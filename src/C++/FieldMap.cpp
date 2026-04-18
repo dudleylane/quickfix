@@ -45,7 +45,14 @@ FieldMap::FieldMap(const int order[])
   m_fields.reserve(DEFAULT_SIZE);
 }
 
-FieldMap::FieldMap(const FieldMap &copy) { *this = copy; }
+FieldMap::FieldMap(const FieldMap &copy)
+    : m_fields(copy.m_fields), m_order(copy.m_order) {
+  for (auto const &tagWithGroups : copy.m_groups) {
+    for (auto const &group : tagWithGroups.second) {
+      m_groups[tagWithGroups.first].push_back(new FieldMap(*group));
+    }
+  }
+}
 
 FieldMap::FieldMap(FieldMap &&rhs)
     : m_fields(std::move(rhs.m_fields)),
@@ -55,17 +62,8 @@ FieldMap::FieldMap(FieldMap &&rhs)
 FieldMap::~FieldMap() { clear(); }
 
 FieldMap &FieldMap::operator=(const FieldMap &rhs) {
-  clear();
-
-  m_fields = rhs.m_fields;
-  m_order = rhs.m_order;
-
-  for (auto const &tagWithGroups : rhs.m_groups) {
-    for (auto const &group : tagWithGroups.second) {
-      m_groups[tagWithGroups.first].push_back(new FieldMap(*group));
-    }
-  }
-
+  FieldMap tmp(rhs);
+  swap(tmp);
   return *this;
 }
 
@@ -168,6 +166,12 @@ bool FieldMap::hasGroup(int tag) const { return m_groups.find(tag) != m_groups.e
 size_t FieldMap::groupCount(int tag) const {
   Groups::const_iterator tagWithGroups = m_groups.find(tag);
   return tagWithGroups == m_groups.end() ? 0 : tagWithGroups->second.size();
+}
+
+void FieldMap::swap(FieldMap &rhs) noexcept {
+  m_fields.swap(rhs.m_fields);
+  m_groups.swap(rhs.m_groups);
+  std::swap(m_order, rhs.m_order);
 }
 
 void FieldMap::clear() {

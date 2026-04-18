@@ -202,6 +202,8 @@ public:
   }
 
   void setResponder(Responder *pR) {
+    Locker l(m_mutex);
+
     if (m_refreshOnLogon) {
       refresh();
     }

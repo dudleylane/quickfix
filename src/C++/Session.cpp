@@ -355,7 +355,7 @@ void Session::nextSequenceReset(const Message &sequenceReset, const UtcTimeStamp
 
     if (newSeqNo > getExpectedTargetNum()) {
       m_state.setNextTargetMsgSeqNum(MsgSeqNum(newSeqNo));
-    } else if (newSeqNo < getExpectedTargetNum()) {
+    } else if (newSeqNo < getExpectedTargetNum() && !isGapFill) {
       generateReject(sequenceReset, SessionRejectReason_VALUE_IS_INCORRECT);
     }
   }
@@ -607,6 +607,8 @@ bool Session::sendRaw(Message &message, SEQNUM num) {
 }
 
 bool Session::send(const std::string &string) {
+  Locker l(m_mutex);
+
   if (!m_pResponder) {
     return false;
   }

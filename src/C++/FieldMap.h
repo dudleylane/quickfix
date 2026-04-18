@@ -216,6 +216,8 @@ public:
 
   /// Clear all fields from the map
   void clear();
+  /// Swap contents with another FieldMap
+  void swap(FieldMap &rhs) noexcept;
   /// Check if map contains any fields
   bool isEmpty();
 

@@ -1,22 +1,3 @@
-#AIX do something like
-#export OBJECT_MODE=64
-#mkdir build
-#cd build
-#CC=xlc_r CXX=xlC_r cmake .. -DHAVE_SSL=ON -DCMAKE_INSTALL_PREFIX:PATH=install-path
-if( ${CMAKE_SYSTEM_NAME} STREQUAL "AIX" )
-add_compile_options(-q64 -qthreaded)
-add_definitions(-D_THREAD_SAFE=1 -D__IBMCPP_TR1__=1)
-endif()
-
-#SunOS can do something like
-#CC=cc CXX=CC cmake .. -DHAVE_SSL=ON -DCMAKE_INSTALL_PREFIX:PATH=install-path -DOPENSSL_ROOT_DIR=path -DOPENSSL_LIBRARIES=path
-#If the linker complains about not finding ssl libs, try setting the LD_LIBRARY_PATH.
-if( ${CMAKE_SYSTEM_NAME} STREQUAL "SunOS" )
-add_compile_options(-m64)
-set( CMAKE_EXE_LINKER_FLAGS "-m64 -lrt" CACHE STRING "Executable link flags" FORCE )
-set( CMAKE_SHARED_LINKER_FLAGS "-m64 -lrt" CACHE STRING "shared link flags" FORCE )
-endif()
-
 if(NOT WIN32)
 find_file (FOUND_ALLOCATOR_HDR NAMES Allocator.h PATHS ${PROJECT_SOURCE_DIR}/src/C++/ NO_DEFAULT_PATH)
 if (NOT FOUND_ALLOCATOR_HDR)

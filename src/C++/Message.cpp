@@ -592,7 +592,10 @@ FIX::FieldBase Message::extractField(
 
     try {
       const FieldBase &fieldLength = location->reverse_find(lenField);
-      soh = valueStart + IntConvertor::convert(fieldLength.getString());
+      int dataLen = IntConvertor::convert(fieldLength.getString());
+      if (dataLen < 0 || valueStart + dataLen > string.end())
+        throw InvalidMessage("RawDataLength exceeds message boundary");
+      soh = valueStart + dataLen;
     } catch (FieldNotFound &) {
       throw InvalidMessage(
           std::string("Data length field ") + IntConvertor::convert(lenField)

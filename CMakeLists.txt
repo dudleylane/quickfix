@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.31 FATAL_ERROR)
 
 set (quickfix_PROJECT_NAME quickfix)
 
@@ -12,8 +12,9 @@ endif()
 project(${quickfix_PROJECT_NAME} VERSION 1.16.0 LANGUAGES CXX C)
 message("-- Project name ${CMAKE_PROJECT_NAME}")
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED OFF)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Allow overriding the output directory for libraries and executables.
 # Default: <project-root>/lib
@@ -39,9 +40,7 @@ if( MSVC AND STATIC_RUNTIME )
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 endif()
 
-if( CMAKE_CXX_STANDARD EQUAL 17 )
-  option( HAVE_CXX17 "Using C++17" ON)
-endif()
+option( HAVE_CXX17 "Using C++17" ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
@@ -54,6 +53,7 @@ option(HAVE_MYSQL "Build with MySQL")
 option(HAVE_POSTGRESQL "Build with PostgreSQL")
 option(HAVE_ODBC "Build with ODBC")
 option(HAVE_PYTHON3 "Build with default Python3 version")
+option(ENABLE_TBB_ALLOCATOR "Use TBB scalable allocator for internal containers")
 
 # add option to build shared or static
 option(QUICKFIX_SHARED_LIBS "Build using shared libraries" ON)
@@ -91,7 +91,6 @@ endif()
 
 if(HAVE_ODBC)
 find_package(ODBC REQUIRED)
-add_definitions(-DHAVE_ODBC)
 include_directories(SYSTEM ${ODBC_INCLUDE_DIRS})
 set(ODBC_LIBRARIES "ODBC::ODBC")
 
@@ -116,10 +115,6 @@ if (QUICKFIX_TESTS)
 endif()
 
 configure_file(cmake_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/C++/config.h @ONLY)
-configure_file(cmake_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/quickfix/config.h @ONLY)
-file(REMOVE config.h)
-
-
 configure_file(cmake_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/quickfix/config.h @ONLY)
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/spec/ DESTINATION share/quickfix FILES_MATCHING PATTERN "FIX*.xml")

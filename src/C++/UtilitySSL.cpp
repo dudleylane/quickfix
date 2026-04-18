@@ -335,7 +335,6 @@ void ssl_init() {
 #endif
   SSL_library_init();           // Initialize OpenSSL's SSL libraries
   SSL_load_error_strings();     // Load SSL error strings
-  ERR_load_BIO_strings();       // Load BIO error strings
   OpenSSL_add_all_algorithms(); // Load all available encryption algorithms
 
   ssl_rand_seed();
@@ -372,14 +371,11 @@ void ssl_socket_close(socket_handle socket, SSL *ssl) {
     return;
   }
 
-  int i;
-  int rc = 0;
+  int rc = SSL_shutdown(ssl);
+  if (rc == 0)
+    SSL_shutdown(ssl);
 
-  for (i = 0; i < 4; i++) {
-    if ((rc = SSL_shutdown(ssl)) == 1) {
-      break;
-    }
-  }
+  socket_close(socket);
 }
 
 static void thread_setup(void) {
@@ -667,8 +663,10 @@ int typeofSSLAlgo(X509 *pCert, EVP_PKEY *pKey) {
   int t;
 
   t = SSL_ALGO_UNKNOWN;
+  bool ownKey = false;
   if (pCert != 0) {
     pKey = X509_get_pubkey(pCert);
+    ownKey = true;
   }
   if (pKey != 0) {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -690,6 +688,8 @@ int typeofSSLAlgo(X509 *pCert, EVP_PKEY *pKey) {
       break;
     }
   }
+  if (ownKey)
+    EVP_PKEY_free(pKey);
   return t;
 }
 
@@ -1590,6 +1590,7 @@ int acceptSSLConnection(socket_handle socket, SSL *ssl, Log *log, int verify) {
     } else {
       if ((xs = SSL_get_peer_certificate(ssl)) != 0) {
         subjName = X509_NAME_oneline(X509_get_subject_name(xs), 0, 0);
+        X509_free(xs);
       }
     }
   }
