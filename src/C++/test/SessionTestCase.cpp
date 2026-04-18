@@ -2125,6 +2125,23 @@ TEST_CASE_METHOD(acceptorFixture, "AcceptorSessionTestCase") {
     CHECK(1 == disconnected);
   }
 
+  SECTION("gapFillNewSeqNoLessThanExpected") {
+    object->setResponder(this);
+    object->next(createLogon("ISLD", "TW", 1), now);
+
+    FIX42::SequenceReset sequenceReset = createSequenceReset("ISLD", "TW", 2, 5);
+    sequenceReset.set(GapFillFlag(true));
+    object->next(sequenceReset, now);
+    CHECK(5 == object->getExpectedTargetNum());
+
+    FIX42::SequenceReset gapFillLower = createSequenceReset("ISLD", "TW", 5, 3);
+    gapFillLower.set(GapFillFlag(true));
+    object->next(gapFillLower, now);
+    CHECK(5 == object->getExpectedTargetNum());
+    CHECK(0 == toReject);
+    CHECK(0 == disconnected);
+  }
+
   SECTION("nextResendRequest") {
     object->next(createLogon("ISLD", "TW", 1), now);
     object->next(createTestRequest("ISLD", "TW", 2, "HELLO"), now);

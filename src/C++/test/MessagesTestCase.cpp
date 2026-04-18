@@ -1382,4 +1382,11 @@ TEST_CASE("MessageTests") {
     CHECK(ApplVerID(ApplVerID_FIX50_SP2) == FIX::Message::toApplVerID(BeginString("FIX.5.0SP2")));
     CHECK(ApplVerID("Custom") == FIX::Message::toApplVerID(BeginString("Custom")));
   }
+
+  SECTION("rawDataLengthExceedsMessageBoundary") {
+    DataDictionary dataDictionary(FIX::TestSettings::pathForSpec("FIX42"));
+    std::string msg = "8=FIX.4.2\0019=40\00135=0\00149=TW\00156=ISLD\001212=9999\001213=X\00110=000\001";
+    FIX::Message object;
+    CHECK_THROWS_AS(object.setString(msg, false, &dataDictionary), InvalidMessage);
+  }
 }

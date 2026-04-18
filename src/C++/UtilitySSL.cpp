@@ -151,7 +151,7 @@
 
 namespace FIX {
 
-#ifndef OPENSSL_NO_DH
+#if !defined(OPENSSL_NO_DH) && OPENSSL_VERSION_NUMBER < 0x30000000L
 static DH *load_dh_param(const char *dhfile) {
   DH *ret = NULL;
   BIO *bio;
@@ -341,7 +341,7 @@ void ssl_init() {
 
   ssl_initialized = 1;
 
-#ifndef OPENSSL_NO_DH
+#if !defined(OPENSSL_NO_DH) && OPENSSL_VERSION_NUMBER < 0x30000000L
   init_dh_params();
 #endif
 
@@ -359,7 +359,7 @@ void ssl_term() {
 
   thread_cleanup();
 
-#ifndef OPENSSL_NO_DH
+#if !defined(OPENSSL_NO_DH) && OPENSSL_VERSION_NUMBER < 0x30000000L
   free_dh_params();
 #endif
 }
@@ -1012,6 +1012,10 @@ void setCtxOptions(SSL_CTX *ctx, long options) {
 }
 
 int enable_DH_ECDH(SSL_CTX *ctx, const char *certFile) {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  SSL_CTX_set_dh_auto(ctx, 1);
+  SSL_CTX_set1_curves_list(ctx, "P-256:P-384:P-521");
+#else
 #ifndef OPENSSL_NO_DH
   int no_dhe = 0;
   if (!no_dhe) {
@@ -1028,7 +1032,6 @@ int enable_DH_ECDH(SSL_CTX *ctx, const char *certFile) {
     } else {
       SSL_CTX_set_tmp_dh_callback(ctx, ssl_callback_TmpDH);
     }
-    //(void)BIO_flush(bio_s_out);
   }
 #endif
 
@@ -1040,6 +1043,7 @@ int enable_DH_ECDH(SSL_CTX *ctx, const char *certFile) {
   }
   SSL_CTX_set_tmp_ecdh(ctx, ecdh);
   EC_KEY_free(ecdh);
+#endif
 #endif
 
   return 0;

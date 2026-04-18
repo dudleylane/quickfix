@@ -127,4 +127,12 @@ TEST_CASE("ParserTests") {
     CHECK_THROWS_AS(object.readFixMessage(readFixMsg), MessageParseError);
     object.readFixMessage(readFixMsg);
   }
+
+  SECTION("addToStreamExceedsMaxMessageSize") {
+    std::string chunk(1024 * 1024, 'X');
+    for (int i = 0; i < 8; i++) {
+      object.addToStream(chunk);
+    }
+    CHECK_THROWS_AS(object.addToStream(chunk), MessageParseError);
+  }
 }

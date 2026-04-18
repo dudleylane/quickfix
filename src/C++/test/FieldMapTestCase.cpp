@@ -161,4 +161,47 @@ TEST_CASE("FieldMapTests") {
     CHECK(18 == actualTag18.getTag());
     CHECK("field18_new" == actualTag18.getString());
   }
+
+  SECTION("copyAssignmentWithGroups") {
+    FieldMap original;
+    original.setField(1, "account");
+
+    FieldMap group;
+    group.setField(11, "clordid1");
+    original.addGroup(78, group);
+
+    FieldMap group2;
+    group2.setField(11, "clordid2");
+    original.addGroup(78, group2);
+
+    FieldMap copy;
+    copy = original;
+
+    CHECK(copy.getField(1) == "account");
+    CHECK(copy.groupCount(78) == 2);
+
+    FieldMap retrievedGroup;
+    copy.getGroup(1, 78, retrievedGroup);
+    CHECK(retrievedGroup.getField(11) == "clordid1");
+
+    copy.setField(1, "modified");
+    CHECK(original.getField(1) == "account");
+  }
+
+  SECTION("copyConstructorWithGroups") {
+    FieldMap original;
+    original.setField(1, "account");
+
+    FieldMap group;
+    group.setField(11, "clordid1");
+    original.addGroup(78, group);
+
+    FieldMap copy(original);
+
+    CHECK(copy.getField(1) == "account");
+    CHECK(copy.groupCount(78) == 1);
+
+    copy.setField(1, "modified");
+    CHECK(original.getField(1) == "account");
+  }
 }
