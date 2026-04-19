@@ -30,6 +30,7 @@
 #include "Log.h"
 #include "MessageStore.h"
 #include "Mutex.h"
+#include <atomic>
 
 namespace FIX {
 /// Maintains all of state for the Session class.
@@ -234,16 +235,16 @@ public:
   }
 
 private:
-  bool m_enabled;
-  bool m_receivedLogon;
-  bool m_sentLogout;
-  bool m_sentLogon;
-  bool m_sentReset;
-  bool m_receivedReset;
-  bool m_initiate;
-  int m_logonTimeout;
-  int m_logoutTimeout;
-  int m_testRequest;
+  std::atomic<bool> m_enabled;
+  std::atomic<bool> m_receivedLogon;
+  std::atomic<bool> m_sentLogout;
+  std::atomic<bool> m_sentLogon;
+  std::atomic<bool> m_sentReset;
+  std::atomic<bool> m_receivedReset;
+  std::atomic<bool> m_initiate;
+  std::atomic<int> m_logonTimeout;
+  std::atomic<int> m_logoutTimeout;
+  std::atomic<int> m_testRequest;
   ResendRange m_resendRange;
   HeartBtInt m_heartBtInt;
   UtcTimeStamp m_lastSentTime;
