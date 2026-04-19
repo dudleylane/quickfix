@@ -200,10 +200,10 @@ private:
 
     std::stringstream connectionStream;
     std::string connectionString = m_connectionID.getHost();
-    if (m_connectionID.getHost().find("UID=") == std::string::npos) {
+    if (!m_connectionID.getHost().contains("UID=")) {
       connectionStream << "UID=" << m_connectionID.getUser() << ";";
     }
-    if (m_connectionID.getHost().find("PWD=") == std::string::npos) {
+    if (!m_connectionID.getHost().contains("PWD=")) {
       connectionStream << "PWD=" << m_connectionID.getPassword() << ";";
     }
     connectionStream << m_connectionID.getHost();

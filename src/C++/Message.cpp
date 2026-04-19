@@ -560,11 +560,11 @@ FIX::FieldBase Message::extractField(
   if (equalSign == strEnd) [[unlikely]] {
     throw InvalidMessage("Equal sign not found in field");
   }
-
   int field = 0;
   if (!IntConvertor::convert(tagStart, equalSign, field)) [[unlikely]] {
     throw InvalidMessage(std::string("Field tag is invalid: ") + std::string(tagStart, equalSign));
   }
+  [[assume(field > 0)]];
 
   std::string::const_iterator const valueStart = equalSign + 1;
 

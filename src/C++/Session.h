@@ -47,7 +47,7 @@ namespace FIX {
 class Session {
 public:
   Session(
-      std::function<UtcTimeStamp()> timestamper,
+      std::move_only_function<UtcTimeStamp()> timestamper,
       Application &,
       MessageStoreFactory &,
       const SessionID &,
@@ -306,7 +306,7 @@ private:
 
   Message newMessage(const MsgType &msgType) const;
 
-  std::function<UtcTimeStamp()> m_timestamper;
+  std::move_only_function<UtcTimeStamp()> m_timestamper;
   Application &m_application;
   SessionID m_sessionID;
   TimeRange m_sessionTime;

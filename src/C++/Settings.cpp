@@ -45,7 +45,7 @@ bool isSection(const std::string &line) {
 
 std::string splitSection(const std::string &line) { return string_strip(std::string(line, 1, line.size() - 2)); }
 
-bool isKeyValue(const std::string &line) { return line.find('=') != std::string::npos; }
+bool isKeyValue(const std::string &line) { return line.contains('='); }
 
 std::pair<std::string, std::string> splitKeyValue(const std::string &line) {
   size_t equals = line.find('=');

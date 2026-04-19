@@ -43,7 +43,7 @@ std::shared_mutex Session::s_mutex;
   }
 
 Session::Session(
-    std::function<UtcTimeStamp()> timestamper,
+    std::move_only_function<UtcTimeStamp()> timestamper,
     Application &application,
     MessageStoreFactory &messageStoreFactory,
     const SessionID &sessionID,
