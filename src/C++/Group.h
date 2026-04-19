@@ -69,6 +69,11 @@ public:
   bool hasGroup(const Group &group);
   bool hasGroup(unsigned num, const Group &group);
 
+  FieldMap *cloneInto(GroupArena &arena) const override {
+    void *p = arena.allocate();
+    return new (p) Group(*this);
+  }
+
 private:
   int m_field;
   int m_delim;

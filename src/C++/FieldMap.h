@@ -32,10 +32,51 @@
 #include "Utility.h"
 #include <algorithm>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <vector>
 
 namespace FIX {
+
+class GroupArena {
+public:
+  static constexpr size_t SLOT_SIZE = 120;
+  static constexpr size_t DEFAULT_CAPACITY = 32;
+
+  GroupArena() : GroupArena(DEFAULT_CAPACITY) {}
+  explicit GroupArena(size_t capacity)
+      : m_storage(new char[capacity * SLOT_SIZE]),
+        m_capacity(capacity) {}
+
+  void *allocate() {
+    if (m_count < m_capacity)
+      return m_storage.get() + m_count++ * SLOT_SIZE;
+    m_overflowCount++;
+    return ::operator new(SLOT_SIZE);
+  }
+
+  void deallocate(void *p) {
+    if (!owns(p)) {
+      ::operator delete(p);
+      if (m_overflowCount > 0) m_overflowCount--;
+    }
+  }
+
+  bool owns(const void *p) const {
+    auto *cp = static_cast<const char *>(p);
+    return cp >= m_storage.get() && cp < m_storage.get() + m_capacity * SLOT_SIZE;
+  }
+
+  void reset() { m_count = 0; m_overflowCount = 0; }
+  size_t count() const { return m_count + m_overflowCount; }
+
+private:
+  std::unique_ptr<char[]> m_storage;
+  size_t m_capacity;
+  size_t m_count = 0;
+  size_t m_overflowCount = 0;
+};
+
 /**
  * Stores and organizes a collection of Fields.
  *
@@ -241,8 +282,18 @@ public:
   g_const_iterator g_begin() const { return m_groups.begin(); }
   g_const_iterator g_end() const { return m_groups.end(); }
 
+  virtual FieldMap *cloneInto(GroupArena &arena) const {
+    void *p = arena.allocate();
+    return new (p) FieldMap(*this);
+  }
+
 protected:
   friend class Message;
+
+  GroupArena &getArena() {
+    if (!m_arena) m_arena = std::make_unique<GroupArena>();
+    return *m_arena;
+  }
 
   void addField(const FieldBase &field) {
     Fields::iterator iter = findPositionFor(field.getTag());
@@ -264,12 +315,13 @@ protected:
     return *field;
   }
 
-  // append field to message without sorting
-  // only applicable during message decoding
   void appendField(const FieldBase &field) { m_fields.push_back(field); }
+  void appendField(FieldBase &&field) { m_fields.push_back(std::move(field)); }
 
-  // sort fields after message decoding
-  void sortFields() { std::sort(m_fields.begin(), m_fields.end(), sorter(m_order)); }
+  void sortFields() {
+    if (!std::is_sorted(m_fields.begin(), m_fields.end(), sorter(m_order)))
+      std::sort(m_fields.begin(), m_fields.end(), sorter(m_order));
+  }
 
 private:
   Fields::const_iterator findTag(int tag) const { return lookup(m_fields.begin(), m_fields.end(), tag); }
@@ -311,6 +363,7 @@ private:
   Fields m_fields;
   Groups m_groups;
   message_order m_order;
+  std::unique_ptr<GroupArena> m_arena;
 };
 /*! @} */
 } // namespace FIX

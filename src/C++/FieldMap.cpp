@@ -49,7 +49,7 @@ FieldMap::FieldMap(const FieldMap &copy)
     : m_fields(copy.m_fields), m_order(copy.m_order) {
   for (auto const &tagWithGroups : copy.m_groups) {
     for (auto const &group : tagWithGroups.second) {
-      m_groups[tagWithGroups.first].push_back(new FieldMap(*group));
+      m_groups[tagWithGroups.first].push_back(group->cloneInto(getArena()));
     }
   }
 }
@@ -57,7 +57,8 @@ FieldMap::FieldMap(const FieldMap &copy)
 FieldMap::FieldMap(FieldMap &&rhs)
     : m_fields(std::move(rhs.m_fields)),
       m_groups(std::move(rhs.m_groups)),
-      m_order(std::move(rhs.m_order)) {}
+      m_order(std::move(rhs.m_order)),
+      m_arena(std::move(rhs.m_arena)) {}
 
 FieldMap::~FieldMap() { clear(); }
 
@@ -71,12 +72,12 @@ FieldMap &FieldMap::operator=(FieldMap &&rhs) {
   m_fields = std::move(rhs.m_fields);
   m_groups = std::move(rhs.m_groups);
   m_order = std::move(rhs.m_order);
+  m_arena = std::move(rhs.m_arena);
   return *this;
 }
 
 void FieldMap::addGroup(int field, const FieldMap &group, bool setCount) {
-  FieldMap *pGroup = new FieldMap(group);
-
+  FieldMap *pGroup = group.cloneInto(getArena());
   addGroupPtr(field, pGroup, setCount);
 }
 
@@ -123,7 +124,11 @@ void FieldMap::removeGroup(int num, int tag) {
   std::vector<FieldMap *>::iterator group = groups.begin();
   std::advance(group, (num - 1));
 
-  delete (*group);
+  (*group)->~FieldMap();
+  if (m_arena)
+    m_arena->deallocate(*group);
+  else
+    ::operator delete(*group);
   groups.erase(group);
 
   if (groups.size() == 0) {
@@ -146,7 +151,13 @@ void FieldMap::removeGroup(int tag) {
 
   m_groups.erase(tagWithGroups);
 
-  std::for_each(toDelete.begin(), toDelete.end(), [](FieldMap *group) { delete group; });
+  std::for_each(toDelete.begin(), toDelete.end(), [this](FieldMap *group) {
+    group->~FieldMap();
+    if (m_arena)
+      m_arena->deallocate(group);
+    else
+      ::operator delete(group);
+  });
 
   removeField(tag);
 }
@@ -172,6 +183,7 @@ void FieldMap::swap(FieldMap &rhs) noexcept {
   m_fields.swap(rhs.m_fields);
   m_groups.swap(rhs.m_groups);
   std::swap(m_order, rhs.m_order);
+  m_arena.swap(rhs.m_arena);
 }
 
 void FieldMap::clear() {
@@ -179,11 +191,16 @@ void FieldMap::clear() {
 
   for (auto const &tagWithGroups : m_groups) {
     for (auto const &group : tagWithGroups.second) {
-      delete group;
+      group->~FieldMap();
+      if (m_arena)
+        m_arena->deallocate(group);
+      else
+        ::operator delete(group);
     }
   }
 
   m_groups.clear();
+  if (m_arena) m_arena->reset();
 }
 
 bool FieldMap::isEmpty() { return m_fields.empty(); }

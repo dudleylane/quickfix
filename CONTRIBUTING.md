@@ -22,7 +22,7 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 ### Reporting Bugs
 
 Before creating a bug report:
-1. Check the [existing issues](https://github.com/quickfix/quickfix/issues) to avoid duplicates
+1. Check the [existing issues](https://github.com/dudleylane/quickfix/issues) to avoid duplicates
 2. Collect relevant information about your environment
 
 When creating a bug report, include:
@@ -58,7 +58,7 @@ We actively welcome pull requests!
    ```bash
    git clone https://github.com/YOUR-USERNAME/quickfix.git
    cd quickfix
-   git remote add upstream https://github.com/quickfix/quickfix.git
+   git remote add upstream https://github.com/dudleylane/quickfix.git
    ```
 
 2. **Create a Branch**: Create a feature branch from `master`
@@ -115,7 +115,7 @@ git diff --name-only | grep -E '\.(cpp|h)$' | xargs clang-format -i
 
 ### General Guidelines
 
-- **C++ Standard**: Minimum C++17
+- **C++ Standard**: Minimum C++23
 - **Naming Conventions**:
   - Classes: `PascalCase` (e.g., `SocketInitiator`)
   - Functions/Methods: `camelCase` (e.g., `sendMessage()`)
@@ -224,8 +224,8 @@ document.bat   # Windows
 ### Setting Up Development Environment
 
 1. **Install Prerequisites**:
-   - C++17 compiler
-   - CMake 3.5+
+   - C++23 compiler (GCC 13+, Clang 16+, MSVC 19.35+)
+   - CMake 3.31+
    - Optional: OpenSSL, MySQL, PostgreSQL
 
 2. **Build in Development Mode**:
@@ -264,7 +264,7 @@ document.bat   # Windows
 
 ## Getting Help
 
-- **Questions**: Use [GitHub Discussions](https://github.com/quickfix/quickfix/discussions)
+- **Questions**: Use [GitHub Discussions](https://github.com/dudleylane/quickfix/discussions)
 - **Chat**: Join the community on the mailing list
 - **Issues**: For bugs and feature requests only
 

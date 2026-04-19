@@ -316,17 +316,19 @@ void Message::setString(
         }
       }
 
-      m_header.appendField(field);
-
       if (pSessionDataDictionary) {
+        m_header.appendField(field);
         setGroup("_header_", field, string, pos, getHeader(), *pSessionDataDictionary);
+      } else {
+        m_header.appendField(std::move(field));
       }
     } else if (isTrailerField(field, pSessionDataDictionary)) {
       type = trailer;
-      m_trailer.appendField(field);
-
       if (pSessionDataDictionary) {
+        m_trailer.appendField(field);
         setGroup("_trailer_", field, string, pos, getTrailer(), *pSessionDataDictionary);
+      } else {
+        m_trailer.appendField(std::move(field));
       }
     } else {
       if (type == trailer) {
@@ -337,10 +339,11 @@ void Message::setString(
       }
 
       type = body;
-      appendField(field);
-
       if (pApplicationDataDictionary) {
+        appendField(field);
         setGroup(msg, field, string, pos, *this, *pApplicationDataDictionary);
+      } else {
+        appendField(std::move(field));
       }
     }
   }
