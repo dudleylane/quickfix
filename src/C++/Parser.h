@@ -40,15 +40,15 @@ public:
   ~Parser() {}
 
   bool extractLength(int &length, std::string::size_type &pos, const std::string &buffer) EXCEPT(MessageParseError);
-  bool readFixMessage(std::string &str) EXCEPT(MessageParseError);
+  [[nodiscard]] bool readFixMessage(std::string &str) EXCEPT(MessageParseError);
 
   void addToStream(const char *str, size_t len) {
-    if (m_buffer.size() + len > MAX_MESSAGE_SIZE)
+    if (m_buffer.size() + len > MAX_MESSAGE_SIZE) [[unlikely]]
       throw MessageParseError("Message size exceeds maximum allowed");
     m_buffer.append(str, len);
   }
   void addToStream(const std::string &str) {
-    if (m_buffer.size() + str.size() > MAX_MESSAGE_SIZE)
+    if (m_buffer.size() + str.size() > MAX_MESSAGE_SIZE) [[unlikely]]
       throw MessageParseError("Message size exceeds maximum allowed");
     m_buffer.append(str);
   }

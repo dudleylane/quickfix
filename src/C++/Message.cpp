@@ -557,23 +557,23 @@ FIX::FieldBase Message::extractField(
   std::string::const_iterator const strEnd = string.end();
 
   std::string::const_iterator const equalSign = std::find(tagStart, strEnd, '=');
-  if (equalSign == strEnd) {
+  if (equalSign == strEnd) [[unlikely]] {
     throw InvalidMessage("Equal sign not found in field");
   }
 
   int field = 0;
-  if (!IntConvertor::convert(tagStart, equalSign, field)) {
+  if (!IntConvertor::convert(tagStart, equalSign, field)) [[unlikely]] {
     throw InvalidMessage(std::string("Field tag is invalid: ") + std::string(tagStart, equalSign));
   }
 
   std::string::const_iterator const valueStart = equalSign + 1;
 
   std::string::const_iterator soh = std::find(valueStart, strEnd, '\001');
-  if (soh == strEnd) {
+  if (soh == strEnd) [[unlikely]] {
     throw InvalidMessage("SOH not found at end of field");
   }
 
-  if (IsDataField(field, pSessionDD, pAppDD)) {
+  if (IsDataField(field, pSessionDD, pAppDD)) [[unlikely]] {
     // Assume length field is 1 less.
     int lenField = field - 1;
     // Special case for Signature which violates above assumption.
@@ -596,7 +596,7 @@ FIX::FieldBase Message::extractField(
     try {
       const FieldBase &fieldLength = location->reverse_find(lenField);
       int dataLen = IntConvertor::convert(fieldLength.getString());
-      if (dataLen < 0 || valueStart + dataLen > string.end())
+      if (dataLen < 0 || valueStart + dataLen > string.end()) [[unlikely]]
         throw InvalidMessage("RawDataLength exceeds message boundary");
       soh = valueStart + dataLen;
     } catch (FieldNotFound &) {

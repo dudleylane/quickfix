@@ -100,10 +100,10 @@ public:
       const std::string &qualifier = "") EXCEPT(SessionNotFound);
 
   static std::set<SessionID> getSessions();
-  static bool doesSessionExist(const SessionID &);
-  static Session *lookupSession(const SessionID &);
-  static Session *lookupSession(const std::string &, bool reverse = false);
-  static bool isSessionRegistered(const SessionID &);
+  [[nodiscard]] static bool doesSessionExist(const SessionID &);
+  [[nodiscard]] static Session *lookupSession(const SessionID &);
+  [[nodiscard]] static Session *lookupSession(const std::string &, bool reverse = false);
+  [[nodiscard]] static bool isSessionRegistered(const SessionID &);
   static Session *registerSession(const SessionID &);
   static void unregisterSession(const SessionID &);
 

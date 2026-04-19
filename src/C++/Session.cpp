@@ -610,7 +610,7 @@ bool Session::sendRaw(Message &message, SEQNUM num) {
 bool Session::send(const std::string &string) {
   Locker l(m_mutex);
 
-  if (!m_pResponder) {
+  if (!m_pResponder) [[unlikely]] {
     return false;
   }
   m_state.onOutgoing(string);

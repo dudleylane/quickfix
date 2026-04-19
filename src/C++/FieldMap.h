@@ -48,7 +48,7 @@ public:
       : m_storage(new char[capacity * SLOT_SIZE]),
         m_capacity(capacity) {}
 
-  void *allocate() {
+  [[nodiscard]] void *allocate() {
     if (m_count < m_capacity)
       return m_storage.get() + m_count++ * SLOT_SIZE;
     m_overflowCount++;
@@ -62,7 +62,7 @@ public:
     }
   }
 
-  bool owns(const void *p) const {
+  [[nodiscard]] bool owns(const void *p) const {
     auto *cp = static_cast<const char *>(p);
     return cp >= m_storage.get() && cp < m_storage.get() + m_capacity * SLOT_SIZE;
   }
