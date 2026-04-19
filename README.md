@@ -25,6 +25,27 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **ssl_socket_close**: Added missing `socket_close()` after `SSL_shutdown()` — fixes socket fd leak on every SSL connection teardown; implemented proper two-phase shutdown
 - **ERR_load_BIO_strings**: Removed deprecated no-op call
 
+### Latency
+- **GroupArena**: Per-message bump-pointer arena for repeating group allocation — eliminates per-group `new`/`delete` during parsing. 32-slot arena (3.8 KB) lazily allocated on first group, bulk-reset on `clear()`. Pooled messages reuse the arena across parse cycles.
+- **Move-semantic appendField**: Eliminates one string copy per field during message deserialization
+- **Sorted-check guard**: `sortFields()` skips redundant `std::sort` for well-ordered messages
+- **Group slicing fix**: Virtual `cloneInto()` preserves `Group::m_field`/`m_delim` during copy — `addGroup` and copy constructor previously sliced to `FieldMap`
+
+#### Benchmark results (100K iterations, Intel i7-4770)
+
+| Operation | Upstream (μs) | This fork (μs) | Improvement |
+|---|---|---|---|
+| Deserialize Heartbeat | 0.288 | 0.219 | **-24%** |
+| Deserialize NewOrderSingle | 0.681 | 0.546 | **-20%** |
+| Deserialize QuoteRequest (10 groups) | 5.451 | 5.543 | — |
+| Pooled vs unpooled QuoteRequest | 6.465 | 5.543 | **-14%** |
+| Socket round-trip NOS | 3.236 | 2.966 | **-8%** |
+
+### OpenSSL 3.0
+- **DH/ECDH**: Auto-negotiation via `SSL_CTX_set_dh_auto` on OpenSSL 3.0+ — eliminates all `DH_new`/`EC_KEY_new_by_curve_name` deprecation warnings
+- **ERR_load_BIO_strings**: Removed (no-op since OpenSSL 1.1.0)
+- Legacy DH parameter code guarded with `OPENSSL_VERSION_NUMBER < 0x30000000L`
+
 ### FIX protocol
 - **SequenceReset-GapFill**: Allow `NewSeqNo < ExpectedTargetNum` when `GapFillFlag=Y`, per FIX spec (was incorrectly rejected)
 
@@ -92,8 +113,21 @@ cmake --build build -j$(nproc)
 cd test && bash setup.sh <port> && ../lib/at -f cfg/at.cfg &
 ruby -I. Runner.rb 127.0.0.1 <port> definitions/server/fix4*/*.def
 
-# Performance tests
+# Performance tests (pooled vs unpooled benchmarks included)
 ./lib/pt -p <port> -c <count>
+```
+
+### Message pooling
+
+For latency-critical applications, reuse `Message` objects instead of creating new ones per FIX string. The internal `GroupArena` survives `clear()` and is reused on the next `setString()` call — no arena reallocation between parse cycles:
+
+```cpp
+FIX::Message pooledMsg;
+while (auto raw = receiveFromSocket()) {
+  pooledMsg.setString(raw, false, &dataDictionary);
+  processMessage(pooledMsg);
+  // pooledMsg.clear() is called by the next setString() — arena is reset, not freed
+}
 ```
 
 ## Building with Autotools

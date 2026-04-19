@@ -70,6 +70,9 @@ long testValidateNewOrderSingle(int);
 long testValidateDictNewOrderSingle(int);
 long testValidateQuoteRequest(int);
 long testValidateDictQuoteRequest(int);
+long testNoPoolHeartbeat(int);
+long testNoPoolNewOrderSingle(int);
+long testNoPoolQuoteRequest(int);
 long testSendOnSocket(int, short);
 long testSendOnThreadedSocket(int, short);
 void report(long, int);
@@ -180,6 +183,15 @@ int main(int argc, char **argv) {
 
     std::cout << "Validating QuoteRequest messages with data dictionary: ";
     report(testValidateDictQuoteRequest(count), count);
+
+    std::cout << "Unpooled Heartbeat (new Message each time): ";
+    report(testNoPoolHeartbeat(count), count);
+
+    std::cout << "Unpooled NewOrderSingle (new Message each time): ";
+    report(testNoPoolNewOrderSingle(count), count);
+
+    std::cout << "Unpooled QuoteRequest (new Message each time): ";
+    report(testNoPoolQuoteRequest(count), count);
 
     std::cout << "Sending/Receiving NewOrderSingle/ExecutionReports on Socket";
     report(testSendOnSocket(count, port), count);
@@ -691,6 +703,60 @@ long testValidateDictQuoteRequest(int count) {
   long start = GetTickCount();
   for (int j = 0; j <= count; ++j) {
     s_dataDictionary->validate(message);
+  }
+  return GetTickCount() - start;
+}
+
+long testNoPoolHeartbeat(int count) {
+  FIX42::Heartbeat tmp;
+  std::string str = tmp.toString();
+  count = count - 1;
+
+  long start = GetTickCount();
+  for (int i = 0; i <= count; ++i) {
+    FIX::Message message(str, DONT_VALIDATE);
+  }
+  return GetTickCount() - start;
+}
+
+long testNoPoolNewOrderSingle(int count) {
+  FIX::ClOrdID clOrdID("ORDERID");
+  FIX::HandlInst handlInst('1');
+  FIX::Symbol symbol("LNUX");
+  FIX::Side side(FIX::Side_BUY);
+  FIX::TransactTime transactTime = FIX::TransactTime::now();
+  FIX::OrdType ordType(FIX::OrdType_MARKET);
+  FIX42::NewOrderSingle tmp(clOrdID, handlInst, symbol, side, transactTime, ordType);
+  std::string str = tmp.toString();
+  count = count - 1;
+
+  long start = GetTickCount();
+  for (int i = 0; i <= count; ++i) {
+    FIX::Message message(str, DONT_VALIDATE);
+  }
+  return GetTickCount() - start;
+}
+
+long testNoPoolQuoteRequest(int count) {
+  FIX42::QuoteRequest tmp(FIX::QuoteReqID("1"));
+  FIX42::QuoteRequest::NoRelatedSym noRelatedSym;
+  for (int i = 1; i <= 10; ++i) {
+    noRelatedSym.set(FIX::Symbol("IBM"));
+    noRelatedSym.set(FIX::MaturityMonthYear());
+    noRelatedSym.set(FIX::PutOrCall(FIX::PutOrCall_PUT));
+    noRelatedSym.set(FIX::StrikePrice(120));
+    noRelatedSym.set(FIX::Side(FIX::Side_BUY));
+    noRelatedSym.set(FIX::OrderQty(100));
+    noRelatedSym.set(FIX::Currency("USD"));
+    noRelatedSym.set(FIX::OrdType(FIX::OrdType_MARKET));
+    tmp.addGroup(noRelatedSym);
+  }
+  std::string str = tmp.toString();
+  count = count - 1;
+
+  long start = GetTickCount();
+  for (int i = 0; i <= count; ++i) {
+    FIX::Message message(str, DONT_VALIDATE);
   }
   return GetTickCount() - start;
 }
