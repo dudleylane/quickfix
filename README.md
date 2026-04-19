@@ -12,6 +12,7 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Mutex**: Replaced hand-rolled recursive lock (data race on `m_count`/`m_threadID`) with `PTHREAD_MUTEX_RECURSIVE`
 - **Session::send()**: Added missing lock on `m_pResponder` read — fixes use-after-free on concurrent send + disconnect
 - **Session::setResponder()**: Added missing lock on `m_pResponder` write — fixes race during connection establishment
+- **Session::s_mutex**: Replaced global `Mutex` with `std::shared_mutex` — concurrent session lookups no longer serialize under multi-session load. Fixed unprotected `getSessions()`
 
 ### Memory safety
 - **FieldMap copy assignment**: Copy-and-swap idiom for strong exception guarantee — fixes memory leak when copy throws mid-group
