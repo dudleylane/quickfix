@@ -25,6 +25,9 @@
 
 #include "Group.h"
 
+static_assert(sizeof(FIX::Group) <= FIX::GroupArena::SLOT_SIZE,
+              "GroupArena::SLOT_SIZE must be >= sizeof(Group)");
+
 namespace FIX {
 void Group::addGroup(const Group &group) { FieldMap::addGroup(group.field(), group); }
 

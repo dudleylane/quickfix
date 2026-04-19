@@ -40,7 +40,7 @@ namespace FIX {
 
 class GroupArena {
 public:
-  static constexpr size_t SLOT_SIZE = 120;
+  static constexpr size_t SLOT_SIZE = 128;
   static constexpr size_t DEFAULT_CAPACITY = 32;
 
   GroupArena() : GroupArena(DEFAULT_CAPACITY) {}

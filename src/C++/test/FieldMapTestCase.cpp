@@ -25,6 +25,7 @@
 #endif
 
 #include <FieldMap.h>
+#include <Group.h>
 #include <Message.h>
 #include <vector>
 
@@ -203,5 +204,61 @@ TEST_CASE("FieldMapTests") {
 
     copy.setField(1, "modified");
     CHECK(original.getField(1) == "account");
+  }
+
+  SECTION("addGroupPreservesGroupType") {
+    FieldMap parent;
+    Group group(268, 269, message_order(269, 0));
+    group.setField(269, "0");
+    group.setField(270, "100.5");
+
+    parent.addGroup(268, group);
+
+    FieldMap retrieved;
+    parent.getGroup(1, 268, retrieved);
+    CHECK(retrieved.getField(269) == "0");
+    CHECK(retrieved.getField(270) == "100.5");
+  }
+
+  SECTION("copyFieldMapWithGroupsPreservesGroupType") {
+    FieldMap parent;
+    Group group(268, 269, message_order(269, 0));
+    group.setField(269, "1");
+    parent.addGroup(268, group);
+
+    FieldMap copy(parent);
+    CHECK(copy.groupCount(268) == 1);
+
+    FieldMap retrieved;
+    copy.getGroup(1, 268, retrieved);
+    CHECK(retrieved.getField(269) == "1");
+  }
+
+  SECTION("arenaReusedAcrossClearCycles") {
+    FieldMap parent;
+    Group group(268, 269, message_order(269, 0));
+    group.setField(269, "0");
+
+    for (int cycle = 0; cycle < 3; ++cycle) {
+      for (int i = 0; i < 10; ++i) {
+        parent.addGroup(268, group);
+      }
+      CHECK(parent.groupCount(268) == 10);
+      parent.clear();
+      CHECK(parent.groupCount(268) == 0);
+    }
+  }
+
+  SECTION("arenaOverflowFallsBackToHeap") {
+    FieldMap parent;
+    Group group(268, 269, message_order(269, 0));
+    group.setField(269, "0");
+
+    for (int i = 0; i < 40; ++i) {
+      parent.addGroup(268, group);
+    }
+    CHECK(parent.groupCount(268) == 40);
+    parent.clear();
+    CHECK(parent.groupCount(268) == 0);
   }
 }
