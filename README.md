@@ -18,6 +18,7 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **FieldMap copy constructor**: Direct member initialization instead of delegating to `operator=`
 - **Parser**: Added `MAX_MESSAGE_SIZE` (8 MB) bound on `addToStream()` — prevents unbounded memory growth from malicious/malformed peers
 - **Message**: Bounds check on `RawDataLength`-computed iterator — prevents out-of-bounds read from corrupted data length fields
+- **FileStoreTestCase**: Added missing `destroy()` call — fixes test fixture memory leak
 
 ### SSL/OpenSSL
 - **X509 leak**: Added `X509_free()` after `SSL_get_peer_certificate()` in `acceptSSLConnection()`
@@ -128,6 +129,32 @@ while (auto raw = receiveFromSocket()) {
   processMessage(pooledMsg);
   // pooledMsg.clear() is called by the next setString() — arena is reset, not freed
 }
+```
+
+### Sanitizer verification
+
+All changes are verified clean under ThreadSanitizer and AddressSanitizer:
+
+```bash
+# TSan (thread safety)
+cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_FLAGS="-fsanitize=thread -fno-omit-frame-pointer" \
+  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread" \
+  -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=thread" \
+  -DHAVE_SSL=ON -DENABLE_TBB_ALLOCATOR=ON \
+  -DQUICKFIX_LIB_OUTPUT_DIR=build-tsan/out
+cmake --build build-tsan -j$(nproc)
+build-tsan/out/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path spec
+
+# ASan + UBSan (memory errors)
+cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+  -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined" \
+  -DHAVE_SSL=ON -DENABLE_TBB_ALLOCATOR=ON \
+  -DQUICKFIX_LIB_OUTPUT_DIR=build-asan/out
+cmake --build build-asan -j$(nproc)
+build-asan/out/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path spec
 ```
 
 ## Building with Autotools
