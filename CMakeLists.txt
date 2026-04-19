@@ -9,7 +9,7 @@ if(UNIX)
   add_definitions(-D_FILE_OFFSET_BITS=64)
 endif()
 
-project(${quickfix_PROJECT_NAME} VERSION 1.16.0 LANGUAGES CXX C)
+project(${quickfix_PROJECT_NAME} VERSION 1.16.1 LANGUAGES CXX C)
 message("-- Project name ${CMAKE_PROJECT_NAME}")
 
 set(CMAKE_CXX_STANDARD 23)
