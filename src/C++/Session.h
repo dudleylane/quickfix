@@ -37,6 +37,7 @@
 #include "TimeRange.h"
 
 #include <functional>
+#include <shared_mutex>
 #include <map>
 #include <queue>
 #include <utility>
@@ -335,10 +336,13 @@ private:
   Responder *m_pResponder;
   Mutex m_mutex;
 
+  static Session *lookupSession_locked(const SessionID &);
+  static bool isSessionRegistered_locked(const SessionID &);
+
   static Sessions s_sessions;
   static SessionIDs s_sessionIDs;
   static Sessions s_registered;
-  static Mutex s_mutex;
+  static std::shared_mutex s_mutex;
 };
 } // namespace FIX
 

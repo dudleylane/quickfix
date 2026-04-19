@@ -27,12 +27,13 @@
 #include "Values.h"
 #include <algorithm>
 #include <iostream>
+#include <mutex>
 
 namespace FIX {
 Session::Sessions Session::s_sessions;
 Session::SessionIDs Session::s_sessionIDs;
 Session::Sessions Session::s_registered;
-Mutex Session::s_mutex;
+std::shared_mutex Session::s_mutex;
 
 #define LOGEX(method)                                                                                                  \
   try {                                                                                                                \
@@ -1351,15 +1352,22 @@ bool Session::sendToTarget(
   return sendToTarget(message, SenderCompID(sender), TargetCompID(target), qualifier);
 }
 
-std::set<SessionID> Session::getSessions() { return s_sessionIDs; }
+std::set<SessionID> Session::getSessions() {
+  std::shared_lock lock(s_mutex);
+  return s_sessionIDs;
+}
 
 bool Session::doesSessionExist(const SessionID &sessionID) {
-  Locker locker(s_mutex);
+  std::shared_lock lock(s_mutex);
   return s_sessions.end() != s_sessions.find(sessionID);
 }
 
 Session *Session::lookupSession(const SessionID &sessionID) {
-  Locker locker(s_mutex);
+  std::shared_lock lock(s_mutex);
+  return lookupSession_locked(sessionID);
+}
+
+Session *Session::lookupSession_locked(const SessionID &sessionID) {
   Sessions::iterator find = s_sessions.find(sessionID);
   if (find != s_sessions.end()) {
     return find->second;
@@ -1391,17 +1399,21 @@ Session *Session::lookupSession(const std::string &string, bool reverse) {
 }
 
 bool Session::isSessionRegistered(const SessionID &sessionID) {
-  Locker locker(s_mutex);
+  std::shared_lock lock(s_mutex);
+  return isSessionRegistered_locked(sessionID);
+}
+
+bool Session::isSessionRegistered_locked(const SessionID &sessionID) {
   return s_registered.end() != s_registered.find(sessionID);
 }
 
 Session *Session::registerSession(const SessionID &sessionID) {
-  Locker locker(s_mutex);
-  Session *pSession = lookupSession(sessionID);
+  std::unique_lock lock(s_mutex);
+  Session *pSession = lookupSession_locked(sessionID);
   if (pSession == nullptr) {
     return nullptr;
   }
-  if (isSessionRegistered(sessionID)) {
+  if (isSessionRegistered_locked(sessionID)) {
     return nullptr;
   }
   s_registered[sessionID] = pSession;
@@ -1409,17 +1421,17 @@ Session *Session::registerSession(const SessionID &sessionID) {
 }
 
 void Session::unregisterSession(const SessionID &sessionID) {
-  Locker locker(s_mutex);
+  std::unique_lock lock(s_mutex);
   s_registered.erase(sessionID);
 }
 
 size_t Session::numSessions() {
-  Locker locker(s_mutex);
+  std::shared_lock lock(s_mutex);
   return s_sessions.size();
 }
 
 bool Session::addSession(Session &s) {
-  Locker locker(s_mutex);
+  std::unique_lock lock(s_mutex);
   Sessions::iterator it = s_sessions.find(s.m_sessionID);
   if (it == s_sessions.end()) {
     s_sessions[s.m_sessionID] = &s;
@@ -1431,7 +1443,7 @@ bool Session::addSession(Session &s) {
 }
 
 void Session::removeSession(Session &s) {
-  Locker locker(s_mutex);
+  std::unique_lock lock(s_mutex);
   s_sessions.erase(s.m_sessionID);
   s_sessionIDs.erase(s.m_sessionID);
   s_registered.erase(s.m_sessionID);
