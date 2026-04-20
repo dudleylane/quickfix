@@ -31,6 +31,7 @@
 #include "MessageSorters.h"
 #include "Utility.h"
 #include <algorithm>
+#include <flat_map>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -122,9 +123,7 @@ protected:
 
 public:
   typedef std::vector<FieldBase, ALLOCATOR<FieldBase>> Fields;
-  typedef std::
-      map<int, std::vector<FieldMap *>, std::less<int>, ALLOCATOR<std::pair<const int, std::vector<FieldMap *>>>>
-          Groups;
+  typedef std::flat_map<int, std::vector<FieldMap *>> Groups;
 
   typedef Fields::iterator iterator;
   typedef Fields::const_iterator const_iterator;
