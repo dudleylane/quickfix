@@ -158,16 +158,6 @@ cmake --build build-asan -j$(nproc)
 build-asan/out/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path spec
 ```
 
-## Building with Autotools
-
-```bash
-./bootstrap
-./configure
-make
-make check
-sudo make install
-```
-
 ## License
 
 This fork is licensed under [AGPL-3.0](LICENSE). The original QuickFIX code is under the [QuickFIX Software License](https://www.quickfixengine.org/LICENSE).
