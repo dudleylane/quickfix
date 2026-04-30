@@ -30,31 +30,35 @@
 #include <iostream>
 #include <string>
 
-namespace FIX {
+namespace FIX
+{
 /// Parses %FIX messages off an input stream.
-class Parser {
+class Parser
+{
 public:
-  static constexpr size_t MAX_MESSAGE_SIZE = 8 * 1024 * 1024;
+    static constexpr size_t MAX_MESSAGE_SIZE = 8 * 1024 * 1024;
 
-  Parser() {}
-  ~Parser() {}
+    Parser() {}
+    ~Parser() {}
 
-  bool extractLength(int &length, std::string::size_type &pos, const std::string &buffer) EXCEPT(MessageParseError);
-  [[nodiscard]] bool readFixMessage(std::string &str) EXCEPT(MessageParseError);
+    bool extractLength(int &length, std::string::size_type &pos, const std::string &buffer) EXCEPT(MessageParseError);
+    [[nodiscard]] bool readFixMessage(std::string &str) EXCEPT(MessageParseError);
 
-  void addToStream(const char *str, size_t len) {
-    if (m_buffer.size() + len > MAX_MESSAGE_SIZE) [[unlikely]]
-      throw MessageParseError("Message size exceeds maximum allowed");
-    m_buffer.append(str, len);
-  }
-  void addToStream(const std::string &str) {
-    if (m_buffer.size() + str.size() > MAX_MESSAGE_SIZE) [[unlikely]]
-      throw MessageParseError("Message size exceeds maximum allowed");
-    m_buffer.append(str);
-  }
+    void addToStream(const char *str, size_t len)
+    {
+        if (m_buffer.size() + len > MAX_MESSAGE_SIZE) [[unlikely]]
+            throw MessageParseError("Message size exceeds maximum allowed");
+        m_buffer.append(str, len);
+    }
+    void addToStream(const std::string &str)
+    {
+        if (m_buffer.size() + str.size() > MAX_MESSAGE_SIZE) [[unlikely]]
+            throw MessageParseError("Message size exceeds maximum allowed");
+        m_buffer.append(str);
+    }
 
 private:
-  std::string m_buffer;
+    std::string m_buffer;
 };
 } // namespace FIX
 #endif // FIX_PARSER_H

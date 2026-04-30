@@ -25,16 +25,17 @@
 
 #include "Group.h"
 
-static_assert(sizeof(FIX::Group) <= FIX::GroupArena::SLOT_SIZE,
-              "GroupArena::SLOT_SIZE must be >= sizeof(Group)");
+static_assert(sizeof(FIX::Group) <= FIX::GroupArena::SLOT_SIZE, "GroupArena::SLOT_SIZE must be >= sizeof(Group)");
 
-namespace FIX {
+namespace FIX
+{
 void Group::addGroup(const Group &group) { FieldMap::addGroup(group.field(), group); }
 
 void Group::replaceGroup(unsigned num, const FIX::Group &group) { FieldMap::replaceGroup(num, group.field(), group); }
 
-Group &Group::getGroup(unsigned num, Group &group) const EXCEPT(FieldNotFound) {
-  return static_cast<Group &>(FieldMap::getGroup(num, group.field(), group));
+Group &Group::getGroup(unsigned num, Group &group) const EXCEPT(FieldNotFound)
+{
+    return static_cast<Group &>(FieldMap::getGroup(num, group.field(), group));
 }
 
 void Group::removeGroup(unsigned num, const Group &group) { FieldMap::removeGroup(num, group.field()); }

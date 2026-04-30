@@ -6,7 +6,8 @@
 
 #include "TestHelper.h"
 
-namespace FIX {
+namespace FIX
+{
 const uint16_t TestSettings::port = 54321;
 FIX::SessionSettings TestSettings::sessionSettings;
 std::string TestSettings::specPath = "";

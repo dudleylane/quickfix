@@ -28,248 +28,292 @@
 #include <deque>
 #include <iterator>
 
-namespace FIX {
+namespace FIX
+{
 
-FieldMap::FieldMap(const message_order &order, int size)
-    : m_order(order) {
-  m_fields.reserve(size);
+FieldMap::FieldMap(const message_order &order, int size) : m_order(order) { m_fields.reserve(size); }
+
+FieldMap::FieldMap(const message_order &order /*= message_order(message_order::normal)*/) : m_order(order)
+{
+    m_fields.reserve(DEFAULT_SIZE);
 }
 
-FieldMap::FieldMap(const message_order &order /*= message_order(message_order::normal)*/)
-    : m_order(order) {
-  m_fields.reserve(DEFAULT_SIZE);
-}
+FieldMap::FieldMap(const int order[]) : m_order(message_order(order)) { m_fields.reserve(DEFAULT_SIZE); }
 
-FieldMap::FieldMap(const int order[])
-    : m_order(message_order(order)) {
-  m_fields.reserve(DEFAULT_SIZE);
-}
-
-FieldMap::FieldMap(const FieldMap &copy)
-    : m_fields(copy.m_fields), m_order(copy.m_order) {
-  for (auto const &tagWithGroups : copy.m_groups) {
-    for (auto const &group : tagWithGroups.second) {
-      m_groups[tagWithGroups.first].push_back(group->cloneInto(getArena()));
+FieldMap::FieldMap(const FieldMap &copy) : m_fields(copy.m_fields), m_order(copy.m_order)
+{
+    for (auto const &tagWithGroups : copy.m_groups)
+    {
+        for (auto const &group : tagWithGroups.second)
+        {
+            m_groups[tagWithGroups.first].push_back(group->cloneInto(getArena()));
+        }
     }
-  }
 }
 
 FieldMap::FieldMap(FieldMap &&rhs)
-    : m_fields(std::move(rhs.m_fields)),
-      m_groups(std::move(rhs.m_groups)),
-      m_order(std::move(rhs.m_order)),
-      m_arena(std::move(rhs.m_arena)) {}
+    : m_fields(std::move(rhs.m_fields)), m_groups(std::move(rhs.m_groups)), m_order(std::move(rhs.m_order)),
+      m_arena(std::move(rhs.m_arena))
+{
+}
 
 FieldMap::~FieldMap() { clear(); }
 
-FieldMap &FieldMap::operator=(const FieldMap &rhs) {
-  FieldMap tmp(rhs);
-  swap(tmp);
-  return *this;
+FieldMap &FieldMap::operator=(const FieldMap &rhs)
+{
+    FieldMap tmp(rhs);
+    swap(tmp);
+    return *this;
 }
 
-FieldMap &FieldMap::operator=(FieldMap &&rhs) {
-  m_fields = std::move(rhs.m_fields);
-  m_groups = std::move(rhs.m_groups);
-  m_order = std::move(rhs.m_order);
-  m_arena = std::move(rhs.m_arena);
-  return *this;
+FieldMap &FieldMap::operator=(FieldMap &&rhs)
+{
+    m_fields = std::move(rhs.m_fields);
+    m_groups = std::move(rhs.m_groups);
+    m_order = std::move(rhs.m_order);
+    m_arena = std::move(rhs.m_arena);
+    return *this;
 }
 
-void FieldMap::addGroup(int field, const FieldMap &group, bool setCount) {
-  FieldMap *pGroup = group.cloneInto(getArena());
-  addGroupPtr(field, pGroup, setCount);
+void FieldMap::addGroup(int field, const FieldMap &group, bool setCount)
+{
+    FieldMap *pGroup = group.cloneInto(getArena());
+    addGroupPtr(field, pGroup, setCount);
 }
 
-void FieldMap::addGroupPtr(int tag, FieldMap *group, bool setCount) {
-  if (group == 0) {
-    return;
-  }
+void FieldMap::addGroupPtr(int tag, FieldMap *group, bool setCount)
+{
+    if (group == 0)
+    {
+        return;
+    }
 
-  std::vector<FieldMap *> &groups = m_groups[tag];
-  groups.push_back(group);
+    std::vector<FieldMap *> &groups = m_groups[tag];
+    groups.push_back(group);
 
-  if (setCount) {
-    setField(IntField(tag, (int)groups.size()));
-  }
+    if (setCount)
+    {
+        setField(IntField(tag, (int)groups.size()));
+    }
 }
 
-void FieldMap::replaceGroup(int num, int tag, const FieldMap &group) {
-  Groups::const_iterator tagWithGroups = m_groups.find(tag);
-  if (tagWithGroups == m_groups.end()) {
-    return;
-  }
-  if (num <= 0) {
-    return;
-  }
-  if (tagWithGroups->second.size() < static_cast<unsigned>(num)) {
-    return;
-  }
-  *(*(tagWithGroups->second.begin() + (num - 1))) = group;
+void FieldMap::replaceGroup(int num, int tag, const FieldMap &group)
+{
+    Groups::const_iterator tagWithGroups = m_groups.find(tag);
+    if (tagWithGroups == m_groups.end())
+    {
+        return;
+    }
+    if (num <= 0)
+    {
+        return;
+    }
+    if (tagWithGroups->second.size() < static_cast<unsigned>(num))
+    {
+        return;
+    }
+    *(*(tagWithGroups->second.begin() + (num - 1))) = group;
 }
 
-void FieldMap::removeGroup(int num, int tag) {
-  Groups::iterator tagWithGroups = m_groups.find(tag);
-  if (tagWithGroups == m_groups.end()) {
-    return;
-  }
-  if (num <= 0) {
-    return;
-  }
-  std::vector<FieldMap *> &groups = tagWithGroups->second;
-  if (groups.size() < static_cast<unsigned>(num)) {
-    return;
-  }
+void FieldMap::removeGroup(int num, int tag)
+{
+    Groups::iterator tagWithGroups = m_groups.find(tag);
+    if (tagWithGroups == m_groups.end())
+    {
+        return;
+    }
+    if (num <= 0)
+    {
+        return;
+    }
+    std::vector<FieldMap *> &groups = tagWithGroups->second;
+    if (groups.size() < static_cast<unsigned>(num))
+    {
+        return;
+    }
 
-  std::vector<FieldMap *>::iterator group = groups.begin();
-  std::advance(group, (num - 1));
+    std::vector<FieldMap *>::iterator group = groups.begin();
+    std::advance(group, (num - 1));
 
-  (*group)->~FieldMap();
-  if (m_arena)
-    m_arena->deallocate(*group);
-  else
-    ::operator delete(*group);
-  groups.erase(group);
-
-  if (groups.size() == 0) {
-    m_groups.erase(tagWithGroups);
-    removeField(tag);
-  } else {
-    IntField groupCount(tag, (int)groups.size());
-    setField(groupCount);
-  }
-}
-
-void FieldMap::removeGroup(int tag) {
-  Groups::iterator tagWithGroups = m_groups.find(tag);
-  if (tagWithGroups == m_groups.end()) {
-    return;
-  }
-
-  std::vector<FieldMap *> toDelete;
-  toDelete.swap(tagWithGroups->second);
-
-  m_groups.erase(tagWithGroups);
-
-  std::for_each(toDelete.begin(), toDelete.end(), [this](FieldMap *group) {
-    group->~FieldMap();
+    (*group)->~FieldMap();
     if (m_arena)
-      m_arena->deallocate(group);
+        m_arena->deallocate(*group);
     else
-      ::operator delete(group);
-  });
+        ::operator delete(*group);
+    groups.erase(group);
 
-  removeField(tag);
+    if (groups.size() == 0)
+    {
+        m_groups.erase(tagWithGroups);
+        removeField(tag);
+    }
+    else
+    {
+        IntField groupCount(tag, (int)groups.size());
+        setField(groupCount);
+    }
 }
 
-void FieldMap::removeField(int tag) {
-  Fields::iterator field = findTag(tag);
-  if (field != m_fields.end()) {
-    m_fields.erase(field);
-    removeGroup(tag);
-  }
+void FieldMap::removeGroup(int tag)
+{
+    Groups::iterator tagWithGroups = m_groups.find(tag);
+    if (tagWithGroups == m_groups.end())
+    {
+        return;
+    }
+
+    std::vector<FieldMap *> toDelete;
+    toDelete.swap(tagWithGroups->second);
+
+    m_groups.erase(tagWithGroups);
+
+    std::for_each(toDelete.begin(), toDelete.end(),
+                  [this](FieldMap *group)
+                  {
+                      group->~FieldMap();
+                      if (m_arena)
+                          m_arena->deallocate(group);
+                      else
+                          ::operator delete(group);
+                  });
+
+    removeField(tag);
+}
+
+void FieldMap::removeField(int tag)
+{
+    Fields::iterator field = findTag(tag);
+    if (field != m_fields.end())
+    {
+        m_fields.erase(field);
+        removeGroup(tag);
+    }
 }
 
 bool FieldMap::hasGroup(int num, int tag) const { return (int)groupCount(tag) >= num; }
 
 bool FieldMap::hasGroup(int tag) const { return m_groups.find(tag) != m_groups.end(); }
 
-size_t FieldMap::groupCount(int tag) const {
-  Groups::const_iterator tagWithGroups = m_groups.find(tag);
-  return tagWithGroups == m_groups.end() ? 0 : tagWithGroups->second.size();
+size_t FieldMap::groupCount(int tag) const
+{
+    Groups::const_iterator tagWithGroups = m_groups.find(tag);
+    return tagWithGroups == m_groups.end() ? 0 : tagWithGroups->second.size();
 }
 
-void FieldMap::swap(FieldMap &rhs) noexcept {
-  m_fields.swap(rhs.m_fields);
-  m_groups.swap(rhs.m_groups);
-  std::swap(m_order, rhs.m_order);
-  m_arena.swap(rhs.m_arena);
+void FieldMap::swap(FieldMap &rhs) noexcept
+{
+    m_fields.swap(rhs.m_fields);
+    m_groups.swap(rhs.m_groups);
+    std::swap(m_order, rhs.m_order);
+    m_arena.swap(rhs.m_arena);
 }
 
-void FieldMap::clear() {
-  m_fields.clear();
+void FieldMap::clear()
+{
+    m_fields.clear();
 
-  for (auto const &tagWithGroups : m_groups) {
-    for (auto const &group : tagWithGroups.second) {
-      group->~FieldMap();
-      if (m_arena)
-        m_arena->deallocate(group);
-      else
-        ::operator delete(group);
+    for (auto const &tagWithGroups : m_groups)
+    {
+        for (auto const &group : tagWithGroups.second)
+        {
+            group->~FieldMap();
+            if (m_arena)
+                m_arena->deallocate(group);
+            else
+                ::operator delete(group);
+        }
     }
-  }
 
-  m_groups.clear();
-  if (m_arena) m_arena->reset();
+    m_groups.clear();
+    if (m_arena)
+        m_arena->reset();
 }
 
 bool FieldMap::isEmpty() { return m_fields.empty(); }
 
-size_t FieldMap::totalFields() const {
-  size_t result = m_fields.size();
+size_t FieldMap::totalFields() const
+{
+    size_t result = m_fields.size();
 
-  for (auto const &tagWithGroups : m_groups) {
-    for (auto const &group : tagWithGroups.second) {
-      result += group->totalFields();
+    for (auto const &tagWithGroups : m_groups)
+    {
+        for (auto const &group : tagWithGroups.second)
+        {
+            result += group->totalFields();
+        }
     }
-  }
-  return result;
+    return result;
 }
 
-std::string &FieldMap::calculateString(std::string &result) const {
-  for (auto const &field : m_fields) {
-    result += field.getFixString();
+std::string &FieldMap::calculateString(std::string &result) const
+{
+    for (auto const &field : m_fields)
+    {
+        result += field.getFixString();
 
-    // add groups if they exist
-    if (!m_groups.size()) {
-      continue;
-    }
+        // add groups if they exist
+        if (!m_groups.size())
+        {
+            continue;
+        }
 
-    Groups::const_iterator tagWithGroups = m_groups.find(field.getTag());
-    if (tagWithGroups == m_groups.end()) {
-      continue;
-    }
+        Groups::const_iterator tagWithGroups = m_groups.find(field.getTag());
+        if (tagWithGroups == m_groups.end())
+        {
+            continue;
+        }
 
-    for (auto const &group : tagWithGroups->second) {
-      group->calculateString(result);
+        for (auto const &group : tagWithGroups->second)
+        {
+            group->calculateString(result);
+        }
     }
-  }
-  return result;
+    return result;
 }
 
-int FieldMap::calculateLength(int beginStringField, int bodyLengthField, int checkSumField) const {
-  int result = 0;
+int FieldMap::calculateLength(int beginStringField, int bodyLengthField, int checkSumField) const
+{
+    int result = 0;
 
-  for (auto const &field : m_fields) {
-    const int tag = field.getTag();
-    if (tag != beginStringField && tag != bodyLengthField && tag != checkSumField) {
-      result += field.getLength();
+    for (auto const &field : m_fields)
+    {
+        const int tag = field.getTag();
+        if (tag != beginStringField && tag != bodyLengthField && tag != checkSumField)
+        {
+            result += field.getLength();
+        }
     }
-  }
 
-  for (auto const &tagWithGroups : m_groups) {
-    for (auto const &group : tagWithGroups.second) {
-      result += group->calculateLength();
+    for (auto const &tagWithGroups : m_groups)
+    {
+        for (auto const &group : tagWithGroups.second)
+        {
+            result += group->calculateLength();
+        }
     }
-  }
-  return result;
+    return result;
 }
 
-int FieldMap::calculateTotal(int checkSumField) const {
-  int result = 0;
+int FieldMap::calculateTotal(int checkSumField) const
+{
+    int result = 0;
 
-  for (auto const &field : m_fields) {
-    if (field.getTag() != checkSumField) {
-      result += field.getTotal();
+    for (auto const &field : m_fields)
+    {
+        if (field.getTag() != checkSumField)
+        {
+            result += field.getTotal();
+        }
     }
-  }
 
-  for (auto const &tagWithGroups : m_groups) {
-    for (auto const &group : tagWithGroups.second) {
-      result += group->calculateTotal();
+    for (auto const &tagWithGroups : m_groups)
+    {
+        for (auto const &group : tagWithGroups.second)
+        {
+            result += group->calculateTotal();
+        }
     }
-  }
-  return result;
+    return result;
 }
 
 } // namespace FIX

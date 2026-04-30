@@ -27,42 +27,46 @@
 #include <memory>
 #include <string>
 
-namespace FIX {
+namespace FIX
+{
 /// Interface that represents attribute from underlying XML parser.
-class DOMAttributes {
+class DOMAttributes
+{
 public:
-  typedef std::map<std::string, std::string> map;
+    typedef std::map<std::string, std::string> map;
 
-  virtual ~DOMAttributes() {}
+    virtual ~DOMAttributes() {}
 
-  virtual bool get(const std::string &, std::string &) = 0;
-  virtual map toMap() = 0;
+    virtual bool get(const std::string &, std::string &) = 0;
+    virtual map toMap() = 0;
 };
 typedef std::unique_ptr<DOMAttributes> DOMAttributesPtr;
 
 /// Interface that represents node from underlying XML parser.
-class DOMNode {
+class DOMNode
+{
 public:
-  virtual ~DOMNode() {}
+    virtual ~DOMNode() {}
 
-  virtual std::unique_ptr<DOMNode> getFirstChildNode() = 0;
-  virtual std::unique_ptr<DOMNode> getNextSiblingNode() = 0;
-  virtual std::unique_ptr<DOMAttributes> getAttributes() = 0;
-  virtual std::string getName() = 0;
-  virtual std::string getText() = 0;
+    virtual std::unique_ptr<DOMNode> getFirstChildNode() = 0;
+    virtual std::unique_ptr<DOMNode> getNextSiblingNode() = 0;
+    virtual std::unique_ptr<DOMAttributes> getAttributes() = 0;
+    virtual std::string getName() = 0;
+    virtual std::string getText() = 0;
 };
 typedef std::unique_ptr<DOMNode> DOMNodePtr;
 
 /// Interface that represents document of underlying XML parser.
-class DOMDocument {
+class DOMDocument
+{
 public:
-  virtual ~DOMDocument() {}
+    virtual ~DOMDocument() {}
 
-  virtual bool load(std::istream &) = 0;
-  virtual bool load(const std::string &) = 0;
-  virtual bool xml(std::ostream &) = 0;
+    virtual bool load(std::istream &) = 0;
+    virtual bool load(const std::string &) = 0;
+    virtual bool xml(std::ostream &) = 0;
 
-  virtual std::unique_ptr<DOMNode> getNode(const std::string &) = 0;
+    virtual std::unique_ptr<DOMNode> getNode(const std::string &) = 0;
 };
 typedef std::unique_ptr<DOMDocument> DOMDocumentPtr;
 } // namespace FIX

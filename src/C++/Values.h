@@ -25,7 +25,8 @@
 #include "FixValues.h"
 #include <string>
 
-namespace FIX {
+namespace FIX
+{
 const char BeginString_FIXT11[] = "FIXT.1.1";
 const char BeginString_FIX50[] = "FIX.5.0";
 const char BeginString_FIX44[] = "FIX.4.4";
@@ -48,8 +49,8 @@ const char SessionRejectReason_SENDINGTIME_ACCURACY_PROBLEM_TEXT[] = "SendingTim
 const char SessionRejectReason_INVALID_MSGTYPE_TEXT[] = "Invalid MsgType";
 const char SessionRejectReason_TAG_APPEARS_MORE_THAN_ONCE_TEXT[] = "Tag appears more than once";
 const char SessionRejectReason_TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_TEXT[] = "Tag specified out of required order";
-const char SessionRejectReason_INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP_TEXT[]
-    = "Incorrect NumInGroup count for repeating group";
+const char SessionRejectReason_INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP_TEXT[] =
+    "Incorrect NumInGroup count for repeating group";
 const char BusinessRejectReason_OTHER_TEXT[] = "Other";
 const char BusinessRejectReason_UNKNOWN_ID_TEXT[] = "Unknown ID";
 const char BusinessRejectReason_UNKNOWN_SECURITY_TEXT[] = "Unknown Security";
@@ -57,7 +58,7 @@ const char BusinessRejectReason_UNSUPPORTED_MESSAGE_TYPE_TEXT[] = "Unsupported M
 const char BusinessRejectReason_APPLICATION_NOT_AVAILABLE_TEXT[] = "Application Not Available";
 const char BusinessRejectReason_CONDITIONALLY_REQUIRED_FIELD_MISSING_TEXT[] = "Conditionally Required Field Missing";
 const char BusinessRejectReason_NOT_AUTHORIZED_TEXT[] = "Not Authorized";
-const char BusinessRejectReason_DELIVER_TO_FIRM_NOT_AVAILABLE_AT_THIS_TIME_TEXT[]
-    = "Deliver to firm not available at this time";
+const char BusinessRejectReason_DELIVER_TO_FIRM_NOT_AVAILABLE_AT_THIS_TIME_TEXT[] =
+    "Deliver to firm not available at this time";
 } // namespace FIX
 #endif // FIX_VALUES_BASE_H

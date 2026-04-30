@@ -5,7 +5,8 @@
 
 #undef Yield
 
-namespace FIX {
+namespace FIX
+{
 DEFINE_STRING(BeginString);
 DEFINE_STRING(SenderCompID);
 DEFINE_STRING(TargetCompID);

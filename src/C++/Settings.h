@@ -32,22 +32,23 @@
 #include <string>
 #include <vector>
 
-namespace FIX {
+namespace FIX
+{
 /// Internal representation of QuickFIX configuration settings.
-class Settings {
+class Settings
+{
 public:
-  Settings(bool resolveEnvVars = false)
-      : m_resolveEnvVars(resolveEnvVars) {}
+    Settings(bool resolveEnvVars = false) : m_resolveEnvVars(resolveEnvVars) {}
 
-  typedef std::vector<Dictionary> Sections;
+    typedef std::vector<Dictionary> Sections;
 
-  Sections get(const std::string &name) const;
+    Sections get(const std::string &name) const;
 
-  friend std::istream &operator>>(std::istream &, Settings &);
+    friend std::istream &operator>>(std::istream &, Settings &);
 
 private:
-  Sections m_sections;
-  bool m_resolveEnvVars;
+    Sections m_sections;
+    bool m_resolveEnvVars;
 };
 
 std::istream &operator>>(std::istream &, Settings &);

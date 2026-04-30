@@ -29,144 +29,182 @@
 #include <cctype>
 #include <set>
 
-namespace FIX {
-std::string Dictionary::getString(const std::string &key, bool capitalize) const
-    EXCEPT(ConfigError, FieldConvertError) {
-  Data::const_iterator i = m_data.find(string_toUpper(key));
-  if (i == m_data.end()) {
-    throw ConfigError(key + " not defined");
-  }
+namespace FIX
+{
+std::string Dictionary::getString(const std::string &key, bool capitalize) const EXCEPT(ConfigError, FieldConvertError)
+{
+    Data::const_iterator i = m_data.find(string_toUpper(key));
+    if (i == m_data.end())
+    {
+        throw ConfigError(key + " not defined");
+    }
 
-  std::string result = i->second;
-  if (capitalize) {
-    std::transform(result.begin(), result.end(), result.begin(), toupper);
-  }
+    std::string result = i->second;
+    if (capitalize)
+    {
+        std::transform(result.begin(), result.end(), result.begin(), toupper);
+    }
 
-  return result;
+    return result;
 }
 
-int Dictionary::getInt(const std::string &key) const EXCEPT(ConfigError, FieldConvertError) {
-  try {
-    return IntConvertor::convert(getString(key));
-  } catch (FieldConvertError &) {
-    throw ConfigError("Illegal value " + getString(key) + " for " + key);
-  }
+int Dictionary::getInt(const std::string &key) const EXCEPT(ConfigError, FieldConvertError)
+{
+    try
+    {
+        return IntConvertor::convert(getString(key));
+    }
+    catch (FieldConvertError &)
+    {
+        throw ConfigError("Illegal value " + getString(key) + " for " + key);
+    }
 }
 
-double Dictionary::getDouble(const std::string &key) const EXCEPT(ConfigError, FieldConvertError) {
-  try {
-    return DoubleConvertor::convert(getString(key));
-  } catch (FieldConvertError &) {
-    throw ConfigError("Illegal value " + getString(key) + " for " + key);
-  }
+double Dictionary::getDouble(const std::string &key) const EXCEPT(ConfigError, FieldConvertError)
+{
+    try
+    {
+        return DoubleConvertor::convert(getString(key));
+    }
+    catch (FieldConvertError &)
+    {
+        throw ConfigError("Illegal value " + getString(key) + " for " + key);
+    }
 }
 
-bool Dictionary::getBool(const std::string &key) const EXCEPT(ConfigError, FieldConvertError) {
-  try {
-    return BoolConvertor::convert(getString(key));
-  } catch (FieldConvertError &) {
-    throw ConfigError("Illegal value " + getString(key) + " for " + key);
-  }
+bool Dictionary::getBool(const std::string &key) const EXCEPT(ConfigError, FieldConvertError)
+{
+    try
+    {
+        return BoolConvertor::convert(getString(key));
+    }
+    catch (FieldConvertError &)
+    {
+        throw ConfigError("Illegal value " + getString(key) + " for " + key);
+    }
 }
 
-int Dictionary::getDay(const std::string &key) const EXCEPT(ConfigError, FieldConvertError) {
-  try {
-    std::string value = getString(key);
-    if (value.size() < 2) {
-      throw FieldConvertError();
+int Dictionary::getDay(const std::string &key) const EXCEPT(ConfigError, FieldConvertError)
+{
+    try
+    {
+        std::string value = getString(key);
+        if (value.size() < 2)
+        {
+            throw FieldConvertError();
+        }
+        std::string abbr = value.substr(0, 2);
+        std::transform(abbr.begin(), abbr.end(), abbr.begin(), tolower);
+        if (abbr == "su")
+        {
+            return 1;
+        }
+        if (abbr == "mo")
+        {
+            return 2;
+        }
+        if (abbr == "tu")
+        {
+            return 3;
+        }
+        if (abbr == "we")
+        {
+            return 4;
+        }
+        if (abbr == "th")
+        {
+            return 5;
+        }
+        if (abbr == "fr")
+        {
+            return 6;
+        }
+        if (abbr == "sa")
+        {
+            return 7;
+        }
     }
-    std::string abbr = value.substr(0, 2);
-    std::transform(abbr.begin(), abbr.end(), abbr.begin(), tolower);
-    if (abbr == "su") {
-      return 1;
+    catch (FieldConvertError &)
+    {
+        throw ConfigError("Illegal value " + getString(key) + " for " + key);
     }
-    if (abbr == "mo") {
-      return 2;
-    }
-    if (abbr == "tu") {
-      return 3;
-    }
-    if (abbr == "we") {
-      return 4;
-    }
-    if (abbr == "th") {
-      return 5;
-    }
-    if (abbr == "fr") {
-      return 6;
-    }
-    if (abbr == "sa") {
-      return 7;
-    }
-  } catch (FieldConvertError &) {
-    throw ConfigError("Illegal value " + getString(key) + " for " + key);
-  }
-  return -1;
+    return -1;
 }
 
-void Dictionary::setString(const std::string &key, const std::string &value) {
-  const std::string upperKey = string_strip(string_toUpper(key));
-  const std::string strippedVal = string_strip(value);
+void Dictionary::setString(const std::string &key, const std::string &value)
+{
+    const std::string upperKey = string_strip(string_toUpper(key));
+    const std::string strippedVal = string_strip(value);
 
-  static const std::set<std::string> numericKeys
-      = {"HEARTBTINT", "MAXLATENCY", "LOGONTIMEOUT", "LOGOUTTIMEOUT", "RECONNECTINTERVAL", "SOCKETCONNECTPORT"};
+    static const std::set<std::string> numericKeys = {"HEARTBTINT",    "MAXLATENCY",        "LOGONTIMEOUT",
+                                                      "LOGOUTTIMEOUT", "RECONNECTINTERVAL", "SOCKETCONNECTPORT"};
 
-  // Validate numeric settings
-  if (numericKeys.count(upperKey)) {
-    if (!std::all_of(strippedVal.begin(), strippedVal.end(), [](unsigned char c) { return std::isdigit(c); })) {
-      throw ConfigError("Expected numeric value for: " + upperKey);
+    // Validate numeric settings
+    if (numericKeys.count(upperKey))
+    {
+        if (!std::all_of(strippedVal.begin(), strippedVal.end(), [](unsigned char c) { return std::isdigit(c); }))
+        {
+            throw ConfigError("Expected numeric value for: " + upperKey);
+        }
     }
-  }
 
-  m_data[upperKey] = strippedVal;
+    m_data[upperKey] = strippedVal;
 }
 
-void Dictionary::setInt(const std::string &key, int value) {
-  m_data[string_strip(string_toUpper(key))] = IntConvertor::convert(value);
+void Dictionary::setInt(const std::string &key, int value)
+{
+    m_data[string_strip(string_toUpper(key))] = IntConvertor::convert(value);
 }
 
-void Dictionary::setDouble(const std::string &key, double value) {
-  m_data[string_strip(string_toUpper(key))] = DoubleConvertor::convert(value);
+void Dictionary::setDouble(const std::string &key, double value)
+{
+    m_data[string_strip(string_toUpper(key))] = DoubleConvertor::convert(value);
 }
 
-void Dictionary::setBool(const std::string &key, bool value) {
-  m_data[string_strip(string_toUpper(key))] = BoolConvertor::convert(value);
+void Dictionary::setBool(const std::string &key, bool value)
+{
+    m_data[string_strip(string_toUpper(key))] = BoolConvertor::convert(value);
 }
 
-void Dictionary::setDay(const std::string &key, int value) {
-  switch (value) {
-  case 1:
-    setString(key, "SU");
-    break;
-  case 2:
-    setString(key, "MO");
-    break;
-  case 3:
-    setString(key, "TU");
-    break;
-  case 4:
-    setString(key, "WE");
-    break;
-  case 5:
-    setString(key, "TH");
-    break;
-  case 6:
-    setString(key, "FR");
-    break;
-  case 7:
-    setString(key, "SA");
-    break;
-  }
+void Dictionary::setDay(const std::string &key, int value)
+{
+    switch (value)
+    {
+    case 1:
+        setString(key, "SU");
+        break;
+    case 2:
+        setString(key, "MO");
+        break;
+    case 3:
+        setString(key, "TU");
+        break;
+    case 4:
+        setString(key, "WE");
+        break;
+    case 5:
+        setString(key, "TH");
+        break;
+    case 6:
+        setString(key, "FR");
+        break;
+    case 7:
+        setString(key, "SA");
+        break;
+    }
 }
 
 bool Dictionary::has(const std::string &key) const { return m_data.find(string_toUpper(key)) != m_data.end(); }
 
-void Dictionary::merge(const Dictionary &toMerge) {
-  Data::const_iterator i = toMerge.m_data.begin();
-  for (; i != toMerge.m_data.end(); ++i) {
-    if (m_data.find(i->first) == m_data.end()) {
-      m_data[i->first] = i->second;
+void Dictionary::merge(const Dictionary &toMerge)
+{
+    Data::const_iterator i = toMerge.m_data.begin();
+    for (; i != toMerge.m_data.end(); ++i)
+    {
+        if (m_data.find(i->first) == m_data.end())
+        {
+            m_data[i->first] = i->second;
+        }
     }
-  }
 }
 } // namespace FIX

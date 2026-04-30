@@ -34,61 +34,68 @@
 
 using namespace FIX;
 
-struct postgreSQLStoreFixture {
-  postgreSQLStoreFixture(bool reset)
-      : factory(TestSettings::sessionSettings.get()) {
-    SessionID sessionID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST"));
+struct postgreSQLStoreFixture
+{
+    postgreSQLStoreFixture(bool reset) : factory(TestSettings::sessionSettings.get())
+    {
+        SessionID sessionID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST"));
 
-    try {
-      object = factory.create(UtcTimeStamp::now(), sessionID);
-    } catch (std::exception &e) {
-      std::cerr << e.what() << std::endl;
-      throw;
+        try
+        {
+            object = factory.create(UtcTimeStamp::now(), sessionID);
+        }
+        catch (std::exception &e)
+        {
+            std::cerr << e.what() << std::endl;
+            throw;
+        }
+
+        if (reset)
+        {
+            object->reset(UtcTimeStamp::now());
+        }
+
+        this->resetAfter = reset;
     }
 
-    if (reset) {
-      object->reset(UtcTimeStamp::now());
+    ~postgreSQLStoreFixture() { factory.destroy(object); }
+
+    PostgreSQLStoreFactory factory;
+    MessageStore *object;
+    bool resetAfter;
+};
+
+struct noResetPostgreSQLStoreFixture : postgreSQLStoreFixture
+{
+    noResetPostgreSQLStoreFixture() : postgreSQLStoreFixture(false) {}
+};
+
+struct resetPostgreSQLStoreFixture : postgreSQLStoreFixture
+{
+    resetPostgreSQLStoreFixture() : postgreSQLStoreFixture(true) {}
+};
+
+TEST_CASE_METHOD(resetPostgreSQLStoreFixture,
+                 "resetPostgreSQLStoreTests"){SECTION("setGet"){CHECK_MESSAGE_STORE_SET_GET}
+
+                                              SECTION("setGetUint64"){CHECK_MESSAGE_STORE_SET_GET_UINT64}
+
+                                              SECTION("setGetWithQuote"){CHECK_MESSAGE_STORE_SET_GET_WITH_QUOTE}
+
+                                              SECTION("other"){CHECK_MESSAGE_STORE_OTHER}
+
+                                              SECTION("otherUint64"){CHECK_MESSAGE_STORE_OTHER_UINT64}
+
+                                              SET_SEQUENCE_NUMBERS}
+
+TEST_CASE_METHOD(noResetPostgreSQLStoreFixture, "noResetPostgreSQLStoreTests")
+{
+    SECTION("reload"){CHECK_MESSAGE_STORE_RELOAD}
+
+    SECTION("refresh")
+    {
+        CHECK_MESSAGE_STORE_RELOAD
     }
-
-    this->resetAfter = reset;
-  }
-
-  ~postgreSQLStoreFixture() { factory.destroy(object); }
-
-  PostgreSQLStoreFactory factory;
-  MessageStore *object;
-  bool resetAfter;
-};
-
-struct noResetPostgreSQLStoreFixture : postgreSQLStoreFixture {
-  noResetPostgreSQLStoreFixture()
-      : postgreSQLStoreFixture(false) {}
-};
-
-struct resetPostgreSQLStoreFixture : postgreSQLStoreFixture {
-  resetPostgreSQLStoreFixture()
-      : postgreSQLStoreFixture(true) {}
-};
-
-TEST_CASE_METHOD(resetPostgreSQLStoreFixture, "resetPostgreSQLStoreTests"){
-    SECTION("setGet"){CHECK_MESSAGE_STORE_SET_GET}
-
-    SECTION("setGetUint64"){CHECK_MESSAGE_STORE_SET_GET_UINT64}
-
-    SECTION("setGetWithQuote"){CHECK_MESSAGE_STORE_SET_GET_WITH_QUOTE}
-
-    SECTION("other"){CHECK_MESSAGE_STORE_OTHER}
-
-    SECTION("otherUint64"){CHECK_MESSAGE_STORE_OTHER_UINT64}
-
-    SET_SEQUENCE_NUMBERS}
-
-TEST_CASE_METHOD(noResetPostgreSQLStoreFixture, "noResetPostgreSQLStoreTests") {
-  SECTION("reload"){CHECK_MESSAGE_STORE_RELOAD}
-
-  SECTION("refresh") {
-    CHECK_MESSAGE_STORE_RELOAD
-  }
 }
 
 #endif

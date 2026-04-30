@@ -24,80 +24,82 @@
 
 #include "Utility.h"
 
-namespace FIX {
+namespace FIX
+{
 /// Portable implementation of a mutex.
-class Mutex {
+class Mutex
+{
 public:
-  Mutex() {
+    Mutex()
+    {
 #ifdef _MSC_VER
-    InitializeCriticalSection(&m_mutex);
+        InitializeCriticalSection(&m_mutex);
 #else
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&m_mutex, &attr);
-    pthread_mutexattr_destroy(&attr);
+        pthread_mutexattr_t attr;
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(&m_mutex, &attr);
+        pthread_mutexattr_destroy(&attr);
 #endif
-  }
+    }
 
-  ~Mutex() {
+    ~Mutex()
+    {
 #ifdef _MSC_VER
-    DeleteCriticalSection(&m_mutex);
+        DeleteCriticalSection(&m_mutex);
 #else
-    pthread_mutex_destroy(&m_mutex);
+        pthread_mutex_destroy(&m_mutex);
 #endif
-  }
+    }
 
-  void lock() {
+    void lock()
+    {
 #ifdef _MSC_VER
-    EnterCriticalSection(&m_mutex);
+        EnterCriticalSection(&m_mutex);
 #else
-    pthread_mutex_lock(&m_mutex);
+        pthread_mutex_lock(&m_mutex);
 #endif
-  }
+    }
 
-  void unlock() {
+    void unlock()
+    {
 #ifdef _MSC_VER
-    LeaveCriticalSection(&m_mutex);
+        LeaveCriticalSection(&m_mutex);
 #else
-    pthread_mutex_unlock(&m_mutex);
+        pthread_mutex_unlock(&m_mutex);
 #endif
-  }
+    }
 
 private:
 #ifdef _MSC_VER
-  CRITICAL_SECTION m_mutex;
+    CRITICAL_SECTION m_mutex;
 #else
-  pthread_mutex_t m_mutex;
+    pthread_mutex_t m_mutex;
 #endif
 };
 
 /// Locks/Unlocks a mutex using RAII.
-class Locker {
+class Locker
+{
 public:
-  Locker(Mutex &mutex)
-      : m_mutex(mutex) {
-    m_mutex.lock();
-  }
+    Locker(Mutex &mutex) : m_mutex(mutex) { m_mutex.lock(); }
 
-  ~Locker() { m_mutex.unlock(); }
+    ~Locker() { m_mutex.unlock(); }
 
 private:
-  Mutex &m_mutex;
+    Mutex &m_mutex;
 };
 
 /// Does the opposite of the Locker to ensure mutex ends up in a locked state.
-class ReverseLocker {
+class ReverseLocker
+{
 public:
-  ReverseLocker(Mutex &mutex)
-      : m_mutex(mutex) {
-    m_mutex.unlock();
-  }
+    ReverseLocker(Mutex &mutex) : m_mutex(mutex) { m_mutex.unlock(); }
 
-  ~ReverseLocker() { m_mutex.lock(); }
+    ~ReverseLocker() { m_mutex.lock(); }
 
 private:
-  Mutex &m_mutex;
+    Mutex &m_mutex;
 };
 } // namespace FIX
 

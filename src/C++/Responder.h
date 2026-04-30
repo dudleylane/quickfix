@@ -28,13 +28,15 @@
 
 #include <string>
 
-namespace FIX {
+namespace FIX
+{
 /// Interface implements sending on and disconnecting a transport.
-class Responder {
+class Responder
+{
 public:
-  virtual ~Responder() {}
-  virtual bool send(const std::string &) = 0;
-  virtual void disconnect() = 0;
+    virtual ~Responder() {}
+    virtual bool send(const std::string &) = 0;
+    virtual void disconnect() = 0;
 };
 } // namespace FIX
 

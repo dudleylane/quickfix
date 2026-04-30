@@ -3,7 +3,8 @@
 
 #include <string>
 
-namespace FIX {
+namespace FIX
+{
 const char MsgType_Heartbeat[] = "0";
 const char MsgType_TestRequest[] = "1";
 const char MsgType_ResendRequest[] = "2";

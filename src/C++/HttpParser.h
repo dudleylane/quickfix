@@ -30,20 +30,22 @@
 #include <iostream>
 #include <string>
 
-namespace FIX {
+namespace FIX
+{
 /// Parses HTTP messages off an input stream.
-class HttpParser {
+class HttpParser
+{
 public:
-  HttpParser() {}
-  ~HttpParser() {}
+    HttpParser() {}
+    ~HttpParser() {}
 
-  bool readHttpMessage(std::string &str) EXCEPT(MessageParseError);
+    bool readHttpMessage(std::string &str) EXCEPT(MessageParseError);
 
-  void addToStream(const char *str, size_t len) { m_buffer.append(str, len); }
-  void addToStream(const std::string &str) { m_buffer.append(str); }
+    void addToStream(const char *str, size_t len) { m_buffer.append(str, len); }
+    void addToStream(const std::string &str) { m_buffer.append(str); }
 
 private:
-  std::string m_buffer;
+    std::string m_buffer;
 };
 } // namespace FIX
 #endif // FIX_HTTPPARSER_H

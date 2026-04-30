@@ -116,7 +116,8 @@
 #include <set>
 #include <string>
 
-namespace FIX {
+namespace FIX
+{
 #ifdef _MSC_VER
 typedef int socklen_t;
 typedef SSIZE_T ssize_t;
@@ -135,8 +136,9 @@ std::string error_wsaerror();
 
 void string_replace(const std::string &oldValue, const std::string &newValue, std::string &value);
 
-extern "C" {
-char *string_concat(const char *a, ...);
+extern "C"
+{
+    char *string_concat(const char *a, ...);
 }
 
 std::string string_toLower(const std::string &value);
@@ -188,8 +190,9 @@ typedef _beginthreadex_proc_type THREAD_START_ROUTINE;
 typedef unsigned int(_stdcall *THREAD_START_ROUTINE)(void *);
 #define THREAD_PROC unsigned int _stdcall
 #else
-extern "C" {
-typedef void *(THREAD_START_ROUTINE)(void *);
+extern "C"
+{
+    typedef void *(THREAD_START_ROUTINE)(void *);
 }
 #define THREAD_PROC void *
 #endif

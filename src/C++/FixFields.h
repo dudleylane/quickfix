@@ -15,7 +15,8 @@
 #undef ReplaceText
 #endif
 
-namespace FIX {
+namespace FIX
+{
 DEFINE_SEQNUM(BeginSeqNo);
 DEFINE_LENGTH(BodyLength);
 DEFINE_CHECKSUM(CheckSum);

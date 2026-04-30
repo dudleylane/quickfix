@@ -30,46 +30,38 @@
 #include "Utility.h"
 #include <string>
 
-namespace FIX {
+namespace FIX
+{
 /// Connects sockets to remote ports and addresses.
-class SocketConnector {
+class SocketConnector
+{
 public:
-  class Strategy;
+    class Strategy;
 
-  SocketConnector(int timeout = 0);
+    SocketConnector(int timeout = 0);
 
-  socket_handle connect(
-      const std::string &address,
-      int port,
-      bool noDelay,
-      int sendBufSize,
-      int rcvBufSize,
-      const std::string &sourceAddress = "",
-      int sourcePort = 0);
-  socket_handle connect(
-      const std::string &address,
-      int port,
-      bool noDelay,
-      int sendBufSize,
-      int rcvBufSize,
-      Strategy &);
-  void block(Strategy &strategy, bool poll = 0, double timeout = 0.0);
-  SocketMonitor &getMonitor() { return m_monitor; }
+    socket_handle connect(const std::string &address, int port, bool noDelay, int sendBufSize, int rcvBufSize,
+                          const std::string &sourceAddress = "", int sourcePort = 0);
+    socket_handle connect(const std::string &address, int port, bool noDelay, int sendBufSize, int rcvBufSize,
+                          Strategy &);
+    void block(Strategy &strategy, bool poll = 0, double timeout = 0.0);
+    SocketMonitor &getMonitor() { return m_monitor; }
 
 private:
-  SocketMonitor m_monitor;
+    SocketMonitor m_monitor;
 
 public:
-  class Strategy {
-  public:
-    virtual ~Strategy() {}
-    virtual void onConnect(SocketConnector &, socket_handle socket) = 0;
-    virtual void onWrite(SocketConnector &, socket_handle socket) = 0;
-    virtual bool onData(SocketConnector &, socket_handle socket) = 0;
-    virtual void onDisconnect(SocketConnector &, socket_handle socket) = 0;
-    virtual void onError(SocketConnector &) = 0;
-    virtual void onTimeout(SocketConnector &) {};
-  };
+    class Strategy
+    {
+    public:
+        virtual ~Strategy() {}
+        virtual void onConnect(SocketConnector &, socket_handle socket) = 0;
+        virtual void onWrite(SocketConnector &, socket_handle socket) = 0;
+        virtual bool onData(SocketConnector &, socket_handle socket) = 0;
+        virtual void onDisconnect(SocketConnector &, socket_handle socket) = 0;
+        virtual void onError(SocketConnector &) = 0;
+        virtual void onTimeout(SocketConnector &) {};
+    };
 };
 } // namespace FIX
 

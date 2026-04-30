@@ -25,8 +25,10 @@
 #include "FixFieldNumbers.h"
 #include <iostream>
 
-namespace FIX {
-namespace FIELD {
+namespace FIX
+{
+namespace FIELD
+{
 const int FIX40_LastField = PrevClosePx;
 const int FIX41_LastField = PegDifference;
 const int FIX42_LastField = EncodedListStatusText;

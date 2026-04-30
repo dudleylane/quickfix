@@ -32,7 +32,8 @@
 #include <map>
 #include <set>
 
-namespace FIX {
+namespace FIX
+{
 const char BEGINSTRING[] = "BeginString";
 const char SENDERCOMPID[] = "SenderCompID";
 const char TARGETCOMPID[] = "TargetCompID";
@@ -239,40 +240,41 @@ const char SSL_CIPHER_SUITE[] = "SSLCipherSuite";
 const char TLS_CIPHER_SUITES[] = "TLSCipherSuites";
 
 /// Container for setting dictionaries mapped to sessions.
-class SessionSettings {
+class SessionSettings
+{
 public:
-  SessionSettings() { m_resolveEnvVars = false; }
-  SessionSettings(std::istream &stream, bool resolveEnvVars = false) EXCEPT(ConfigError);
-  SessionSettings(const std::string &file, bool resolveEnvVars = false) EXCEPT(ConfigError);
+    SessionSettings() { m_resolveEnvVars = false; }
+    SessionSettings(std::istream &stream, bool resolveEnvVars = false) EXCEPT(ConfigError);
+    SessionSettings(const std::string &file, bool resolveEnvVars = false) EXCEPT(ConfigError);
 
-  /// Check if session setings are present
-  const bool has(const SessionID &) const;
+    /// Check if session setings are present
+    const bool has(const SessionID &) const;
 
-  /// Get a dictionary for a session.
-  const Dictionary &get(const SessionID &) const EXCEPT(ConfigError);
-  /// Set a dictionary for a session
-  void set(const SessionID &, Dictionary) EXCEPT(ConfigError);
+    /// Get a dictionary for a session.
+    const Dictionary &get(const SessionID &) const EXCEPT(ConfigError);
+    /// Set a dictionary for a session
+    void set(const SessionID &, Dictionary) EXCEPT(ConfigError);
 
-  /// Get global default settings
-  const Dictionary &get() const { return m_defaults; }
-  /// Set global default settings
-  void set(const Dictionary &defaults) EXCEPT(ConfigError);
+    /// Get global default settings
+    const Dictionary &get() const { return m_defaults; }
+    /// Set global default settings
+    void set(const Dictionary &defaults) EXCEPT(ConfigError);
 
-  /// Number of session settings
-  size_t size() const { return m_settings.size(); }
+    /// Number of session settings
+    size_t size() const { return m_settings.size(); }
 
-  typedef std::map<SessionID, Dictionary> Dictionaries;
-  std::set<SessionID> getSessions() const;
+    typedef std::map<SessionID, Dictionary> Dictionaries;
+    std::set<SessionID> getSessions() const;
 
 private:
-  void validate(const Dictionary &) const EXCEPT(ConfigError);
+    void validate(const Dictionary &) const EXCEPT(ConfigError);
 
-  Dictionaries m_settings;
-  Dictionary m_defaults;
-  bool m_resolveEnvVars; // while reading, replace $var, $(var) and ${var} by environment variable var
+    Dictionaries m_settings;
+    Dictionary m_defaults;
+    bool m_resolveEnvVars; // while reading, replace $var, $(var) and ${var} by environment variable var
 
-  friend std::istream &operator>>(std::istream &, SessionSettings &) EXCEPT(ConfigError);
-  friend std::ostream &operator<<(std::ostream &, const SessionSettings &);
+    friend std::istream &operator>>(std::istream &, SessionSettings &) EXCEPT(ConfigError);
+    friend std::ostream &operator<<(std::ostream &, const SessionSettings &);
 };
 /*! @} */
 

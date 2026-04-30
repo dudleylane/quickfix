@@ -26,7 +26,8 @@
 #include "Mutex.h"
 #include "SessionID.h"
 
-namespace FIX {
+namespace FIX
+{
 /**
  * This interface must be implemented to define what your %FIX application
  * does.
@@ -39,25 +40,26 @@ namespace FIX {
  * The various MessageCracker classes can be used to parse the generic message
  * structure into specific %FIX messages.
  */
-class Application {
+class Application
+{
 public:
-  virtual ~Application() {};
-  /// Notification of a session begin created
-  virtual void onCreate(const SessionID &) = 0;
-  /// Notification of a session successfully logging on
-  virtual void onLogon(const SessionID &) = 0;
-  /// Notification of a session logging off or disconnecting
-  virtual void onLogout(const SessionID &) = 0;
-  /// Notification of admin message being sent to target
-  virtual void toAdmin(Message &, const SessionID &) = 0;
-  /// Notification of app message being sent to target
-  virtual void toApp(Message &, const SessionID &) EXCEPT(DoNotSend) = 0;
-  /// Notification of admin message being received from target
-  virtual void fromAdmin(const Message &, const SessionID &)
-      EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon) = 0;
-  /// Notification of app message being received from target
-  virtual void fromApp(const Message &, const SessionID &)
-      EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType) = 0;
+    virtual ~Application() {};
+    /// Notification of a session begin created
+    virtual void onCreate(const SessionID &) = 0;
+    /// Notification of a session successfully logging on
+    virtual void onLogon(const SessionID &) = 0;
+    /// Notification of a session logging off or disconnecting
+    virtual void onLogout(const SessionID &) = 0;
+    /// Notification of admin message being sent to target
+    virtual void toAdmin(Message &, const SessionID &) = 0;
+    /// Notification of app message being sent to target
+    virtual void toApp(Message &, const SessionID &) EXCEPT(DoNotSend) = 0;
+    /// Notification of admin message being received from target
+    virtual void fromAdmin(const Message &, const SessionID &)
+        EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon) = 0;
+    /// Notification of app message being received from target
+    virtual void fromApp(const Message &, const SessionID &)
+        EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType) = 0;
 };
 
 /**
@@ -70,46 +72,53 @@ public:
  * in that you may be synchronizing more than you need to. There is also a very
  * minor performance penalty due to the extra virtual table lookup.
  */
-class SynchronizedApplication : public Application {
+class SynchronizedApplication : public Application
+{
 public:
-  SynchronizedApplication(Application &app)
-      : m_app(app) {}
+    SynchronizedApplication(Application &app) : m_app(app) {}
 
-  void onCreate(const SessionID &sessionID) {
-    Locker l(m_mutex);
-    app().onCreate(sessionID);
-  }
-  void onLogon(const SessionID &sessionID) {
-    Locker l(m_mutex);
-    app().onLogon(sessionID);
-  }
-  void onLogout(const SessionID &sessionID) {
-    Locker l(m_mutex);
-    app().onLogout(sessionID);
-  }
-  void toAdmin(Message &message, const SessionID &sessionID) {
-    Locker l(m_mutex);
-    app().toAdmin(message, sessionID);
-  }
-  void toApp(Message &message, const SessionID &sessionID) EXCEPT(DoNotSend) {
-    Locker l(m_mutex);
-    app().toApp(message, sessionID);
-  }
-  void fromAdmin(const Message &message, const SessionID &sessionID)
-      EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon) {
-    Locker l(m_mutex);
-    app().fromAdmin(message, sessionID);
-  }
-  void fromApp(const Message &message, const SessionID &sessionID)
-      EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType) {
-    Locker l(m_mutex);
-    app().fromApp(message, sessionID);
-  }
+    void onCreate(const SessionID &sessionID)
+    {
+        Locker l(m_mutex);
+        app().onCreate(sessionID);
+    }
+    void onLogon(const SessionID &sessionID)
+    {
+        Locker l(m_mutex);
+        app().onLogon(sessionID);
+    }
+    void onLogout(const SessionID &sessionID)
+    {
+        Locker l(m_mutex);
+        app().onLogout(sessionID);
+    }
+    void toAdmin(Message &message, const SessionID &sessionID)
+    {
+        Locker l(m_mutex);
+        app().toAdmin(message, sessionID);
+    }
+    void toApp(Message &message, const SessionID &sessionID) EXCEPT(DoNotSend)
+    {
+        Locker l(m_mutex);
+        app().toApp(message, sessionID);
+    }
+    void fromAdmin(const Message &message, const SessionID &sessionID)
+        EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon)
+    {
+        Locker l(m_mutex);
+        app().fromAdmin(message, sessionID);
+    }
+    void fromApp(const Message &message, const SessionID &sessionID)
+        EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType)
+    {
+        Locker l(m_mutex);
+        app().fromApp(message, sessionID);
+    }
 
-  Mutex m_mutex;
+    Mutex m_mutex;
 
-  Application &app() { return m_app; }
-  Application &m_app;
+    Application &app() { return m_app; }
+    Application &m_app;
 };
 
 /**
@@ -118,16 +127,21 @@ public:
  * It is also useful for unit tests where the callback
  * values of some or all methods are not of interest.
  */
-class NullApplication : public Application {
-  void onCreate(const SessionID &) {}
-  void onLogon(const SessionID &) {}
-  void onLogout(const SessionID &) {}
-  void toAdmin(Message &, const SessionID &) {}
-  void toApp(Message &, const SessionID &) EXCEPT(DoNotSend) {}
-  void fromAdmin(const Message &, const SessionID &)
-      EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon) {}
-  void fromApp(const Message &, const SessionID &)
-      EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType) {}
+class NullApplication : public Application
+{
+    void onCreate(const SessionID &) {}
+    void onLogon(const SessionID &) {}
+    void onLogout(const SessionID &) {}
+    void toAdmin(Message &, const SessionID &) {}
+    void toApp(Message &, const SessionID &) EXCEPT(DoNotSend) {}
+    void fromAdmin(const Message &, const SessionID &)
+        EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon)
+    {
+    }
+    void fromApp(const Message &, const SessionID &)
+        EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType)
+    {
+    }
 };
 /*! @} */
 } // namespace FIX

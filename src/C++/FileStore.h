@@ -32,23 +32,23 @@
 #include <fstream>
 #include <string>
 
-namespace FIX {
+namespace FIX
+{
 class Session;
 
 /// Creates a file based implementation of MessageStore.
-class FileStoreFactory : public MessageStoreFactory {
+class FileStoreFactory : public MessageStoreFactory
+{
 public:
-  FileStoreFactory(const SessionSettings &settings)
-      : m_settings(settings) {};
-  FileStoreFactory(const std::string &path)
-      : m_path(path) {};
+    FileStoreFactory(const SessionSettings &settings) : m_settings(settings) {};
+    FileStoreFactory(const std::string &path) : m_path(path) {};
 
-  MessageStore *create(const UtcTimeStamp &, const SessionID &);
-  void destroy(MessageStore *);
+    MessageStore *create(const UtcTimeStamp &, const SessionID &);
+    void destroy(MessageStore *);
 
 private:
-  std::string m_path;
-  SessionSettings m_settings;
+    std::string m_path;
+    SessionSettings m_settings;
 };
 /*! @} */
 
@@ -78,50 +78,51 @@ private:
  * &nbsp;&nbsp;
  *   YYYYMMDD-HH:MM:SS
  */
-class FileStore : public MessageStore {
+class FileStore : public MessageStore
+{
 public:
-  FileStore(const UtcTimeStamp &now, std::string, const SessionID &sessionID);
-  virtual ~FileStore();
+    FileStore(const UtcTimeStamp &now, std::string, const SessionID &sessionID);
+    virtual ~FileStore();
 
-  bool set(SEQNUM, const std::string &) EXCEPT(IOException);
-  void get(SEQNUM, SEQNUM, std::vector<std::string> &) const EXCEPT(IOException);
+    bool set(SEQNUM, const std::string &) EXCEPT(IOException);
+    void get(SEQNUM, SEQNUM, std::vector<std::string> &) const EXCEPT(IOException);
 
-  SEQNUM getNextSenderMsgSeqNum() const EXCEPT(IOException);
-  SEQNUM getNextTargetMsgSeqNum() const EXCEPT(IOException);
-  void setNextSenderMsgSeqNum(SEQNUM value) EXCEPT(IOException);
-  void setNextTargetMsgSeqNum(SEQNUM value) EXCEPT(IOException);
-  void incrNextSenderMsgSeqNum() EXCEPT(IOException);
-  void incrNextTargetMsgSeqNum() EXCEPT(IOException);
+    SEQNUM getNextSenderMsgSeqNum() const EXCEPT(IOException);
+    SEQNUM getNextTargetMsgSeqNum() const EXCEPT(IOException);
+    void setNextSenderMsgSeqNum(SEQNUM value) EXCEPT(IOException);
+    void setNextTargetMsgSeqNum(SEQNUM value) EXCEPT(IOException);
+    void incrNextSenderMsgSeqNum() EXCEPT(IOException);
+    void incrNextTargetMsgSeqNum() EXCEPT(IOException);
 
-  UtcTimeStamp getCreationTime() const EXCEPT(IOException);
+    UtcTimeStamp getCreationTime() const EXCEPT(IOException);
 
-  void reset(const UtcTimeStamp &now) EXCEPT(IOException);
-  void refresh() EXCEPT(IOException);
+    void reset(const UtcTimeStamp &now) EXCEPT(IOException);
+    void refresh() EXCEPT(IOException);
 
 private:
-  typedef std::pair<int64_t, std::size_t> OffsetSize;
-  typedef std::map<SEQNUM, OffsetSize> NumToOffset;
+    typedef std::pair<int64_t, std::size_t> OffsetSize;
+    typedef std::map<SEQNUM, OffsetSize> NumToOffset;
 
-  void open(bool deleteFile);
-  void populateCache();
-  bool readFromFile(int64_t offset, int size, std::string &msg);
-  void setSeqNum();
-  void setSession();
+    void open(bool deleteFile);
+    void populateCache();
+    bool readFromFile(int64_t offset, int size, std::string &msg);
+    void setSeqNum();
+    void setSession();
 
-  bool get(SEQNUM, std::string &) const EXCEPT(IOException);
+    bool get(SEQNUM, std::string &) const EXCEPT(IOException);
 
-  MemoryStore m_cache;
-  NumToOffset m_offsets;
+    MemoryStore m_cache;
+    NumToOffset m_offsets;
 
-  std::string m_msgFileName;
-  std::string m_headerFileName;
-  std::string m_seqNumsFileName;
-  std::string m_sessionFileName;
+    std::string m_msgFileName;
+    std::string m_headerFileName;
+    std::string m_seqNumsFileName;
+    std::string m_sessionFileName;
 
-  FILE *m_msgFile;
-  FILE *m_headerFile;
-  FILE *m_seqNumsFile;
-  FILE *m_sessionFile;
+    FILE *m_msgFile;
+    FILE *m_headerFile;
+    FILE *m_seqNumsFile;
+    FILE *m_sessionFile;
 };
 } // namespace FIX
 

@@ -10,8 +10,10 @@
 #undef ReplaceText
 #endif
 
-namespace FIX {
-namespace FIELD {
+namespace FIX
+{
+namespace FIELD
+{
 const int BeginSeqNo = 7;
 const int BeginString = 8;
 const int BodyLength = 9;
