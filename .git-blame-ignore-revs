@@ -5,7 +5,7 @@
 # mechanical reformat (e.g. clang-format style switch).
 
 # Switch .clang-format from K&R to BSD/Allman + 120-column; reformat src/
-844a2dbc866251701dd2464603e824cd9d7832e1
+7e48e4ffc7274d2629b8985011fbce74a9756d86
 
 # Finish the BSD/Allman + 120-column reformat: examples/, test/atrun/, UtilitySSL.h
-4b0c7f4e72c6f9624511fa1f205ee914f6471368
+98339fae12a5ea6dfd474e4f2dfb0f2c8ea3aea9
