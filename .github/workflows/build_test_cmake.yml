@@ -44,7 +44,7 @@ jobs:
             ruby ruby-devel \
             python3
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure
         shell: bash
