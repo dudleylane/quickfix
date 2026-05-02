@@ -10,5 +10,5 @@ jobs:
       uses: jidicula/clang-format-action@v4.14.0
       with:
         clang-format-version: '22'
-        check-path: 'src'
-        exclude-regex: '(catch_amalgamated|pugixml|scope_guard|UtilitySSL.h)' 
+        check-path: '.'
+        exclude-regex: '(catch_amalgamated|pugixml|scope_guard)'
