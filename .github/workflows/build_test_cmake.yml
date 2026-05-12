@@ -9,9 +9,7 @@ on:
 jobs:
   build:
     name: Build + tests (${{ matrix.configuration }})
-    runs-on: ubuntu-latest
-    container:
-      image: quay.io/centos/centos:stream10
+    runs-on: [self-hosted, Linux, X64, quickfix-dev]
     # gcc-toolset-15 is required: Stream 10's default is GCC 14, which lacks
     # <flat_map>.  No `source enable` script exists at the standard path on
     # Stream 10 — the SCL way is `scl enable …`, but env vars achieve the
@@ -26,24 +24,6 @@ jobs:
       matrix:
         configuration: [Debug, Release]
     steps:
-      - name: Install build tools (dnf)
-        # Stream 10 base + appstream provide cmake 3.31, gcc-toolset-15,
-        # ruby, and openssl-devel.  ninja-build only ships in EPEL, so
-        # enable EPEL + CRB before installing.  ruby + ruby-devel are
-        # needed for the acceptance-test driver (test/Runner.rb).
-        # python3 covers the bindings build path even when HAVE_PYTHON3
-        # is OFF — some CMakeLists probes still call out to it.
-        shell: bash
-        run: |
-          dnf install -y dnf-plugins-core epel-release
-          dnf config-manager --set-enabled crb
-          dnf install -y --setopt=install_weak_deps=False \
-            gcc-toolset-15 gcc-toolset-15-gcc-c++ \
-            cmake ninja-build git make \
-            openssl-devel \
-            ruby ruby-devel \
-            python3
-
       - uses: actions/checkout@v6
 
       - name: Configure

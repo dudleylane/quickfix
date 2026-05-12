@@ -3,12 +3,23 @@ on: [push, pull_request]
 jobs:
   formatting-check:
     name: Formatting Check
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, quickfix-dev]
     steps:
     - uses: actions/checkout@v6
     - name: Run clang-format style check for C/C++/Protobuf programs.
-      uses: jidicula/clang-format-action@v4.14.0
-      with:
-        clang-format-version: '22'
-        check-path: '.'
-        exclude-regex: '(catch_amalgamated|pugixml|scope_guard)'
+      # The dev host ships clang-format-22 (LLVM 22.1.1) directly, so we
+      # invoke it via find|xargs rather than the jidicula Docker container
+      # action — the runner's `docker` is podman-emulated and the action's
+      # Docker socket assumption is fragile here.  Same clang-format major
+      # version (22) so output matches the previous hosted-runner result.
+      # The previous workflow used exclude-regex against the path string;
+      # here we use grep -v on filename stems, which has the same effect
+      # for these three (pugixml.cpp/.hpp, scope_guard.hpp, and
+      # catch_amalgamated.cpp/.hpp are vendored — formatted upstream).
+      shell: bash
+      run: |
+        git ls-files \
+          | grep -E '\.(cpp|cc|cxx|h|hpp|hh|hxx|ixx|c)$' \
+          | grep -vE '(^|/)(catch_amalgamated|pugixml|scope_guard)\.[^/]+$' \
+          | tr '\n' '\0' \
+          | xargs -0 -r clang-format-22 --dry-run -Werror
