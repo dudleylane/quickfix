@@ -3,7 +3,7 @@ add_definitions(-DCATCH_AMALGAMATED_CUSTOM_MAIN)
 if (QUICKFIX_TESTS)
   set (ut_SOURCES 
   ${PROJECT_SOURCE_DIR}/src/C++/test/catch_amalgamated.cpp
-  ${PROJECT_SOURCE_DIR}/src/C++/test/DataDictionaryTestCase.cpp
+  ${PROJECT_SOURCE_DIR}/src/C++/test/DataDictionaryProviderTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/DataDictionaryTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/DictionaryTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/FieldBaseTestCase.cpp
