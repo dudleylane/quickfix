@@ -4,7 +4,6 @@ Thank you for your interest in contributing to QuickFIX! This document provides 
 
 ## Table of Contents
 
-- [Code of Conduct](#code-of-conduct)
 - [How to Contribute](#how-to-contribute)
 - [Reporting Bugs](#reporting-bugs)
 - [Suggesting Features](#suggesting-features)
@@ -12,10 +11,8 @@ Thank you for your interest in contributing to QuickFIX! This document provides 
 - [Coding Standards](#coding-standards)
 - [Testing](#testing)
 - [Documentation](#documentation)
-
-## Code of Conduct
-
-This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+- [Development Workflow](#development-workflow)
+- [Platform-Specific Notes](#platform-specific-notes)
 
 ## How to Contribute
 
@@ -68,18 +65,17 @@ We actively welcome pull requests!
 
 3. **Make Changes**: Implement your changes following our [coding standards](#coding-standards)
 
-4. **Test**: Ensure all tests pass
+4. **Test**: Build, then run the suites from `test/` (see [Testing](#testing))
    ```bash
-   # CMake
-   cmake --build . --target test
-
-   # Autotools
-   make check
+   cmake --build build -j"$(nproc)"
+   cd test
+   ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
+   ./runat.sh 54321
    ```
 
-5. **Commit**: Write clear, concise commit messages
+5. **Commit**: Single-line, imperative, no prefix or scope tag — match the existing history
    ```bash
-   git commit -m "Add feature: brief description"
+   git commit -m "Bound Parser input at MAX_MESSAGE_SIZE"
    ```
 
 6. **Push**: Push to your fork
@@ -87,7 +83,9 @@ We actively welcome pull requests!
    git push origin feature/your-feature-name
    ```
 
-7. **Open a PR**: Create a pull request from your fork to `quickfix/quickfix:master`
+7. **Open a PR**: Target `dudleylane/quickfix:master`. Changes that are not specific to this
+   fork's hardening work belong upstream at
+   [`quickfix/quickfix`](https://github.com/quickfix/quickfix) instead.
 
 #### Pull Request Guidelines
 
@@ -106,12 +104,27 @@ We actively welcome pull requests!
 
 ### C++ Style
 
-QuickFIX uses `.clang-format` for code formatting. Format your code before submitting:
+`.clang-format` is LLVM-based with BSD/Allman braces, 4-space indent, and a 120-column limit.
+Format your changes before submitting:
 
 ```bash
-# Format all modified files
-git diff --name-only | grep -E '\.(cpp|h)$' | xargs clang-format -i
+git diff --name-only | grep -E '\.(cpp|h)$' | xargs clang-format-22 -i
 ```
+
+CI (`.github/workflows/format.yml`) re-checks the whole tracked tree, so an unformatted file
+anywhere fails the build:
+
+```bash
+git ls-files \
+  | grep -E '\.(cpp|cc|cxx|h|hpp|hh|hxx|ixx|c)$' \
+  | grep -vE '(^|/)(catch_amalgamated|pugixml|scope_guard)\.[^/]+$' \
+  | tr '\n' '\0' | xargs -0 -r clang-format-22 --dry-run -Werror
+```
+
+Vendored sources (`pugixml`, `scope_guard`, `catch_amalgamated`, `src/C++/double-conversion/`) are
+excluded — leave them formatted as upstream ships them. Two tree-wide reformats are recorded in
+`.git-blame-ignore-revs`; run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once to keep
+`git blame` readable.
 
 ### General Guidelines
 
@@ -121,7 +134,8 @@ git diff --name-only | grep -E '\.(cpp|h)$' | xargs clang-format -i
   - Functions/Methods: `camelCase` (e.g., `sendMessage()`)
   - Member variables: `m_camelCase` (e.g., `m_sessionID`)
   - Constants: `UPPER_CASE` (e.g., `MAX_BUFFER_SIZE`)
-- **Headers**: Use `#pragma once` for header guards
+- **Headers**: Use `#ifndef FIX_<NAME>_H` / `#define` / `#endif` include guards, the convention
+  throughout `src/C++/` (only `stdafx.h` and `stdint_msvc.h` use `#pragma once`)
 - **Includes**: Order includes as:
   1. Corresponding header (for .cpp files)
   2. C++ standard library
@@ -136,7 +150,8 @@ git diff --name-only | grep -E '\.(cpp|h)$' | xargs clang-format -i
 ### Example
 
 ```cpp
-#pragma once
+#ifndef FIX_SESSION_H
+#define FIX_SESSION_H
 
 #include <memory>
 #include <string>
@@ -163,29 +178,66 @@ private:
 };
 
 } // namespace FIX
+
+#endif // FIX_SESSION_H
 ```
 
 ## Testing
 
+There is no CTest integration — no `test` target exists. Build first, then run the three suites
+from the `test/` directory, where the build leaves `ut`, `at`, and `pt` symlinks.
+
 ### Running Tests
 
 ```bash
-# CMake
-cmake --build . --target test
+cd test
 
-# Autotools
-make check
+# Unit tests (Catch2). Both flags are required: they populate FIX::TestSettings
+# before Catch2 runs, and the store/dictionary cases fail without them.
+./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
 
-# Run specific tests
-./test/ut --quickfix-config-file cfg/ut.cfg
+# A single test case, or a single SECTION within one
+./ut "SessionTestCase" --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
+./ut "SessionTestCase" -c "lookupSession" --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
+./ut --list-tests
+
+# Acceptance tests: 468 definitions, ~7.5 min, needs ruby. Regenerates cfg/at.cfg,
+# starts `at`, and drives it with the Ruby reflector.
+./runat.sh 54321
+
+# Performance benchmarks (meaningful only against a Release build)
+./pt -p 54323 -c 500000
 ```
+
+`runat.sh` and `runut.sh` start with `killall ut at`, so don't run them alongside another `ut`.
+
+Judge the acceptance run by its output, not its exit status: `runat.sh`'s `trap … EXIT` runs
+`kill -- -$$`, so when the script is its own process-group leader it SIGTERMs itself and returns
+143 even though every definition passed. The last line of output is the real verdict —
+`468 tests passed`, or `FAILED n out of 468 tests`.
+
+CI runs the unit tests on every push, the acceptance suite on pull requests only, and `pt` only in
+the Release configuration.
 
 ### Writing Tests
 
-- Add unit tests for new functionality in the `test/` directory
-- Use the Catch2 test framework
+- Unit tests live in `src/C++/test/`, one `<Subject>TestCase.cpp` per subject, using Catch2
+  (`TEST_CASE` / `TEST_CASE_METHOD` with a fixture, plus `SECTION`s)
+- **Add every new file to the `ut_SOURCES` list in `src/C++/test/CMakeLists.txt`** — the list is
+  explicit, there is no glob, and an unlisted file compiles for nobody
+- Session- and protocol-level behaviour is usually better covered by an acceptance script under
+  `test/definitions/server/<version>/*.def`: `I…` lines are sent to the engine, `E…` lines are the
+  expected responses
 - Test edge cases and error conditions
 - Ensure tests are deterministic and don't depend on external state
+
+### Sanitizers
+
+This fork's standard is that changes are verified clean under ThreadSanitizer and
+AddressSanitizer + UBSan; see "Sanitizer verification" in `README.md` for the exact configure lines.
+Run them for anything touching locking, object lifetime, or the repeating-group arena. Give each
+sanitizer build its own `-DQUICKFIX_LIB_OUTPUT_DIR`, otherwise it overwrites `lib/` and re-points the
+`test/{ut,at,pt}` symlinks belonging to your ordinary build.
 
 ### Test Coverage
 
@@ -224,15 +276,23 @@ document.bat   # Windows
 ### Setting Up Development Environment
 
 1. **Install Prerequisites**:
-   - C++23 compiler (GCC 13+, Clang 16+, MSVC 19.35+)
-   - CMake 3.31+
-   - Optional: OpenSSL, MySQL, PostgreSQL
+   - **GCC 15+**. `FieldMap.h` uses `std::flat_map`, which GCC 14's standard library does not ship;
+     with any Clang or MSVC toolchain, check that `<flat_map>` is available. Only Linux/GCC is
+     covered by CI.
+   - CMake 3.31+, and Ninja for the CI-equivalent build
+   - Ruby, for the acceptance suite
+   - `clang-format-22`, matching the version CI enforces
+   - Optional: OpenSSL, MySQL, PostgreSQL, ODBC, TBB
 
 2. **Build in Development Mode**:
    ```bash
-   cmake -DCMAKE_BUILD_TYPE=Debug -DQUICKFIX_TESTS=ON .
-   make -j$(nproc)
+   cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=ON
+   cmake --build build -j"$(nproc)"
    ```
+
+   Pass `-DHAVE_SSL=ON`: the top-level `configure_file` rewrites the tracked `src/C++/config.h`
+   on every configure, and the committed version has SSL enabled — configuring without it shows up
+   as an unrelated diff. Binaries land in `lib/`, not in the build directory.
 
 3. **Enable clang-format integration** in your IDE/editor
 
@@ -244,23 +304,36 @@ document.bat   # Windows
 
 ## Platform-Specific Notes
 
-### Windows
-
-- Use Visual Studio 2019 or later
-- For SSL support, install OpenSSL and set `OPENSSL_ROOT_DIR`
-- Tests can be run from Visual Studio or command line
+CI covers Linux only (a self-hosted runner). Windows and macOS builds are supported but unverified
+by automation, so check them by hand if your change touches platform-specific code — chiefly
+`SocketMonitor_WIN32.cpp` / `SocketMonitor_UNIX.cpp`, `Utility.cpp`, and `dirent_windows.h`.
 
 ### Linux
 
-- Install development packages: `build-essential cmake`
-- For SSL: `libssl-dev`
-- For MySQL: `libmysqlclient-dev`
-- For PostgreSQL: `libpq-dev`
+- **CentOS Stream 10 / RHEL 10** (what CI runs): `gcc-toolset-15`, `cmake`, `ninja-build`, `ruby`;
+  put the toolset ahead of the system GCC 14 for every build and test step:
+  ```bash
+  export CC=/opt/rh/gcc-toolset-15/root/usr/bin/gcc
+  export CXX=/opt/rh/gcc-toolset-15/root/usr/bin/g++
+  export PATH=/opt/rh/gcc-toolset-15/root/usr/bin:$PATH
+  export LD_LIBRARY_PATH=/opt/rh/gcc-toolset-15/root/usr/lib64
+  ```
+- **Debian/Ubuntu**: `g++-15 cmake ninja-build ruby`
+- For SSL: `openssl-devel` / `libssl-dev`
+- For MySQL: `mysql-devel` / `libmysqlclient-dev`
+- For PostgreSQL: `libpq-devel` / `libpq-dev`
+
+### Windows
+
+- Visual Studio 2022, with a toolset whose standard library provides C++23 `<flat_map>`
+- For SSL support, install OpenSSL and set `OPENSSL_ROOT_DIR`
+- The build places the executables under `test/{debug,release}/{ut,at,pt}/` rather than creating
+  the `test/ut`-style symlinks it uses on Unix
 
 ### macOS
 
 - Install Xcode Command Line Tools
-- Use Homebrew for dependencies: `brew install openssl cmake`
+- Use Homebrew for dependencies: `brew install cmake ninja openssl`
 
 ## Getting Help
 
