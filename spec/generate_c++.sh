@@ -1,8 +1,10 @@
 #!/bin/bash
 set -e
 
-xsltproc -o ../src/C++/FixValues.h Values.xsl FIX50SP2.xml 
-xsltproc -o ../src/C++/FixTValues.h Values.xsl FIXT11.xml 
+# NB: FixValues.h is NOT generated here -- Generator.rb (GeneratorCPP.rb) writes
+# it afterwards and would overwrite anything xsltproc produced.  The FIXT11
+# Values.xsl pass is dropped too: it produced FixTValues.h, which is untracked
+# and included by nothing.
 xsltproc -o ../src/C++/fix40/MessageCracker.h MessageCracker.xsl FIX40.xml
 xsltproc -o ../src/C++/fix41/MessageCracker.h MessageCracker.xsl FIX41.xml
 xsltproc -o ../src/C++/fix42/MessageCracker.h MessageCracker.xsl FIX42.xml

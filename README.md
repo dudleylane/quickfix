@@ -134,7 +134,47 @@ while (auto raw = receiveFromSocket()) {
 
 ### Sanitizer verification
 
-All changes are verified clean under ThreadSanitizer and AddressSanitizer:
+These recipes are how changes are checked under ThreadSanitizer and AddressSanitizer + UBSan. Run
+them for anything touching locking, object lifetime, or the repeating-group arena.
+
+**The ASan build must not enable the TBB allocator.** ASan detects heap errors through the allocator
+it interposes. `tbb::scalable_allocator` suballocates from `libtbbmalloc`'s own slabs, which ASan
+does not intercept, so blocks it returns carry no redzones and are invisible to LeakSanitizer. With
+`-DENABLE_TBB_ALLOCATOR=ON` that covers `FieldMap::Fields` and the `SocketConnection` /
+`SSLSocketConnection` send queues — every use of `ALLOCATOR` in `Utility.h`. Measured on this tree:
+an identical 240-byte heap overflow and 4000-byte leak are both reported under the default allocator
+and both pass silently under `tbb::scalable_allocator`. No flag changes this; it is inherent to an
+uninstrumented allocator, so the TBB configuration simply has no ASan coverage of those two
+containers. (Only `TBB::tbbmalloc` is linked, not `tbbmalloc_proxy`, so global `new`/`malloc` are
+unaffected and everything else remains visible to ASan.)
+
+#### Known baseline — the suite is not currently clean
+
+As of `25b23432` (2026-09-21), `ut` under ASan + UBSan **exits 1**:
+
+- **173 leak records — 2,697,884 bytes in 39,833 allocations.** 152 of the records allocate inside
+  `DataDictionary`. The two direct roots are libstdc++'s demangler and `string_concat`
+  (`Utility.cpp:100`), whose `new char[]` result is dropped by the caller at
+  `src/C++/test/UtilityTestCase.cpp:70`.
+- **48 UBSan vptr reports**, all genuine type confusion from one idiom: `FieldMap` stores fields by
+  value in `std::vector<FieldBase>`, so `addField` slices any derived field, and `FIELD_GET_REF`,
+  `FIELD_GET_PTR` and `getField<T>()` (a `reinterpret_cast`) then read them back as `StringField`,
+  `UInt64Field`, `IntField`, `CheckSumField`, `MsgType` or `MsgSeqNum`. Sites span `Field.h`,
+  `DataDictionary.h`, `Message.cpp` and `Session.{h,cpp}`.
+
+  These are inert **only** because every derived field type adds no data members and no virtual
+  overrides, so each access stays inside the base object. Adding a single member to any of them
+  turns this into an out-of-bounds read. The idiom is upstream and long-standing — the
+  `virtual ~FieldBase` that makes it detectable dates to 2006 — and is not introduced by this fork.
+  The counts are identical in a static build, so they are not a shared-library RTTI artefact.
+
+  A second family of 17, where the generated `FIXnn::Message::getHeader()`/`getTrailer()` cast a
+  `FIX::Header`/`FIX::Trailer` to the per-version subclass, was removed from the generator; see
+  `FieldMap`'s typed `set`/`get`/`isSet`/`getIfSet` templates.
+
+These counts are **identical with and without `ENABLE_TBB_ALLOCATOR`**, so they are not an artefact
+of the allocator. Treat them as a baseline to diff against rather than an accepted state: a change
+is clean if it does not add to them. The TSan recipe has not been re-measured against this baseline.
 
 ```bash
 # TSan (thread safety)
@@ -148,11 +188,13 @@ cmake --build build-tsan -j$(nproc)
 build-tsan/out/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path spec
 
 # ASan + UBSan (memory errors)
+# No -DENABLE_TBB_ALLOCATOR here: it would hide heap errors and leaks in
+# FieldMap::Fields and the socket send queues (see above).
 cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
   -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
   -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined" \
-  -DHAVE_SSL=ON -DENABLE_TBB_ALLOCATOR=ON \
+  -DHAVE_SSL=ON \
   -DQUICKFIX_LIB_OUTPUT_DIR=build-asan/out
 cmake --build build-asan -j$(nproc)
 build-asan/out/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path spec

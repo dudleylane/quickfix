@@ -91,10 +91,13 @@ class GeneratorCPP
     @f.puts "Message(Message&& m) = default;"
     @f.puts "Message& operator=(Message&&) = default;"
     @f.puts "Message& operator=(const Message&) = default;"
-    @f.puts "Header& getHeader() { return (Header&)m_header; }"
-    @f.puts "const Header& getHeader() const { return (Header&)m_header; }"
-    @f.puts "Trailer& getTrailer() { return (Trailer&)m_trailer; }"
-    @f.puts "const Trailer& getTrailer() const { return (Trailer&)m_trailer; }"
+    # No getHeader()/getTrailer() override here.  These used to return
+    # (Header&)m_header, casting a FIX::Header to the per-version subclass --
+    # undefined behaviour, since the object never had that type, and 17 UBSan
+    # vptr reports.  FIX::Message::getHeader()/getTrailer() already return
+    # FIX::Header&/FIX::Trailer&, and the typed set/get spelling now comes from
+    # FieldMap's templates, so the subclasses are only a scope for the header's
+    # nested group types.
     @f.dedent
     @f.puts "};"
     @f.puts
@@ -233,6 +236,30 @@ class GeneratorCPP
     f.indent
   end
 
+  # Win32 defines a ReplaceText macro and these headers declare an identifier of
+  # the same name, so any existing macro is stashed around them.  MSVC spells
+  # this push_macro/pop_macro; the #pragma push/pop form is for other compilers.
+  def replaceTextPush(f)
+    f.puts "#ifdef ReplaceText"
+    f.puts "#ifdef _MSC_VER"
+    f.puts '#pragma push_macro("ReplaceText")'
+    f.puts "#else"
+    f.puts '#pragma push("ReplaceText")'
+    f.puts "#endif"
+    f.puts "#undef ReplaceText"
+    f.puts "#endif"
+  end
+
+  def replaceTextPop(f)
+    f.puts "#ifdef ReplaceText"
+    f.puts "#ifdef _MSC_VER"
+    f.puts '#pragma pop_macro("ReplaceText")'
+    f.puts "#else"
+    f.puts '#pragma pop("ReplaceText")'
+    f.puts "#endif"
+    f.puts "#endif"
+  end
+
   def fixFieldsStart(f)
     f.puts "#ifndef FIX_FIELDS_H"
     f.puts "#define FIX_FIELDS_H"
@@ -242,10 +269,7 @@ class GeneratorCPP
     f.puts
     f.puts "#undef Yield"
     f.puts
-    f.puts "#ifdef ReplaceText"
-    f.puts '#pragma push("ReplaceText")'
-    f.puts "#undef ReplaceText"
-    f.puts "#endif"
+    replaceTextPush(f)
     f.puts
     f.puts "namespace FIX"
     f.puts "{"
@@ -270,9 +294,7 @@ class GeneratorCPP
     f.dedent
     f.puts "}"
     f.puts
-    f.puts "#ifdef ReplaceText"
-    f.puts '#pragma pop("ReplaceText")'
-    f.puts "#endif"
+    replaceTextPop(f)
     f.puts
     f.puts "#endif //FIX_FIELDS_H"
   end
@@ -280,6 +302,8 @@ class GeneratorCPP
   def fixFieldNumbersStart(f)
     f.puts "#ifndef FIX_FIELD_NUMBERS_H"
     f.puts "#define FIX_FIELD_NUMBERS_H"
+    f.puts
+    replaceTextPush(f)
     f.puts
     f.puts "namespace FIX"
     f.puts "{"
@@ -297,6 +321,8 @@ class GeneratorCPP
     f.dedent
     f.puts "}"
     f.dedent
+    f.puts
+    replaceTextPop(f)
     f.puts "}"
     f.puts "#endif //FIX_FIELDNUMBERS_H"
   end

@@ -23,6 +23,8 @@ Makefile
 *.dylib
 ChangeLog
 aclocal.m4
+# Anchored: a bare config.h would also match the tracked src/C++/config.h
+/config.h
 config_unix.h
 config.log
 config.status
