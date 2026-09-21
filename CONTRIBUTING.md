@@ -12,7 +12,7 @@ Thank you for your interest in contributing to QuickFIX! This document provides 
 - [Testing](#testing)
 - [Documentation](#documentation)
 - [Development Workflow](#development-workflow)
-- [Platform-Specific Notes](#platform-specific-notes)
+- [Platform Notes](#platform-notes)
 
 ## How to Contribute
 
@@ -269,9 +269,7 @@ When making user-facing changes:
 
 ```bash
 cd doc
-./document.sh  # Unix/Linux
-# or
-document.bat   # Windows
+./document.sh
 ```
 
 ## Development Workflow
@@ -279,9 +277,7 @@ document.bat   # Windows
 ### Setting Up Development Environment
 
 1. **Install Prerequisites**:
-   - **GCC 15+**. `FieldMap.h` uses `std::flat_map`, which GCC 14's standard library does not ship;
-     with any Clang or MSVC toolchain, check that `<flat_map>` is available. Only Linux/GCC is
-     covered by CI.
+   - **GCC 15+**. `FieldMap.h` uses `std::flat_map`, which GCC 14's standard library does not ship.
    - CMake 3.31+, and Ninja for the CI-equivalent build
    - Ruby, for the acceptance suite and the code generators; the generators also need
      the `rexml` gem, which Ruby 3 no longer bundles (`gem install --user-install rexml`)
@@ -303,16 +299,15 @@ document.bat   # Windows
 ### Debugging
 
 - Build with `-DCMAKE_BUILD_TYPE=Debug`
-- Use standard C++ debugging tools (gdb, lldb, Visual Studio debugger)
+- Use `gdb`, or `lldb` if you prefer it
 - Check logs in the FileStore directory
 
-## Platform-Specific Notes
+## Platform Notes
 
-CI covers Linux only (a self-hosted runner). Windows and macOS builds are supported but unverified
-by automation, so check them by hand if your change touches platform-specific code — chiefly
-`SocketMonitor_WIN32.cpp` / `SocketMonitor_UNIX.cpp`, `Utility.cpp`, and `dirent_windows.h`.
-
-### Linux
+**Linux is the only supported platform.** Windows and macOS sources inherited from upstream remain
+in the tree — `SocketMonitor_WIN32.cpp`, `dirent_windows.h`, `stdint_msvc.h`, the `*.bat` runners
+and `test/atrun/` — but nothing builds or tests them, and changes are not expected to keep them
+working. Don't spend effort on them, and don't treat a Windows-only construct as a constraint.
 
 - **CentOS Stream 10 / RHEL 10** (what CI runs): `gcc-toolset-15`, `cmake`, `ninja-build`, `ruby`;
   put the toolset ahead of the system GCC 14 for every build and test step:
@@ -326,18 +321,6 @@ by automation, so check them by hand if your change touches platform-specific co
 - For SSL: `openssl-devel` / `libssl-dev`
 - For MySQL: `mysql-devel` / `libmysqlclient-dev`
 - For PostgreSQL: `libpq-devel` / `libpq-dev`
-
-### Windows
-
-- Visual Studio 2022, with a toolset whose standard library provides C++23 `<flat_map>`
-- For SSL support, install OpenSSL and set `OPENSSL_ROOT_DIR`
-- The build places the executables under `test/{debug,release}/{ut,at,pt}/` rather than creating
-  the `test/ut`-style symlinks it uses on Unix
-
-### macOS
-
-- Install Xcode Command Line Tools
-- Use Homebrew for dependencies: `brew install cmake ninja openssl`
 
 ## Getting Help
 

@@ -61,14 +61,17 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 
 ## Supported Platforms
 
-- **Linux**: Ubuntu (latest), CentOS Stream 10, various distributions
-- **Windows**: Windows Server 2019, Windows Server 2022
-- **macOS**: Latest versions
+**Linux only.** CentOS Stream 10 / RHEL 10 is what CI builds and tests; other distributions with a
+new enough toolchain should work but are not verified.
+
+Windows and macOS sources inherited from upstream are still in the tree — `SocketMonitor_WIN32.cpp`,
+`dirent_windows.h`, `stdint_msvc.h`, the `*.bat` runners, `test/atrun/` — but they are neither built
+nor tested here, and no support is offered for them.
 
 ## Prerequisites
 
-- C++23 compatible compiler (GCC 13+, Clang 16+, MSVC 19.35+)
-- CMake 3.31+
+- **GCC 15+**. `FieldMap.h` uses `std::flat_map`, which GCC 14's standard library does not ship.
+- CMake 3.31+, and Ninja for the CI-equivalent build
 - Optional: OpenSSL (for SSL/TLS support)
 - Optional: MySQL, PostgreSQL, or ODBC (for database message stores)
 - Optional: TBB (for scalable allocator)
