@@ -237,26 +237,24 @@ class GeneratorCPP
   end
 
   # Win32 defines a ReplaceText macro and these headers declare an identifier of
-  # the same name, so any existing macro is stashed around them.  MSVC spells
-  # this push_macro/pop_macro; the #pragma push/pop form is for other compilers.
+  # the same name, so any existing macro is stashed around them and restored
+  # afterwards.  The pop is keyed off a sentinel, not off ReplaceText itself:
+  # the push #undef's ReplaceText, so an "#ifdef ReplaceText" pop can never
+  # fire and the caller's macro would be lost for the rest of the translation
+  # unit.  push_macro/pop_macro are understood by MSVC, GCC and Clang alike;
+  # the plain "#pragma push" spelling is not a GCC pragma and is ignored there.
   def replaceTextPush(f)
     f.puts "#ifdef ReplaceText"
-    f.puts "#ifdef _MSC_VER"
     f.puts '#pragma push_macro("ReplaceText")'
-    f.puts "#else"
-    f.puts '#pragma push("ReplaceText")'
-    f.puts "#endif"
     f.puts "#undef ReplaceText"
+    f.puts "#define FIX_PUSHED_REPLACETEXT"
     f.puts "#endif"
   end
 
   def replaceTextPop(f)
-    f.puts "#ifdef ReplaceText"
-    f.puts "#ifdef _MSC_VER"
+    f.puts "#ifdef FIX_PUSHED_REPLACETEXT"
     f.puts '#pragma pop_macro("ReplaceText")'
-    f.puts "#else"
-    f.puts '#pragma pop("ReplaceText")'
-    f.puts "#endif"
+    f.puts "#undef FIX_PUSHED_REPLACETEXT"
     f.puts "#endif"
   end
 
