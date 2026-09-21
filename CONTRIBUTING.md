@@ -233,11 +233,14 @@ the Release configuration.
 
 ### Sanitizers
 
-This fork's standard is that changes are verified clean under ThreadSanitizer and
-AddressSanitizer + UBSan; see "Sanitizer verification" in `README.md` for the exact configure lines.
-Run them for anything touching locking, object lifetime, or the repeating-group arena. Give each
-sanitizer build its own `-DQUICKFIX_LIB_OUTPUT_DIR`, otherwise it overwrites `lib/` and re-points the
-`test/{ut,at,pt}` symlinks belonging to your ordinary build.
+Run the sanitizer builds for anything touching locking, object lifetime, or the repeating-group
+arena; "Sanitizer verification" in `README.md` has the exact configure lines. Two things to know
+before you read the output: the ASan suite is not currently clean — it exits 1 with a recorded
+baseline of 173 leak records and 65 UBSan reports, so compare against that baseline rather than
+expecting silence — and the ASan build must not set `ENABLE_TBB_ALLOCATOR`, which makes ASan and
+LeakSanitizer blind to `FieldMap::Fields` and the socket send queues. Give each sanitizer build its
+own `-DQUICKFIX_LIB_OUTPUT_DIR`, otherwise it overwrites `lib/` and re-points the `test/{ut,at,pt}`
+symlinks belonging to your ordinary build.
 
 ### Test Coverage
 

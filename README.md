@@ -134,7 +134,34 @@ while (auto raw = receiveFromSocket()) {
 
 ### Sanitizer verification
 
-All changes are verified clean under ThreadSanitizer and AddressSanitizer:
+These recipes are how changes are checked under ThreadSanitizer and AddressSanitizer + UBSan. Run
+them for anything touching locking, object lifetime, or the repeating-group arena.
+
+**The ASan build must not enable the TBB allocator.** ASan detects heap errors through the allocator
+it interposes. `tbb::scalable_allocator` suballocates from `libtbbmalloc`'s own slabs, which ASan
+does not intercept, so blocks it returns carry no redzones and are invisible to LeakSanitizer. With
+`-DENABLE_TBB_ALLOCATOR=ON` that covers `FieldMap::Fields` and the `SocketConnection` /
+`SSLSocketConnection` send queues — every use of `ALLOCATOR` in `Utility.h`. Measured on this tree:
+an identical 240-byte heap overflow and 4000-byte leak are both reported under the default allocator
+and both pass silently under `tbb::scalable_allocator`. No flag changes this; it is inherent to an
+uninstrumented allocator, so the TBB configuration simply has no ASan coverage of those two
+containers. (Only `TBB::tbbmalloc` is linked, not `tbbmalloc_proxy`, so global `new`/`malloc` are
+unaffected and everything else remains visible to ASan.)
+
+#### Known baseline — the suite is not currently clean
+
+As of `76f1c56b` (2026-09-21), `ut` under ASan + UBSan **exits 1**:
+
+- **173 leak records — 2,698,428 bytes in 39,867 allocations.** 152 of the records allocate inside
+  `DataDictionary`. The two direct roots are libstdc++'s demangler and `string_concat`
+  (`Utility.cpp:100`), whose `new char[]` result is dropped by the caller at
+  `src/C++/test/UtilityTestCase.cpp:70`.
+- **65 UBSan reports** — 63 `member call on address …` and 2 `downcast of address …`, i.e. the vptr
+  check firing in `DataDictionary.h` and `Field.h`.
+
+These counts are **identical with and without `ENABLE_TBB_ALLOCATOR`**, so they are not an artefact
+of the allocator. Treat them as a baseline to diff against rather than an accepted state: a change
+is clean if it does not add to them. The TSan recipe has not been re-measured against this baseline.
 
 ```bash
 # TSan (thread safety)
@@ -148,11 +175,13 @@ cmake --build build-tsan -j$(nproc)
 build-tsan/out/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path spec
 
 # ASan + UBSan (memory errors)
+# No -DENABLE_TBB_ALLOCATOR here: it would hide heap errors and leaks in
+# FieldMap::Fields and the socket send queues (see above).
 cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
   -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
   -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined" \
-  -DHAVE_SSL=ON -DENABLE_TBB_ALLOCATOR=ON \
+  -DHAVE_SSL=ON \
   -DQUICKFIX_LIB_OUTPUT_DIR=build-asan/out
 cmake --build build-asan -j$(nproc)
 build-asan/out/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path spec
