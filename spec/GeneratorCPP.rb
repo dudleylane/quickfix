@@ -233,6 +233,30 @@ class GeneratorCPP
     f.indent
   end
 
+  # Win32 defines a ReplaceText macro and these headers declare an identifier of
+  # the same name, so any existing macro is stashed around them.  MSVC spells
+  # this push_macro/pop_macro; the #pragma push/pop form is for other compilers.
+  def replaceTextPush(f)
+    f.puts "#ifdef ReplaceText"
+    f.puts "#ifdef _MSC_VER"
+    f.puts '#pragma push_macro("ReplaceText")'
+    f.puts "#else"
+    f.puts '#pragma push("ReplaceText")'
+    f.puts "#endif"
+    f.puts "#undef ReplaceText"
+    f.puts "#endif"
+  end
+
+  def replaceTextPop(f)
+    f.puts "#ifdef ReplaceText"
+    f.puts "#ifdef _MSC_VER"
+    f.puts '#pragma pop_macro("ReplaceText")'
+    f.puts "#else"
+    f.puts '#pragma pop("ReplaceText")'
+    f.puts "#endif"
+    f.puts "#endif"
+  end
+
   def fixFieldsStart(f)
     f.puts "#ifndef FIX_FIELDS_H"
     f.puts "#define FIX_FIELDS_H"
@@ -242,10 +266,7 @@ class GeneratorCPP
     f.puts
     f.puts "#undef Yield"
     f.puts
-    f.puts "#ifdef ReplaceText"
-    f.puts '#pragma push("ReplaceText")'
-    f.puts "#undef ReplaceText"
-    f.puts "#endif"
+    replaceTextPush(f)
     f.puts
     f.puts "namespace FIX"
     f.puts "{"
@@ -270,9 +291,7 @@ class GeneratorCPP
     f.dedent
     f.puts "}"
     f.puts
-    f.puts "#ifdef ReplaceText"
-    f.puts '#pragma pop("ReplaceText")'
-    f.puts "#endif"
+    replaceTextPop(f)
     f.puts
     f.puts "#endif //FIX_FIELDS_H"
   end
@@ -280,6 +299,8 @@ class GeneratorCPP
   def fixFieldNumbersStart(f)
     f.puts "#ifndef FIX_FIELD_NUMBERS_H"
     f.puts "#define FIX_FIELD_NUMBERS_H"
+    f.puts
+    replaceTextPush(f)
     f.puts
     f.puts "namespace FIX"
     f.puts "{"
@@ -297,6 +318,8 @@ class GeneratorCPP
     f.dedent
     f.puts "}"
     f.dedent
+    f.puts
+    replaceTextPop(f)
     f.puts "}"
     f.puts "#endif //FIX_FIELDNUMBERS_H"
   end

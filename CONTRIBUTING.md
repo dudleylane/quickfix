@@ -283,7 +283,8 @@ document.bat   # Windows
      with any Clang or MSVC toolchain, check that `<flat_map>` is available. Only Linux/GCC is
      covered by CI.
    - CMake 3.31+, and Ninja for the CI-equivalent build
-   - Ruby, for the acceptance suite
+   - Ruby, for the acceptance suite and the code generators; the generators also need
+     the `rexml` gem, which Ruby 3 no longer bundles (`gem install --user-install rexml`)
    - `clang-format-22`, matching the version CI enforces
    - Optional: OpenSSL, MySQL, PostgreSQL, ODBC, TBB
 
