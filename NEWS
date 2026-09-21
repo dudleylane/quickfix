@@ -1,4 +1,33 @@
 
+1.16.1-hardened
+---------------
+
+INCOMPATIBLE: FIXnn::Message::getHeader() and getTrailer() now return FIX::Header& and
+FIX::Trailer& rather than the per-version subclass. The previous accessors downcast a FIX::Header
+to a type the object never had, which is undefined behaviour. The typed set/get/isSet/getIfSet
+spelling those subclasses provided now comes from templates on FieldMap, so getHeader().set(...)
+and getHeader().get(...) still compile unchanged.
+
+INCOMPATIBLE: FIX 4.2 QuoteAcknowledgement referenced FIX::QuoteAckStatus, which is tag 1865 and
+defined only in FIX 5.0 SP2, where FIX42.xml specifies QuoteStatus, tag 297. Messages this engine
+built for FIX 4.2 were not conformant. Code naming FIX::QuoteAckStatus in a FIX 4.2 context must
+be updated.
+
+INCOMPATIBLE: the generated value constants MatchType_FIX50ONLY_* and
+YieldType_FIX4n_YIELD_VALUE_OF32NDS lose those prefixes, matching the names in the spec XML.
+
+spec/generate.sh reproduces the checked-in generated tree again: it preflights the rexml gem that
+Ruby 3 no longer bundles, clang-formats what it generates, and no longer writes two outputs that
+were immediately overwritten or unused.
+
+DataDictionaryProviderTestCase was never compiled into the unit test binary.
+
+The AddressSanitizer recipe no longer enables the TBB allocator, which made ASan and LeakSanitizer
+blind to FieldMap::Fields and the socket send queues. README records the measured ASan/UBSan
+baseline rather than claiming the suite is clean.
+
+See README.md "Changes from upstream" for the full set of changes in this fork.
+
 1.16.0
 ------
 
