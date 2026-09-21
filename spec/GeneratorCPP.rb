@@ -91,10 +91,13 @@ class GeneratorCPP
     @f.puts "Message(Message&& m) = default;"
     @f.puts "Message& operator=(Message&&) = default;"
     @f.puts "Message& operator=(const Message&) = default;"
-    @f.puts "Header& getHeader() { return (Header&)m_header; }"
-    @f.puts "const Header& getHeader() const { return (Header&)m_header; }"
-    @f.puts "Trailer& getTrailer() { return (Trailer&)m_trailer; }"
-    @f.puts "const Trailer& getTrailer() const { return (Trailer&)m_trailer; }"
+    # No getHeader()/getTrailer() override here.  These used to return
+    # (Header&)m_header, casting a FIX::Header to the per-version subclass --
+    # undefined behaviour, since the object never had that type, and 17 UBSan
+    # vptr reports.  FIX::Message::getHeader()/getTrailer() already return
+    # FIX::Header&/FIX::Trailer&, and the typed set/get spelling now comes from
+    # FieldMap's templates, so the subclasses are only a scope for the header's
+    # nested group types.
     @f.dedent
     @f.puts "};"
     @f.puts

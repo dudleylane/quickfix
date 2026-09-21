@@ -228,6 +228,16 @@ public:
 
     /// Check to see if a field is set
     bool isSetField(const FieldBase &field) const { return isSetField(field.getTag()); }
+
+    /// Typed accessors mirroring FIELD_SET.  These let a plain FieldMap -- in
+    /// particular FIX::Header and FIX::Trailer -- offer the set/get/isSet/getIfSet
+    /// spelling that the generated per-version classes used to supply.  get()
+    /// downcasts to F, which is safe here because getField() returns a reference
+    /// to the caller's own object, whose dynamic type is already F.
+    template <typename F> void set(const F &field) { setField(field); }
+    template <typename F> F &get(F &field) const { return (F &)getField(field); }
+    template <typename F> bool isSet(const F &field) const { return isSetField(field); }
+    template <typename F> bool getIfSet(F &field) const { return getFieldIfSet(field); }
     /// Check to see if a field is set by referencing its number
     bool isSetField(int tag) const { return findTag(tag) != m_fields.end(); }
 

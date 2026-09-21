@@ -150,27 +150,27 @@ unaffected and everything else remains visible to ASan.)
 
 #### Known baseline — the suite is not currently clean
 
-As of `76f1c56b` (2026-09-21), `ut` under ASan + UBSan **exits 1**:
+As of `25b23432` (2026-09-21), `ut` under ASan + UBSan **exits 1**:
 
-- **173 leak records — 2,698,428 bytes in 39,867 allocations.** 152 of the records allocate inside
+- **173 leak records — 2,697,884 bytes in 39,833 allocations.** 152 of the records allocate inside
   `DataDictionary`. The two direct roots are libstdc++'s demangler and `string_concat`
   (`Utility.cpp:100`), whose `new char[]` result is dropped by the caller at
   `src/C++/test/UtilityTestCase.cpp:70`.
-- **65 UBSan vptr reports**, all genuine type confusion, in two families sharing one idiom — a base
-  object accessed through a reference to a derived type:
-  - **48**: `FieldMap` stores fields by value in `std::vector<FieldBase>`, so `addField` slices any
-    derived field. `FIELD_GET_REF`, `FIELD_GET_PTR` and `getField<T>()` (a `reinterpret_cast`) then
-    read them back as `StringField`, `UInt64Field`, `IntField`, `CheckSumField`, `MsgType` or
-    `MsgSeqNum`. Sites span `Field.h`, `DataDictionary.h`, `Message.cpp` and `Session.{h,cpp}`.
-  - **17**: the generated `FIXnn::Message::getHeader()` / `getTrailer()` return `(Header&)m_header`,
-    casting a `FIX::Header` / `FIX::Trailer` to the per-version subclass. Emitted by
-    `spec/GeneratorCPP.rb:94-97`, so a fix belongs in the generator, not the generated headers.
+- **48 UBSan vptr reports**, all genuine type confusion from one idiom: `FieldMap` stores fields by
+  value in `std::vector<FieldBase>`, so `addField` slices any derived field, and `FIELD_GET_REF`,
+  `FIELD_GET_PTR` and `getField<T>()` (a `reinterpret_cast`) then read them back as `StringField`,
+  `UInt64Field`, `IntField`, `CheckSumField`, `MsgType` or `MsgSeqNum`. Sites span `Field.h`,
+  `DataDictionary.h`, `Message.cpp` and `Session.{h,cpp}`.
 
-  Both are inert **only** because every derived type involved adds no data members and no virtual
+  These are inert **only** because every derived field type adds no data members and no virtual
   overrides, so each access stays inside the base object. Adding a single member to any of them
   turns this into an out-of-bounds read. The idiom is upstream and long-standing — the
   `virtual ~FieldBase` that makes it detectable dates to 2006 — and is not introduced by this fork.
   The counts are identical in a static build, so they are not a shared-library RTTI artefact.
+
+  A second family of 17, where the generated `FIXnn::Message::getHeader()`/`getTrailer()` cast a
+  `FIX::Header`/`FIX::Trailer` to the per-version subclass, was removed from the generator; see
+  `FieldMap`'s typed `set`/`get`/`isSet`/`getIfSet` templates.
 
 These counts are **identical with and without `ENABLE_TBB_ALLOCATOR`**, so they are not an artefact
 of the allocator. Treat them as a baseline to diff against rather than an accepted state: a change
