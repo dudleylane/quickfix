@@ -1,0 +1,15 @@
+# Linux is the only supported platform, so every text file is LF both in the
+# repository and in the working tree.  This makes the convention enforced
+# rather than accidental: three sources were CRLF until scripted edits in
+# 6ff4a20f and 43652ed8 rewrote them wholesale, which is an easy mistake to
+# repeat because most text-mode writers translate newlines.
+* text=auto eol=lf
+
+# Acceptance fixtures are byte-exact FIX wire data, and 108 of them -- all of
+# fix50, fix50sp1 and fix50sp2 -- use CRLF today.  The Ruby runner accepts
+# that, so git must not rewrite them.
+*.def -text
+
+# Binary assets.
+*.gif -text
+*.jpg -text
