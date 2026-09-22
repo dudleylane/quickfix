@@ -56,4 +56,7 @@ jobs:
         # Release-only: pt benchmarks against the Debug build are noise.
         if: matrix.configuration == 'Release'
         working-directory: ./test
-        run: ./pt -p 54323 -c 500000
+        # -r 1: this step is a smoke test for crashes and hangs, not a
+        # regression gate, so it does not need the repetition harness's
+        # default of 5 runs per benchmark.
+        run: ./pt -p 54323 -c 500000 -r 1

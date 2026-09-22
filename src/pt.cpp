@@ -39,8 +39,12 @@
 #include "fix42/NewOrderSingle.h"
 #include "fix42/QuoteRequest.h"
 #include "getopt-repl.h"
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 long testIntegerToString(int);
 long testStringToInteger(int);
@@ -70,20 +74,65 @@ long testNoPoolNewOrderSingle(int);
 long testNoPoolQuoteRequest(int);
 long testSendOnSocket(int, short);
 long testSendOnThreadedSocket(int, short);
-void report(long, int);
 
 #ifndef _MSC_VER
-#include <sys/time.h>
+#include <ctime>
+// CLOCK_MONOTONIC, not gettimeofday: wall clock can be stepped by NTP mid-run,
+// which silently corrupts a measurement rather than failing it.
 long GetTickCount()
 {
-    timeval tv;
-    gettimeofday(&tv, 0);
-    long microsec = tv.tv_sec * 1e6;
-    microsec += (long)tv.tv_usec;
-
-    return (long)microsec;
+    timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long)ts.tv_sec * 1000000L + ts.tv_nsec / 1000L;
 }
 #endif
+
+/*
+ * Repetition harness.  A single aggregate mean cannot distinguish a real change
+ * from run-to-run noise -- measured spread on this tree reaches 40% on the
+ * sub-microsecond benchmarks -- so every benchmark is warmed up, then run
+ * repeatedly, and the distribution is reported rather than one number.
+ */
+static int s_reps = 5;
+
+template <typename Fn> void run(const char *name, Fn fn, int count)
+{
+    if (count >= 10)
+    {
+        fn(count / 10); // warm caches and any lazy allocation; discarded
+    }
+
+    std::vector<double> micros;
+    micros.reserve(s_reps);
+    for (int r = 0; r < s_reps; ++r)
+    {
+        micros.push_back(static_cast<double>(fn(count)) / count);
+    }
+    std::sort(micros.begin(), micros.end());
+
+    const size_t n = micros.size();
+    const double median = (n % 2) ? micros[n / 2] : (micros[n / 2 - 1] + micros[n / 2]) / 2.0;
+    const double lo = micros.front();
+    const double hi = micros.back();
+    double mean = 0.0;
+    for (double v : micros)
+    {
+        mean += v;
+    }
+    mean /= n;
+    double var = 0.0;
+    for (double v : micros)
+    {
+        var += (v - mean) * (v - mean);
+    }
+    const double sd = (n > 1) ? std::sqrt(var / (n - 1)) : 0.0;
+    const double spread = (median > 0.0) ? (hi - lo) / median * 100.0 : 0.0;
+
+    std::cout << name << "\n"
+              << "    n=" << count << " reps=" << s_reps << std::fixed << std::setprecision(5) << "  median " << median
+              << " us  min " << lo << "  max " << hi << "  sd " << sd << std::setprecision(1) << "  spread " << spread
+              << "%" << std::defaultfloat << std::endl;
+}
 
 std::unique_ptr<FIX::DataDictionary> s_dataDictionary;
 const bool VALIDATE = true;
@@ -95,7 +144,7 @@ int main(int argc, char **argv)
     short port = 0;
 
     int opt;
-    while ((opt = getopt(argc, argv, "+p:+c:")) != -1)
+    while ((opt = getopt(argc, argv, "+p:+c:+r:")) != -1)
     {
         switch (opt)
         {
@@ -105,8 +154,15 @@ int main(int argc, char **argv)
         case 'c':
             count = atoi(optarg);
             break;
+        case 'r':
+            s_reps = atoi(optarg);
+            if (s_reps < 1)
+            {
+                s_reps = 1;
+            }
+            break;
         default:
-            std::cout << "usage: " << argv[0] << " -p port -c count" << std::endl;
+            std::cout << "usage: " << argv[0] << " -p port -c count [-r repetitions]" << std::endl;
             return EXIT_FAILURE;
         }
     }
@@ -115,89 +171,81 @@ int main(int argc, char **argv)
     {
         s_dataDictionary.reset(new FIX::DataDictionary("../spec/FIX42.xml"));
 
-        std::cout << "Converting integers to strings: ";
-        report(testIntegerToString(count), count);
+        run("Converting integers to strings", [&](int n) { return testIntegerToString(n); }, count);
 
-        std::cout << "Converting strings to integers: ";
-        report(testStringToInteger(count), count);
+        run("Converting strings to integers", [&](int n) { return testStringToInteger(n); }, count);
 
-        std::cout << "Converting doubles to strings: ";
-        report(testDoubleToString(count), count);
+        run("Converting doubles to strings", [&](int n) { return testDoubleToString(n); }, count);
 
-        std::cout << "Converting strings to doubles: ";
-        report(testStringToDouble(count), count);
+        run("Converting strings to doubles", [&](int n) { return testStringToDouble(n); }, count);
 
-        std::cout << "Creating Heartbeat messages: ";
-        report(testCreateHeartbeat(count), count);
+        run("Creating Heartbeat messages", [&](int n) { return testCreateHeartbeat(n); }, count);
 
-        std::cout << "Identifying message types: ";
-        report(testIdentifyType(count), count);
+        run("Identifying message types", [&](int n) { return testIdentifyType(n); }, count);
 
-        std::cout << "Serializing Heartbeat messages: ";
-        report(testSerializeHeartbeat(count), count);
+        run("Serializing Heartbeat messages", [&](int n) { return testSerializeHeartbeat(n); }, count);
 
-        std::cout << "Deserializing Heartbeat messages: ";
-        report(testDeserializeHeartbeat(count), count);
+        run("Deserializing Heartbeat messages", [&](int n) { return testDeserializeHeartbeat(n); }, count);
 
-        std::cout << "Deserializing and validating Heartbeat messages: ";
-        report(testDeserializeAndValidateHeartbeat(count), count);
+        run(
+            "Deserializing and validating Heartbeat messages",
+            [&](int n) { return testDeserializeAndValidateHeartbeat(n); }, count);
 
-        std::cout << "Creating NewOrderSingle messages: ";
-        report(testCreateNewOrderSingle(count), count);
+        run("Creating NewOrderSingle messages", [&](int n) { return testCreateNewOrderSingle(n); }, count);
 
-        std::cout << "Serializing NewOrderSingle messages: ";
-        report(testSerializeNewOrderSingle(count), count);
+        run("Serializing NewOrderSingle messages", [&](int n) { return testSerializeNewOrderSingle(n); }, count);
 
-        std::cout << "Deserializing NewOrderSingle messages: ";
-        report(testDeserializeNewOrderSingle(count), count);
+        run("Deserializing NewOrderSingle messages", [&](int n) { return testDeserializeNewOrderSingle(n); }, count);
 
-        std::cout << "Deserializing and validating NewOrderSingle messages: ";
-        report(testDeserializeAndValidateNewOrderSingle(count), count);
+        run(
+            "Deserializing and validating NewOrderSingle messages",
+            [&](int n) { return testDeserializeAndValidateNewOrderSingle(n); }, count);
 
-        std::cout << "Creating QuoteRequest messages: ";
-        report(testCreateQuoteRequest(count), count);
+        run("Creating QuoteRequest messages", [&](int n) { return testCreateQuoteRequest(n); }, count);
 
-        std::cout << "Serializing QuoteRequest messages: ";
-        report(testSerializeQuoteRequest(count), count);
+        run("Serializing QuoteRequest messages", [&](int n) { return testSerializeQuoteRequest(n); }, count);
 
-        std::cout << "Deserializing QuoteRequest messages: ";
-        report(testDeserializeQuoteRequest(count), count);
+        run("Deserializing QuoteRequest messages", [&](int n) { return testDeserializeQuoteRequest(n); }, count);
 
-        std::cout << "Deserializing and validating QuoteRequest messages: ";
-        report(testDeserializeAndValidateQuoteRequest(count), count);
+        run(
+            "Deserializing and validating QuoteRequest messages",
+            [&](int n) { return testDeserializeAndValidateQuoteRequest(n); }, count);
 
-        std::cout << "Reading fields from QuoteRequest message: ";
-        report(testReadFromQuoteRequest(count), count);
+        run("Reading fields from QuoteRequest message", [&](int n) { return testReadFromQuoteRequest(n); }, count);
 
-        std::cout << "Storing NewOrderSingle messages: ";
-        report(testFileStoreNewOrderSingle(count), count);
+        run("Storing NewOrderSingle messages", [&](int n) { return testFileStoreNewOrderSingle(n); }, count);
 
-        std::cout << "Validating NewOrderSingle messages with no data dictionary: ";
-        report(testValidateNewOrderSingle(count), count);
+        run(
+            "Validating NewOrderSingle messages with no data dictionary",
+            [&](int n) { return testValidateNewOrderSingle(n); }, count);
 
-        std::cout << "Validating NewOrderSingle messages with data dictionary: ";
-        report(testValidateDictNewOrderSingle(count), count);
+        run(
+            "Validating NewOrderSingle messages with data dictionary",
+            [&](int n) { return testValidateDictNewOrderSingle(n); }, count);
 
-        std::cout << "Validating QuoteRequest messages with no data dictionary: ";
-        report(testValidateQuoteRequest(count), count);
+        run(
+            "Validating QuoteRequest messages with no data dictionary",
+            [&](int n) { return testValidateQuoteRequest(n); }, count);
 
-        std::cout << "Validating QuoteRequest messages with data dictionary: ";
-        report(testValidateDictQuoteRequest(count), count);
+        run(
+            "Validating QuoteRequest messages with data dictionary",
+            [&](int n) { return testValidateDictQuoteRequest(n); }, count);
 
-        std::cout << "Unpooled Heartbeat (new Message each time): ";
-        report(testNoPoolHeartbeat(count), count);
+        run("Unpooled Heartbeat (new Message each time)", [&](int n) { return testNoPoolHeartbeat(n); }, count);
 
-        std::cout << "Unpooled NewOrderSingle (new Message each time): ";
-        report(testNoPoolNewOrderSingle(count), count);
+        run(
+            "Unpooled NewOrderSingle (new Message each time)", [&](int n) { return testNoPoolNewOrderSingle(n); },
+            count);
 
-        std::cout << "Unpooled QuoteRequest (new Message each time): ";
-        report(testNoPoolQuoteRequest(count), count);
+        run("Unpooled QuoteRequest (new Message each time)", [&](int n) { return testNoPoolQuoteRequest(n); }, count);
 
-        std::cout << "Sending/Receiving NewOrderSingle/ExecutionReports on Socket";
-        report(testSendOnSocket(count, port), count);
+        run(
+            "Sending/Receiving NewOrderSingle/ExecutionReports on Socket",
+            [&](int n) { return testSendOnSocket(n, port); }, count);
 
-        std::cout << "Sending/Receiving NewOrderSingle/ExecutionReports on ThreadedSocket";
-        report(testSendOnThreadedSocket(count, port), count);
+        run(
+            "Sending/Receiving NewOrderSingle/ExecutionReports on ThreadedSocket",
+            [&](int n) { return testSendOnThreadedSocket(n, port); }, count);
     }
     catch (std::exception const &e)
     {
@@ -206,16 +254,6 @@ int main(int argc, char **argv)
     }
 
     return EXIT_SUCCESS;
-}
-
-void report(long total_micros, int count)
-{
-    double total_seconds = static_cast<double>(total_micros) / 1e6;
-    double num_per_second = count / total_seconds;
-    double micros_per = static_cast<double>(total_micros) / count;
-    std::cout << std::endl
-              << "    num: " << count << ", total_seconds: " << total_seconds << ", num_per_second: " << num_per_second
-              << ", micros_per: " << micros_per << std::endl;
 }
 
 long testIntegerToString(int count)
