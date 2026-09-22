@@ -151,6 +151,13 @@ SSLSocketAcceptor::~SSLSocketAcceptor()
         delete connection.second;
     }
 
+    // onStart() owns m_pServer on the blocking path and nulls it there, but the
+    // poll() path never runs onStart(), so without this the server leaks.  Doing
+    // it here rather than in onStop() avoids racing a blocking onStart() that may
+    // still be using it when stop() is called from another thread.
+    delete m_pServer;
+    m_pServer = 0;
+
     if (m_sslInit)
     {
         SSL_CTX_free(m_ctx);

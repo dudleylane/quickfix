@@ -153,12 +153,13 @@ unaffected and everything else remains visible to ASan.)
 
 #### Known baseline — the suite is not currently clean
 
-As of `25b23432` (2026-09-21), `ut` under ASan + UBSan **exits 1**:
+As of `558f56d0` (2026-09-22), `ut` under ASan + UBSan **exits 1**, on one leak record and the
+UBSan reports below:
 
-- **173 leak records — 2,697,884 bytes in 39,833 allocations.** 152 of the records allocate inside
-  `DataDictionary`. The two direct roots are libstdc++'s demangler and `string_concat`
-  (`Utility.cpp:100`), whose `new char[]` result is dropped by the caller at
-  `src/C++/test/UtilityTestCase.cpp:70`.
+- **1 leak record — 1,536 bytes in 96 allocations**, and it is not ours: libstdc++'s
+  `d_growable_string_callback_adapter`, the buffer `__cxa_demangle` grows and its caller never
+  frees. The stack contains no quickfix frames. This is the floor, not a target.
+  It was 2,697,884 bytes in 173 records until `558f56d0` and the acceptor fix that follows it.
 - **48 UBSan vptr reports**, all genuine type confusion from one idiom: `FieldMap` stores fields by
   value in `std::vector<FieldBase>`, so `addField` slices any derived field, and `FIELD_GET_REF`,
   `FIELD_GET_PTR` and `getField<T>()` (a `reinterpret_cast`) then read them back as `StringField`,

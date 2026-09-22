@@ -46,6 +46,13 @@ SocketAcceptor::~SocketAcceptor()
     {
         delete iter->second;
     }
+
+    // onStart() owns m_pServer on the blocking path and nulls it there, but the
+    // poll() path never runs onStart(), so without this the server leaks.  Doing
+    // it here rather than in onStop() avoids racing a blocking onStart() that may
+    // still be using it when stop() is called from another thread.
+    delete m_pServer;
+    m_pServer = 0;
 }
 
 void SocketAcceptor::onConfigure(const SessionSettings &sessionSettings) EXCEPT(ConfigError)
