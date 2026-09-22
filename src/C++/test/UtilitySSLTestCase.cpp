@@ -17,12 +17,7 @@
 **
 ****************************************************************************/
 
-#ifdef _MSC_VER
-#pragma warning(disable : 4503 4355 4786)
-#include "stdafx.h"
-#else
 #include "config.h"
-#endif
 
 #if (HAVE_SSL > 0)
 

@@ -73,7 +73,6 @@ COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/Sock
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SSLSocketAcceptor.h ${PROJECT_SOURCE_DIR}/include/quickfix/SSLSocketAcceptor.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SSLSocketConnection.h ${PROJECT_SOURCE_DIR}/include/quickfix/SSLSocketConnection.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SSLSocketInitiator.h ${PROJECT_SOURCE_DIR}/include/quickfix/SSLSocketInitiator.h
-COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/stdafx.h ${PROJECT_SOURCE_DIR}/include/quickfix/stdafx.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/strptime.h ${PROJECT_SOURCE_DIR}/include/quickfix/strptime.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/ThreadedSocketAcceptor.h ${PROJECT_SOURCE_DIR}/include/quickfix/ThreadedSocketAcceptor.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/ThreadedSocketConnection.h ${PROJECT_SOURCE_DIR}/include/quickfix/ThreadedSocketConnection.h

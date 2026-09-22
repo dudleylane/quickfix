@@ -39,7 +39,6 @@ set(quickfix_SOURCES
   SocketConnector.cpp
   SocketInitiator.cpp
   SocketServer.cpp
-  stdafx.cpp
   ThreadedSocketAcceptor.cpp
   ThreadedSocketConnection.cpp
   ThreadedSocketInitiator.cpp

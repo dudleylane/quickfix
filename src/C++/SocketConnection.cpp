@@ -17,12 +17,8 @@
 **
 ****************************************************************************/
 
-#ifdef _MSC_VER
-#include "stdafx.h"
-#else
 #include "config.h"
 #include <poll.h>
-#endif
 
 #include "Session.h"
 #include "SocketAcceptor.h"

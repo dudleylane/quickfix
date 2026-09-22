@@ -17,11 +17,7 @@
 **
 ****************************************************************************/
 
-#ifdef _MSC_VER
-#include "stdafx.h"
-#else
 #include "config.h"
-#endif
 
 #include "PUGIXML_DOMDocument.h"
 #include <sstream>

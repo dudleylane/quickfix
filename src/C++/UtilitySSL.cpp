@@ -109,11 +109,7 @@
  * ====================================================================
  */
 
-#ifdef _MSC_VER
-#include "stdafx.h"
-#else
 #include "config.h"
-#endif
 
 #if (HAVE_SSL > 0)
 

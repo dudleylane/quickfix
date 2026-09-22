@@ -135,7 +135,7 @@ excluded — leave them formatted as upstream ships them. Two tree-wide reformat
   - Member variables: `m_camelCase` (e.g., `m_sessionID`)
   - Constants: `UPPER_CASE` (e.g., `MAX_BUFFER_SIZE`)
 - **Headers**: Use `#ifndef FIX_<NAME>_H` / `#define` / `#endif` include guards, the convention
-  throughout `src/C++/` (only `stdafx.h` and `stdint_msvc.h` use `#pragma once`)
+  throughout `src/C++/` — every header there uses them
 - **Includes**: Order includes as:
   1. Corresponding header (for .cpp files)
   2. C++ standard library
@@ -304,11 +304,11 @@ cd doc
 
 ## Platform Notes
 
-**Linux is the only supported platform**, and the Windows-specific files have been removed — the
-`WIN32` socket monitor, the MSVC shims, the `.bat` runners and the Windows-only `atrun` supervisor.
-What survives is `stdafx.{h,cpp}`, the MSVC precompiled-header shim that every source still includes
-behind `#ifdef _MSC_VER`, plus scattered `_MSC_VER` guards. Treat those as dead weight rather than a
-constraint: don't let one shape a design, and don't spend the gate on it.
+**Linux is the only supported platform**, and the Windows-specific files have been removed: the
+`WIN32` socket monitor, the MSVC shims, the `stdafx` precompiled-header shim, the `.bat` runners
+and the Windows-only `atrun` supervisor. A few inline `_MSC_VER` guards remain in shared sources.
+Treat those as dead weight rather than a constraint: don't let one shape a design, and don't spend
+the gate on it.
 
 - **CentOS Stream 10 / RHEL 10** (what CI runs): `gcc-toolset-15`, `cmake`, `ninja-build`, `ruby`;
   put the toolset ahead of the system GCC 14 for every build and test step:

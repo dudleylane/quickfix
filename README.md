@@ -65,9 +65,8 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 new enough toolchain should work but are not verified.
 
 Windows and macOS support has been removed: the `WIN32` socket monitor, the MSVC shims, the `.bat`
-runners and the Windows-only `atrun` supervisor are gone. What remains is `stdafx.{h,cpp}`, the MSVC
-precompiled-header shim that every source still includes behind `#ifdef _MSC_VER`, plus scattered
-`_MSC_VER` guards. Those are inert here and are not maintained.
+runners, the `stdafx` precompiled-header shim and the Windows-only `atrun` supervisor are all gone.
+A few inline `_MSC_VER` guards remain in shared sources; they are inert here and not maintained.
 
 ## Prerequisites
 
