@@ -23,6 +23,7 @@
 
 #include <UtilitySSL.h>
 
+#include "TestHelper.h"
 #include "catch_amalgamated.hpp"
 
 using namespace FIX;
@@ -81,6 +82,55 @@ TEST_CASE("UtilitySSLTests")
         // Empty hostname should be skipped silently
         // We can't test with null SSL but we can document behavior
         CHECK_FALSE(ssl_set_sni_hostname(nullptr, ""));
+    }
+}
+
+// findCAList builds the client-CA list an acceptor advertises.  The fixtures
+// live beside the sample configs; specPath is "spec" or "../spec" depending on
+// where ut is launched from, so resolve relative to it.
+static std::string certPath(const std::string &leaf)
+{
+    return FIX::TestSettings::specPath + "/../bin/cfg/certs/" + leaf;
+}
+
+TEST_CASE("FindCAListTests")
+{
+    SECTION("findCAList_BundleFile_ReturnsTheCertificateName")
+    {
+        const std::string caFile = certPath("certs/cacert.pem");
+        STACK_OF(X509_NAME) *caList = findCAList(caFile.c_str(), 0);
+        REQUIRE(caList != 0);
+        CHECK(sk_X509_NAME_num(caList) == 1);
+        sk_X509_NAME_pop_free(caList, X509_NAME_free);
+    }
+
+    SECTION("findCAList_Directory_ReturnsEachCertificateName")
+    {
+        const std::string caPath = certPath("newcerts");
+        STACK_OF(X509_NAME) *caList = findCAList(0, caPath.c_str());
+        REQUIRE(caList != 0);
+        // 01.pem and 02.pem hold distinct subjects; "." and ".." are not certificates.
+        CHECK(sk_X509_NAME_num(caList) == 2);
+        sk_X509_NAME_pop_free(caList, X509_NAME_free);
+    }
+
+    SECTION("findCAList_FileAndDirectory_DeduplicatesByName")
+    {
+        const std::string caFile = certPath("certs/cacert.pem");
+        const std::string caPath = certPath("certs");
+        // The same certificate reached both ways must appear once.
+        STACK_OF(X509_NAME) *caList = findCAList(caFile.c_str(), caPath.c_str());
+        REQUIRE(caList != 0);
+        CHECK(sk_X509_NAME_num(caList) == 1);
+        sk_X509_NAME_pop_free(caList, X509_NAME_free);
+    }
+
+    SECTION("findCAList_NeitherSource_ReturnsEmptyList")
+    {
+        STACK_OF(X509_NAME) *caList = findCAList(0, 0);
+        REQUIRE(caList != 0);
+        CHECK(sk_X509_NAME_num(caList) == 0);
+        sk_X509_NAME_pop_free(caList, X509_NAME_free);
     }
 }
 

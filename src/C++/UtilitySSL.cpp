@@ -736,6 +736,35 @@ int typeofSSLAlgo(X509 *pCert, EVP_PKEY *pKey)
     return t;
 }
 
+/*
+ * Move every name from sk into skCAList, dropping duplicates.  SSL_load_client_CA_file
+ * hands back a stack that owns its names, so each one has to be either transferred or
+ * freed, and the emptied container released -- otherwise both the names that lose the
+ * duplicate check and every container leak on each call.
+ */
+static void mergeCANames(STACK_OF(X509_NAME) * skCAList, STACK_OF(X509_NAME) * sk)
+{
+    if (sk == 0)
+    {
+        return;
+    }
+
+    X509_NAME *name;
+    while ((name = sk_X509_NAME_shift(sk)) != 0)
+    {
+        if (sk_X509_NAME_find(skCAList, name) < 0)
+        {
+            sk_X509_NAME_push(skCAList, name);
+        }
+        else
+        {
+            X509_NAME_free(name);
+        }
+    }
+
+    sk_X509_NAME_free(sk);
+}
+
 STACK_OF(X509_NAME) * findCAList(const char *cpCAfile, const char *cpCApath)
 {
     STACK_OF(X509_NAME) * skCAList;
@@ -765,16 +794,7 @@ STACK_OF(X509_NAME) * findCAList(const char *cpCAfile, const char *cpCApath)
      */
     if (cpCAfile != 0)
     {
-        sk = SSL_load_client_CA_file(cpCAfile);
-        for (n = 0; sk != 0 && n < sk_X509_NAME_num(sk); n++)
-        {
-            // TODO log->onEvent(std::string("CA certificate: ") +
-            // X509_NAME_oneline(sk_X509_NAME_value(sk, n), 0, 0));
-            if (sk_X509_NAME_find(skCAList, sk_X509_NAME_value(sk, n)) < 0)
-            {
-                sk_X509_NAME_push(skCAList, sk_X509_NAME_value(sk, n));
-            }
-        }
+        mergeCANames(skCAList, SSL_load_client_CA_file(cpCAfile));
     }
 
     /*
@@ -788,6 +808,11 @@ STACK_OF(X509_NAME) * findCAList(const char *cpCAfile, const char *cpCApath)
         dir = ACE_OS::opendir(cpCApath);
 #endif
 
+        if (dir == 0)
+        {
+            return skCAList;
+        }
+
 #ifndef HAVE_ACE_DIRENT
         while ((direntry = readdir(dir)) != 0)
         {
@@ -796,16 +821,8 @@ STACK_OF(X509_NAME) * findCAList(const char *cpCAfile, const char *cpCApath)
         {
 #endif
             cp = string_concat(cpCApath, SLASH, direntry->d_name, 0);
-            sk = SSL_load_client_CA_file(cp);
-            for (n = 0; sk != 0 && n < sk_X509_NAME_num(sk); n++)
-            {
-                // TODO log->onEvent(std::string("CA certificate: %s") +
-                //           X509_NAME_oneline(sk_X509_NAME_value(sk, n), 0, 0));
-                if (sk_X509_NAME_find(skCAList, sk_X509_NAME_value(sk, n)) < 0)
-                {
-                    sk_X509_NAME_push(skCAList, sk_X509_NAME_value(sk, n));
-                }
-            }
+            mergeCANames(skCAList, SSL_load_client_CA_file(cp));
+            delete[] cp; // string_concat returns storage owned by the caller
         }
 #ifndef HAVE_ACE_DIRENT
         closedir(dir);
