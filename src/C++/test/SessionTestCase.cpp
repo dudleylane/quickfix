@@ -1349,6 +1349,7 @@ TEST_CASE_METHOD(initiatorFixture, "InitiatorSessionTestCase")
 
         provider.addTransportDataDictionary(sessionID.getBeginString(), pDataDictionary);
 
+        delete object; // the fixture already created one; replacing it would leak
         object = new Session([this]() { return now; }, *this, factory, sessionID, provider, sessionTime, 1, 0);
 
         FIX::Message sentLogon = createLogon("TW", "ISLD", 1);
@@ -1386,6 +1387,7 @@ TEST_CASE_METHOD(initiatorFixture, "InitiatorSessionTestCase")
         provider.addTransportDataDictionary(sessionID.getBeginString(), pDataDictionary);
         provider.addApplicationDataDictionary(ApplVerID("20"), pDataDictionary);
 
+        delete object; // the fixture already created one; replacing it would leak
         object = new Session([this]() { return now; }, *this, factory, sessionID, provider, sessionTime, 1, 0);
         object->setSenderDefaultApplVerID(ApplVerID("20"));
         object->setTargetDefaultApplVerID(ApplVerID("20"));
@@ -1459,6 +1461,7 @@ TEST_CASE_METHOD(initiatorFixture, "InitiatorSessionTestCase")
         provider.addTransportDataDictionary(sessionID.getBeginString(), pDataDictionary);
         provider.addApplicationDataDictionary(ApplVerID("20"), pDataDictionary);
 
+        delete object; // the fixture already created one; replacing it would leak
         object = new Session([this]() { return now; }, *this, factory, sessionID, provider, sessionTime, 1, 0);
         object->setSenderDefaultApplVerID(ApplVerID("20"));
         object->setTargetDefaultApplVerID(ApplVerID("20"));
@@ -1514,6 +1517,7 @@ TEST_CASE_METHOD(initiatorFixture, "InitiatorSessionTestCase")
         provider.addTransportDataDictionary(sessionID.getBeginString(), pDataDictionary);
         provider.addApplicationDataDictionary(ApplVerID("20"), pDataDictionary);
 
+        delete object; // the fixture already created one; replacing it would leak
         object = new Session([this]() { return now; }, *this, factory, sessionID, provider, sessionTime, 1, 0);
         object->setSenderDefaultApplVerID(ApplVerID("20"));
         object->setTargetDefaultApplVerID(ApplVerID("20"));
@@ -1609,6 +1613,7 @@ TEST_CASE_METHOD(initiatorFixture, "InitiatorSessionTestCase")
         pDataDictionary->addMsgField(FIX::MsgType_Reject, 115);
         provider.addTransportDataDictionary(sessionID.getBeginString(), pDataDictionary);
 
+        delete object; // the fixture already created one; replacing it would leak
         object = new Session([this]() { return now; }, *this, factory, sessionID, provider, sessionTime, 1, 0);
 
         FIX::Message sentLogon = createLogon("TW", "ISLD", 1);
@@ -1747,6 +1752,7 @@ TEST_CASE_METHOD(initiatorFixture, "InitiatorSessionTestCase")
         provider.addTransportDataDictionary(sessionID.getBeginString(), pDataDictionary);
         provider.addApplicationDataDictionary(ApplVerID("20"), pDataDictionary);
 
+        delete object; // the fixture already created one; replacing it would leak
         object = new Session([this]() { return now; }, *this, factory, sessionID, provider, sessionTime, 1, 0);
         object->setSenderDefaultApplVerID(ApplVerID("20"));
         object->setTargetDefaultApplVerID(ApplVerID("20"));
@@ -2819,6 +2825,7 @@ TEST_CASE_METHOD(initiatorFIX40Fixture, "customFIX40_UnsupportedMessageType_ERRe
 
     provider.addTransportDataDictionary(sessionID.getBeginString(), pDataDictionary);
 
+    delete object; // the fixture already created one; replacing it would leak
     object = new Session([this]() { return now; }, *this, factory, sessionID, provider, sessionTime, 1, 0);
     object->setResponder(this);
 
