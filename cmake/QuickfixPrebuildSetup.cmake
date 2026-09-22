@@ -11,7 +11,6 @@ COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/Data
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/DataDictionary.h ${PROJECT_SOURCE_DIR}/include/quickfix/DataDictionary.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/DataDictionaryProvider.h ${PROJECT_SOURCE_DIR}/include/quickfix/DataDictionaryProvider.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/Dictionary.h ${PROJECT_SOURCE_DIR}/include/quickfix/Dictionary.h
-COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/dirent_windows.h ${PROJECT_SOURCE_DIR}/include/quickfix/dirent_windows.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/DOMDocument.h ${PROJECT_SOURCE_DIR}/include/quickfix/DOMDocument.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/Event.h ${PROJECT_SOURCE_DIR}/include/quickfix/Event.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/Except.h ${PROJECT_SOURCE_DIR}/include/quickfix/Except.h
@@ -70,13 +69,11 @@ COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/Sock
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SocketInitiator.h ${PROJECT_SOURCE_DIR}/include/quickfix/SocketInitiator.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SocketMonitor.h ${PROJECT_SOURCE_DIR}/include/quickfix/SocketMonitor.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SocketMonitor_UNIX.h ${PROJECT_SOURCE_DIR}/include/quickfix/SocketMonitor_UNIX.h
-COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SocketMonitor_WIN32.h ${PROJECT_SOURCE_DIR}/include/quickfix/SocketMonitor_WIN32.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SocketServer.h ${PROJECT_SOURCE_DIR}/include/quickfix/SocketServer.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SSLSocketAcceptor.h ${PROJECT_SOURCE_DIR}/include/quickfix/SSLSocketAcceptor.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SSLSocketConnection.h ${PROJECT_SOURCE_DIR}/include/quickfix/SSLSocketConnection.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/SSLSocketInitiator.h ${PROJECT_SOURCE_DIR}/include/quickfix/SSLSocketInitiator.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/stdafx.h ${PROJECT_SOURCE_DIR}/include/quickfix/stdafx.h
-COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/stdint_msvc.h ${PROJECT_SOURCE_DIR}/include/quickfix/stdint_msvc.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/strptime.h ${PROJECT_SOURCE_DIR}/include/quickfix/strptime.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/ThreadedSocketAcceptor.h ${PROJECT_SOURCE_DIR}/include/quickfix/ThreadedSocketAcceptor.h
 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/src/C++/ThreadedSocketConnection.h ${PROJECT_SOURCE_DIR}/include/quickfix/ThreadedSocketConnection.h

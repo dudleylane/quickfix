@@ -118,15 +118,7 @@
 #include "SessionSettings.h"
 #include "Utility.h"
 
-#ifndef _MSC_VER
 #include <dirent.h>
-#else
-#ifndef HAVE_ACE_DIRENT
-#include "dirent_windows.h"
-#else
-#include "ace/OS_NS_dirent.h"
-#endif
-#endif
 
 #include "openssl/err.h"
 #include "openssl/ssl.h" // SSL and SSL_CTX for SSL connections

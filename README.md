@@ -64,9 +64,10 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 **Linux only.** CentOS Stream 10 / RHEL 10 is what CI builds and tests; other distributions with a
 new enough toolchain should work but are not verified.
 
-Windows and macOS sources inherited from upstream are still in the tree — `SocketMonitor_WIN32.cpp`,
-`dirent_windows.h`, `stdint_msvc.h`, the `*.bat` runners, `test/atrun/` — but they are neither built
-nor tested here, and no support is offered for them.
+Windows and macOS support has been removed: the `WIN32` socket monitor, the MSVC shims, the `.bat`
+runners and the Windows-only `atrun` supervisor are gone. What remains is `stdafx.{h,cpp}`, the MSVC
+precompiled-header shim that every source still includes behind `#ifdef _MSC_VER`, plus scattered
+`_MSC_VER` guards. Those are inert here and are not maintained.
 
 ## Prerequisites
 

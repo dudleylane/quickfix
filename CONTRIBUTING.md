@@ -304,10 +304,11 @@ cd doc
 
 ## Platform Notes
 
-**Linux is the only supported platform.** Windows and macOS sources inherited from upstream remain
-in the tree — `SocketMonitor_WIN32.cpp`, `dirent_windows.h`, `stdint_msvc.h`, the `*.bat` runners
-and `test/atrun/` — but nothing builds or tests them, and changes are not expected to keep them
-working. Don't spend effort on them, and don't treat a Windows-only construct as a constraint.
+**Linux is the only supported platform**, and the Windows-specific files have been removed — the
+`WIN32` socket monitor, the MSVC shims, the `.bat` runners and the Windows-only `atrun` supervisor.
+What survives is `stdafx.{h,cpp}`, the MSVC precompiled-header shim that every source still includes
+behind `#ifdef _MSC_VER`, plus scattered `_MSC_VER` guards. Treat those as dead weight rather than a
+constraint: don't let one shape a design, and don't spend the gate on it.
 
 - **CentOS Stream 10 / RHEL 10** (what CI runs): `gcc-toolset-15`, `cmake`, `ninja-build`, `ruby`;
   put the toolset ahead of the system GCC 14 for every build and test step:

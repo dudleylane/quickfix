@@ -47,11 +47,7 @@ set(quickfix_SOURCES
   Utility.cpp
 )
 
-if (WIN32)
-  list(APPEND quickfix_SOURCES SocketMonitor_WIN32.cpp)
-else()
-  list(APPEND quickfix_SOURCES SocketMonitor_UNIX.cpp)
-endif()
+list(APPEND quickfix_SOURCES SocketMonitor_UNIX.cpp)
 
 if (HAVE_SSL)
   set (quickfix_SOURCES ${quickfix_SOURCES}

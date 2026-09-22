@@ -108,12 +108,6 @@ if (QUICKFIX_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
-if (QUICKFIX_TESTS)
-  if( WIN32)
-    add_subdirectory(test)
-  endif()
-endif()
-
 configure_file(cmake_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/C++/config.h @ONLY)
 configure_file(cmake_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/quickfix/config.h @ONLY)
 
