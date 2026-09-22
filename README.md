@@ -20,6 +20,7 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Parser**: Added `MAX_MESSAGE_SIZE` (8 MB) bound on `addToStream()` — prevents unbounded memory growth from malicious/malformed peers
 - **Message**: Bounds check on `RawDataLength`-computed iterator — prevents out-of-bounds read from corrupted data length fields
 - **FileStoreTestCase**: Added missing `destroy()` call — fixes test fixture memory leak
+- **`FieldRef<F>`** (`FieldMap.h`): `FIELD_GET_REF`/`FIELD_GET_PTR` no longer cast the stored `FieldBase` to a derived field type — `FieldMap` slices on `addField`, so that cast was undefined behaviour. They now read the value through `F::valueOf`, which takes a `FieldBase`
 
 ### SSL/OpenSSL
 - **X509 leak**: Added `X509_free()` after `SSL_get_peer_certificate()` in `acceptSSLConnection()`
@@ -177,19 +178,21 @@ unaffected and everything else remains visible to ASan.)
 
 #### Known baseline — the suite is not currently clean
 
-As of `7bc5c74e` (2026-09-22), `ut` runs **56 test cases / 2033 assertions**, all passing, and
+As of `92877495` (2026-09-22), `ut` runs **56 test cases / 2033 assertions**, all passing, and
 under ASan + UBSan **exits 1** on one leak record and the UBSan reports below:
 
-- **1 leak record — 1,536 bytes in 96 allocations**, and it is not ours: libstdc++'s
+- **1 leak record — 800 bytes in 50 allocations**, and it is not ours: libstdc++'s
   `d_growable_string_callback_adapter`, the buffer `__cxa_demangle` grows and its caller never
-  frees. The stack contains no quickfix frames. This is the floor, not a target.
+  frees. The stack contains no quickfix frames. It is not a target of its own: the size tracks how
+  many UBSan reports get demangled, so it falls as those are removed.
   It was 2,697,884 bytes in 173 records until `558f56d0`, `7383a9ef` and `7bc5c74e` removed the
   orphaned test Sessions, the `poll()`-path `SocketServer` leak, and the `findCAList` leaks.
-- **48 UBSan vptr reports**, all genuine type confusion from one idiom: `FieldMap` stores fields by
-  value in `std::vector<FieldBase>`, so `addField` slices any derived field, and `FIELD_GET_REF`,
-  `FIELD_GET_PTR` and `getField<T>()` (a `reinterpret_cast`) then read them back as `StringField`,
-  `UInt64Field`, `IntField`, `CheckSumField`, `MsgType` or `MsgSeqNum`. Sites span `Field.h`,
-  `DataDictionary.h`, `Message.cpp` and `Session.{h,cpp}`.
+- **25 UBSan vptr reports**, all genuine type confusion from one idiom: `FieldMap` stores fields by
+  value in `std::vector<FieldBase>`, so `addField` slices any derived field, and `getField<T>()`
+  (a `reinterpret_cast`) then reads it back as `StringField`, `UInt64Field`, `IntField`, `MsgType`
+  or `MsgSeqNum`. They surface in `Field.h`'s comparison and conversion operators, and at the
+  `getField<T>()` call sites in `Message.cpp`, `Session.cpp` and the test suite itself
+  (`SessionTestCase.cpp`, and Catch2's own comparison template).
 
   These are inert **only** because every derived field type adds no data members and no virtual
   overrides, so each access stays inside the base object. Adding a single member to any of them
@@ -197,9 +200,12 @@ under ASan + UBSan **exits 1** on one leak record and the UBSan reports below:
   `virtual ~FieldBase` that makes it detectable dates to 2006 — and is not introduced by this fork.
   The counts are identical in a static build, so they are not a shared-library RTTI artefact.
 
-  A second family of 17, where the generated `FIXnn::Message::getHeader()`/`getTrailer()` cast a
-  `FIX::Header`/`FIX::Trailer` to the per-version subclass, was removed from the generator; see
-  `FieldMap`'s typed `set`/`get`/`isSet`/`getIfSet` templates.
+  Two other families are already gone. 17, where the generated
+  `FIXnn::Message::getHeader()`/`getTrailer()` cast a `FIX::Header`/`FIX::Trailer` to the
+  per-version subclass, left with the generator; see `FieldMap`'s typed
+  `set`/`get`/`isSet`/`getIfSet` templates. A further 23 left with `FIELD_GET_REF` and
+  `FIELD_GET_PTR` in `92877495`, which now yield a `FieldRef<F>` and a `const FieldBase *` and read
+  the stored field through `F::valueOf` rather than casting it.
 
 These counts are **identical with and without `ENABLE_TBB_ALLOCATOR`**, so they are not an artefact
 of the allocator. Treat them as a baseline to diff against rather than an accepted state: a change
