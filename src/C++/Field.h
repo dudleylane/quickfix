@@ -239,7 +239,10 @@ public:
     StringField(int field) : FieldBase(field, "") {}
 
     void setValue(const std::string &value) { setString(value); }
-    const std::string &getValue() const { return getString(); }
+    using value_type = const std::string &;
+    /// Reads the value from any FieldBase without pretending it is a StringField.
+    static value_type valueOf(const FieldBase &field) { return field.getString(); }
+    const std::string &getValue() const { return valueOf(*this); }
     operator const std::string &() const { return getString(); }
 
     bool operator<(const StringField &rhs) const { return getString() < rhs.getString(); }
@@ -309,17 +312,20 @@ public:
     CharField(int field) : FieldBase(field, "") {}
 
     void setValue(char value) { setString(CharConvertor::convert(value)); }
-    char getValue() const EXCEPT(IncorrectDataFormat)
+    using value_type = char;
+    /// Reads the value from any FieldBase without pretending it is a CharField.
+    static value_type valueOf(const FieldBase &field) EXCEPT(IncorrectDataFormat)
     {
         try
         {
-            return CharConvertor::convert(getString());
+            return CharConvertor::convert(field.getString());
         }
         catch (FieldConvertError &)
         {
-            throw IncorrectDataFormat(getTag(), getString());
+            throw IncorrectDataFormat(field.getTag(), field.getString());
         }
     }
+    char getValue() const EXCEPT(IncorrectDataFormat) { return valueOf(*this); }
     operator char() const { return getValue(); }
 };
 
@@ -334,17 +340,20 @@ public:
     DoubleField(int field) : FieldBase(field, "") {}
 
     void setValue(double value, int padding = 0) { setString(DoubleConvertor::convert(value, padding)); }
-    double getValue() const EXCEPT(IncorrectDataFormat)
+    using value_type = double;
+    /// Reads the value from any FieldBase without pretending it is a DoubleField.
+    static value_type valueOf(const FieldBase &field) EXCEPT(IncorrectDataFormat)
     {
         try
         {
-            return DoubleConvertor::convert(getString());
+            return DoubleConvertor::convert(field.getString());
         }
         catch (FieldConvertError &)
         {
-            throw IncorrectDataFormat(getTag(), getString());
+            throw IncorrectDataFormat(field.getTag(), field.getString());
         }
     }
+    double getValue() const EXCEPT(IncorrectDataFormat) { return valueOf(*this); }
     operator double() const { return getValue(); }
 };
 
@@ -356,17 +365,20 @@ public:
     IntField(int field) : FieldBase(field, "") {}
 
     void setValue(int value) { setString(IntConvertor::convert(value)); }
-    int getValue() const EXCEPT(IncorrectDataFormat)
+    using value_type = int;
+    /// Reads the value from any FieldBase without pretending it is a IntField.
+    static value_type valueOf(const FieldBase &field) EXCEPT(IncorrectDataFormat)
     {
         try
         {
-            return IntConvertor::convert(getString());
+            return IntConvertor::convert(field.getString());
         }
         catch (FieldConvertError &)
         {
-            throw IncorrectDataFormat(getTag(), getString());
+            throw IncorrectDataFormat(field.getTag(), field.getString());
         }
     }
+    int getValue() const EXCEPT(IncorrectDataFormat) { return valueOf(*this); }
     operator int() const { return getValue(); }
 };
 
@@ -382,17 +394,20 @@ public:
     Int64Field(int field) : FieldBase(field, "") {}
 
     void setValue(int64_t value) { setString(Int64Convertor::convert(value)); }
-    int64_t getValue() const EXCEPT(IncorrectDataFormat)
+    using value_type = int64_t;
+    /// Reads the value from any FieldBase without pretending it is a Int64Field.
+    static value_type valueOf(const FieldBase &field) EXCEPT(IncorrectDataFormat)
     {
         try
         {
-            return Int64Convertor::convert(getString());
+            return Int64Convertor::convert(field.getString());
         }
         catch (FieldConvertError &)
         {
-            throw IncorrectDataFormat(getTag(), getString());
+            throw IncorrectDataFormat(field.getTag(), field.getString());
         }
     }
+    int64_t getValue() const EXCEPT(IncorrectDataFormat) { return valueOf(*this); }
     operator int64_t() const { return getValue(); }
 };
 
@@ -404,17 +419,20 @@ public:
     UInt64Field(int field) : FieldBase(field, "") {}
 
     void setValue(uint64_t value) { setString(UInt64Convertor::convert(value)); }
-    uint64_t getValue() const EXCEPT(IncorrectDataFormat)
+    using value_type = uint64_t;
+    /// Reads the value from any FieldBase without pretending it is a UInt64Field.
+    static value_type valueOf(const FieldBase &field) EXCEPT(IncorrectDataFormat)
     {
         try
         {
-            return UInt64Convertor::convert(getString());
+            return UInt64Convertor::convert(field.getString());
         }
         catch (FieldConvertError &)
         {
-            throw IncorrectDataFormat(getTag(), getString());
+            throw IncorrectDataFormat(field.getTag(), field.getString());
         }
     }
+    uint64_t getValue() const EXCEPT(IncorrectDataFormat) { return valueOf(*this); }
     operator uint64_t() const { return getValue(); }
 };
 
@@ -426,17 +444,20 @@ public:
     BoolField(int field) : FieldBase(field, "") {}
 
     void setValue(bool value) { setString(BoolConvertor::convert(value)); }
-    bool getValue() const EXCEPT(IncorrectDataFormat)
+    using value_type = bool;
+    /// Reads the value from any FieldBase without pretending it is a BoolField.
+    static value_type valueOf(const FieldBase &field) EXCEPT(IncorrectDataFormat)
     {
         try
         {
-            return BoolConvertor::convert(getString());
+            return BoolConvertor::convert(field.getString());
         }
         catch (FieldConvertError &)
         {
-            throw IncorrectDataFormat(getTag(), getString());
+            throw IncorrectDataFormat(field.getTag(), field.getString());
         }
     }
+    bool getValue() const EXCEPT(IncorrectDataFormat) { return valueOf(*this); }
     operator bool() const { return getValue(); }
 };
 
@@ -454,17 +475,20 @@ public:
     }
 
     void setValue(const UtcTimeStamp &value) { setString(UtcTimeStampConvertor::convert(value)); }
-    UtcTimeStamp getValue() const EXCEPT(IncorrectDataFormat)
+    using value_type = UtcTimeStamp;
+    /// Reads the value from any FieldBase without pretending it is a UtcTimeStampField.
+    static value_type valueOf(const FieldBase &field) EXCEPT(IncorrectDataFormat)
     {
         try
         {
-            return UtcTimeStampConvertor::convert(getString());
+            return UtcTimeStampConvertor::convert(field.getString());
         }
         catch (FieldConvertError &)
         {
-            throw IncorrectDataFormat(getTag(), getString());
+            throw IncorrectDataFormat(field.getTag(), field.getString());
         }
     }
+    UtcTimeStamp getValue() const EXCEPT(IncorrectDataFormat) { return valueOf(*this); }
     operator UtcTimeStamp() const { return getValue(); }
 
     bool operator<(const UtcTimeStampField &rhs) const { return getValue() < rhs.getValue(); }
@@ -480,17 +504,20 @@ public:
     UtcDateField(int field) : FieldBase(field, UtcDateConvertor::convert(UtcDate())) {}
 
     void setValue(const UtcDate &value) { setString(UtcDateConvertor::convert(value)); }
-    UtcDate getValue() const EXCEPT(IncorrectDataFormat)
+    using value_type = UtcDate;
+    /// Reads the value from any FieldBase without pretending it is a UtcDateField.
+    static value_type valueOf(const FieldBase &field) EXCEPT(IncorrectDataFormat)
     {
         try
         {
-            return UtcDateConvertor::convert(getString());
+            return UtcDateConvertor::convert(field.getString());
         }
         catch (FieldConvertError &)
         {
-            throw IncorrectDataFormat(getTag(), getString());
+            throw IncorrectDataFormat(field.getTag(), field.getString());
         }
     }
+    UtcDate getValue() const EXCEPT(IncorrectDataFormat) { return valueOf(*this); }
     operator UtcDate() const { return getValue(); }
 
     bool operator<(const UtcDateField &rhs) const { return getValue() < rhs.getValue(); }
@@ -512,17 +539,20 @@ public:
     }
 
     void setValue(const UtcTimeOnly &value) { setString(UtcTimeOnlyConvertor::convert(value)); }
-    UtcTimeOnly getValue() const EXCEPT(IncorrectDataFormat)
+    using value_type = UtcTimeOnly;
+    /// Reads the value from any FieldBase without pretending it is a UtcTimeOnlyField.
+    static value_type valueOf(const FieldBase &field) EXCEPT(IncorrectDataFormat)
     {
         try
         {
-            return UtcTimeOnlyConvertor::convert(getString());
+            return UtcTimeOnlyConvertor::convert(field.getString());
         }
         catch (FieldConvertError &)
         {
-            throw IncorrectDataFormat(getTag(), getString());
+            throw IncorrectDataFormat(field.getTag(), field.getString());
         }
     }
+    UtcTimeOnly getValue() const EXCEPT(IncorrectDataFormat) { return valueOf(*this); }
     operator UtcTimeOnly() const { return getValue(); }
 
     bool operator<(const UtcTimeOnlyField &rhs) const { return getValue() < rhs.getValue(); }
@@ -538,17 +568,20 @@ public:
     CheckSumField(int field) : FieldBase(field, "") {}
 
     void setValue(int value) { setString(CheckSumConvertor::convert(value)); }
-    int getValue() const EXCEPT(IncorrectDataFormat)
+    using value_type = int;
+    /// Reads the value from any FieldBase without pretending it is a CheckSumField.
+    static value_type valueOf(const FieldBase &field) EXCEPT(IncorrectDataFormat)
     {
         try
         {
-            return CheckSumConvertor::convert(getString());
+            return CheckSumConvertor::convert(field.getString());
         }
         catch (FieldConvertError &)
         {
-            throw IncorrectDataFormat(getTag(), getString());
+            throw IncorrectDataFormat(field.getTag(), field.getString());
         }
     }
+    int getValue() const EXCEPT(IncorrectDataFormat) { return valueOf(*this); }
     operator int() const { return getValue(); }
 };
 
