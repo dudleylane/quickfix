@@ -153,13 +153,14 @@ unaffected and everything else remains visible to ASan.)
 
 #### Known baseline — the suite is not currently clean
 
-As of `558f56d0` (2026-09-22), `ut` under ASan + UBSan **exits 1**, on one leak record and the
-UBSan reports below:
+As of `7bc5c74e` (2026-09-22), `ut` runs **56 test cases / 2033 assertions**, all passing, and
+under ASan + UBSan **exits 1** on one leak record and the UBSan reports below:
 
 - **1 leak record — 1,536 bytes in 96 allocations**, and it is not ours: libstdc++'s
   `d_growable_string_callback_adapter`, the buffer `__cxa_demangle` grows and its caller never
   frees. The stack contains no quickfix frames. This is the floor, not a target.
-  It was 2,697,884 bytes in 173 records until `558f56d0` and the acceptor fix that follows it.
+  It was 2,697,884 bytes in 173 records until `558f56d0`, `7383a9ef` and `7bc5c74e` removed the
+  orphaned test Sessions, the `poll()`-path `SocketServer` leak, and the `findCAList` leaks.
 - **48 UBSan vptr reports**, all genuine type confusion from one idiom: `FieldMap` stores fields by
   value in `std::vector<FieldBase>`, so `addField` slices any derived field, and `FIELD_GET_REF`,
   `FIELD_GET_PTR` and `getField<T>()` (a `reinterpret_cast`) then read them back as `StringField`,
