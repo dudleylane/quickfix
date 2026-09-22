@@ -41,10 +41,13 @@
 #include "getopt-repl.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <x86intrin.h>
 
 long testIntegerToString(int);
 long testStringToInteger(int);
@@ -94,20 +97,151 @@ long GetTickCount()
  * then run repeatedly, and the distribution is reported rather than one
  * number.
  */
+
+/*
+ * Per-iteration latency sampling.
+ *
+ * rdtscp costs ~26 cycles (9.6 ns at 2.71 GHz) for a back-to-back pair on this
+ * host, against ~71 cycles for clock_gettime, so it is the only timer fine
+ * enough to bracket a single operation.  It is still not free: an operation
+ * near the floor would be mostly measurement.  Sampling is therefore enabled
+ * per benchmark, automatically, only when the warm-up pass shows the operation
+ * costs at least LATENCY_MIN_NS -- the conversion micro-benchmarks at 8-20 ns
+ * stay throughput-only rather than reporting a number that is mostly overhead.
+ *
+ * Requires an invariant TSC (constant_tsc + nonstop_tsc); checked at startup.
+ */
+// Keep a benchmark's result observable.  Without this the convertor loops have
+// a constant argument and a discarded result, so the compiler folds them away
+// entirely -- "Converting integers to strings" measured exactly 0.00000 us.
+template <typename T> static inline void sink(const T &v) { asm volatile("" : : "g"(&v) : "memory"); }
+
+static constexpr double LATENCY_MIN_NS = 100.0;
+
+static inline uint64_t tscNow()
+{
+    unsigned aux;
+    return __rdtscp(&aux);
+}
+
+static double g_cyclesPerNs = 0.0;
+static uint64_t g_tscOverhead = 0;
+static bool g_tscUsable = false;
+static bool g_sampling = false;
+static std::vector<uint64_t> g_samples;
+
+static bool tscIsInvariant()
+{
+    std::ifstream info("/proc/cpuinfo");
+    std::string line;
+    while (std::getline(info, line))
+    {
+        if (line.rfind("flags", 0) == 0)
+        {
+            return line.find("constant_tsc") != std::string::npos && line.find("nonstop_tsc") != std::string::npos;
+        }
+    }
+    return false;
+}
+
+static void calibrateTsc()
+{
+    if (!tscIsInvariant())
+    {
+        std::cout << "note: no invariant TSC; latency percentiles disabled" << std::endl;
+        return;
+    }
+
+    timespec a, b;
+    clock_gettime(CLOCK_MONOTONIC, &a);
+    const uint64_t t0 = tscNow();
+    timespec nap{0, 200000000};
+    nanosleep(&nap, nullptr);
+    const uint64_t t1 = tscNow();
+    clock_gettime(CLOCK_MONOTONIC, &b);
+
+    const double ns = (b.tv_sec - a.tv_sec) * 1e9 + (b.tv_nsec - a.tv_nsec);
+    g_cyclesPerNs = (t1 - t0) / ns;
+
+    std::vector<uint64_t> pairs;
+    pairs.reserve(20000);
+    for (int i = 0; i < 20000; ++i)
+    {
+        const uint64_t s0 = tscNow();
+        pairs.push_back(tscNow() - s0);
+    }
+    std::sort(pairs.begin(), pairs.end());
+    g_tscOverhead = pairs[pairs.size() / 2];
+    g_tscUsable = true;
+
+    std::cout << std::fixed << std::setprecision(3) << "TSC " << g_cyclesPerNs << " cycles/ns, sampling overhead "
+              << g_tscOverhead / g_cyclesPerNs << " ns (subtracted); latency shown for operations above "
+              << LATENCY_MIN_NS << " ns" << std::defaultfloat << std::endl
+              << std::endl;
+}
+
+// Runs the measured loop, optionally bracketing each iteration.  `count` is the
+// already-decremented bound the benchmarks use, so this runs count+1 iterations,
+// matching the original loops exactly.
+template <typename Op> long sampleLoop(int count, Op op)
+{
+    const long start = GetTickCount();
+    if (g_sampling)
+    {
+        g_samples.clear();
+        g_samples.reserve(static_cast<size_t>(count) + 1);
+        for (int i = 0; i <= count; ++i)
+        {
+            const uint64_t t0 = tscNow();
+            op();
+            g_samples.push_back(tscNow() - t0);
+        }
+    }
+    else
+    {
+        for (int i = 0; i <= count; ++i)
+        {
+            op();
+        }
+    }
+    return GetTickCount() - start;
+}
+
+static double pct(const std::vector<uint64_t> &sorted, double q)
+{
+    if (sorted.empty())
+    {
+        return 0.0;
+    }
+    size_t i = static_cast<size_t>(q * (sorted.size() - 1));
+    const double cycles = static_cast<double>(sorted[i]);
+    const double corrected = cycles > g_tscOverhead ? cycles - g_tscOverhead : 0.0;
+    return corrected / g_cyclesPerNs / 1000.0; // microseconds
+}
+
 static int s_reps = 5;
 
 template <typename Fn> void run(const char *name, Fn fn, int count)
 {
+    double warmUsPerOp = 0.0;
     if (count >= 10)
     {
-        fn(count / 10); // warm caches and any lazy allocation; discarded
+        const int warmCount = count / 10;
+        warmUsPerOp = static_cast<double>(fn(warmCount)) / warmCount; // warm-up, discarded but sized
     }
+
+    // Only bracket individual iterations when the operation is comfortably
+    // larger than the sampling overhead; otherwise report throughput alone.
+    const bool wantLatency = g_tscUsable && warmUsPerOp * 1000.0 >= LATENCY_MIN_NS;
+    g_samples.clear();
 
     std::vector<double> micros;
     micros.reserve(s_reps);
     for (int r = 0; r < s_reps; ++r)
     {
+        g_sampling = wantLatency && (r == s_reps - 1); // sample the last run only
         micros.push_back(static_cast<double>(fn(count)) / count);
+        g_sampling = false;
     }
     std::sort(micros.begin(), micros.end());
 
@@ -136,6 +270,15 @@ template <typename Fn> void run(const char *name, Fn fn, int count)
               << "    n=" << count << " reps=" << s_reps << std::fixed << std::setprecision(5) << "  median " << median
               << " us  min " << lo << "  max " << hi << "  sd " << sd << std::setprecision(1) << "  cv " << cv << "%"
               << std::defaultfloat << std::endl;
+
+    if (wantLatency && !g_samples.empty())
+    {
+        std::sort(g_samples.begin(), g_samples.end());
+        std::cout << std::fixed << std::setprecision(5) << "    latency n=" << g_samples.size() << "  p50 "
+                  << pct(g_samples, 0.50) << "  p90 " << pct(g_samples, 0.90) << "  p99 " << pct(g_samples, 0.99)
+                  << "  p99.9 " << pct(g_samples, 0.999) << "  max " << pct(g_samples, 1.0) << " us"
+                  << std::defaultfloat << std::endl;
+    }
 }
 
 std::unique_ptr<FIX::DataDictionary> s_dataDictionary;
@@ -173,6 +316,8 @@ int main(int argc, char **argv)
 
     try
     {
+        calibrateTsc();
+
         s_dataDictionary.reset(new FIX::DataDictionary("../spec/FIX42.xml"));
 
         run("Converting integers to strings", [&](int n) { return testIntegerToString(n); }, count);
@@ -264,12 +409,7 @@ long testIntegerToString(int count)
 {
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        FIX::IntConvertor::convert(1234);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { sink(FIX::IntConvertor::convert(1234)); });
 }
 
 long testStringToInteger(int count)
@@ -277,24 +417,14 @@ long testStringToInteger(int count)
     std::string value("1234");
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        FIX::IntConvertor::convert(value);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { sink(FIX::IntConvertor::convert(value)); });
 }
 
 long testDoubleToString(int count)
 {
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        FIX::DoubleConvertor::convert(123.45);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { sink(FIX::DoubleConvertor::convert(123.45)); });
 }
 
 long testStringToDouble(int count)
@@ -302,25 +432,14 @@ long testStringToDouble(int count)
     std::string value("123.45");
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        FIX::DoubleConvertor::convert(value);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { sink(FIX::DoubleConvertor::convert(value)); });
 }
 
 long testCreateHeartbeat(int count)
 {
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        FIX42::Heartbeat();
-    }
-
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { FIX42::Heartbeat(); });
 }
 
 long testIdentifyType(int count)
@@ -330,13 +449,7 @@ long testIdentifyType(int count)
 
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        FIX::identifyType(messageString);
-    }
-
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { FIX::identifyType(messageString); });
 }
 
 long testSerializeHeartbeat(int count)
@@ -344,12 +457,7 @@ long testSerializeHeartbeat(int count)
     FIX42::Heartbeat message;
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        message.toString();
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { message.toString(); });
 }
 
 long testDeserializeHeartbeat(int count)
@@ -358,12 +466,7 @@ long testDeserializeHeartbeat(int count)
     std::string string = message.toString();
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        message.setString(string, DONT_VALIDATE, s_dataDictionary.get());
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { message.setString(string, DONT_VALIDATE, s_dataDictionary.get()); });
 }
 
 long testDeserializeAndValidateHeartbeat(int count)
@@ -372,29 +475,22 @@ long testDeserializeAndValidateHeartbeat(int count)
     std::string string = message.toString();
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        message.setString(string, VALIDATE, s_dataDictionary.get());
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { message.setString(string, VALIDATE, s_dataDictionary.get()); });
 }
 
 long testCreateNewOrderSingle(int count)
 {
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        FIX::ClOrdID clOrdID("ORDERID");
-        FIX::HandlInst handlInst('1');
-        FIX::Symbol symbol("LNUX");
-        FIX::Side side(FIX::Side_BUY);
-        FIX::TransactTime transactTime = FIX::TransactTime::now();
-        FIX::OrdType ordType(FIX::OrdType_MARKET);
-        FIX42::NewOrderSingle(clOrdID, handlInst, symbol, side, transactTime, ordType);
-    }
-
-    return GetTickCount() - start;
+    return sampleLoop(count,
+                      [&]
+                      {
+                          FIX::ClOrdID clOrdID("ORDERID");
+                          FIX::HandlInst handlInst('1');
+                          FIX::Symbol symbol("LNUX");
+                          FIX::Side side(FIX::Side_BUY);
+                          FIX::TransactTime transactTime = FIX::TransactTime::now();
+                          FIX::OrdType ordType(FIX::OrdType_MARKET);
+                          FIX42::NewOrderSingle(clOrdID, handlInst, symbol, side, transactTime, ordType);
+                      });
 }
 
 long testSerializeNewOrderSingle(int count)
@@ -409,12 +505,7 @@ long testSerializeNewOrderSingle(int count)
 
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        message.toString();
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { message.toString(); });
 }
 
 long testDeserializeNewOrderSingle(int count)
@@ -430,12 +521,7 @@ long testDeserializeNewOrderSingle(int count)
 
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        message.setString(string, DONT_VALIDATE, s_dataDictionary.get());
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { message.setString(string, DONT_VALIDATE, s_dataDictionary.get()); });
 }
 
 long testDeserializeAndValidateNewOrderSingle(int count)
@@ -451,12 +537,7 @@ long testDeserializeAndValidateNewOrderSingle(int count)
 
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        message.setString(string, VALIDATE, s_dataDictionary.get());
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { message.setString(string, VALIDATE, s_dataDictionary.get()); });
 }
 
 long testCreateQuoteRequest(int count)
@@ -524,12 +605,7 @@ long testSerializeQuoteRequest(int count)
 
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int j = 0; j <= count; ++j)
-    {
-        message.toString();
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { message.toString(); });
 }
 
 long testDeserializeQuoteRequest(int count)
@@ -553,12 +629,7 @@ long testDeserializeQuoteRequest(int count)
 
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int j = 0; j <= count; ++j)
-    {
-        message.setString(string, DONT_VALIDATE, s_dataDictionary.get());
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { message.setString(string, DONT_VALIDATE, s_dataDictionary.get()); });
 }
 
 long testDeserializeAndValidateQuoteRequest(int count)
@@ -582,12 +653,7 @@ long testDeserializeAndValidateQuoteRequest(int count)
 
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int j = 0; j <= count; ++j)
-    {
-        message.setString(string, VALIDATE, s_dataDictionary.get());
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { message.setString(string, VALIDATE, s_dataDictionary.get()); });
 }
 
 long testReadFromQuoteRequest(int count)
@@ -611,44 +677,42 @@ long testReadFromQuoteRequest(int count)
     }
     group.clear();
 
-    long start = GetTickCount();
-    for (int j = 0; j <= count; ++j)
-    {
-        FIX::QuoteReqID quoteReqID;
-        FIX::Symbol symbol;
-        FIX::MaturityMonthYear maturityMonthYear;
-        FIX::PutOrCall putOrCall;
-        FIX::StrikePrice strikePrice;
-        FIX::Side side;
-        FIX::OrderQty orderQty;
-        FIX::Currency currency;
-        FIX::OrdType ordType;
+    return sampleLoop(count,
+                      [&]
+                      {
+                          FIX::QuoteReqID quoteReqID;
+                          FIX::Symbol symbol;
+                          FIX::MaturityMonthYear maturityMonthYear;
+                          FIX::PutOrCall putOrCall;
+                          FIX::StrikePrice strikePrice;
+                          FIX::Side side;
+                          FIX::OrderQty orderQty;
+                          FIX::Currency currency;
+                          FIX::OrdType ordType;
 
-        FIX::NoRelatedSym noRelatedSym;
-        message.get(noRelatedSym);
-        int end = noRelatedSym;
-        for (int k = 1; k <= end; ++k)
-        {
-            message.getGroup(k, group);
-            group.get(symbol);
-            group.get(maturityMonthYear);
-            group.get(putOrCall);
-            group.get(strikePrice);
-            group.get(side);
-            group.get(orderQty);
-            group.get(currency);
-            group.get(ordType);
-            maturityMonthYear.getValue();
-            putOrCall.getValue();
-            strikePrice.getValue();
-            side.getValue();
-            orderQty.getValue();
-            currency.getValue();
-            ordType.getValue();
-        }
-    }
-
-    return GetTickCount() - start;
+                          FIX::NoRelatedSym noRelatedSym;
+                          message.get(noRelatedSym);
+                          int end = noRelatedSym;
+                          for (int k = 1; k <= end; ++k)
+                          {
+                              message.getGroup(k, group);
+                              group.get(symbol);
+                              group.get(maturityMonthYear);
+                              group.get(putOrCall);
+                              group.get(strikePrice);
+                              group.get(side);
+                              group.get(orderQty);
+                              group.get(currency);
+                              group.get(ordType);
+                              maturityMonthYear.getValue();
+                              putOrCall.getValue();
+                              strikePrice.getValue();
+                              side.getValue();
+                              orderQty.getValue();
+                              currency.getValue();
+                              ordType.getValue();
+                          }
+                      });
 }
 
 long testFileStoreNewOrderSingle(int count)
@@ -701,12 +765,7 @@ long testValidateNewOrderSingle(int count)
     FIX::DataDictionary dataDictionary;
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        dataDictionary.validate(message);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { dataDictionary.validate(message); });
 }
 
 long testValidateDictNewOrderSingle(int count)
@@ -727,12 +786,7 @@ long testValidateDictNewOrderSingle(int count)
 
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        s_dataDictionary->validate(message);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { s_dataDictionary->validate(message); });
 }
 
 long testValidateQuoteRequest(int count)
@@ -763,12 +817,7 @@ long testValidateQuoteRequest(int count)
     FIX::DataDictionary dataDictionary;
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int j = 0; j <= count; ++j)
-    {
-        dataDictionary.validate(message);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { dataDictionary.validate(message); });
 }
 
 long testValidateDictQuoteRequest(int count)
@@ -798,12 +847,7 @@ long testValidateDictQuoteRequest(int count)
 
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int j = 0; j <= count; ++j)
-    {
-        s_dataDictionary->validate(message);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { s_dataDictionary->validate(message); });
 }
 
 long testNoPoolHeartbeat(int count)
@@ -812,12 +856,7 @@ long testNoPoolHeartbeat(int count)
     std::string str = tmp.toString();
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        FIX::Message message(str, DONT_VALIDATE);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { FIX::Message message(str, DONT_VALIDATE); });
 }
 
 long testNoPoolNewOrderSingle(int count)
@@ -832,12 +871,7 @@ long testNoPoolNewOrderSingle(int count)
     std::string str = tmp.toString();
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        FIX::Message message(str, DONT_VALIDATE);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { FIX::Message message(str, DONT_VALIDATE); });
 }
 
 long testNoPoolQuoteRequest(int count)
@@ -859,12 +893,7 @@ long testNoPoolQuoteRequest(int count)
     std::string str = tmp.toString();
     count = count - 1;
 
-    long start = GetTickCount();
-    for (int i = 0; i <= count; ++i)
-    {
-        FIX::Message message(str, DONT_VALIDATE);
-    }
-    return GetTickCount() - start;
+    return sampleLoop(count, [&] { FIX::Message message(str, DONT_VALIDATE); });
 }
 
 class TestApplication : public FIX::NullApplication
