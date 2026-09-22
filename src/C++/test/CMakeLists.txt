@@ -48,8 +48,13 @@ if (QUICKFIX_TESTS)
 
   add_executable(ut ut.cpp ${ut_SOURCES})
   
-  target_include_directories(ut PRIVATE ${PROJECT_SOURCE_DIR} 
-    ${PROJECT_SOURCE_DIR}/src/C++)
+  # src/C++ must precede the project root: a quoted #include "config.h" from a
+  # file in src/C++ resolves to src/C++/config.h because the including file's own
+  # directory is searched first, but a test in src/C++/test has no config.h beside
+  # it and would otherwise pick up the empty placeholder CMake drops at the root,
+  # leaving HAVE_SSL undefined and compiling every SSL test out of existence.
+  target_include_directories(ut PRIVATE ${PROJECT_SOURCE_DIR}/src/C++
+    ${PROJECT_SOURCE_DIR})
     
   target_link_libraries(ut ${PROJECT_NAME})
   
