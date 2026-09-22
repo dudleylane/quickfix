@@ -36,8 +36,12 @@ TEST_CASE("SocketConnectorTests")
     {
         SocketConnector object;
         SocketServer server(0);
-        socket_handle socket = server.add(TestSettings::port, true, true);
-        CHECK(object.connect("127.0.0.1", TestSettings::port, false, 1024, 1024));
+        // Port 0 lets the OS pick a free one; binding a fixed port collides
+        // with anything else on the machine using it, including the
+        // acceptance suite and a concurrent CI run.
+        socket_handle socket = server.add(0, true, true);
+        const uint16_t port = socket_hostport(socket);
+        CHECK(object.connect("127.0.0.1", port, false, 1024, 1024));
         CHECK(server.accept(socket));
         server.close();
     }

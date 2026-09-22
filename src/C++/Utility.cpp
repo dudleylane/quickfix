@@ -436,7 +436,7 @@ bool socket_isBad(int s)
 
 void socket_invalidate(socket_handle &socket) { socket = INVALID_SOCKET_HANDLE; }
 
-short socket_hostport(socket_handle socket)
+uint16_t socket_hostport(socket_handle socket)
 {
     struct sockaddr_in addr;
     socklen_t len = sizeof(addr);
@@ -519,7 +519,7 @@ std::pair<socket_handle, socket_handle> socket_createpair()
 #ifdef _MSC_VER
     socket_handle acceptor = socket_createAcceptor(0, true);
     const char *host = socket_hostname(acceptor);
-    short port = socket_hostport(acceptor);
+    uint16_t port = socket_hostport(acceptor);
     socket_handle client = socket_createConnector();
     socket_connect(client, "localhost", port);
     socket_handle server = socket_accept(acceptor);

@@ -174,7 +174,7 @@ bool socket_isValid(socket_handle socket);
 bool socket_isBad(int s);
 #endif
 void socket_invalidate(socket_handle &socket);
-short socket_hostport(socket_handle socket);
+uint16_t socket_hostport(socket_handle socket);
 const char *socket_hostname(socket_handle socket);
 const char *socket_hostname(const char *name);
 const char *socket_peername(socket_handle socket);

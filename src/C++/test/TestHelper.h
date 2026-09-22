@@ -13,7 +13,6 @@ namespace FIX
 {
 struct TestSettings
 {
-    static const uint16_t port;
     static FIX::SessionSettings sessionSettings;
     static std::string specPath;
 
