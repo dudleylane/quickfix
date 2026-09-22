@@ -33,15 +33,39 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Sorted-check guard**: `sortFields()` skips redundant `std::sort` for well-ordered messages
 - **Group slicing fix**: Virtual `cloneInto()` preserves `Group::m_field`/`m_delim` during copy — `addGroup` and copy constructor previously sliced to `FieldMap`
 
-#### Benchmark results (100K iterations, Intel i7-4770)
+#### Benchmark baseline
 
-| Operation | Upstream (μs) | This fork (μs) | Improvement |
+Captured with `./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c 1,2,3` on an otherwise idle
+Intel i7-6820HQ (4C/8T, `performance` governor), Release build, GCC 15. Median of nine runs after a
+discarded warm-up; **cv** is the coefficient of variation across those runs.
+
+| Operation | Median (μs) | cv |
+|---|---|---|
+| Deserialize Heartbeat | 0.256 | 7.9% |
+| Deserialize NewOrderSingle | 0.676 | 5.5% |
+| Deserialize QuoteRequest (10 groups) | 6.467 | 4.5% |
+| Serialize QuoteRequest | 0.945 | 10.6% |
+| Read fields from QuoteRequest | 2.444 | 1.6% |
+| Socket round-trip NOS | 4.766 | 0.9% |
+| ThreadedSocket round-trip NOS | 3.395 | 4.8% |
+
+Message pooling, measured in the same process as reusing one `Message` across `setString()` calls
+versus constructing a new one each time:
+
+| Operation | Unpooled (μs) | Pooled (μs) | Delta |
 |---|---|---|---|
-| Deserialize Heartbeat | 0.288 | 0.219 | **-24%** |
-| Deserialize NewOrderSingle | 0.681 | 0.546 | **-20%** |
-| Deserialize QuoteRequest (10 groups) | 5.451 | 5.543 | — |
-| Pooled vs unpooled QuoteRequest | 6.465 | 5.543 | **-14%** |
-| Socket round-trip NOS | 3.236 | 2.966 | **-8%** |
+| Heartbeat | 0.321 (cv 4.5%) | 0.256 (cv 7.9%) | −20% |
+| NewOrderSingle | 0.621 (cv 2.1%) | 0.676 (cv 5.5%) | **+9%** |
+| QuoteRequest (10 groups) | 7.011 (cv 0.4%) | 6.467 (cv 4.5%) | −8% |
+
+Read these as indicative, not as guarantees. Pooling helps clearly only on the group-heavy
+QuoteRequest, where the arena avoids repeated group allocation; on NewOrderSingle it measured
+*slower*, and the sub-microsecond cases carry a cv near or above the effect being claimed. A
+difference smaller than roughly twice the cv is not resolvable on this hardware.
+
+These figures are absolute, not a comparison against upstream: the previous table's upstream column
+was measured on different hardware with unrecorded methodology and could not be reproduced here. It
+remains in git history.
 
 ### OpenSSL 3.0
 - **DH/ECDH**: Auto-negotiation via `SSL_CTX_set_dh_auto` on OpenSSL 3.0+ — eliminates all `DH_new`/`EC_KEY_new_by_curve_name` deprecation warnings

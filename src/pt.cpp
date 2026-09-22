@@ -89,9 +89,10 @@ long GetTickCount()
 
 /*
  * Repetition harness.  A single aggregate mean cannot distinguish a real change
- * from run-to-run noise -- measured spread on this tree reaches 40% on the
- * sub-microsecond benchmarks -- so every benchmark is warmed up, then run
- * repeatedly, and the distribution is reported rather than one number.
+ * from run-to-run noise -- the coefficient of variation on this tree reaches
+ * 10% on the sub-microsecond benchmarks -- so every benchmark is warmed up,
+ * then run repeatedly, and the distribution is reported rather than one
+ * number.
  */
 static int s_reps = 5;
 
@@ -126,12 +127,15 @@ template <typename Fn> void run(const char *name, Fn fn, int count)
         var += (v - mean) * (v - mean);
     }
     const double sd = (n > 1) ? std::sqrt(var / (n - 1)) : 0.0;
-    const double spread = (median > 0.0) ? (hi - lo) / median * 100.0 : 0.0;
+    // Coefficient of variation, not (max - lo) / median: the range grows with the
+    // number of repetitions by construction, so a range taken at -r 9 cannot be
+    // compared with one taken at -r 5.  CV is stable across sample sizes.
+    const double cv = (median > 0.0) ? sd / median * 100.0 : 0.0;
 
     std::cout << name << "\n"
               << "    n=" << count << " reps=" << s_reps << std::fixed << std::setprecision(5) << "  median " << median
-              << " us  min " << lo << "  max " << hi << "  sd " << sd << std::setprecision(1) << "  spread " << spread
-              << "%" << std::defaultfloat << std::endl;
+              << " us  min " << lo << "  max " << hi << "  sd " << sd << std::setprecision(1) << "  cv " << cv << "%"
+              << std::defaultfloat << std::endl;
 }
 
 std::unique_ptr<FIX::DataDictionary> s_dataDictionary;
