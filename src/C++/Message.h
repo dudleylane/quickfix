@@ -280,16 +280,16 @@ public:
         m_trailer.clear();
     }
 
-    static bool isAdminMsgType(const MsgType &msgType)
+    static bool isAdminMsgType(const std::string &msgType)
     {
-        if (msgType.getValue().length() != 1)
+        if (msgType.length() != 1)
         {
             return false;
         }
-        return strchr("0A12345", msgType.getValue().c_str()[0]) != 0;
+        return strchr("0A12345", msgType[0]) != 0;
     }
 
-    static ApplVerID toApplVerID(const BeginString &value)
+    static ApplVerID toApplVerID(const std::string &value)
     {
         if (value == BeginString_FIX40)
         {

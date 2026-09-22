@@ -118,8 +118,8 @@ void DataDictionary::validate(const Message &message, const DataDictionary *cons
                               const DataDictionary *const pAppDD) EXCEPT(FIX::Exception)
 {
     const Header &header = message.getHeader();
-    const BeginString &beginString = FIELD_GET_REF(header, BeginString);
-    const MsgType &msgType = FIELD_GET_REF(header, MsgType);
+    const std::string &beginString = FIELD_GET_REF(header, BeginString);
+    const std::string &msgType = FIELD_GET_REF(header, MsgType);
 
     if (pSessionDD != 0 && pSessionDD->m_hasVersion)
     {
@@ -156,7 +156,7 @@ void DataDictionary::validate(const Message &message, const DataDictionary *cons
     }
 }
 
-void DataDictionary::iterate(const FieldMap &map, const MsgType &msgType) const
+void DataDictionary::iterate(const FieldMap &map, const std::string &msgType) const
 {
     int lastField = 0;
 

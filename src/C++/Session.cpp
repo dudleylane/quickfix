@@ -277,7 +277,7 @@ void Session::nextLogon(const Message &logon, const UtcTimeStamp &now)
     m_state.receivedReset(false);
 
     auto const &msgSeqNum = logon.getHeader().getField<MsgSeqNum>();
-    if (isTargetTooHigh(msgSeqNum) && !resetSeqNumFlag)
+    if (isTargetTooHigh(msgSeqNum.getValue()) && !resetSeqNumFlag)
     {
         if (m_sendNextExpectedMsgSeqNum)
         {
@@ -454,7 +454,7 @@ void Session::nextResendRequest(const Message &resendRequest, const UtcTimeStamp
 
     MsgSeqNum msgSeqNum(0);
     resendRequest.getHeader().getField(msgSeqNum);
-    if (!isTargetTooHigh(msgSeqNum) && !isTargetTooLow(msgSeqNum))
+    if (!isTargetTooHigh(msgSeqNum.getValue()) && !isTargetTooLow(msgSeqNum.getValue()))
     {
         m_state.incrNextTargetMsgSeqNum();
     }
@@ -1149,31 +1149,36 @@ void Session::populateRejectReason(Message &reject, int field, const std::string
 
 void Session::populateRejectReason(Message &reject, const std::string &text) { reject.setField(Text(text)); }
 
+namespace
+{
+const std::string EMPTY_MSGTYPE;
+}
+
 bool Session::verify(const Message &msg, bool checkTooHigh, bool checkTooLow)
 {
-    const MsgType *pMsgType = 0;
-    const MsgSeqNum *pMsgSeqNum = 0;
+    const FieldBase *pMsgType = nullptr;
+    SEQNUM msgSeqNum = 0;
 
     try
     {
         const Header &header = msg.getHeader();
 
         pMsgType = FIELD_GET_PTR(header, MsgType);
-        const SenderCompID &senderCompID = FIELD_GET_REF(header, SenderCompID);
-        const TargetCompID &targetCompID = FIELD_GET_REF(header, TargetCompID);
-        const SendingTime &sendingTime = FIELD_GET_REF(header, SendingTime);
+        const std::string &senderCompID = FIELD_GET_REF(header, SenderCompID);
+        const std::string &targetCompID = FIELD_GET_REF(header, TargetCompID);
+        const FieldBase *pSendingTime = FIELD_GET_PTR(header, SendingTime);
 
         if (checkTooHigh || checkTooLow)
         {
-            pMsgSeqNum = FIELD_GET_PTR(header, MsgSeqNum);
+            msgSeqNum = FIELD_GET_REF(header, MsgSeqNum);
         }
 
-        if (!validLogonState(*pMsgType))
+        if (!validLogonState(MsgType::valueOf(*pMsgType)))
         {
             throw std::logic_error("Logon state is not valid for message");
         }
 
-        if (!isGoodTime(sendingTime))
+        if (!isGoodTime(*pSendingTime))
         {
             doBadTime(msg);
             return false;
@@ -1184,12 +1189,12 @@ bool Session::verify(const Message &msg, bool checkTooHigh, bool checkTooLow)
             return false;
         }
 
-        if (checkTooHigh && isTargetTooHigh(*pMsgSeqNum))
+        if (checkTooHigh && isTargetTooHigh(msgSeqNum))
         {
             doTargetTooHigh(msg);
             return false;
         }
-        else if (checkTooLow && isTargetTooLow(*pMsgSeqNum))
+        else if (checkTooLow && isTargetTooLow(msgSeqNum))
         {
             doTargetTooLow(msg);
             return false;
@@ -1199,7 +1204,7 @@ bool Session::verify(const Message &msg, bool checkTooHigh, bool checkTooLow)
         {
             SessionState::ResendRange range = m_state.resendRange();
 
-            if (*pMsgSeqNum >= range.second)
+            if (msgSeqNum >= range.second)
             {
                 m_state.onEvent("ResendRequest for messages FROM: " + SEQNUM_CONVERTOR::convert(range.first) +
                                 " TO: " + SEQNUM_CONVERTOR::convert(range.second) + " has been satisfied.");
@@ -1217,7 +1222,7 @@ bool Session::verify(const Message &msg, bool checkTooHigh, bool checkTooLow)
     m_state.lastReceivedTime(m_timestamper());
     m_state.testRequest(0);
 
-    fromCallback(pMsgType ? *pMsgType : MsgType(), msg, m_sessionID);
+    fromCallback(pMsgType ? MsgType::valueOf(*pMsgType) : EMPTY_MSGTYPE, msg, m_sessionID);
     return true;
 }
 
@@ -1228,7 +1233,7 @@ bool Session::shouldSendReset()
            (getExpectedSenderNum() == 1) && (getExpectedTargetNum() == 1);
 }
 
-bool Session::validLogonState(const MsgType &msgType)
+bool Session::validLogonState(const std::string &msgType)
 {
     if ((msgType == MsgType_Logon && m_state.sentReset()) || (m_state.receivedReset()))
     {
@@ -1258,7 +1263,7 @@ bool Session::validLogonState(const MsgType &msgType)
     return false;
 }
 
-void Session::fromCallback(const MsgType &msgType, const Message &msg, const SessionID &sessionID)
+void Session::fromCallback(const std::string &msgType, const Message &msg, const SessionID &sessionID)
 {
     if (Message::isAdminMsgType(msgType))
     {
@@ -1429,8 +1434,8 @@ void Session::next(const Message &message, const UtcTimeStamp &now, bool queued)
             return;
         }
 
-        const MsgType &msgType = FIELD_GET_REF(header, MsgType);
-        const BeginString &beginString = FIELD_GET_REF(header, BeginString);
+        const std::string &msgType = FIELD_GET_REF(header, MsgType);
+        const std::string &beginString = FIELD_GET_REF(header, BeginString);
         // make sure these fields are present
         FIELD_THROW_IF_NOT_FOUND(header, SenderCompID);
         FIELD_THROW_IF_NOT_FOUND(header, TargetCompID);
@@ -1444,7 +1449,7 @@ void Session::next(const Message &message, const UtcTimeStamp &now, bool queued)
         {
             if (m_sessionID.isFIXT())
             {
-                const DefaultApplVerID &applVerID = FIELD_GET_REF(message, DefaultApplVerID);
+                const std::string &applVerID = FIELD_GET_REF(message, DefaultApplVerID);
                 setTargetDefaultApplVerID(applVerID);
             }
             else
@@ -1696,13 +1701,13 @@ Session *Session::lookupSession(const std::string &string, bool reverse)
     try
     {
         const Header &header = message.getHeader();
-        const BeginString &beginString = FIELD_GET_REF(header, BeginString);
-        const SenderCompID &senderCompID = FIELD_GET_REF(header, SenderCompID);
-        const TargetCompID &targetCompID = FIELD_GET_REF(header, TargetCompID);
+        const std::string &beginString = FIELD_GET_REF(header, BeginString);
+        const std::string &senderCompID = FIELD_GET_REF(header, SenderCompID);
+        const std::string &targetCompID = FIELD_GET_REF(header, TargetCompID);
 
         if (reverse)
         {
-            return lookupSession(SessionID(beginString, SenderCompID(targetCompID), TargetCompID(senderCompID)));
+            return lookupSession(SessionID(beginString, targetCompID, senderCompID));
         }
 
         return lookupSession(SessionID(beginString, senderCompID, targetCompID));

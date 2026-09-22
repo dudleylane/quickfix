@@ -52,12 +52,12 @@ class MessageCracker : public FIX40::MessageCracker,
 public:
     void crack(const Message &message, const SessionID &sessionID)
     {
-        const FIX::BeginString &beginString = FIELD_GET_REF(message.getHeader(), BeginString);
+        const std::string &beginString = FIELD_GET_REF(message.getHeader(), BeginString);
 
         crack(message, sessionID, beginString);
     }
 
-    void crack(const Message &message, const SessionID &sessionID, const BeginString &beginString)
+    void crack(const Message &message, const SessionID &sessionID, const std::string &beginString)
     {
         if (beginString == BeginString_FIX40)
         {
@@ -137,12 +137,12 @@ public:
 
     void crack(Message &message, const SessionID &sessionID)
     {
-        const FIX::BeginString &beginString = FIELD_GET_REF(message.getHeader(), BeginString);
+        const std::string &beginString = FIELD_GET_REF(message.getHeader(), BeginString);
 
         crack(message, sessionID, beginString);
     }
 
-    void crack(Message &message, const SessionID &sessionID, const BeginString &beginString)
+    void crack(Message &message, const SessionID &sessionID, const std::string &beginString)
     {
         if (beginString == BeginString_FIX40)
         {

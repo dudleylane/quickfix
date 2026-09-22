@@ -420,6 +420,32 @@ private:
     std::unique_ptr<GroupArena> m_arena;
 };
 /*! @} */
+/**
+ * A typed, non-owning view over a field stored in a FieldMap.
+ *
+ * FieldMap stores fields by value as FieldBase, so addField slices any derived
+ * field: the stored object never was a StringField or an IntField. Casting it
+ * to one to reach getValue() is undefined behaviour, and was the source of the
+ * vptr reports UBSan raises on this tree. FieldRef reads the same value through
+ * F::valueOf, which takes a FieldBase and needs no cast, while holding only a
+ * reference -- so the access stays zero-copy. Verified to compile to the same
+ * two instructions as the cast it replaces.
+ */
+template <typename F> class FieldRef
+{
+public:
+    explicit FieldRef(const FieldBase &field) : m_field(field) {}
+
+    typename F::value_type getValue() const { return F::valueOf(m_field); }
+    operator typename F::value_type() const { return F::valueOf(m_field); }
+
+    int getTag() const { return m_field.getTag(); }
+    const std::string &getString() const { return m_field.getString(); }
+    const FieldBase &field() const { return m_field; }
+
+private:
+    const FieldBase &m_field;
+};
 } // namespace FIX
 
 #define FIELD_SET(MAP, FIELD)                                                                                          \
@@ -428,8 +454,10 @@ private:
     FIELD &get(FIELD &field) const { return (FIELD &)(MAP).getField(field); }                                          \
     bool getIfSet(FIELD &field) const { return (MAP).getFieldIfSet(field); }
 
-#define FIELD_GET_PTR(MAP, FLD) (const FIX::FLD *)MAP.getFieldPtr(FIX::FIELD::FLD)
-#define FIELD_GET_REF(MAP, FLD) (const FIX::FLD &)MAP.getFieldRef(FIX::FIELD::FLD)
+// Neither macro casts any more: the stored object is a FieldBase and is read as
+// one. FIELD_GET_PTR yields a plain FieldBase pointer; use FLD::valueOf on it.
+#define FIELD_GET_PTR(MAP, FLD) MAP.getFieldPtr(FIX::FIELD::FLD)
+#define FIELD_GET_REF(MAP, FLD) FIX::FieldRef<FIX::FLD>(MAP.getFieldRef(FIX::FIELD::FLD))
 #define FIELD_THROW_IF_NOT_FOUND(MAP, FLD)                                                                             \
     if (!(MAP).isSetField(FIX::FIELD::FLD))                                                                            \
     throw FieldNotFound(FIX::FIELD::FLD)

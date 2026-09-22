@@ -395,12 +395,12 @@ public:
 
 private:
     /// Iterate through fields while applying checks.
-    void iterate(const FieldMap &map, const MsgType &msgType) const;
+    void iterate(const FieldMap &map, const std::string &msgType) const;
 
     /// Check if message type is defined in spec.
-    void checkMsgType(const MsgType &msgType) const
+    void checkMsgType(const std::string &msgType) const
     {
-        if (!isMsgType(msgType.getValue()))
+        if (!isMsgType(msgType))
         {
             throw InvalidMessageType();
         }
@@ -576,7 +576,7 @@ private:
     }
 
     /// Check if a field is in this message type.
-    void checkIsInMessage(const FieldBase &field, const MsgType &msgType) const EXCEPT(TagNotDefinedForMessage)
+    void checkIsInMessage(const FieldBase &field, const std::string &msgType) const EXCEPT(TagNotDefinedForMessage)
     {
         if (!isMsgField(msgType, field.getTag()))
         {
@@ -585,7 +585,7 @@ private:
     }
 
     /// Check if group count matches number of groups in
-    void checkGroupCount(const FieldBase &field, const FieldMap &fieldMap, const MsgType &msgType) const
+    void checkGroupCount(const FieldBase &field, const FieldMap &fieldMap, const std::string &msgType) const
         EXCEPT(RepeatingGroupCountMismatch)
     {
         int fieldNum = field.getTag();
@@ -600,7 +600,7 @@ private:
 
     /// Check if a message has all required fields.
     void checkHasRequired(const FieldMap &header, const FieldMap &body, const FieldMap &trailer,
-                          const MsgType &msgType) const EXCEPT(RequiredTagMissing)
+                          const std::string &msgType) const EXCEPT(RequiredTagMissing)
     {
         for (const NonBodyFields::value_type &NBF : m_headerFields)
         {
@@ -618,7 +618,7 @@ private:
             }
         }
 
-        MsgTypeToField::const_iterator iM = m_requiredFields.find(msgType.getString());
+        MsgTypeToField::const_iterator iM = m_requiredFields.find(msgType);
         if (iM == m_requiredFields.end())
         {
             return;
@@ -639,7 +639,7 @@ private:
             int delim;
             const DataDictionary *DD = 0;
             int field = groups->first;
-            if (getGroup(msgType.getValue(), field, delim, DD))
+            if (getGroup(msgType, field, delim, DD))
             {
                 for (const FieldMap *group : groups->second)
                 {

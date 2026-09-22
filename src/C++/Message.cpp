@@ -574,9 +574,7 @@ void Message::validate() const
 {
     try
     {
-        const BodyLength &aBodyLength = FIELD_GET_REF(m_header, BodyLength);
-
-        const size_t expectedLength = static_cast<size_t>(aBodyLength);
+        const size_t expectedLength = FIELD_GET_REF(m_header, BodyLength);
         const size_t receivedLength = bodyLength();
 
         if (expectedLength != receivedLength)
@@ -586,9 +584,7 @@ void Message::validate() const
             throw InvalidMessage(text.str());
         }
 
-        const CheckSum &aCheckSum = FIELD_GET_REF(m_trailer, CheckSum);
-
-        const int expectedChecksum = (int)aCheckSum;
+        const int expectedChecksum = FIELD_GET_REF(m_trailer, CheckSum);
         const int receivedChecksum = checkSum();
 
         if (expectedChecksum != receivedChecksum)

@@ -253,13 +253,13 @@ private:
     void insertOrigSendingTime(Header &, const UtcTimeStamp &now);
     void fill(Header &);
 
-    bool isGoodTime(const SendingTime &sendingTime)
+    bool isGoodTime(const FieldBase &sendingTime)
     {
         if (!m_checkLatency)
         {
             return true;
         }
-        return labs(m_timestamper() - sendingTime) <= m_maxLatency;
+        return labs(m_timestamper() - SendingTime::valueOf(sendingTime)) <= m_maxLatency;
     }
     bool checkSessionTime(const UtcTimeStamp &now)
     {
@@ -270,22 +270,22 @@ private:
         UtcTimeStamp creationTime = m_state.getCreationTime();
         return m_sessionTime.isInSameRange(now, creationTime);
     }
-    bool isTargetTooHigh(const MsgSeqNum &msgSeqNum) { return msgSeqNum > (m_state.getNextTargetMsgSeqNum()); }
-    bool isTargetTooLow(const MsgSeqNum &msgSeqNum) { return msgSeqNum < (m_state.getNextTargetMsgSeqNum()); }
-    bool isCorrectCompID(const SenderCompID &senderCompID, const TargetCompID &targetCompID)
+    bool isTargetTooHigh(SEQNUM msgSeqNum) { return msgSeqNum > (m_state.getNextTargetMsgSeqNum()); }
+    bool isTargetTooLow(SEQNUM msgSeqNum) { return msgSeqNum < (m_state.getNextTargetMsgSeqNum()); }
+    bool isCorrectCompID(const std::string &senderCompID, const std::string &targetCompID)
     {
         if (!m_checkCompId)
         {
             return true;
         }
 
-        return m_sessionID.getSenderCompID().getValue() == targetCompID.getValue() &&
-               m_sessionID.getTargetCompID().getValue() == senderCompID.getValue();
+        return m_sessionID.getSenderCompID().getValue() == targetCompID &&
+               m_sessionID.getTargetCompID().getValue() == senderCompID;
     }
     bool shouldSendReset();
 
-    bool validLogonState(const MsgType &msgType);
-    void fromCallback(const MsgType &msgType, const Message &msg, const SessionID &sessionID);
+    bool validLogonState(const std::string &msgType);
+    void fromCallback(const std::string &msgType, const Message &msg, const SessionID &sessionID);
 
     void doBadTime(const Message &msg);
     void doBadCompID(const Message &msg);
