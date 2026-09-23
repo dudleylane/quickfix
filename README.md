@@ -20,7 +20,8 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Parser**: Added `MAX_MESSAGE_SIZE` (8 MB) bound on `addToStream()` — prevents unbounded memory growth from malicious/malformed peers
 - **Message**: Bounds check on `RawDataLength`-computed iterator — prevents out-of-bounds read from corrupted data length fields
 - **FileStoreTestCase**: Added missing `destroy()` call — fixes test fixture memory leak
-- **`FieldBase` is not polymorphic** (`Field.h`): the virtual destructor was removed — nothing owned a `FieldBase *` — taking every field from 88 to 80 bytes and making the class standard-layout. `FIX_ASSERT_FIELD_LAYOUT` in the `DEFINE_*` macros is the guard that replaces UBSan's `vptr` check
+- **`FieldBase` is not polymorphic** (`Field.h`): the virtual destructor was removed — nothing owned a `FieldBase *` — taking every field from 88 to 80 bytes and making the class standard-layout.
+- **No per-field encoded-string cache** (`Field.h`): `m_data`, a `mutable std::string` holding `tag=value<SOH>`, was another 32 bytes and a data race waiting to happen — it was written from `const` methods. `appendTo()` writes the field straight into the caller's buffer instead, and `getLength()`/`getTotal()` compute from the tag and value rather than building the string to measure it. A field is 48 bytes `FIX_ASSERT_FIELD_LAYOUT` in the `DEFINE_*` macros is the guard that replaces UBSan's `vptr` check
 - **`FieldRef<F>`** (`FieldMap.h`): `FIELD_GET_REF`, `FIELD_GET_PTR` and `getField<T>()` no longer cast the stored `FieldBase` to a derived field type — `FieldMap` slices on `addField`, so that cast was undefined behaviour. They now read the value through `F::valueOf`, which takes a `FieldBase`. This is what makes the sanitizer suite clean; see "Known baseline". Note the one change a compiler will not catch: `auto x = msg.getField<T>()` used to copy the field, and now copies a view that aliases the stored `FieldBase`, so it must not outlive the next `setString()` or `clear()` on that message — bind the value (`const std::string &`, `SEQNUM`) instead of the view when it needs to
 
 ### SSL/OpenSSL
@@ -37,33 +38,41 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 
 #### Benchmark baseline
 
-Captured with `./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c 1,2,3` on an otherwise idle
+Captured at `63c5c066` with `./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c 1,2,3` on an
 Intel i7-6820HQ (4C/8T, `performance` governor), Release build, GCC 15. Median of nine runs after a
-discarded warm-up; **cv** is the coefficient of variation across those runs.
+discarded warm-up; **cv** is the coefficient of variation across those runs. The run waits for the
+1-minute load average to fall below 0.20 before starting: a fixed settle is not enough after a
+parallel build, and starting warm inflates every number in the run by several percent.
 
 | Operation | Median (μs) | cv |
 |---|---|---|
-| Deserialize Heartbeat | 0.256 | 7.9% |
-| Deserialize NewOrderSingle | 0.676 | 5.5% |
-| Deserialize QuoteRequest (10 groups) | 6.467 | 4.5% |
-| Serialize QuoteRequest | 0.945 | 10.6% |
-| Read fields from QuoteRequest | 2.444 | 1.6% |
-| Socket round-trip NOS | 4.766 | 0.9% |
-| ThreadedSocket round-trip NOS | 3.395 | 4.8% |
+| Deserialize Heartbeat | 0.205 | 2.1% |
+| Deserialize NewOrderSingle | 0.537 | 3.2% |
+| Deserialize QuoteRequest (10 groups) | 5.269 | 2.2% |
+| Serialize QuoteRequest | 1.363 | 2.5% |
+| Read fields from QuoteRequest | 2.068 | 1.3% |
+| Socket round-trip NOS | 4.808 | 1.1% |
+| ThreadedSocket round-trip NOS | 3.603 | 1.1% |
+
+**Serialize QuoteRequest rose from 0.945 μs** when `63c5c066` removed `FieldBase`'s cache of the
+encoded field. That benchmark calls `toString()` in a loop over one unmodified message, so it used
+to measure a cache hit after the first iteration. The engine has no such path — `Session::sendRaw`
+serialises each message once and hands that one string to both `persist()` and `send()` — which is
+why the round-trip rows did not move and the parse rows improved.
 
 Message pooling, measured in the same process as reusing one `Message` across `setString()` calls
 versus constructing a new one each time:
 
 | Operation | Unpooled (μs) | Pooled (μs) | Delta |
 |---|---|---|---|
-| Heartbeat | 0.321 (cv 4.5%) | 0.256 (cv 7.9%) | −20% |
-| NewOrderSingle | 0.621 (cv 2.1%) | 0.676 (cv 5.5%) | **+9%** |
-| QuoteRequest (10 groups) | 7.011 (cv 0.4%) | 6.467 (cv 4.5%) | −8% |
+| Heartbeat | 0.269 (cv 2.1%) | 0.205 (cv 2.1%) | −24% |
+| NewOrderSingle | 0.528 (cv 5.0%) | 0.537 (cv 3.2%) | +2% |
+| QuoteRequest (10 groups) | 6.124 (cv 0.4%) | 5.269 (cv 2.2%) | −14% |
 
-Read these as indicative, not as guarantees. Pooling helps clearly only on the group-heavy
-QuoteRequest, where the arena avoids repeated group allocation; on NewOrderSingle it measured
-*slower*, and the sub-microsecond cases carry a cv near or above the effect being claimed. A
-difference smaller than roughly twice the cv is not resolvable on this hardware.
+Read these as indicative, not as guarantees. Pooling helps on Heartbeat and on the group-heavy
+QuoteRequest, where the arena avoids repeated group allocation; on NewOrderSingle the +2% is inside
+its own cv and resolves nothing either way. A difference smaller than roughly twice the cv is not
+resolvable on this hardware.
 
 These figures are absolute, not a comparison against upstream: the previous table's upstream column
 was measured on different hardware with unrecorded methodology and could not be reproduced here. It
