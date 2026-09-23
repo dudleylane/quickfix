@@ -20,7 +20,7 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Parser**: Added `MAX_MESSAGE_SIZE` (8 MB) bound on `addToStream()` — prevents unbounded memory growth from malicious/malformed peers
 - **Message**: Bounds check on `RawDataLength`-computed iterator — prevents out-of-bounds read from corrupted data length fields
 - **FileStoreTestCase**: Added missing `destroy()` call — fixes test fixture memory leak
-- **`FieldRef<F>`** (`FieldMap.h`): `FIELD_GET_REF`/`FIELD_GET_PTR` no longer cast the stored `FieldBase` to a derived field type — `FieldMap` slices on `addField`, so that cast was undefined behaviour. They now read the value through `F::valueOf`, which takes a `FieldBase`
+- **`FieldRef<F>`** (`FieldMap.h`): `FIELD_GET_REF`, `FIELD_GET_PTR` and `getField<T>()` no longer cast the stored `FieldBase` to a derived field type — `FieldMap` slices on `addField`, so that cast was undefined behaviour. They now read the value through `F::valueOf`, which takes a `FieldBase`. This is what makes the sanitizer suite clean; see "Known baseline". Note the one change a compiler will not catch: `auto x = msg.getField<T>()` used to copy the field, and now copies a view that aliases the stored `FieldBase`, so it must not outlive the next `setString()` or `clear()` on that message — bind the value (`const std::string &`, `SEQNUM`) instead of the view when it needs to
 
 ### SSL/OpenSSL
 - **X509 leak**: Added `X509_free()` after `SSL_get_peer_certificate()` in `acceptSSLConnection()`
@@ -176,40 +176,38 @@ uninstrumented allocator, so the TBB configuration simply has no ASan coverage o
 containers. (Only `TBB::tbbmalloc` is linked, not `tbbmalloc_proxy`, so global `new`/`malloc` are
 unaffected and everything else remains visible to ASan.)
 
-#### Known baseline — the suite is not currently clean
+#### Known baseline — the suite is clean
 
-As of `92877495` (2026-09-22), `ut` runs **56 test cases / 2033 assertions**, all passing, and
-under ASan + UBSan **exits 1** on one leak record and the UBSan reports below:
+As of `2c065998` (2026-09-23), `ut` runs **56 test cases / 2033 assertions**, all passing, and
+under ASan + UBSan **exits 0**: no leak record, no UBSan report. That is the baseline to diff
+against — anything a run reports is yours.
 
-- **1 leak record — 800 bytes in 50 allocations**, and it is not ours: libstdc++'s
-  `d_growable_string_callback_adapter`, the buffer `__cxa_demangle` grows and its caller never
-  frees. The stack contains no quickfix frames. It is not a target of its own: the size tracks how
-  many UBSan reports get demangled, so it falls as those are removed.
-  It was 2,697,884 bytes in 173 records until `558f56d0`, `7383a9ef` and `7bc5c74e` removed the
-  orphaned test Sessions, the `poll()`-path `SocketServer` leak, and the `findCAList` leaks.
-- **25 UBSan vptr reports**, all genuine type confusion from one idiom: `FieldMap` stores fields by
-  value in `std::vector<FieldBase>`, so `addField` slices any derived field, and `getField<T>()`
-  (a `reinterpret_cast`) then reads it back as `StringField`, `UInt64Field`, `IntField`, `MsgType`
-  or `MsgSeqNum`. They surface in `Field.h`'s comparison and conversion operators, and at the
-  `getField<T>()` call sites in `Message.cpp`, `Session.cpp` and the test suite itself
-  (`SessionTestCase.cpp`, and Catch2's own comparison template).
+It took three changes to get there, all of one idiom. `FieldMap` stores fields by value in
+`std::vector<FieldBase>`, so `addField` slices any derived field; reading the stored object back as
+a `StringField`, `UInt64Field`, `IntField`, `MsgType` or `MsgSeqNum` is undefined behaviour, and
+UBSan's `vptr` check saw every instance. The idiom is upstream and long-standing — the
+`virtual ~FieldBase` that makes it detectable dates to 2006 — and was not introduced by this fork.
+It was inert **only** because no derived field type adds a data member or a virtual override, so
+each access stayed inside the base object; one added member would have turned each into an
+out-of-bounds read.
 
-  These are inert **only** because every derived field type adds no data members and no virtual
-  overrides, so each access stays inside the base object. Adding a single member to any of them
-  turns this into an out-of-bounds read. The idiom is upstream and long-standing — the
-  `virtual ~FieldBase` that makes it detectable dates to 2006 — and is not introduced by this fork.
-  The counts are identical in a static build, so they are not a shared-library RTTI artefact.
+| Cast | Removed by | Reports |
+|---|---|---|
+| Generated `FIXnn::Message::getHeader()`/`getTrailer()` casting `FIX::Header`/`FIX::Trailer` to the per-version subclass | the generator change; see `FieldMap`'s typed `set`/`get`/`isSet`/`getIfSet` | 17 |
+| `FIELD_GET_REF` / `FIELD_GET_PTR` | `92877495` — now a `FieldRef<F>` and a `const FieldBase *` | 23 |
+| `getField<T>()`'s `reinterpret_cast` | `2c065998` — now a `FieldRef<T>` | 25 |
 
-  Two other families are already gone. 17, where the generated
-  `FIXnn::Message::getHeader()`/`getTrailer()` cast a `FIX::Header`/`FIX::Trailer` to the
-  per-version subclass, left with the generator; see `FieldMap`'s typed
-  `set`/`get`/`isSet`/`getIfSet` templates. A further 23 left with `FIELD_GET_REF` and
-  `FIELD_GET_PTR` in `92877495`, which now yield a `FieldRef<F>` and a `const FieldBase *` and read
-  the stored field through `F::valueOf` rather than casting it.
+All three read the value through `F::valueOf`, which takes a `FieldBase` and needs no cast.
 
-These counts are **identical with and without `ENABLE_TBB_ALLOCATOR`**, so they are not an artefact
-of the allocator. Treat them as a baseline to diff against rather than an accepted state: a change
-is clean if it does not add to them. The TSan recipe has not been re-measured against this baseline.
+The single leak record went with them: it was libstdc++'s `d_growable_string_callback_adapter`, the
+buffer `__cxa_demangle` grows for each type name a UBSan report prints and never frees, so it
+tracked the report count. It was 2,697,884 bytes in 173 records until `558f56d0`, `7383a9ef` and
+`7bc5c74e` removed the orphaned test Sessions, the `poll()`-path `SocketServer` leak and the
+`findCAList` leaks; 1,536 then 800 bytes while reports remained; zero once they did not.
+
+The counts were identical with and without `ENABLE_TBB_ALLOCATOR` and in a static build, so they
+were never an allocator or shared-library RTTI artefact. The TSan recipe has not been re-measured
+against this baseline.
 
 ```bash
 # TSan (thread safety)

@@ -235,12 +235,11 @@ the Release configuration.
 
 Run the sanitizer builds for anything touching locking, object lifetime, or the repeating-group
 arena; "Sanitizer verification" in `README.md` has the exact configure lines. Two things to know
-before you read the output: `ut` still exits 1, but only on a recorded baseline of **1 leak record
-(800 bytes, libstdc++'s demangler, not quickfix code)** and **25 UBSan vptr reports**, so anything
-beyond that is yours — and the ASan build must not set `ENABLE_TBB_ALLOCATOR`, which makes ASan and
-LeakSanitizer blind to `FieldMap::Fields` and the socket send queues. Give each sanitizer build its
-own `-DQUICKFIX_LIB_OUTPUT_DIR`, otherwise it overwrites `lib/` and re-points the `test/{ut,at,pt}`
-symlinks belonging to your ordinary build.
+before you read the output: `ut` **exits 0** under ASan + UBSan, with no leak record and no vptr
+report, so anything a run prints is yours — and the ASan build must not set `ENABLE_TBB_ALLOCATOR`,
+which makes ASan and LeakSanitizer blind to `FieldMap::Fields` and the socket send queues. Give
+each sanitizer build its own `-DQUICKFIX_LIB_OUTPUT_DIR`, otherwise it overwrites `lib/` and
+re-points the `test/{ut,at,pt}` symlinks belonging to your ordinary build.
 
 ### Test Coverage
 
