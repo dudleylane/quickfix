@@ -39,9 +39,18 @@ rebuilt. Field classes must now be layout-identical to FieldBase, which FIX_ASSE
 enforces at compile time -- adding a data member to a field class is an error, and correctly so,
 because FieldMap would silently drop it.
 
-Together those four remove every undefined field downcast in the engine. ut under AddressSanitizer
+INCOMPATIBLE: FieldBase::getFixString() returns std::string rather than const std::string&, and
+encodeTo() is replaced by appendTo(), which appends to the caller's buffer instead of overwriting
+it. FieldBase no longer caches the encoded field, so a field is 48 bytes rather than 80. Binding
+getFixString() to a const reference still works; taking its address does not. Serialising the same
+unmodified message repeatedly is slower as a result -- that is what the cache served, and the
+engine does not do it, since a message is serialised once and the result reused for both the store
+and the wire. Parsing, reading fields and the socket round-trips all improved; see the benchmark
+table in README.md.
+
+Together those five remove every undefined field downcast in the engine. ut under AddressSanitizer
 and UndefinedBehaviorSanitizer exits 0 with no report and no leak record, where it previously
-reported 65 vptr type-confusion errors.
+reported 65 vptr type-confusion errors. A field went from 88 bytes to 48.
 
 spec/generate.sh reproduces the checked-in generated tree again: it preflights the rexml gem that
 Ruby 3 no longer bundles, clang-formats what it generates, and no longer writes two outputs that
