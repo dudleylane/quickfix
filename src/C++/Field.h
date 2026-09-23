@@ -86,8 +86,6 @@ public:
         m_tag = rhs.getTag();
         m_string = rhs.m_string;
         m_metrics = rhs.m_metrics;
-        m_data.clear();
-
         return *this;
     }
 
@@ -96,14 +94,12 @@ public:
         std::swap(m_tag, rhs.m_tag);
         std::swap(m_metrics, rhs.m_metrics);
         m_string.swap(rhs.m_string);
-        m_data.swap(rhs.m_data);
     }
 
     void setTag(int tag)
     {
         m_tag = tag;
         m_metrics = no_metrics();
-        m_data.clear();
     }
 
     [[deprecated("Use setTag")]]
@@ -116,7 +112,6 @@ public:
     {
         m_string = string;
         m_metrics = no_metrics();
-        m_data.clear();
     }
 
     /// Get the fields integer tag.
@@ -131,15 +126,31 @@ public:
     /// Get the string representation of the fields value.
     const std::string &getString() const { return m_string; }
 
-    /// Get the string representation of the Field (i.e.) 55=MSFT[SOH]
-    const std::string &getFixString() const
+    /// Append the string representation of the Field -- 55=MSFT[SOH] -- to
+    /// result.  Serialising a FieldMap appends every field into one buffer, so
+    /// this is the primitive; getFixString() is the convenience over it.
+    void appendTo(std::string &result) const
     {
-        if (m_data.empty())
-        {
-            encodeTo(m_data);
-        }
+        const size_t tagLength = static_cast<size_t>(FIX::number_of_symbols_in(m_tag));
+        const size_t start = result.size();
+        const size_t totalLength = tagLength + m_string.length() + 2;
 
-        return m_data;
+        result.resize(start + totalLength);
+
+        char *buf = result.data() + start;
+        FIX::integer_to_string(buf, tagLength, m_tag);
+
+        buf[tagLength] = '=';
+        memcpy(buf + tagLength + 1, m_string.data(), m_string.length());
+        buf[totalLength - 1] = '\001';
+    }
+
+    /// Get the string representation of the Field (i.e.) 55=MSFT[SOH]
+    std::string getFixString() const
+    {
+        std::string result;
+        appendTo(result);
+        return result;
     }
 
     /// Get the length of the fields string representation
@@ -167,23 +178,7 @@ private:
             return;
         }
 
-        m_metrics = calculateMetrics(getFixString());
-    }
-
-    /// Serializes string representation of the Field to input string
-    void encodeTo(std::string &result) const
-    {
-        size_t tagLength = FIX::number_of_symbols_in(m_tag);
-        size_t totalLength = tagLength + m_string.length() + 2;
-
-        result.resize(totalLength);
-
-        char *buf = (char *)result.c_str();
-        FIX::integer_to_string(buf, tagLength, m_tag);
-
-        buf[tagLength] = '=';
-        memcpy(buf + tagLength + 1, m_string.data(), m_string.length());
-        buf[totalLength - 1] = '\001';
+        m_metrics = calculateMetrics(m_tag, m_string);
     }
 
     static field_metrics no_metrics() { return field_metrics(0, 0); }
@@ -212,9 +207,30 @@ private:
         return calculateMetrics(field.begin(), field.end());
     }
 
+    /// Metrics for "<tag>=<value><SOH>" without building it.  The tag is
+    /// rendered with the same integer_to_string the encoder uses, so the
+    /// checksum is identical to summing the encoded field byte by byte.
+    static field_metrics calculateMetrics(int tag, const std::string &value)
+    {
+        char tagBuffer[16];
+        const size_t tagLength = static_cast<size_t>(FIX::number_of_symbols_in(tag));
+        FIX::integer_to_string(tagBuffer, tagLength, tag);
+
+        int checksum = '=' + '\001';
+        for (size_t i = 0; i < tagLength; ++i)
+        {
+            checksum += (unsigned char)tagBuffer[i];
+        }
+        for (const char c : value)
+        {
+            checksum += (unsigned char)c;
+        }
+
+        return field_metrics(static_cast<int>(tagLength + value.length() + 2), checksum);
+    }
+
     int m_tag;
     std::string m_string;
-    mutable std::string m_data;
     mutable field_metrics m_metrics;
 };
 /*! @} */
