@@ -20,6 +20,7 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Parser**: Added `MAX_MESSAGE_SIZE` (8 MB) bound on `addToStream()` — prevents unbounded memory growth from malicious/malformed peers
 - **Message**: Bounds check on `RawDataLength`-computed iterator — prevents out-of-bounds read from corrupted data length fields
 - **FileStoreTestCase**: Added missing `destroy()` call — fixes test fixture memory leak
+- **`FieldBase` is not polymorphic** (`Field.h`): the virtual destructor was removed — nothing owned a `FieldBase *` — taking every field from 88 to 80 bytes and making the class standard-layout. `FIX_ASSERT_FIELD_LAYOUT` in the `DEFINE_*` macros is the guard that replaces UBSan's `vptr` check
 - **`FieldRef<F>`** (`FieldMap.h`): `FIELD_GET_REF`, `FIELD_GET_PTR` and `getField<T>()` no longer cast the stored `FieldBase` to a derived field type — `FieldMap` slices on `addField`, so that cast was undefined behaviour. They now read the value through `F::valueOf`, which takes a `FieldBase`. This is what makes the sanitizer suite clean; see "Known baseline". Note the one change a compiler will not catch: `auto x = msg.getField<T>()` used to copy the field, and now copies a view that aliases the stored `FieldBase`, so it must not outlive the next `setString()` or `clear()` on that message — bind the value (`const std::string &`, `SEQNUM`) instead of the view when it needs to
 
 ### SSL/OpenSSL
@@ -186,10 +187,18 @@ It took three changes to get there, all of one idiom. `FieldMap` stores fields b
 `std::vector<FieldBase>`, so `addField` slices any derived field; reading the stored object back as
 a `StringField`, `UInt64Field`, `IntField`, `MsgType` or `MsgSeqNum` is undefined behaviour, and
 UBSan's `vptr` check saw every instance. The idiom is upstream and long-standing — the
-`virtual ~FieldBase` that makes it detectable dates to 2006 — and was not introduced by this fork.
+`virtual ~FieldBase` that made it detectable dated to 2006 — and was not introduced by this fork.
 It was inert **only** because no derived field type adds a data member or a virtual override, so
 each access stayed inside the base object; one added member would have turned each into an
 out-of-bounds read.
+
+That destructor is gone as of `7782f9a9` — nothing ever owned a `FieldBase *`, so it bought nothing
+and cost 8 bytes on every stored field — which also removes the `vptr` check as a detector. The
+invariant it was detecting is asserted directly in its place: `FIX_ASSERT_FIELD_LAYOUT`, carried by
+the `DEFINE_*_NUM` macros in `Field.h`, fails to compile if any of the 6,107 generated field classes
+or the 11 hand-written intermediates ever stops being layout-identical to `FieldBase`. **If you add
+a member to a field class, that assertion is what will stop you, and it is telling you the truth:
+`FieldMap` would silently drop the member.**
 
 | Cast | Removed by | Reports |
 |---|---|---|
