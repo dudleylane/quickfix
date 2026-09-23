@@ -16,6 +16,33 @@ be updated.
 INCOMPATIBLE: the generated value constants MatchType_FIX50ONLY_* and
 YieldType_FIX4n_YIELD_VALUE_OF32NDS lose those prefixes, matching the names in the spec XML.
 
+INCOMPATIBLE: FIELD_GET_REF and FIELD_GET_PTR no longer cast the stored field to a derived field
+type. FieldMap keeps fields by value as FieldBase, so addField slices them and the cast read an
+object that never had that type. FIELD_GET_REF now yields FIX::FieldRef<F>, convertible to the
+field's value_type, and FIELD_GET_PTR a const FieldBase*. Code binding their result to a field
+reference must bind the value instead.
+
+INCOMPATIBLE: FieldMap::getField<T>() returns FIX::FieldRef<T> rather than const T&, for the same
+reason. Comparing the result directly against a MsgType_ or BeginString_ constant no longer
+compiles; call getValue(). One change the compiler does not catch: auto x = msg.getField<T>() used
+to copy the field and now copies a view aliasing the stored FieldBase, so it must not outlive the
+next setString() or clear() on that message.
+
+INCOMPATIBLE: Message::isAdminMsgType, Message::toApplVerID and the three-argument
+MessageCracker::crack overloads take const std::string& rather than a field type. Callers passing a
+field still compile, through StringField's conversion operator.
+
+INCOMPATIBLE: FieldBase has no virtual destructor, so a field is 80 bytes rather than 88 and the
+class is standard-layout. Nothing ever owned a FieldBase*, so no delete went through a base
+pointer. This moves object layout: code linked against a previously built shared library must be
+rebuilt. Field classes must now be layout-identical to FieldBase, which FIX_ASSERT_FIELD_LAYOUT
+enforces at compile time -- adding a data member to a field class is an error, and correctly so,
+because FieldMap would silently drop it.
+
+Together those four remove every undefined field downcast in the engine. ut under AddressSanitizer
+and UndefinedBehaviorSanitizer exits 0 with no report and no leak record, where it previously
+reported 65 vptr type-confusion errors.
+
 spec/generate.sh reproduces the checked-in generated tree again: it preflights the rexml gem that
 Ruby 3 no longer bundles, clang-formats what it generates, and no longer writes two outputs that
 were immediately overwritten or unused.
@@ -23,8 +50,7 @@ were immediately overwritten or unused.
 DataDictionaryProviderTestCase was never compiled into the unit test binary.
 
 The AddressSanitizer recipe no longer enables the TBB allocator, which made ASan and LeakSanitizer
-blind to FieldMap::Fields and the socket send queues. README records the measured ASan/UBSan
-baseline rather than claiming the suite is clean.
+blind to FieldMap::Fields and the socket send queues.
 
 See README.md "Changes from upstream" for the full set of changes in this fork.
 
