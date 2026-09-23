@@ -32,6 +32,7 @@
 #include "Utility.h"
 #include <numeric>
 #include <sstream>
+#include <type_traits>
 
 #if defined(__SUNPRO_CC)
 #include <algorithm>
@@ -77,8 +78,6 @@ class FieldBase
 
 public:
     FieldBase(int tag, const std::string &string) : m_tag(tag), m_string(string), m_metrics(no_metrics()) {}
-
-    virtual ~FieldBase() {}
 
     FieldBase(const FieldBase &rhs) : m_tag(rhs.getTag()), m_string(rhs.m_string), m_metrics(rhs.m_metrics) {}
 
@@ -611,6 +610,35 @@ typedef StringField TzTimeOnlyField;
 typedef StringField TzTimeStampField;
 } // namespace FIX
 
+/**
+ * Every field class must be layout-identical to FieldBase.
+ *
+ * FieldMap stores fields by value in a std::vector<FieldBase>, so addField
+ * slices whatever it is handed. That is harmless only while no derived class
+ * carries state of its own -- add one member and every stored field silently
+ * loses it. UBSan's vptr check used to catch the casts that idiom invited;
+ * FieldBase is no longer polymorphic -- nothing ever owned a FieldBase *, so
+ * the virtual destructor bought nothing and cost 8 bytes on every field -- so
+ * these assertions are the guard in its place.
+ */
+static_assert(!std::is_polymorphic_v<FIX::FieldBase>,
+              "FieldBase must stay non-polymorphic: a vptr costs 8 bytes on every stored field");
+#define FIX_ASSERT_FIELD_LAYOUT(NAME)                                                                                  \
+    static_assert(sizeof(NAME) == sizeof(::FIX::FieldBase),                                                            \
+                  "a field class must add no state: FieldMap stores fields sliced to FieldBase")
+
+FIX_ASSERT_FIELD_LAYOUT(FIX::StringField);
+FIX_ASSERT_FIELD_LAYOUT(FIX::CharField);
+FIX_ASSERT_FIELD_LAYOUT(FIX::DoubleField);
+FIX_ASSERT_FIELD_LAYOUT(FIX::IntField);
+FIX_ASSERT_FIELD_LAYOUT(FIX::Int64Field);
+FIX_ASSERT_FIELD_LAYOUT(FIX::UInt64Field);
+FIX_ASSERT_FIELD_LAYOUT(FIX::BoolField);
+FIX_ASSERT_FIELD_LAYOUT(FIX::UtcTimeStampField);
+FIX_ASSERT_FIELD_LAYOUT(FIX::UtcDateField);
+FIX_ASSERT_FIELD_LAYOUT(FIX::UtcTimeOnlyField);
+FIX_ASSERT_FIELD_LAYOUT(FIX::CheckSumField);
+
 #define DEFINE_FIELD_CLASS_NUM(NAME, TOK, TYPE, NUM)                                                                   \
     class NAME : public TOK##Field                                                                                     \
     {                                                                                                                  \
@@ -618,7 +646,8 @@ typedef StringField TzTimeStampField;
         static constexpr int tag = NUM;                                                                                \
         NAME() : TOK##Field(NUM) {}                                                                                    \
         NAME(const TYPE &value) : TOK##Field(NUM, value) {}                                                            \
-    }
+    };                                                                                                                 \
+    FIX_ASSERT_FIELD_LAYOUT(NAME)
 
 #define DEFINE_TRIVIAL_FIELD_CLASS_NUM(NAME, TOK, TYPE, NUM)                                                           \
     class NAME : public TOK##Field                                                                                     \
@@ -627,7 +656,8 @@ typedef StringField TzTimeStampField;
         static constexpr int tag = NUM;                                                                                \
         NAME() : TOK##Field(NUM) {}                                                                                    \
         NAME(TYPE value) : TOK##Field(NUM, value) {}                                                                   \
-    }
+    };                                                                                                                 \
+    FIX_ASSERT_FIELD_LAYOUT(NAME)
 
 #define DEFINE_FIELD_CLASS(NAME, TOK, TYPE) DEFINE_FIELD_CLASS_NUM(NAME, TOK, TYPE, FIELD::NAME)
 
@@ -646,7 +676,8 @@ typedef StringField TzTimeStampField;
         NAME(int precision) : TOK##Field(NUM, TYPE::now(), precision) {}                                               \
         NAME(const TYPE &value) : TOK##Field(NUM, value) {}                                                            \
         NAME(const TYPE &value, int precision) : TOK##Field(NUM, value, precision) {}                                  \
-    }
+    };                                                                                                                 \
+    FIX_ASSERT_FIELD_LAYOUT(NAME)
 
 #define DEFINE_FIELD_TIMECLASS(NAME, TOK, TYPE) DEFINE_FIELD_TIMECLASS_NUM(NAME, TOK, TYPE, FIELD::NAME)
 
