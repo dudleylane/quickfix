@@ -101,7 +101,7 @@ Session *Acceptor::getSession(const std::string &msg, Responder &responder)
         auto const &beginString = message.getHeader().getField<BeginString>();
         auto const &clSenderCompID = message.getHeader().getField<SenderCompID>();
         auto const &clTargetCompID = message.getHeader().getField<TargetCompID>();
-        auto const &msgType = message.getHeader().getField<MsgType>();
+        const std::string &msgType = message.getHeader().getField<MsgType>();
         if (msgType != MsgType_Logon)
         {
             return 0;

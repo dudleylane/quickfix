@@ -47,7 +47,7 @@ public:
         FIX::PossResend possResend(false);
         message.getHeader().getFieldIfSet(possResend);
 
-        auto const &clOrdID = message.getField<FIX::ClOrdID>();
+        const FIX::ClOrdID clOrdID(message.getField<FIX::ClOrdID>().getValue());
 
         std::pair<FIX::ClOrdID, FIX::SessionID> pair = std::make_pair(clOrdID, sessionID);
 
@@ -166,7 +166,7 @@ class Application : public FIX::Application
     void fromAdmin(const FIX::Message &message, const FIX::SessionID &sessionID)
         EXCEPT(FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::RejectLogon)
     {
-        auto const &msgType = message.getHeader().getField<FIX::MsgType>();
+        const std::string &msgType = message.getHeader().getField<FIX::MsgType>();
         if (msgType == FIX::MsgType_Logon)
         {
             if (message.isSetField(FIX::FIELD::DefaultApplVerID))
@@ -180,7 +180,7 @@ class Application : public FIX::Application
     void fromApp(const FIX::Message &message, const FIX::SessionID &sessionID)
         EXCEPT(FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::UnsupportedMessageType)
     {
-        auto const &msgType = message.getHeader().getField<FIX::MsgType>();
+        const std::string &msgType = message.getHeader().getField<FIX::MsgType>();
         if (msgType == FIX::MsgType_Email)
         {
             FIX::Message echo = message;

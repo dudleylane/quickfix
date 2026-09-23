@@ -305,7 +305,7 @@ private:
 
     void generateLogon();
     void generateLogon(const Message &);
-    void generateResendRequest(const BeginString &, const MsgSeqNum &);
+    void generateResendRequest(const std::string &, SEQNUM);
     void generateSequenceReset(SEQNUM, SEQNUM);
     void generateRetransmits(SEQNUM beginSeqNo, SEQNUM endSeqNo);
     void generateHeartbeat();

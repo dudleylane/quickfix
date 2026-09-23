@@ -88,6 +88,33 @@ private:
 };
 
 /**
+ * A typed, non-owning view over a field stored in a FieldMap.
+ *
+ * FieldMap stores fields by value as FieldBase, so addField slices any derived
+ * field: the stored object never was a StringField or an IntField. Casting it
+ * to one to reach getValue() is undefined behaviour, and was the source of the
+ * vptr reports UBSan raises on this tree. FieldRef reads the same value through
+ * F::valueOf, which takes a FieldBase and needs no cast, while holding only a
+ * reference -- so the access stays zero-copy. Verified to compile to the same
+ * two instructions as the cast it replaces.
+ */
+template <typename F> class FieldRef
+{
+public:
+    explicit FieldRef(const FieldBase &field) : m_field(field) {}
+
+    typename F::value_type getValue() const { return F::valueOf(m_field); }
+    operator typename F::value_type() const { return F::valueOf(m_field); }
+
+    int getTag() const { return m_field.getTag(); }
+    const std::string &getString() const { return m_field.getString(); }
+    const FieldBase &field() const { return m_field; }
+
+private:
+    const FieldBase &m_field;
+};
+
+/**
  * Stores and organizes a collection of Fields.
  *
  * This is the basis for a message, header, and trailer.  This collection
@@ -203,10 +230,12 @@ public:
         return field;
     }
 
-    /// Get a field without type checking
-    template <typename T> const T &getField() const EXCEPT(FieldNotFound)
+    /// Get a field's value without type checking.  The stored object is a
+    /// FieldBase -- addField slices -- so this hands back a view that reads it
+    /// through T::valueOf, rather than a reference reinterpreted as T.
+    template <typename T> FieldRef<T> getField() const EXCEPT(FieldNotFound)
     {
-        return *reinterpret_cast<const T *>(&getFieldRef(T::tag));
+        return FieldRef<T>(getFieldRef(T::tag));
     }
 
     /// Get a field without a field class
@@ -420,32 +449,6 @@ private:
     std::unique_ptr<GroupArena> m_arena;
 };
 /*! @} */
-/**
- * A typed, non-owning view over a field stored in a FieldMap.
- *
- * FieldMap stores fields by value as FieldBase, so addField slices any derived
- * field: the stored object never was a StringField or an IntField. Casting it
- * to one to reach getValue() is undefined behaviour, and was the source of the
- * vptr reports UBSan raises on this tree. FieldRef reads the same value through
- * F::valueOf, which takes a FieldBase and needs no cast, while holding only a
- * reference -- so the access stays zero-copy. Verified to compile to the same
- * two instructions as the cast it replaces.
- */
-template <typename F> class FieldRef
-{
-public:
-    explicit FieldRef(const FieldBase &field) : m_field(field) {}
-
-    typename F::value_type getValue() const { return F::valueOf(m_field); }
-    operator typename F::value_type() const { return F::valueOf(m_field); }
-
-    int getTag() const { return m_field.getTag(); }
-    const std::string &getString() const { return m_field.getString(); }
-    const FieldBase &field() const { return m_field; }
-
-private:
-    const FieldBase &m_field;
-};
 } // namespace FIX
 
 #define FIELD_SET(MAP, FIELD)                                                                                          \

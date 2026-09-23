@@ -424,8 +424,8 @@ void Session::nextResendRequest(const Message &resendRequest, const UtcTimeStamp
 
     Locker l(m_mutex);
 
-    auto beginSeqNo = resendRequest.getField<BeginSeqNo>();
-    auto endSeqNo = resendRequest.getField<EndSeqNo>();
+    const SEQNUM beginSeqNo = resendRequest.getField<BeginSeqNo>();
+    SEQNUM endSeqNo = resendRequest.getField<EndSeqNo>();
 
     m_state.onEvent("Received ResendRequest FROM: " + SEQNUM_CONVERTOR::convert(beginSeqNo) +
                     " TO: " + SEQNUM_CONVERTOR::convert(endSeqNo));
@@ -439,17 +439,17 @@ void Session::nextResendRequest(const Message &resendRequest, const UtcTimeStamp
 
     if (!m_persistMessages)
     {
-        endSeqNo = EndSeqNo(endSeqNo + 1);
+        endSeqNo = endSeqNo + 1;
         auto next = m_state.getNextSenderMsgSeqNum();
         if (endSeqNo > next)
         {
-            endSeqNo = EndSeqNo(next);
+            endSeqNo = next;
         }
         generateSequenceReset(beginSeqNo, endSeqNo);
     }
     else
     {
-        generateRetransmits(beginSeqNo.getValue(), endSeqNo.getValue());
+        generateRetransmits(beginSeqNo, endSeqNo);
     }
 
     MsgSeqNum msgSeqNum(0);
@@ -837,7 +837,7 @@ void Session::generateLogon(const Message &aLogon)
     {
         logon.setField(ResetSeqNumFlag(true));
     }
-    logon.setField(aLogon.getField<HeartBtInt>());
+    logon.setField(aLogon.getField<HeartBtInt>().field());
     if (m_sendNextExpectedMsgSeqNum)
     {
         logon.setField(NextExpectedMsgSeqNum(getExpectedTargetNum() +
@@ -848,7 +848,7 @@ void Session::generateLogon(const Message &aLogon)
     m_state.sentLogon(true);
 }
 
-void Session::generateResendRequest(const BeginString &beginString, const MsgSeqNum &msgSeqNum)
+void Session::generateResendRequest(const std::string &beginString, SEQNUM msgSeqNum)
 {
     Message resendRequest = newMessage(MsgType(MsgType_ResendRequest));
 
@@ -904,7 +904,7 @@ void Session::generateHeartbeat(const Message &testRequest)
     fill(heartbeat.getHeader());
     try
     {
-        heartbeat.setField(testRequest.getField<TestReqID>());
+        heartbeat.setField(testRequest.getField<TestReqID>().field());
     }
     catch (FieldNotFound &)
     {
@@ -935,7 +935,7 @@ void Session::generateReject(const Message &message, int err, int field)
 
     MsgSeqNum msgSeqNum;
 
-    auto const &msgType = message.getHeader().getField<MsgType>();
+    const std::string &msgType = message.getHeader().getField<MsgType>();
     if (message.getHeader().getFieldIfSet(msgSeqNum))
     {
         if (msgSeqNum.getString() != "")
@@ -946,7 +946,7 @@ void Session::generateReject(const Message &message, int err, int field)
 
     if (beginString >= FIX::BeginString_FIX42)
     {
-        if (msgType.getString() != "")
+        if (!msgType.empty())
         {
             reject.setField(RefMsgType(msgType));
         }
@@ -1035,7 +1035,7 @@ void Session::generateReject(const Message &message, const std::string &text)
     reject.reverseRoute(message.getHeader());
     fill(reject.getHeader());
 
-    auto const &msgType = message.getHeader().getField<MsgType>();
+    const std::string &msgType = message.getHeader().getField<MsgType>();
     auto const &msgSeqNum = message.getHeader().getField<MsgSeqNum>();
 
     if (beginString >= FIX::BeginString_FIX42)
@@ -1132,7 +1132,7 @@ void Session::generateLogout(const std::string &text)
 
 void Session::populateRejectReason(Message &reject, int field, const std::string &text)
 {
-    auto const &msgType = reject.getHeader().getField<MsgType>();
+    const std::string &msgType = reject.getHeader().getField<MsgType>();
 
     if (msgType == MsgType_Reject && m_sessionID.getBeginString() >= FIX::BeginString_FIX42)
     {
@@ -1292,7 +1292,7 @@ bool Session::doPossDup(const Message &msg)
     OrigSendingTime origSendingTime = m_timestamper();
 
     const Header &header = msg.getHeader();
-    auto const &msgType = header.getField<MsgType>();
+    const std::string &msgType = header.getField<MsgType>();
     auto const &sendingTime = header.getField<SendingTime>();
 
     if (msgType != MsgType_SequenceReset)
@@ -1334,8 +1334,8 @@ bool Session::doTargetTooLow(const Message &msg)
 void Session::doTargetTooHigh(const Message &msg)
 {
     const Header &header = msg.getHeader();
-    auto const &beginString = header.getField<BeginString>();
-    auto const &msgSeqNum = header.getField<MsgSeqNum>();
+    const std::string &beginString = header.getField<BeginString>();
+    const SEQNUM msgSeqNum = header.getField<MsgSeqNum>();
 
     m_state.onEvent("MsgSeqNum too high, expecting " + SEQNUM_CONVERTOR::convert(getExpectedTargetNum()) +
                     " but received " + SEQNUM_CONVERTOR::convert(msgSeqNum));
@@ -1371,7 +1371,7 @@ bool Session::nextQueued(SEQNUM num, const UtcTimeStamp &now)
     if (m_state.retrieve(num, msg))
     {
         m_state.onEvent("Processing QUEUED message: " + SEQNUM_CONVERTOR::convert(num));
-        auto const &msgType = msg.getHeader().getField<MsgType>();
+        const std::string &msgType = msg.getHeader().getField<MsgType>();
         if (msgType == MsgType_Logon || msgType == MsgType_ResendRequest)
         {
             m_state.incrNextTargetMsgSeqNum();
