@@ -188,9 +188,10 @@ unaffected and everything else remains visible to ASan.)
 
 #### Known baseline — the suite is clean
 
-As of `2c065998` (2026-09-23), `ut` runs **56 test cases / 2033 assertions**, all passing, and
-under ASan + UBSan **exits 0**: no leak record, no UBSan report. That is the baseline to diff
-against — anything a run reports is yours.
+As of `f4c9c0c3` (2026-09-24), `ut` runs **56 test cases / 2034 assertions**, all passing, and
+**exits 0 under every sanitizer** — ASan + UBSan with no leak record and no report, and
+ThreadSanitizer with no warning. That is the baseline to diff against — anything a run reports is
+yours.
 
 It took three changes to get there, all of one idiom. `FieldMap` stores fields by value in
 `std::vector<FieldBase>`, so `addField` slices any derived field; reading the stored object back as
@@ -224,8 +225,17 @@ tracked the report count. It was 2,697,884 bytes in 173 records until `558f56d0`
 `findCAList` leaks; 1,536 then 800 bytes while reports remained; zero once they did not.
 
 The counts were identical with and without `ENABLE_TBB_ALLOCATOR` and in a static build, so they
-were never an allocator or shared-library RTTI artefact. The TSan recipe has not been re-measured
-against this baseline.
+were never an allocator or shared-library RTTI artefact.
+
+**ThreadSanitizer is clean too, as of `f4c9c0c3`** — `ut` exits 0 with no warning, 56 test cases and
+2034 assertions. That is the first result the TSan recipe has ever produced on this tree, and the
+reason is worth recording rather than filing as an absence: `UtilityTestCase` joined a thread and
+then detached the same id, which is undefined behaviour once `pthread_join` has invalidated the
+handle. TSan does not report that — it aborts its own runtime on it, so `ut` exited 66 having run no
+tests. Behind it, the two-argument `thread_spawn(func, var)` left its thread joinable while
+discarding the id, which is a leak by construction. Two lines in the thread helpers were hiding the
+entire thread-safety signal of a fork whose first stated divergence from upstream is thread safety.
+The engine itself was correct on both counts; see the commit.
 
 ```bash
 # TSan (thread safety)
