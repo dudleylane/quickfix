@@ -77,6 +77,47 @@ jobs:
           "$CXX" -std=c++23 -fsyntax-only -Iinclude -Isrc/C++ -Isrc/swig \
               $ruby_flags src/ruby/QuickfixRuby.cpp
 
+      - name: Compile the database backends
+        # Nothing compiles MySQLStore/Log, PostgreSQLStore/Log or OdbcStore/Log
+        # on any push -- CI never sets HAVE_MYSQL, HAVE_POSTGRESQL or HAVE_ODBC
+        # -- so they can stop compiling and every job stays green. That is what
+        # happened to the SWIG wrappers, which went 33 commits broken before
+        # anyone noticed, and all six of these were last touched by 6ff4a20f, a
+        # scripted tree-wide edit that silently damaged other files it touched.
+        #
+        # A syntax check rather than a CMake build with the options on. Enabling
+        # them pulls in 4 test cases needing live database servers (ut goes
+        # 56 -> 60, and the new ones fail with "Unable to connect to postgres
+        # database"), and configure_file would rewrite the *tracked*
+        # src/C++/config.h. A second full build costs ~2m per push on a runner
+        # that already shares this machine, to guard leaf implementations whose
+        # realistic breakage -- a MessageStore or Log interface they no longer
+        # satisfy -- is a compile error. The limit: this does not link, so a
+        # missing symbol would still pass.
+        #
+        # The grep is not redundant. The -D is load-bearing: without it each
+        # file is entirely #ifdef'd out and "compiles" in 12ms instead of ~3s,
+        # so if the guard macro were ever renamed this step would keep passing
+        # while checking nothing.
+        #
+        # MySQL is NOT covered -- mysql-devel / mariadb-connector-c-devel are
+        # not installed. Requires libpq5-devel and unixODBC-devel on the runner.
+        if: matrix.configuration == 'Debug'
+        shell: bash
+        run: |
+          set -u
+          check() {
+            macro=$1; shift
+            for src in "$@"; do
+              grep -q "$macro" "src/C++/$src.cpp" \
+                || { echo "::error::$src.cpp no longer mentions $macro -- this step would check nothing"; exit 1; }
+              "$CXX" -std=c++23 -fsyntax-only "-D$macro=1" -DHAVE_SSL=1 \
+                  -Iinclude -Isrc/C++ "src/C++/$src.cpp"
+            done
+          }
+          check HAVE_ODBC       OdbcStore OdbcLog
+          check HAVE_POSTGRESQL PostgreSQLStore PostgreSQLLog
+
       - name: Run acceptance tests
         # PR-only: the at-driven Ruby runner takes ~2 minutes and isn't
         # informative on every push to master.

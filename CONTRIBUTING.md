@@ -224,7 +224,17 @@ all before anyone noticed. It configures with `-DHAVE_PYTHON3=ON`, so CMake comp
 `src/python/QuickfixPython.cpp` into `_quickfix.so`; Ruby has no CMake path (`extconf.rb` /
 `make_ruby.sh`), so `src/ruby/QuickfixRuby.cpp` is compiled separately with `-fsyntax-only`. If a
 change to `src/C++` breaks either, regenerate with `src/python/swig.sh` and `src/ruby/swig.sh`
-rather than hand-editing the output. To run the Python bindings' own tests:
+rather than hand-editing the output.
+
+The Debug leg additionally syntax-checks the ODBC and PostgreSQL backends, which no build
+configures — CI never sets `HAVE_ODBC` or `HAVE_POSTGRESQL`, so `OdbcStore.cpp`, `OdbcLog.cpp`,
+`PostgreSQLStore.cpp` and `PostgreSQLLog.cpp` would otherwise compile for nobody. It needs
+`libpq5-devel` and `unixODBC-devel` on the runner. **MySQL is still not covered**: `mysql-devel` is
+not installed, so `MySQLStore.cpp` and `MySQLLog.cpp` remain compiled by nothing. The check does not
+link, and enabling the CMake options instead would pull in four test cases that need live database
+servers.
+
+To run the Python bindings' own tests:
 
 ```bash
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=ON -DHAVE_PYTHON3=ON
