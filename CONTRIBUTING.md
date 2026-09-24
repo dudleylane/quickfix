@@ -217,7 +217,11 @@ Judge the acceptance run by its output, not its exit status: `runat.sh`'s `trap 
 `468 tests passed`, or `FAILED n out of 468 tests`.
 
 CI runs the unit tests on every push, the acceptance suite on pull requests only, and `pt` only in
-the Release configuration.
+the Release configuration. The Debug leg also syntax-checks the checked-in SWIG output
+(`src/python/QuickfixPython.cpp`, `src/ruby/QuickfixRuby.cpp`) with `-fsyntax-only`. No CMake target
+builds those files, so they are compiled but never linked, and before that step existed they went 33
+commits without compiling at all. If a change to `src/C++` breaks that step, regenerate with
+`src/python/swig.sh` and `src/ruby/swig.sh` rather than hand-editing the output.
 
 ### Writing Tests
 

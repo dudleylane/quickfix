@@ -45,6 +45,36 @@ jobs:
         working-directory: ./test
         run: ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
 
+      - name: Compile the SWIG bindings
+        # No CMake target builds the checked-in SWIG output, so it drifted 33
+        # commits out of date before 4cb3d655 and nobody noticed. Both failures
+        # that caused were compile errors -- FieldMap's group container became a
+        # std::flat_map, and getFixString started returning by value -- so
+        # compiling the two translation units catches the class of rot that
+        # actually bit. It does not catch new API that was never exposed;
+        # regenerate-and-diff would, at the cost of pinning CI to one SWIG
+        # version.
+        #
+        # -Isrc/swig supplies MySQLStubs.h, which the -DHAVE_MYSQL
+        # -DHAVE_POSTGRESQL in swig.sh make the generated code include. The
+        # interpreter header paths are queried rather than hardcoded so a Python
+        # or Ruby point release does not turn this red. $CXX rather than g++:
+        # the job env puts gcc-toolset-15 first on PATH, but FieldMap.h needs
+        # <flat_map>, so naming the compiler the job configured with is what
+        # keeps this from silently depending on PATH order. Debug-only: the
+        # result does not depend on the configuration, and each file takes ~8s.
+        if: matrix.configuration == 'Debug'
+        shell: bash
+        run: |
+          python_include=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["include"])')
+          ruby_dirs=$(ruby -e 'require "rbconfig"; print RbConfig::CONFIG["rubyhdrdir"], " ", RbConfig::CONFIG["rubyarchhdrdir"]')
+          ruby_flags=""
+          for dir in $ruby_dirs; do ruby_flags="$ruby_flags -I$dir"; done
+          "$CXX" -std=c++23 -fsyntax-only -Iinclude -Isrc/C++ -Isrc/swig \
+              -I"$python_include" src/python/QuickfixPython.cpp
+          "$CXX" -std=c++23 -fsyntax-only -Iinclude -Isrc/C++ -Isrc/swig \
+              $ruby_flags src/ruby/QuickfixRuby.cpp
+
       - name: Run acceptance tests
         # PR-only: the at-driven Ruby runner takes ~2 minutes and isn't
         # informative on every push to master.
