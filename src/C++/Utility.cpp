@@ -587,8 +587,17 @@ bool thread_spawn(THREAD_START_ROUTINE func, void *var, thread_id &thread)
 
 bool thread_spawn(THREAD_START_ROUTINE func, void *var)
 {
+    // The caller gets no id back, so it can never join or detach this thread.
+    // Leaving it joinable means its stack and descriptor are held until the
+    // process exits -- a leak by construction, and one ThreadSanitizer reports.
+    // Fire-and-forget is the only meaning this overload can have, so detach.
     thread_id thread = 0;
-    return thread_spawn(func, var, thread);
+    if (!thread_spawn(func, var, thread))
+    {
+        return false;
+    }
+    thread_detach(thread);
+    return true;
 }
 
 void thread_join(thread_id thread)

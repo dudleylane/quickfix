@@ -213,10 +213,20 @@ TEST_CASE("UtilityTests")
 
     SECTION("threadJoinAndDetach_NoException")
     {
-        thread_id threadId;
-        CHECK_NOTHROW(thread_spawn(&startTestThread, NULL, threadId));
-        CHECK_NOTHROW(thread_join(threadId));
-        CHECK_NOTHROW(thread_detach(threadId));
+        thread_id joined;
+        CHECK_NOTHROW(thread_spawn(&startTestThread, NULL, joined));
+        CHECK_NOTHROW(thread_join(joined));
+
+        // Detach a thread that was never joined. pthread_join invalidates the
+        // handle, so detaching the same id afterwards is undefined behaviour --
+        // ThreadSanitizer aborts its runtime on it rather than reporting, which
+        // is why `ut` could not run under TSan at all. This also matches what
+        // the engine does: removeThread() detaches and erases, while onStop()
+        // joins only ids it has already taken out of the map, so an id is
+        // joined or detached but never both.
+        thread_id detached;
+        CHECK_NOTHROW(thread_spawn(&startTestThread, NULL, detached));
+        CHECK_NOTHROW(thread_detach(detached));
     }
 
     SECTION("fileExists_FileDoesNotExist")
