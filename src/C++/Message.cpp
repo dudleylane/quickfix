@@ -623,7 +623,11 @@ FIX::FieldBase Message::extractField(const std::string &string, std::string::siz
     {
         throw InvalidMessage(std::string("Field tag is invalid: ") + std::string(tagStart, equalSign));
     }
-    [[assume(field > 0)]];
+    // No [[assume(field > 0)]] here: "0=" converts successfully to tag 0, so the
+    // assumption was false on input any peer can send, and the compiler was
+    // entitled to elide the validator's own tag-0 handling on the strength of
+    // it. The validator answers tag 0 with SessionRejectReason InvalidTagNumber,
+    // which is the conformant reply and what test 2q expects.
 
     std::string::const_iterator const valueStart = equalSign + 1;
 
