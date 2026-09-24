@@ -98,8 +98,18 @@ message("-- Building with ODBC")
 endif()
 
 if (HAVE_PYTHON3)
-  find_package(PythonLibs 3 REQUIRED)
-  include_directories(${PYTHON_INCLUDE_DIRS})
+  # Development.Module, not Development: src/python3/CMakeLists.txt deliberately
+  # does not link libpython, because an extension module resolves the
+  # interpreter's symbols at load time. The include directory is the only thing
+  # needed here, and requiring Development would add a dependency on the shared
+  # library that nothing links against.
+  #
+  # FindPythonLibs was what this used, and cmake_minimum_required(VERSION 3.31)
+  # above makes CMP0148 NEW, which removes that module -- find_package then fell
+  # through to config mode and failed, so -DHAVE_PYTHON3=ON could not configure
+  # at all.
+  find_package(Python3 COMPONENTS Development.Module REQUIRED)
+  include_directories(${Python3_INCLUDE_DIRS})
 endif ()
 
 add_subdirectory(src)

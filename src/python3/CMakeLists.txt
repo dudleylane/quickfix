@@ -8,7 +8,11 @@ set(quickfix_python_lib_name _${PROJECT_NAME})
 
 add_library(${quickfix_python_lib_name} SHARED  ${quickfix_python_SOURCES})
 
-target_include_directories(${quickfix_python_lib_name} PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src/C++)
+# src/swig holds MySQLStubs.h / PostgreSQLStubs.h, which the generated wrapper
+# includes on the #else branch whenever HAVE_MYSQL / HAVE_POSTGRESQL are off --
+# the default. Without it the module does not compile, which is the second half
+# of why -DHAVE_PYTHON3=ON never produced anything.
+target_include_directories(${quickfix_python_lib_name} PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src/C++ ${PROJECT_SOURCE_DIR}/src/swig)
 
 target_link_libraries(${quickfix_python_lib_name} ${PROJECT_NAME})
 

@@ -217,11 +217,22 @@ Judge the acceptance run by its output, not its exit status: `runat.sh`'s `trap 
 `468 tests passed`, or `FAILED n out of 468 tests`.
 
 CI runs the unit tests on every push, the acceptance suite on pull requests only, and `pt` only in
-the Release configuration. The Debug leg also syntax-checks the checked-in SWIG output
-(`src/python/QuickfixPython.cpp`, `src/ruby/QuickfixRuby.cpp`) with `-fsyntax-only`. No CMake target
-builds those files, so they are compiled but never linked, and before that step existed they went 33
-commits without compiling at all. If a change to `src/C++` breaks that step, regenerate with
-`src/python/swig.sh` and `src/ruby/swig.sh` rather than hand-editing the output.
+the Release configuration.
+
+The Debug leg also covers the checked-in SWIG output, which went 33 commits without compiling at
+all before anyone noticed. It configures with `-DHAVE_PYTHON3=ON`, so CMake compiles and links
+`src/python/QuickfixPython.cpp` into `_quickfix.so`; Ruby has no CMake path (`extconf.rb` /
+`make_ruby.sh`), so `src/ruby/QuickfixRuby.cpp` is compiled separately with `-fsyntax-only`. If a
+change to `src/C++` breaks either, regenerate with `src/python/swig.sh` and `src/ruby/swig.sh`
+rather than hand-editing the output. To run the Python bindings' own tests:
+
+```bash
+cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=ON -DHAVE_PYTHON3=ON
+cmake --build build -j"$(nproc)"
+cd src/python
+PYTHONPATH=../../lib:. LD_LIBRARY_PATH=../../lib QUICKFIX_PATH=../.. \
+  sh -c 'for t in test/*TestCase.py; do python3 "$t"; done'
+```
 
 ### Writing Tests
 
