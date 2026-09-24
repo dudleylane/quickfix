@@ -544,6 +544,13 @@ typedef FIX::SessionSettings SessionSettings;
 %include "../C++/SessionID.h"
 %include "../C++/Dictionary.h"
 %include "../C++/SessionSettings.h"
+// Session's constructor takes a std::move_only_function<UtcTimeStamp()>, which
+// SWIG wraps in a SwigValueWrapper that copies -- and a move-only type cannot
+// be copied. The constructor is unusable from a scripting language regardless,
+// since there is no way to build a move_only_function from Python or Ruby, and
+// sessions are created by SessionFactory through the initiator or acceptor
+// rather than directly. Everything else on Session stays exposed.
+%ignore FIX::Session::Session;
 %include "../C++/Session.h"
 %include "../C++/Log.h"
 %include "../C++/FileLog.h"
