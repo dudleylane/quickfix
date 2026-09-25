@@ -303,9 +303,13 @@ void Message::setString(const std::string &string, bool doValidation, const Data
 
     field_type type = header;
 
+    int precedingTag = 0;
+
     while (pos < string.size())
     {
-        FieldBase field = extractField(string, pos, pSessionDataDictionary, pApplicationDataDictionary);
+        FieldBase field =
+            extractField(string, pos, pSessionDataDictionary, pApplicationDataDictionary, 0, precedingTag);
+        precedingTag = field.getTag();
         if (count < 3 && headerOrder[count++] != field.getTag())
         {
             if (doValidation)
@@ -403,11 +407,13 @@ void Message::setGroup(const std::string &msg, const FieldBase &field, const std
         return;
     }
     std::unique_ptr<Group> pGroup;
+    int precedingTag = field.getTag();
 
     while (pos < string.size())
     {
         std::string::size_type oldPos = pos;
-        FieldBase field = extractField(string, pos, &dataDictionary, &dataDictionary, pGroup.get());
+        FieldBase field = extractField(string, pos, &dataDictionary, &dataDictionary, pGroup.get(), precedingTag);
+        precedingTag = field.getTag();
 
         // Start a new group because...
         if ( // found delimiter
@@ -575,7 +581,7 @@ void Message::validate() const
     try
     {
         const size_t expectedLength = FIELD_GET_REF(m_header, BodyLength);
-        const size_t receivedLength = bodyLength();
+        const size_t receivedLength = bodyLength() + static_cast<size_t>(m_embeddedSOHSkippedLength);
 
         if (expectedLength != receivedLength)
         {
@@ -585,7 +591,7 @@ void Message::validate() const
         }
 
         const int expectedChecksum = FIELD_GET_REF(m_trailer, CheckSum);
-        const int receivedChecksum = checkSum();
+        const int receivedChecksum = (checkSum() + m_embeddedSOHSkippedChecksum) % 256;
 
         if (expectedChecksum != receivedChecksum)
         {
@@ -608,91 +614,146 @@ void Message::validate() const
 
 FIX::FieldBase Message::extractField(const std::string &string, std::string::size_type &pos,
                                      const DataDictionary *pSessionDD /*= 0*/, const DataDictionary *pAppDD /*= 0*/,
-                                     const Group *pGroup /*= 0*/) const
+                                     const Group *pGroup /*= 0*/, int precedingTag /*= 0*/)
 {
-    std::string::const_iterator const tagStart = string.begin() + pos;
-    std::string::const_iterator const strEnd = string.end();
-
-    std::string::const_iterator const equalSign = std::find(tagStart, strEnd, '=');
-    if (equalSign == strEnd) [[unlikely]]
+    // The loop exists only for orphan tokens, which appear in malformed input
+    // and nowhere else: a well-formed field returns on the first iteration, so
+    // the common path pays nothing for the tolerance. An earlier version put
+    // this in a wrapper function instead and cost 6.3% on the parse benchmarks
+    // against 1.4% for this shape -- see the bisect in the commit message.
+    for (;;)
     {
-        throw InvalidMessage("Equal sign not found in field");
-    }
-    int field = 0;
-    if (!IntConvertor::convert(tagStart, equalSign, field)) [[unlikely]]
-    {
-        throw InvalidMessage(std::string("Field tag is invalid: ") + std::string(tagStart, equalSign));
-    }
-    // No [[assume(field > 0)]] here: "0=" converts successfully to tag 0, so the
-    // assumption was false on input any peer can send, and the compiler was
-    // entitled to elide the validator's own tag-0 handling on the strength of
-    // it. The validator answers tag 0 with SessionRejectReason InvalidTagNumber,
-    // which is the conformant reply and what test 2q expects.
+        std::string::const_iterator const tagStart = string.begin() + pos;
+        std::string::const_iterator const strEnd = string.end();
 
-    std::string::const_iterator const valueStart = equalSign + 1;
-
-    std::string::const_iterator soh = std::find(valueStart, strEnd, '\001');
-    if (soh == strEnd) [[unlikely]]
-    {
-        throw InvalidMessage("SOH not found at end of field");
-    }
-
-    if (IsDataField(field, pSessionDD, pAppDD)) [[unlikely]]
-    {
-        // Assume length field is 1 less.
-        int lenField = field - 1;
-        // Special case for Signature which violates above assumption.
-        if (field == FIELD::Signature)
+        // The field ends at the next SOH. Finding it first bounds the '=' search
+        // below: scanning to the end of the message instead lets one damaged
+        // field borrow the '=' of a later one. For
+        // "336=PRE-<SOH>OPEN<SOH>336=AFTER-HOURS" the orphan "OPEN" paired with
+        // the '=' of the following 336 and produced the tag "OPEN\001336", which
+        // failed the whole parse -- so a fault in the body was
+        // indistinguishable from a garbled header, and the message was discarded
+        // silently instead of rejected.
+        //
+        // Two find calls, not three. Detecting the orphan by searching the tag
+        // for a SOH after locating the '=' scans fewer bytes but adds a third
+        // call, and measured +11.3% on the parse benchmarks against +2.9% for
+        // this shape: for ranges this short the call dominates the scan.
+        std::string::const_iterator const fieldEnd = std::find(tagStart, strEnd, '\001');
+        if (fieldEnd == strEnd) [[unlikely]]
         {
-            lenField = FIELD::SignatureLength;
+            throw InvalidMessage("SOH not found at end of field");
         }
 
-        // identify part of the message that should contain length field
-        const FieldMap *location = pGroup;
-        if (!location)
+        std::string::const_iterator const equalSign = std::find(tagStart, fieldEnd, '=');
+        if (equalSign == fieldEnd) [[unlikely]]
         {
-            if (isHeaderField(lenField, pSessionDD))
+            // No '=' anywhere in this field, so it is not a field at all: it is what
+            // was left of the previous one after an embedded SOH cut it short.
+            if (m_embeddedSOHTag == 0)
             {
-                location = &m_header;
+                // Only the first is kept: a Reject names one tag, and the first
+                // truncated field is the one that explains the rest.
+                m_embeddedSOHTag = precedingTag;
             }
-            else if (isTrailerField(lenField, pSessionDD))
+
+            std::string::size_type const orphanEnd =
+                static_cast<std::string::size_type>(std::distance(string.begin(), fieldEnd)) + 1;
+
+            // These bytes were on the wire and counted toward the peer's BodyLength
+            // and CheckSum, so validate() has to add them back or it rejects a
+            // correctly framed message for the wrong reason.
+            for (std::string::size_type i = pos; i < orphanEnd && i < string.size(); ++i)
             {
-                location = &m_trailer;
+                m_embeddedSOHSkippedChecksum += static_cast<unsigned char>(string[i]);
             }
-            else
+            m_embeddedSOHSkippedLength += static_cast<int>(orphanEnd - pos);
+
+            pos = orphanEnd;
+            if (pos >= string.size()) [[unlikely]]
             {
-                location = this;
+                // The orphan ran to the end, so there is no field to return and
+                // nothing left to reject with: garbled after all.
+                throw InvalidMessage("SOH not found at end of field");
+            }
+            continue;
+        }
+        int field = 0;
+        if (!IntConvertor::convert(tagStart, equalSign, field)) [[unlikely]]
+        {
+            throw InvalidMessage(std::string("Field tag is invalid: ") + std::string(tagStart, equalSign));
+        }
+        // No [[assume(field > 0)]] here: "0=" converts successfully to tag 0, so the
+        // assumption was false on input any peer can send, and the compiler was
+        // entitled to elide the validator's own tag-0 handling on the strength of
+        // it. The validator answers tag 0 with SessionRejectReason InvalidTagNumber,
+        // which is the conformant reply and what test 2q expects.
+
+        std::string::const_iterator const valueStart = equalSign + 1;
+
+        // fieldEnd is the first SOH at or after tagStart and the '=' precedes it,
+        // so it is also the first SOH after valueStart. Data fields recompute
+        // this below from their length field, their values being allowed to
+        // contain SOH.
+        std::string::const_iterator soh = fieldEnd;
+
+        if (IsDataField(field, pSessionDD, pAppDD)) [[unlikely]]
+        {
+            // Assume length field is 1 less.
+            int lenField = field - 1;
+            // Special case for Signature which violates above assumption.
+            if (field == FIELD::Signature)
+            {
+                lenField = FIELD::SignatureLength;
+            }
+
+            // identify part of the message that should contain length field
+            const FieldMap *location = pGroup;
+            if (!location)
+            {
+                if (isHeaderField(lenField, pSessionDD))
+                {
+                    location = &m_header;
+                }
+                else if (isTrailerField(lenField, pSessionDD))
+                {
+                    location = &m_trailer;
+                }
+                else
+                {
+                    location = this;
+                }
+            }
+
+            try
+            {
+                const FieldBase &fieldLength = location->reverse_find(lenField);
+                int dataLen = IntConvertor::convert(fieldLength.getString());
+                if (dataLen < 0 || valueStart + dataLen > string.end()) [[unlikely]]
+                    throw InvalidMessage("RawDataLength exceeds message boundary");
+                soh = valueStart + dataLen;
+            }
+            catch (FieldNotFound &)
+            {
+                throw InvalidMessage(std::string("Data length field ") + IntConvertor::convert(lenField) +
+                                     std::string(" was not found for data field ") + IntConvertor::convert(field));
+            }
+            catch (FieldConvertError &e)
+            {
+                throw InvalidMessage(std::string("Unable to determine SOH for data field ") +
+                                     IntConvertor::convert(field) + std::string(": ") + e.what());
             }
         }
 
-        try
-        {
-            const FieldBase &fieldLength = location->reverse_find(lenField);
-            int dataLen = IntConvertor::convert(fieldLength.getString());
-            if (dataLen < 0 || valueStart + dataLen > string.end()) [[unlikely]]
-                throw InvalidMessage("RawDataLength exceeds message boundary");
-            soh = valueStart + dataLen;
-        }
-        catch (FieldNotFound &)
-        {
-            throw InvalidMessage(std::string("Data length field ") + IntConvertor::convert(lenField) +
-                                 std::string(" was not found for data field ") + IntConvertor::convert(field));
-        }
-        catch (FieldConvertError &e)
-        {
-            throw InvalidMessage(std::string("Unable to determine SOH for data field ") + IntConvertor::convert(field) +
-                                 std::string(": ") + e.what());
-        }
-    }
-
-    std::string::const_iterator const tagEnd = soh + 1;
+        std::string::const_iterator const tagEnd = soh + 1;
 #if defined(__SUNPRO_CC)
-    std::distance(string.begin(), tagEnd, pos);
+        std::distance(string.begin(), tagEnd, pos);
 #else
-    pos = std::distance(string.begin(), tagEnd);
+        pos = std::distance(string.begin(), tagEnd);
 #endif
 
-    return FieldBase(field, valueStart, soh, tagStart, tagEnd);
+        return FieldBase(field, valueStart, soh, tagStart, tagEnd);
+    }
 }
 
 } // namespace FIX

@@ -1026,7 +1026,7 @@ void Session::generateReject(const Message &message, int err, int field)
     sendRaw(reject);
 }
 
-void Session::generateReject(const Message &message, const std::string &text)
+void Session::generateReject(const Message &message, const std::string &text, int field)
 {
     std::string beginString = m_sessionID.getBeginString();
 
@@ -1047,6 +1047,11 @@ void Session::generateReject(const Message &message, const std::string &text)
     if (msgType != MsgType_Logon && msgType != MsgType_SequenceReset)
     {
         m_state.incrNextTargetMsgSeqNum();
+    }
+
+    if (field != 0 && beginString >= FIX::BeginString_FIX42)
+    {
+        reject.setField(RefTagID(field));
     }
 
     reject.setField(Text(text));
@@ -1561,6 +1566,13 @@ void Session::next(const Message &message, const UtcTimeStamp &now, bool queued)
         {
             LOGEX(generateReject(message, "Unsupported message type"));
         }
+    }
+    catch (EmbeddedSOH &e)
+    {
+        // Deliberately a Reject rather than the silent drop a garbled message
+        // gets: the header parsed, so MsgSeqNum is known and the peer can be
+        // told which field was truncated instead of inferring a gap later.
+        LOGEX(generateReject(message, "Embedded SOH", e.field));
     }
     catch (TagOutOfOrder &e)
     {

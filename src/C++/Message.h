@@ -234,6 +234,16 @@ public:
         return m_validStructure;
     }
 
+    /// True when some field's value contained an embedded SOH, which truncated
+    /// it on the wire. Unlike a garbled header this is recoverable: the header
+    /// parsed, so MsgSeqNum is known and the peer can be told with a Reject
+    /// rather than left to discover a gap. `tag` is the truncated field.
+    bool hasEmbeddedSOH(int &tag) const
+    {
+        tag = m_embeddedSOHTag;
+        return m_embeddedSOHTag != 0;
+    }
+
     int bodyLength(int beginStringField = FIELD::BeginString, int bodyLengthField = FIELD::BodyLength,
                    int checkSumField = FIELD::CheckSum) const
     {
@@ -274,6 +284,9 @@ public:
     void clear()
     {
         m_tag = 0;
+        m_embeddedSOHTag = 0;
+        m_embeddedSOHSkippedLength = 0;
+        m_embeddedSOHSkippedChecksum = 0;
         m_validStructure = true;
         m_header.clear();
         FieldMap::clear();
@@ -380,8 +393,11 @@ public:
     void setSessionID(const SessionID &sessionID);
 
 private:
+    /// Not const: it records a value truncated by an embedded SOH. `precedingTag`
+    /// is the field an orphan token was cut from, which is the one the Reject
+    /// names.
     FieldBase extractField(const std::string &string, std::string::size_type &pos, const DataDictionary *pSessionDD = 0,
-                           const DataDictionary *pAppDD = 0, const Group *pGroup = 0) const;
+                           const DataDictionary *pAppDD = 0, const Group *pGroup = 0, int precedingTag = 0);
 
     static bool IsDataField(int field, const DataDictionary *pSessionDD, const DataDictionary *pAppDD)
     {
@@ -402,6 +418,12 @@ protected:
     mutable Trailer m_trailer;
     bool m_validStructure;
     int m_tag;
+    int m_embeddedSOHTag = 0;
+    /// Bytes of orphan tokens stepped over, and their byte sum. They were on the
+    /// wire and counted toward the peer's BodyLength and CheckSum, so validate()
+    /// has to add them back or it rejects a correctly framed message.
+    int m_embeddedSOHSkippedLength = 0;
+    int m_embeddedSOHSkippedChecksum = 0;
     static std::unique_ptr<DataDictionary> s_dataDictionary;
 };
 /*! @} */

@@ -312,7 +312,7 @@ private:
     void generateHeartbeat(const Message &);
     void generateTestRequest(const std::string &);
     void generateReject(const Message &, int err, int field = 0);
-    void generateReject(const Message &, const std::string &text);
+    void generateReject(const Message &, const std::string &text, int field = 0);
     void generateBusinessReject(const Message &, int err, int field = 0);
     void generateLogout(const std::string &text = "");
 

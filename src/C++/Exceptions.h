@@ -196,6 +196,16 @@ struct TagOutOfOrder : public Exception
     int field;
 };
 
+/// A field value contained an embedded SOH. The SOH terminated the field early,
+/// leaving the rest of the value as an orphan token with no tag of its own. The
+/// field named is the one whose value was truncated, not the orphan.
+struct EmbeddedSOH : public Exception
+{
+    EmbeddedSOH(int field = 0, const std::string &what = "") : Exception("Embedded SOH", what), field(field) {}
+
+    int field;
+};
+
 /// Repeated tag not part of repeating group
 struct RepeatedTag : public Exception
 {
