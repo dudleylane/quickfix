@@ -38,21 +38,32 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 
 #### Benchmark baseline
 
-Captured at `63c5c066` with `./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c 1,2,3` on an
+Captured at `2c9ed23a` with `./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c 1,2,3` on an
 Intel i7-6820HQ (4C/8T, `performance` governor), Release build, GCC 15. Median of nine runs after a
 discarded warm-up; **cv** is the coefficient of variation across those runs. The run waits for the
 1-minute load average to fall below 0.20 before starting: a fixed settle is not enough after a
 parallel build, and starting warm inflates every number in the run by several percent.
 
-| Operation | Median (μs) | cv |
-|---|---|---|
-| Deserialize Heartbeat | 0.205 | 2.1% |
-| Deserialize NewOrderSingle | 0.537 | 3.2% |
-| Deserialize QuoteRequest (10 groups) | 5.269 | 2.2% |
-| Serialize QuoteRequest | 1.363 | 2.5% |
-| Read fields from QuoteRequest | 2.068 | 1.3% |
-| Socket round-trip NOS | 4.808 | 1.1% |
-| ThreadedSocket round-trip NOS | 3.603 | 1.1% |
+| Operation | Median (μs) | cv | vs `63c5c066` |
+|---|---|---|---|
+| Deserialize Heartbeat | 0.205 | 2.7% | +0.2% |
+| Deserialize NewOrderSingle | 0.553 | 1.5% | +2.9% |
+| Deserialize QuoteRequest (10 groups) | 5.241 | 0.6% | −0.5% |
+| Serialize QuoteRequest | 1.349 | 1.5% | −1.1% |
+| Read fields from QuoteRequest | 2.058 | 4.7% | −0.5% |
+| Socket round-trip NOS | 4.668 | 0.9% | −2.9% |
+| ThreadedSocket round-trip NOS | 3.407 | 1.1% | −5.4% |
+
+The last column spans four commits — `41415ed7`, `f4c9c0c3`, `26aa506c`, `74fe9320` — and two
+separately captured runs, so no single row is attributable to one change. Read it as drift, not
+as a measurement of anything.
+
+Two rows are worth a word. **Deserialize NewOrderSingle** is up because `26aa506c` put an
+embedded-SOH check on the parse path; a controlled same-session A/B of that commit alone measured
+~+3% median across the nine parse benchmarks, which is consistent with this row and with the other
+two parse rows being flat. That cost is real and was accepted deliberately — see "Known baseline"
+for what it buys. The **round-trip rows moving down** is not explained by anything in those four
+commits and is most likely cross-session variation; treat it as noise rather than an improvement.
 
 **Serialize QuoteRequest rose from 0.945 μs** when `63c5c066` removed `FieldBase`'s cache of the
 encoded field. That benchmark calls `toString()` in a loop over one unmodified message, so it used
