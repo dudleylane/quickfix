@@ -238,7 +238,13 @@ library, a link-level incompatibility is exactly what it cannot see. And it deli
 enable the CMake options instead: that pulls in four test cases needing live database servers (`ut`
 goes 56 → 60 and the new ones fail to connect) and rewrites the *tracked* `src/C++/config.h`.
 
-To run the Python bindings' own tests:
+The Debug leg then **runs** the Python bindings' 32 tests (`src/python/test/`). Ruby's suite does
+not run: its module cannot be built here, because `make_ruby.sh` → `extconf.rb` → `mkmf` fails with
+`inaccessible plugin file plugin/gcc-annobin.so`. `mkmf` bakes in Ruby's RPM hardening specs, whose
+annobin plugin ships only for the system GCC 14 — and GCC 14 cannot compile this tree, which needs
+`<flat_map>`.
+
+To run the Python bindings' tests yourself:
 
 ```bash
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=ON -DHAVE_PYTHON3=ON
