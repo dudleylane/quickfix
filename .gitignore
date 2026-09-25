@@ -78,3 +78,8 @@ compile_commands.json
 *.sln
 *.swp
 CLAUDE.md
+
+# FileStoreTestCase writes here when ut runs from the repo root (factory("store")
+# in src/C++/test/FileStoreTestCase.cpp). Untracked and unignored until c43da40c
+# swept six of these files into a commit.
+store/
