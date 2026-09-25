@@ -1567,6 +1567,12 @@ void Session::next(const Message &message, const UtcTimeStamp &now, bool queued)
             LOGEX(generateReject(message, "Unsupported message type"));
         }
     }
+    catch (OutOfOrderGroupMembers &e)
+    {
+        // Names the misplaced member rather than the count field: the count is
+        // usually correct, and pointing at it sends the peer to the wrong place.
+        LOGEX(generateReject(message, "Out of order repeating group members", e.field));
+    }
     catch (EmbeddedSOH &e)
     {
         // Deliberately a Reject rather than the silent drop a garbled message

@@ -244,6 +244,15 @@ public:
         return m_embeddedSOHTag != 0;
     }
 
+    /// True when a repeating group instance did not open with its delimiter.
+    /// `tag` is the member found in its place, which is what the peer needs to
+    /// know -- the count field is usually fine.
+    bool hasOutOfOrderGroupMembers(int &tag) const
+    {
+        tag = m_outOfOrderGroupTag;
+        return m_outOfOrderGroupTag != 0;
+    }
+
     int bodyLength(int beginStringField = FIELD::BeginString, int bodyLengthField = FIELD::BodyLength,
                    int checkSumField = FIELD::CheckSum) const
     {
@@ -285,6 +294,7 @@ public:
     {
         m_tag = 0;
         m_embeddedSOHTag = 0;
+        m_outOfOrderGroupTag = 0;
         m_embeddedSOHSkippedLength = 0;
         m_embeddedSOHSkippedChecksum = 0;
         m_validStructure = true;
@@ -419,6 +429,7 @@ protected:
     bool m_validStructure;
     int m_tag;
     int m_embeddedSOHTag = 0;
+    int m_outOfOrderGroupTag = 0;
     /// Bytes of orphan tokens stepped over, and their byte sum. They were on the
     /// wire and counted toward the peer's BodyLength and CheckSum, so validate()
     /// has to add them back or it rejects a correctly framed message.

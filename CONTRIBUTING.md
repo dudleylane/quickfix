@@ -201,7 +201,7 @@ cd test
 ./ut "SessionTestCase" -c "lookupSession" --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
 ./ut --list-tests
 
-# Acceptance tests: 468 definitions, ~7.5 min, needs ruby. Regenerates cfg/at.cfg,
+# Acceptance tests: 470 definitions, ~7.5 min, needs ruby. Regenerates cfg/at.cfg,
 # starts `at`, and drives it with the Ruby reflector.
 ./runat.sh 54321
 
@@ -214,7 +214,7 @@ cd test
 Judge the acceptance run by its output, not its exit status: `runat.sh`'s `trap … EXIT` runs
 `kill -- -$$`, so when the script is its own process-group leader it SIGTERMs itself and returns
 143 even though every definition passed. The last line of output is the real verdict —
-`468 tests passed`, or `FAILED n out of 468 tests`.
+`470 tests passed`, or `FAILED n out of 470 tests`.
 
 CI runs the unit tests on every push, the acceptance suite on pull requests only, and `pt` only in
 the Release configuration.

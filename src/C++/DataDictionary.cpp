@@ -132,6 +132,12 @@ void DataDictionary::validate(const Message &message, const DataDictionary *cons
     // Not gated on m_checkFieldsOutOfOrder: a value cut short by an embedded SOH
     // is a malformed field rather than a misplaced one, and the peer is entitled
     // to be told regardless of how lenient the dictionary is about ordering.
+    int outOfOrderGroupField = 0;
+    if (message.hasOutOfOrderGroupMembers(outOfOrderGroupField))
+    {
+        throw OutOfOrderGroupMembers(outOfOrderGroupField);
+    }
+
     int embeddedSOHField = 0;
     if (message.hasEmbeddedSOH(embeddedSOHField))
     {

@@ -206,6 +206,19 @@ struct EmbeddedSOH : public Exception
     int field;
 };
 
+/// A repeating group instance did not begin with its delimiter, so its members
+/// are out of order. The field named is the member found in the delimiter's
+/// place, not the count field.
+struct OutOfOrderGroupMembers : public Exception
+{
+    OutOfOrderGroupMembers(int field = 0, const std::string &what = "")
+        : Exception("Out of order repeating group members", what), field(field)
+    {
+    }
+
+    int field;
+};
+
 /// Repeated tag not part of repeating group
 struct RepeatedTag : public Exception
 {

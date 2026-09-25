@@ -408,12 +408,48 @@ void Message::setGroup(const std::string &msg, const FieldBase &field, const std
     }
     std::unique_ptr<Group> pGroup;
     int precedingTag = field.getTag();
+    bool firstMember = true;
+    int outOfOrderCandidate = 0;
 
     while (pos < string.size())
     {
         std::string::size_type oldPos = pos;
         FieldBase field = extractField(string, pos, &dataDictionary, &dataDictionary, pGroup.get(), precedingTag);
         precedingTag = field.getTag();
+
+        if (firstMember)
+        {
+            firstMember = false;
+
+            // FIX requires the delimiter to open every group instance. A
+            // different field here is only *provisionally* wrong, because two
+            // unrelated faults look identical at this point: the delimiter may
+            // appear later, which is genuinely out of order, or it may be
+            // absent altogether, which is a missing required tag and is already
+            // reported as one. Confirming below, when the delimiter actually
+            // turns up, keeps them apart -- treating both as out of order broke
+            // DataDictionaryTests/checkGroupRequiredFields, which sends a
+            // NoOrders group with no ClOrdID at all and rightly expects
+            // RequiredTagMissing.
+            if (field.getTag() != delim && pDD->isField(field.getTag()))
+            {
+                outOfOrderCandidate = field.getTag();
+            }
+        }
+        else if (outOfOrderCandidate != 0 && field.getTag() == delim)
+        {
+            // The delimiter exists after all, so the members really are out of
+            // order. Without this the loop opens a group on the wrong field and
+            // another on each delimiter it meets, and the inflated instance
+            // count surfaces as RepeatingGroupCountMismatch naming the count
+            // field -- misleading, because the count is right and the order is
+            // not.
+            if (m_outOfOrderGroupTag == 0)
+            {
+                m_outOfOrderGroupTag = outOfOrderCandidate;
+            }
+            outOfOrderCandidate = 0;
+        }
 
         // Start a new group because...
         if ( // found delimiter
