@@ -232,11 +232,16 @@ never sets `HAVE_MYSQL`, `HAVE_POSTGRESQL` or `HAVE_ODBC`, so `MySQLStore.cpp`, 
 compile for nobody. The runner needs `unixODBC-devel`, `libpq5-devel` and
 `mariadb-connector-c-devel`.
 
-Two limits worth knowing. The check does not **link**, so a missing symbol still passes — and since
-`mariadb-connector-c` is an API-compatible replacement for `libmysqlclient` rather than the same
-library, a link-level incompatibility is exactly what it cannot see. And it deliberately does not
-enable the CMake options instead: that pulls in four test cases needing live database servers (`ut`
-goes 56 → 60 and the new ones fail to connect) and rewrites the *tracked* `src/C++/config.h`.
+On **pull requests** a further step links them: it configures with `-DHAVE_MYSQL=ON
+-DHAVE_POSTGRESQL=ON -DHAVE_ODBC=ON` into its own build directory and then checks `ldd` really
+reports `libmariadb`, `libpq` and `libodbc`, since a build that quietly ignored the options would
+otherwise exit 0 and prove nothing. That is a second full build (~2m15s), which is why it is not on
+every push. It also restores `src/C++/config.h`, which `configure_file` rewrites — that file is
+tracked.
+
+One limit remains: linking proves the symbols exist, not that they behave. Exercising them needs
+live database servers, so `ut` is not run in that configuration — enabling the backends takes it
+from 56 test cases to 60, and the four new ones fail to connect.
 
 The Debug leg then **runs** both binding suites: the Python bindings' 32 tests
 (`src/python/test/`) and the Ruby bindings' 33 (`src/ruby/test/`, via `TestSuite.rb`). Ruby has no

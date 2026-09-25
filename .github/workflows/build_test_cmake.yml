@@ -119,6 +119,50 @@ jobs:
           check HAVE_POSTGRESQL ""                PostgreSQLStore PostgreSQLLog
           check HAVE_MYSQL      "$mysql_include"  MySQLStore MySQLLog
 
+      - name: Link the database backends
+        # The per-push step above syntax-checks these six files, which proves
+        # they parse against their headers and never resolves a symbol. That
+        # matters most for MySQL: the headers come from mariadb-connector-c,
+        # an API-compatible *replacement* for libmysqlclient rather than the
+        # same library -- /usr/lib64/libmysqlclient_r.so is a symlink to
+        # libmariadb.so.3 -- so a function present in the header but absent from
+        # the shared object is exactly what a syntax check cannot catch and a
+        # link can.
+        #
+        # PR-only, like the acceptance suite. A second full build costs ~2m15s,
+        # too much on every push for drift that only needs catching before a
+        # merge; the syntax check stays as the fast per-push guard.
+        #
+        # ut is deliberately not run in this configuration: enabling the
+        # backends adds four test cases that require live database servers.
+        # This proves the symbols exist, not that they behave.
+        #
+        # Runner needs mariadb-connector-c-devel, libpq5-devel, unixODBC-devel.
+        if: github.event_name == 'pull_request' && matrix.configuration == 'Debug'
+        shell: bash
+        run: |
+          # Its own build dir and output dir: the ut/at/pt symlink targets are
+          # unconditional, so a second tree would otherwise steal them from the
+          # build the later steps use.
+          cmake -B build-db -S . -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DHAVE_SSL=ON -DHAVE_MYSQL=ON -DHAVE_POSTGRESQL=ON -DHAVE_ODBC=ON \
+            -DQUICKFIX_LIB_OUTPUT_DIR="${{ github.workspace }}/build-db/out"
+          cmake --build build-db -j"$(nproc)"
+
+          # Exiting 0 is not the check: confirm the backends were really linked
+          # in, rather than the options having been silently ignored.
+          lib=$(find build-db/out -name 'libquickfix.so.*' -type f | head -1)
+          for want in libmariadb libpq libodbc; do
+            ldd "$lib" | grep -q "$want" \
+              || { echo "::error::$want is not linked into $lib"; exit 1; }
+          done
+
+          # configure_file rewrote the *tracked* src/C++/config.h to define
+          # HAVE_MYSQL and friends. Harmless on a fresh checkout, but left dirty
+          # it misleads whatever runs next and anyone copying this recipe.
+          git checkout -- src/C++/config.h
+
       - name: Run the Python binding tests
         # Compiling and linking the wrapper proves it builds, not that it works.
         # A %ignore that removes something callers use, a typemap that marshals
