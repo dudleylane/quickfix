@@ -226,13 +226,17 @@ all before anyone noticed. It configures with `-DHAVE_PYTHON3=ON`, so CMake comp
 change to `src/C++` breaks either, regenerate with `src/python/swig.sh` and `src/ruby/swig.sh`
 rather than hand-editing the output.
 
-The Debug leg additionally syntax-checks the ODBC and PostgreSQL backends, which no build
-configures — CI never sets `HAVE_ODBC` or `HAVE_POSTGRESQL`, so `OdbcStore.cpp`, `OdbcLog.cpp`,
-`PostgreSQLStore.cpp` and `PostgreSQLLog.cpp` would otherwise compile for nobody. It needs
-`libpq5-devel` and `unixODBC-devel` on the runner. **MySQL is still not covered**: `mysql-devel` is
-not installed, so `MySQLStore.cpp` and `MySQLLog.cpp` remain compiled by nothing. The check does not
-link, and enabling the CMake options instead would pull in four test cases that need live database
-servers.
+The Debug leg additionally syntax-checks all six database backends, which no build configures — CI
+never sets `HAVE_MYSQL`, `HAVE_POSTGRESQL` or `HAVE_ODBC`, so `MySQLStore.cpp`, `MySQLLog.cpp`,
+`PostgreSQLStore.cpp`, `PostgreSQLLog.cpp`, `OdbcStore.cpp` and `OdbcLog.cpp` would otherwise
+compile for nobody. The runner needs `unixODBC-devel`, `libpq5-devel` and
+`mariadb-connector-c-devel`.
+
+Two limits worth knowing. The check does not **link**, so a missing symbol still passes — and since
+`mariadb-connector-c` is an API-compatible replacement for `libmysqlclient` rather than the same
+library, a link-level incompatibility is exactly what it cannot see. And it deliberately does not
+enable the CMake options instead: that pulls in four test cases needing live database servers (`ut`
+goes 56 → 60 and the new ones fail to connect) and rewrites the *tracked* `src/C++/config.h`.
 
 To run the Python bindings' own tests:
 

@@ -100,23 +100,31 @@ jobs:
         # so if the guard macro were ever renamed this step would keep passing
         # while checking nothing.
         #
-        # MySQL is NOT covered -- mysql-devel / mariadb-connector-c-devel are
-        # not installed. Requires libpq5-devel and unixODBC-devel on the runner.
+        # Runner needs unixODBC-devel, libpq5-devel and mariadb-connector-c-devel.
+        # The last provides /usr/include/mysql/mysql.h, which is the MySQL C API
+        # that MySQLConnection.h's `#include <mysql.h>` wants; it is an
+        # API-compatible replacement for libmysqlclient rather than the same
+        # library, which a syntax check cannot tell apart from the real thing --
+        # another reason this does not stand in for linking.
         if: matrix.configuration == 'Debug'
         shell: bash
         run: |
           set -u
+          # Queried, not hardcoded, like the Ruby step's header paths.
+          mysql_include=$(mysql_config --include)
           check() {
-            macro=$1; shift
+            macro=$1; extra=$2; shift 2
             for src in "$@"; do
               grep -q "$macro" "src/C++/$src.cpp" \
                 || { echo "::error::$src.cpp no longer mentions $macro -- this step would check nothing"; exit 1; }
+              # $extra is deliberately unquoted: it carries several -I flags.
               "$CXX" -std=c++23 -fsyntax-only "-D$macro=1" -DHAVE_SSL=1 \
-                  -Iinclude -Isrc/C++ "src/C++/$src.cpp"
+                  -Iinclude -Isrc/C++ $extra "src/C++/$src.cpp"
             done
           }
-          check HAVE_ODBC       OdbcStore OdbcLog
-          check HAVE_POSTGRESQL PostgreSQLStore PostgreSQLLog
+          check HAVE_ODBC       ""                OdbcStore OdbcLog
+          check HAVE_POSTGRESQL ""                PostgreSQLStore PostgreSQLLog
+          check HAVE_MYSQL      "$mysql_include"  MySQLStore MySQLLog
 
       - name: Run acceptance tests
         # PR-only: the at-driven Ruby runner takes ~2 minutes and isn't
