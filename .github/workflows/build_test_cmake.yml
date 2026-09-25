@@ -46,36 +46,29 @@ jobs:
         working-directory: ./test
         run: ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
 
-      - name: Compile the Ruby SWIG bindings
-        # The checked-in SWIG output drifted 33 commits out of date before
-        # 4cb3d655 and nobody noticed, because nothing compiled it. The Python
-        # half is now covered by the build itself -- the Debug leg configures
-        # with -DHAVE_PYTHON3=ON, so CMake compiles and links
-        # QuickfixPython.cpp into _quickfix.so, which is strictly stronger than
-        # a syntax check of the same file. Ruby has no CMake path at all
-        # (extconf.rb / make_ruby.sh), so compiling it here is the only thing
-        # that notices its wrapper no longer matches the headers.
+      - name: Build and test the Ruby bindings
+        # Replaces an -fsyntax-only check of QuickfixRuby.cpp. Ruby has no CMake
+        # path, so this runs the project's own build script -- extconf.rb
+        # through mkmf -- which is what #6 fixed: mkmf compiled its probes with
+        # Ruby's baked-in RPM hardening flags, whose annobin plugin cannot load
+        # into gcc-toolset-15, and extconf.rb silently discarded the CXXFLAGS
+        # and LIBS that make_ruby.sh passes it, so the module was built without
+        # -std=c++23.
         #
-        # This catches a changed signature or container type, which is what
-        # broke both wrappers before. It does not catch public API that was
-        # never exposed through SWIG; regenerate-and-diff would, at the cost of
-        # pinning CI to one SWIG version.
+        # Building and then running the suite is strictly stronger than a syntax
+        # check, and it keeps the documented build honest: if make_ruby.sh
+        # breaks again, this goes red rather than a direct g++ command quietly
+        # covering for it.
         #
-        # -Isrc/swig supplies MySQLStubs.h, which the generated code includes
-        # whenever HAVE_MYSQL is off. The header paths are queried rather than
-        # hardcoded so a Ruby point release does not turn this red. $CXX rather
-        # than g++: the job env puts gcc-toolset-15 first on PATH, but
-        # FieldMap.h needs <flat_map>, so naming the compiler the job
-        # configured with is what keeps this from silently depending on PATH
-        # order. Debug-only, matching where the Python module is built; ~8s.
+        # Needs rubygem-test-unit on the runner -- Ruby 3.3 no longer bundles
+        # test/unit. libquickfix comes from lib/, which the Build step fills.
         if: matrix.configuration == 'Debug'
+        working-directory: ./src/ruby
         shell: bash
         run: |
-          ruby_dirs=$(ruby -e 'require "rbconfig"; print RbConfig::CONFIG["rubyhdrdir"], " ", RbConfig::CONFIG["rubyarchhdrdir"]')
-          ruby_flags=""
-          for dir in $ruby_dirs; do ruby_flags="$ruby_flags -I$dir"; done
-          "$CXX" -std=c++23 -fsyntax-only -Iinclude -Isrc/C++ -Isrc/swig \
-              $ruby_flags src/ruby/QuickfixRuby.cpp
+          bash make_ruby.sh "$CXX" "-std=c++23 -DHAVE_SSL=1" "-lssl -lcrypto"
+          export LD_LIBRARY_PATH="${{ github.workspace }}/lib:$LD_LIBRARY_PATH"
+          ruby -I . test/TestSuite.rb
 
       - name: Compile the database backends
         # Nothing compiles MySQLStore/Log, PostgreSQLStore/Log or OdbcStore/Log

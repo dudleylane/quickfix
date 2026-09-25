@@ -27,4 +27,14 @@ popd
 cp $TEMP/Makefile Makefile.ruby
 rm -rf $TEMP
 
+# mkmf writes a Makefile that names itself as a prerequisite -- "$(TARGET_SO):
+# $(OBJS) Makefile", and the same for the pre-install-rb targets. Copying it to
+# Makefile.ruby leaves those references dangling, so make stops with "No rule to
+# make target 'Makefile', needed by 'quickfix.so'" after compiling everything.
+# Retarget them at the renamed file.
+sed -i -e 's/^\($(TARGET_SO): $(OBJS) \)Makefile$/\1Makefile.ruby/' \
+       -e 's/^\(pre-install-rb: \)Makefile$/\1Makefile.ruby/' \
+       -e 's/^\(pre-install-rb-default: \)Makefile$/\1Makefile.ruby/' \
+       Makefile.ruby
+
 make -f Makefile.ruby
