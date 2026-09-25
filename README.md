@@ -188,10 +188,12 @@ unaffected and everything else remains visible to ASan.)
 
 #### Known baseline — the suite is clean
 
-As of `f4c9c0c3` (2026-09-24), `ut` runs **56 test cases / 2034 assertions**, all passing, and
+As of `74fe9320` (2026-09-25), `ut` runs **56 test cases / 2034 assertions**, all passing, and
 **exits 0 under every sanitizer** — ASan + UBSan with no leak record and no report, and
 ThreadSanitizer with no warning. That is the baseline to diff against — anything a run reports is
-yours.
+yours. Re-verified at that commit rather than carried forward: `26aa506c` and `74fe9320` changed the
+parse path, and `26aa506c` in particular added hand-written indexing over the message buffer on a
+malformed-input path, which is exactly what ASan is for.
 
 It took three changes to get there, all of one idiom. `FieldMap` stores fields by value in
 `std::vector<FieldBase>`, so `addField` slices any derived field; reading the stored object back as
