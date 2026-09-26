@@ -2235,6 +2235,84 @@ TEST_CASE_METHOD(acceptorFixture, "AcceptorSessionTestCase")
         CHECK(0 == disconnected);
     }
 
+    SECTION("gapFillClearsQueuedMessages")
+    {
+        object->setResponder(this);
+        object->next(createLogon("ISLD", "TW", 1), now);
+        // Expected target is now 2.
+
+        // Messages at 5, 6, 7 arrive before the gap is filled -- they get queued.
+        object->next(createTestRequest("ISLD", "TW", 5, "A"), now);
+        object->next(createTestRequest("ISLD", "TW", 6, "B"), now);
+        object->next(createTestRequest("ISLD", "TW", 7, "C"), now);
+        CHECK(0 == fromTestRequest);
+
+        // GapFill skips 2-7 entirely (newSeqNo=8). Queued items 5, 6, 7 should be
+        // discarded -- they were part of the gap, not messages the app should see.
+        FIX42::SequenceReset gapFill = createSequenceReset("ISLD", "TW", 2, 8);
+        gapFill.set(GapFillFlag(true));
+        object->next(gapFill, now);
+        CHECK(8 == object->getExpectedTargetNum());
+        CHECK(0 == fromTestRequest);
+
+        // Next in-sequence message is processed normally with no queue backup.
+        object->next(createTestRequest("ISLD", "TW", 8, "D"), now);
+        CHECK(1 == fromTestRequest);
+        CHECK(9 == object->getExpectedTargetNum());
+    }
+
+    SECTION("gapFillDrainsQueuedMessagesAboveNewSeqNo")
+    {
+        object->setResponder(this);
+        object->next(createLogon("ISLD", "TW", 1), now);
+        // Expected target is now 2.
+
+        // Message at seq 5 arrives and is queued; seq 6 arrives and is also queued.
+        object->next(createTestRequest("ISLD", "TW", 5, "A"), now);
+        object->next(createTestRequest("ISLD", "TW", 6, "B"), now);
+        CHECK(0 == fromTestRequest);
+
+        // GapFill covers only 2-4 (newSeqNo=5). The queued message at 5 should be
+        // processed immediately via nextQueued, and the one at 6 should follow.
+        FIX42::SequenceReset gapFill = createSequenceReset("ISLD", "TW", 2, 5);
+        gapFill.set(GapFillFlag(true));
+        object->next(gapFill, now);
+        CHECK(2 == fromTestRequest);
+        CHECK(7 == object->getExpectedTargetNum());
+    }
+
+    SECTION("gapFillDoesNotRetainSkippedMessages")
+    {
+        // The two sections above pass with or without the fix: the first never
+        // observes the queue, and the second's draining already happens through
+        // the nextQueued call at the end of Session::next. This one fails
+        // without it. Messages a GapFill skipped over must be discarded, not
+        // merely left unreached -- otherwise they are retained for the life of
+        // the session, and if the expected number ever comes back into that
+        // range they are delivered to the application after all.
+        object->setResponder(this);
+        object->next(createLogon("ISLD", "TW", 1), now);
+
+        object->next(createTestRequest("ISLD", "TW", 5, "A"), now);
+        object->next(createTestRequest("ISLD", "TW", 6, "B"), now);
+        object->next(createTestRequest("ISLD", "TW", 7, "C"), now);
+        CHECK(0 == fromTestRequest);
+
+        FIX42::SequenceReset gapFill = createSequenceReset("ISLD", "TW", 2, 8);
+        gapFill.set(GapFillFlag(true));
+        object->next(gapFill, now);
+        CHECK(8 == object->getExpectedTargetNum());
+
+        // setNextTargetMsgSeqNum is public and is the only way back into the
+        // skipped range without a reset, which would clear the queue anyway. A
+        // fresh 5 must be the only message delivered: if 6 and 7 had been
+        // retained, nextQueued would hand them to the application here.
+        object->setNextTargetMsgSeqNum(5);
+        object->next(createTestRequest("ISLD", "TW", 5, "fresh"), now);
+        CHECK(1 == fromTestRequest);
+        CHECK(6 == object->getExpectedTargetNum());
+    }
+
     SECTION("nextResendRequest")
     {
         object->next(createLogon("ISLD", "TW", 1), now);

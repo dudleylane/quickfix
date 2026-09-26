@@ -156,6 +156,16 @@ public:
         m_queue.clear();
     }
 
+    /// Discard queued messages numbered below msgSeqNum. Used when a GapFill
+    /// moves the expected number past them: nothing else ever removes them, so
+    /// they were retained for the life of the session and could still be
+    /// delivered if the expected number later returned to that range.
+    void clearQueueUpTo(SEQNUM msgSeqNum)
+    {
+        Locker l(m_mutex);
+        m_queue.erase(m_queue.begin(), m_queue.lower_bound(msgSeqNum));
+    }
+
     bool set(SEQNUM s, const std::string &m) EXCEPT(IOException)
     {
         Locker l(m_mutex);
