@@ -153,8 +153,11 @@ SSLSocketConnection::~SSLSocketConnection()
         Session::unregisterSession(m_pSession->getSessionID());
     }
 
-    ssl_socket_close(m_socket, m_ssl);
-
+    // The fd is the SocketMonitor's (the BIO is BIO_NOCLOSE): it closes it when
+    // it drops the socket, which happens on either side of this destructor.
+    // Closing it here as well closed every SSL connection's fd twice (#25).
+    // SSL_free does no fd I/O with BIO_NOCLOSE; close_notify is sent from
+    // disconnect(), while the fd is still ours.
     SSL_free(m_ssl);
 }
 
@@ -249,6 +252,19 @@ bool SSLSocketConnection::didProcessQueueRequestToRead() const
 
 void SSLSocketConnection::disconnect()
 {
+    // Send close_notify before dropping: drop() closes the fd, and the number
+    // can be reused at once, so TLS I/O afterwards could reach an unrelated
+    // descriptor -- which is what the destructor used to do on this path. One
+    // unidirectional shutdown, only after a completed handshake: a
+    // bidirectional one would block waiting to read the peer's reply.
+    {
+        Locker l(m_mutex);
+        if (m_ssl && SSL_is_init_finished(m_ssl) && !(SSL_get_shutdown(m_ssl) & SSL_SENT_SHUTDOWN))
+        {
+            SSL_shutdown(m_ssl);
+        }
+    }
+
     if (m_pMonitor)
     {
         m_pMonitor->drop(m_socket);

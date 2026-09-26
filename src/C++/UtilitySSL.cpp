@@ -394,7 +394,17 @@ void ssl_socket_close(socket_handle socket, SSL *ssl)
     if (rc == 0)
         SSL_shutdown(ssl);
 
-    socket_close(socket);
+    // No close() when an SSL object is present. The fd already has exactly one
+    // owner: the BIO in the threaded transports (BIO_CLOSE, released by
+    // SSL_free) or the SocketMonitor in the reactor (BIO_NOCLOSE, released by
+    // drop()). Closing it here as well -- added in db39515f -- made every SSL
+    // disconnect close the fd twice, and a second close() on a number reused
+    // in between closes someone else's descriptor (#25).
+    //
+    // shutdown(2) keeps what that close() did for the threaded onStop path: it
+    // wakes a connection thread blocked in select() on this fd so thread_join
+    // returns, without releasing the number while the thread still uses it.
+    ::shutdown(socket, SHUT_RDWR);
 }
 
 static void thread_setup(void)

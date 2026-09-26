@@ -145,18 +145,27 @@ SSLSocketInitiator::SSLSocketInitiator(Application &application, MessageStoreFac
 
 SSLSocketInitiator::~SSLSocketInitiator()
 {
+    // Drop each socket before deleting its connection: the monitor owns the fd
+    // and its destructor closes only the read set, so a connection still
+    // connecting -- in the connect set -- would otherwise leak its fd now that
+    // the connection's destructor no longer closes it (#25). m_connector is a
+    // member, so its monitor is still alive here.
+    SocketMonitor &monitor = m_connector.getMonitor();
     for (const SocketConnections::value_type &connection : m_connections)
     {
+        monitor.drop(connection.first);
         delete connection.second;
     }
 
     for (const SocketConnections::value_type &connection : m_pendingConnections)
     {
+        monitor.drop(connection.first);
         delete connection.second;
     }
 
     for (const SocketConnections::value_type &connection : m_pendingSSLHandshakes)
     {
+        monitor.drop(connection.first);
         delete connection.second;
     }
 
@@ -433,6 +442,13 @@ void SSLSocketInitiator::handshakeSSLAndHandleConnection(SocketConnector &connec
     else if (sslHandshakeStatus == SSL_HANDSHAKE_FAILED)
     {
         setDisconnected(pSocketConnection->getSession()->getSessionID());
+
+        // Drop before deleting. The monitor owns this fd and nothing else closes
+        // it now that the connection's destructor does not (#25); without the
+        // drop the socket also stays in the monitor's read set. Upstream
+        // 63deeff9 calls the connection's disconnect() here, which is private
+        // in this fork and equivalent: no TLS session exists to shut down.
+        connector.getMonitor().drop(pSocketConnection->getSocket());
 
         Session *pSession = pSocketConnection->getSession();
         if (pSession)

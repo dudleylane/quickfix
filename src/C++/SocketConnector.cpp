@@ -56,9 +56,25 @@ private:
         }
     }
 
-    virtual void onError(SocketMonitor &, socket_handle socket) override
+    virtual void onError(SocketMonitor &monitor, socket_handle socket) override
     {
-        m_strategy.onDisconnect(m_connector, socket);
+        // A socket in error is dropped at once -- left registered, poll()
+        // reports it on every block(): a CPU spin that re-fires onDisconnect and
+        // never closes the fd (upstream 63deeff9). The strategy is told only
+        // from the dropped-socket queue, which re-invokes this method on the
+        // next block(), where drop() returns false. That is also how it hears
+        // of a socket a connection dropped itself when its session ended, so
+        // every drop is reported exactly once whoever made it.
+        //
+        // Upstream 30622fa6 guards the other way, `if (drop) notify`, and that
+        // suppresses the self-dropped case: the initiator never deletes the
+        // connection or marks the session disconnected, so it never
+        // reconnects. SocketConnectorTests' self_dropped_connection_is_reported_once
+        // fails under it.
+        if (!monitor.drop(socket))
+        {
+            m_strategy.onDisconnect(m_connector, socket);
+        }
     }
 
     virtual void onError(SocketMonitor &) override { m_strategy.onError(m_connector); }
