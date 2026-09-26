@@ -2313,6 +2313,30 @@ TEST_CASE_METHOD(acceptorFixture, "AcceptorSessionTestCase")
         CHECK(6 == object->getExpectedTargetNum());
     }
 
+    SECTION("sequenceResetDoesNotRetainSkippedMessages")
+    {
+        // The section above in Reset mode. A SequenceReset without GapFillFlag=Y
+        // moves the expected number forward through the same branch, so the
+        // messages it skips over must be discarded just the same (#8).
+        object->setResponder(this);
+        object->next(createLogon("ISLD", "TW", 1), now);
+
+        object->next(createTestRequest("ISLD", "TW", 5, "A"), now);
+        object->next(createTestRequest("ISLD", "TW", 6, "B"), now);
+        object->next(createTestRequest("ISLD", "TW", 7, "C"), now);
+        CHECK(0 == fromTestRequest);
+
+        FIX42::SequenceReset reset = createSequenceReset("ISLD", "TW", 2, 8);
+        reset.set(GapFillFlag(false));
+        object->next(reset, now);
+        CHECK(8 == object->getExpectedTargetNum());
+
+        object->setNextTargetMsgSeqNum(5);
+        object->next(createTestRequest("ISLD", "TW", 5, "fresh"), now);
+        CHECK(1 == fromTestRequest);
+        CHECK(6 == object->getExpectedTargetNum());
+    }
+
     SECTION("nextResendRequest")
     {
         object->next(createLogon("ISLD", "TW", 1), now);

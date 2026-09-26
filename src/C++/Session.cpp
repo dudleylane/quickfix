@@ -410,15 +410,13 @@ void Session::nextSequenceReset(const Message &sequenceReset, const UtcTimeStamp
 
             // Ported from upstream d5a5cfdd (#715). Messages queued ahead of the
             // gap and now below the new expected number were skipped by the
-            // peer and must be discarded, not merely left unreached. The
-            // nextQueued call is redundant here -- Session::next drains the
-            // queue after dispatch -- but harmless, and kept so this stays
-            // textually close to upstream.
-            if (isGapFill)
-            {
-                m_state.clearQueueUpTo(newSeqNo);
-                nextQueued(now);
-            }
+            // peer and must be discarded, not merely left unreached. Upstream
+            // does this only for GapFill, but Reset mode moves the expected
+            // number through this same branch and skips the same messages, so
+            // here it is unconditional (#8). The nextQueued call is redundant --
+            // Session::next drains the queue after dispatch -- but harmless.
+            m_state.clearQueueUpTo(newSeqNo);
+            nextQueued(now);
         }
         else if (newSeqNo < getExpectedTargetNum() && !isGapFill)
         {
