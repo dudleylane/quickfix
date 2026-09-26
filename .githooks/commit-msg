@@ -1,6 +1,6 @@
 #!/bin/sh
 # Reject a commit touching executable content whose message carries neither the
-# five framing lines from CLAUDE.md "Issue framing" nor a Deviation: trailer.
+# five framing lines (Issue, Impact, Found, Fix, Success) nor a Deviation: trailer.
 #
 # This catches a forgotten artifact, not a skipped decision -- the framing is
 # supposed to exist before the work starts, and nothing here can check that.
@@ -31,7 +31,7 @@ cat >&2 <<EOF
 commit-msg: $executable executable file(s) staged, but the message is missing:
            $missing
 
-CLAUDE.md "Issue framing" wants all five, stated before the first edit:
+All five are wanted, stated before the first edit:
 
   Issue:   the precise failure or gap
   Impact:  what it costs -- if this is unclear, that alone blocks the change

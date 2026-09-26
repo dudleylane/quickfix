@@ -346,7 +346,7 @@ cd doc
    git config core.hooksPath .githooks
    ```
    It rejects a commit touching executable content — C++, CMake, workflows, scripts, spec XML —
-   whose message carries neither the five framing lines of CLAUDE.md's "Decision-making policy"
+   whose message carries neither the five framing lines
    (`Issue:`, `Impact:`, `Found:`, `Fix:`, `Success:`) nor a `Deviation:` trailer.
 
 ### Debugging
