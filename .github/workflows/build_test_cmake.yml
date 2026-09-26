@@ -62,13 +62,16 @@ jobs:
         #
         # Needs rubygem-test-unit on the runner -- Ruby 3.3 no longer bundles
         # test/unit. libquickfix comes from lib/, which the Build step fills.
+        #
+        # The suite runs through test.sh, not an inline command, for the same
+        # reason: a script nothing runs rots, and this one had pointed at the
+        # autotools .libs directory for years before #23.
         if: matrix.configuration == 'Debug'
         working-directory: ./src/ruby
         shell: bash
         run: |
           bash make_ruby.sh "$CXX" "-std=c++23 -DHAVE_SSL=1" "-lssl -lcrypto"
-          export LD_LIBRARY_PATH="${{ github.workspace }}/lib:$LD_LIBRARY_PATH"
-          ruby -I . test/TestSuite.rb
+          ./test.sh
 
       - name: Compile the database backends
         # Nothing compiles MySQLStore/Log, PostgreSQLStore/Log or OdbcStore/Log
@@ -172,17 +175,15 @@ jobs:
         # commits, one level up.
         #
         # Debug-only because lib/_quickfix.so exists only there: HAVE_PYTHON3 is
-        # ON in Debug and OFF in Release. LD_LIBRARY_PATH is *prepended*, not
-        # assigned -- the job env already points it at gcc-toolset-15's lib64,
-        # which libquickfix.so.17 needs at load time as well.
+        # ON in Debug and OFF in Release. test-python3.sh *prepends* lib/ to
+        # LD_LIBRARY_PATH rather than assigning it -- the job env already points
+        # it at gcc-toolset-15's lib64, which libquickfix.so.17 needs at load
+        # time as well. CI runs the script rather than inline commands so that
+        # the documented way to run these tests cannot rot unnoticed again (#23).
         if: matrix.configuration == 'Debug'
         working-directory: ./src/python
         shell: bash
-        env:
-          PYTHONPATH: ${{ github.workspace }}/lib:${{ github.workspace }}/src/python
-        run: |
-          export LD_LIBRARY_PATH="${{ github.workspace }}/lib:$LD_LIBRARY_PATH"
-          python3 -m unittest discover -s test -p '*TestCase.py' -v
+        run: ./test-python3.sh
 
       - name: Run acceptance tests
         # PR-only: the at-driven Ruby runner takes about 7.5 minutes for the

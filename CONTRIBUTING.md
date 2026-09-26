@@ -218,10 +218,10 @@ the Release configuration.
 
 The Debug leg also covers the checked-in SWIG output, which went 33 commits without compiling at
 all before anyone noticed. It configures with `-DHAVE_PYTHON3=ON`, so CMake compiles and links
-`src/python/QuickfixPython.cpp` into `_quickfix.so`; Ruby has no CMake path (`extconf.rb` /
-`make_ruby.sh`), so `src/ruby/QuickfixRuby.cpp` is compiled separately with `-fsyntax-only`. If a
-change to `src/C++` breaks either, regenerate with `src/python/swig.sh` and `src/ruby/swig.sh`
-rather than hand-editing the output.
+`src/python/QuickfixPython.cpp` into `_quickfix.so`; Ruby has no CMake path, so the same leg
+builds `src/ruby/QuickfixRuby.cpp` with the project's own `make_ruby.sh`. If a change to `src/C++`
+breaks either, regenerate with `src/python/swig.sh` and `src/ruby/swig.sh` rather than
+hand-editing the output.
 
 The Debug leg additionally syntax-checks all six database backends, which no build configures — CI
 never sets `HAVE_MYSQL`, `HAVE_POSTGRESQL` or `HAVE_ODBC`, so `MySQLStore.cpp`, `MySQLLog.cpp`,
@@ -247,14 +247,16 @@ invocation — if that script breaks, the step goes red instead of something els
 it. Running the Ruby suite needs `rubygem-test-unit` on the runner, since Ruby 3.3 no longer bundles
 `test/unit`.
 
-To run the Python bindings' tests yourself:
+To run both suites yourself, use the scripts CI runs. Each works from any directory and exits
+with its suite's status:
 
 ```bash
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=ON -DHAVE_PYTHON3=ON
 cmake --build build -j"$(nproc)"
-cd src/python
-PYTHONPATH=../../lib:. LD_LIBRARY_PATH=../../lib QUICKFIX_PATH=../.. \
-  sh -c 'for t in test/*TestCase.py; do python3 "$t"; done'
+src/python/test-python3.sh
+
+(cd src/ruby && bash make_ruby.sh "$CXX" "-std=c++23 -DHAVE_SSL=1" "-lssl -lcrypto")
+src/ruby/test.sh
 ```
 
 ### Writing Tests
