@@ -37,4 +37,11 @@ sed -i -e 's/^\($(TARGET_SO): $(OBJS) \)Makefile$/\1Makefile.ruby/' \
        -e 's/^\(pre-install-rb-default: \)Makefile$/\1Makefile.ruby/' \
        Makefile.ruby
 
+# mkmf's Makefile records no dependency on libquickfix's headers, so after a
+# header change make would relink quickfix.so from the existing QuickfixRuby.o,
+# compiled against the old class layouts, and the module would corrupt the heap
+# at load instead of failing to build. Compile from scratch every time; CI,
+# starting from a clean checkout, pays this anyway.
+rm -f QuickfixRuby.o quickfix.so
+
 make -f Makefile.ruby
