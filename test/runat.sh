@@ -1,6 +1,11 @@
 #!/bin/sh
 
-trap "trap - TERM && kill -- -$$ 2 &&> /dev/null" INT TERM KILL EXIT
+# Stop the acceptor on the way out, and only the acceptor. Signalling the whole
+# process group, as this once did, also signalled this script, so it exited 143
+# even when every definition passed.
+trap 'kill "$PROCID" 2>/dev/null' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 killall ut at
 
