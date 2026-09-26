@@ -215,7 +215,8 @@ cd test
 after the port go to `at`: `./runat.sh 54321 -l` logs session events on stdout, and `-t` runs the
 threaded transport instead of the reactor.
 
-CI runs the unit tests on every push, the acceptance suite on pull requests only, and `pt` only in
+CI runs the unit tests on every push, the acceptance suite on pull requests and manual runs
+(`gh workflow run build_test_cmake.yml --ref master`), and `pt` only in
 the Release configuration.
 
 The Debug leg also covers the checked-in SWIG output, which went 33 commits without compiling at
@@ -234,7 +235,7 @@ never sets `HAVE_MYSQL`, `HAVE_POSTGRESQL` or `HAVE_ODBC`, so `MySQLStore.cpp`, 
 compile for nobody. The runner needs `unixODBC-devel`, `libpq5-devel` and
 `mariadb-connector-c-devel`.
 
-On **pull requests** a further step links them: it configures with `-DHAVE_MYSQL=ON
+On **pull requests and manual runs** a further step links them: it configures with `-DHAVE_MYSQL=ON
 -DHAVE_POSTGRESQL=ON -DHAVE_ODBC=ON` into its own build directory and then checks `ldd` really
 reports `libmariadb`, `libpq` and `libodbc`, since a build that quietly ignored the options would
 otherwise exit 0 and prove nothing. That is a second full build (~2m15s), which is why it is not on
