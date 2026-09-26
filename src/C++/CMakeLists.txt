@@ -1,6 +1,10 @@
 add_subdirectory(test)
 
-set(quickfix_VERSION_MAJOR 17)
+# The major version is the soname. It is 18 rather than upstream's 17 because
+# the fork has changed the layout of exported classes (FieldBase, Message), so
+# a binary built against upstream 17 must not load this library. Bump it again
+# for the first such change after a release is tagged.
+set(quickfix_VERSION_MAJOR 18)
 set(quickfix_VERSION_MINOR 0)
 set(quickfix_VERSION_PATCH 0)
 set(quickfix_VERSION ${quickfix_VERSION_MAJOR}.${quickfix_VERSION_MINOR}.${quickfix_VERSION_PATCH} )

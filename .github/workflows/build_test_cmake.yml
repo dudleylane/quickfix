@@ -214,7 +214,7 @@ jobs:
         # Debug-only because lib/_quickfix.so exists only there: HAVE_PYTHON3 is
         # ON in Debug and OFF in Release. test-python3.sh *prepends* lib/ to
         # LD_LIBRARY_PATH rather than assigning it -- the job env already points
-        # it at gcc-toolset-15's lib64, which libquickfix.so.17 needs at load
+        # it at gcc-toolset-15's lib64, which libquickfix.so needs at load
         # time as well. CI runs the script rather than inline commands so that
         # the documented way to run these tests cannot rot unnoticed again (#23).
         if: matrix.configuration == 'Debug'

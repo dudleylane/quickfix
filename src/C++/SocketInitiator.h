@@ -60,8 +60,6 @@ private:
     void onError(SocketConnector &);
     void onTimeout(SocketConnector &);
 
-    SessionSettings m_settings;
-
     HostDetailsProvider m_hostDetailsProvider;
     SocketConnector m_connector;
     SocketConnections m_pendingConnections;
