@@ -210,6 +210,8 @@ cd test
 ```
 
 `runat.sh` and `runut.sh` start with `killall ut at`, so don't run them alongside another `ut`.
+`runut.sh` can be invoked from any directory and returns ut's real exit status; `runat.sh` still
+returns 143 from its own trap, so judge that one by its output line.
 
 Judge the acceptance run by its output, not its exit status: `runat.sh`'s `trap … EXIT` runs
 `kill -- -$$`, so when the script is its own process-group leader it SIGTERMs itself and returns
