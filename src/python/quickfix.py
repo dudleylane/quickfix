@@ -546,6 +546,28 @@ class TagOutOfOrder(FIXException):
 
 # Register TagOutOfOrder in _quickfix:
 _quickfix.TagOutOfOrder_swigregister(TagOutOfOrder)
+class EmbeddedSOH(FIXException):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        _quickfix.EmbeddedSOH_swiginit(self, _quickfix.new_EmbeddedSOH(*args))
+    field = property(_quickfix.EmbeddedSOH_field_get, _quickfix.EmbeddedSOH_field_set)
+    __swig_destroy__ = _quickfix.delete_EmbeddedSOH
+
+# Register EmbeddedSOH in _quickfix:
+_quickfix.EmbeddedSOH_swigregister(EmbeddedSOH)
+class OutOfOrderGroupMembers(FIXException):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        _quickfix.OutOfOrderGroupMembers_swiginit(self, _quickfix.new_OutOfOrderGroupMembers(*args))
+    field = property(_quickfix.OutOfOrderGroupMembers_field_get, _quickfix.OutOfOrderGroupMembers_field_set)
+    __swig_destroy__ = _quickfix.delete_OutOfOrderGroupMembers
+
+# Register OutOfOrderGroupMembers in _quickfix:
+_quickfix.OutOfOrderGroupMembers_swigregister(OutOfOrderGroupMembers)
 class RepeatedTag(FIXException):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -1467,6 +1489,12 @@ class Message(FieldMap):
 
     def hasValidStructure(self, tag):
         return _quickfix.Message_hasValidStructure(self, tag)
+
+    def hasEmbeddedSOH(self, tag):
+        return _quickfix.Message_hasEmbeddedSOH(self, tag)
+
+    def hasOutOfOrderGroupMembers(self, tag):
+        return _quickfix.Message_hasOutOfOrderGroupMembers(self, tag)
 
     def bodyLength(self, *args):
         return _quickfix.Message_bodyLength(self, *args)

@@ -3787,166 +3787,168 @@ namespace Swig {
 #define SWIGTYPE_p_FIX__DoNotSend swig_types[22]
 #define SWIGTYPE_p_FIX__DoubleField swig_types[23]
 #define SWIGTYPE_p_FIX__DuplicateFieldNumber swig_types[24]
-#define SWIGTYPE_p_FIX__Exception swig_types[25]
-#define SWIGTYPE_p_FIX__FieldBase swig_types[26]
-#define SWIGTYPE_p_FIX__FieldConvertError swig_types[27]
-#define SWIGTYPE_p_FIX__FieldMap swig_types[28]
-#define SWIGTYPE_p_FIX__FieldNotFound swig_types[29]
-#define SWIGTYPE_p_FIX__FileLog swig_types[30]
-#define SWIGTYPE_p_FIX__FileLogFactory swig_types[31]
-#define SWIGTYPE_p_FIX__FileStore swig_types[32]
-#define SWIGTYPE_p_FIX__FileStoreFactory swig_types[33]
-#define SWIGTYPE_p_FIX__Group swig_types[34]
-#define SWIGTYPE_p_FIX__GroupArena swig_types[35]
-#define SWIGTYPE_p_FIX__Header swig_types[36]
-#define SWIGTYPE_p_FIX__IOException swig_types[37]
-#define SWIGTYPE_p_FIX__IncorrectDataFormat swig_types[38]
-#define SWIGTYPE_p_FIX__IncorrectMessageStructure swig_types[39]
-#define SWIGTYPE_p_FIX__IncorrectTagValue swig_types[40]
-#define SWIGTYPE_p_FIX__Initiator swig_types[41]
-#define SWIGTYPE_p_FIX__Int64Field swig_types[42]
-#define SWIGTYPE_p_FIX__IntField swig_types[43]
-#define SWIGTYPE_p_FIX__InvalidMessage swig_types[44]
-#define SWIGTYPE_p_FIX__InvalidMessageType swig_types[45]
-#define SWIGTYPE_p_FIX__InvalidTagNumber swig_types[46]
-#define SWIGTYPE_p_FIX__LocalDate swig_types[47]
-#define SWIGTYPE_p_FIX__LocalTimeOnly swig_types[48]
-#define SWIGTYPE_p_FIX__LocalTimeStamp swig_types[49]
-#define SWIGTYPE_p_FIX__Log swig_types[50]
-#define SWIGTYPE_p_FIX__LogFactory swig_types[51]
-#define SWIGTYPE_p_FIX__MemoryStore swig_types[52]
-#define SWIGTYPE_p_FIX__MemoryStoreFactory swig_types[53]
-#define SWIGTYPE_p_FIX__Message swig_types[54]
-#define SWIGTYPE_p_FIX__MessageParseError swig_types[55]
-#define SWIGTYPE_p_FIX__MessageStore swig_types[56]
-#define SWIGTYPE_p_FIX__MessageStoreExceptionWrapper swig_types[57]
-#define SWIGTYPE_p_FIX__MessageStoreFactory swig_types[58]
-#define SWIGTYPE_p_FIX__MessageStoreFactoryExceptionWrapper swig_types[59]
-#define SWIGTYPE_p_FIX__MySQLConnection swig_types[60]
-#define SWIGTYPE_p_FIX__MySQLLog swig_types[61]
-#define SWIGTYPE_p_FIX__MySQLLogFactory swig_types[62]
-#define SWIGTYPE_p_FIX__MySQLQuery swig_types[63]
-#define SWIGTYPE_p_FIX__MySQLStore swig_types[64]
-#define SWIGTYPE_p_FIX__MySQLStoreFactory swig_types[65]
-#define SWIGTYPE_p_FIX__NoTagValue swig_types[66]
-#define SWIGTYPE_p_FIX__NullApplication swig_types[67]
-#define SWIGTYPE_p_FIX__NullLog swig_types[68]
-#define SWIGTYPE_p_FIX__NullStore swig_types[69]
-#define SWIGTYPE_p_FIX__NullStoreFactory swig_types[70]
-#define SWIGTYPE_p_FIX__PostgreSQLConnection swig_types[71]
-#define SWIGTYPE_p_FIX__PostgreSQLLog swig_types[72]
-#define SWIGTYPE_p_FIX__PostgreSQLLogFactory swig_types[73]
-#define SWIGTYPE_p_FIX__PostgreSQLQuery swig_types[74]
-#define SWIGTYPE_p_FIX__PostgreSQLStore swig_types[75]
-#define SWIGTYPE_p_FIX__PostgreSQLStoreFactory swig_types[76]
-#define SWIGTYPE_p_FIX__RejectLogon swig_types[77]
-#define SWIGTYPE_p_FIX__RepeatedTag swig_types[78]
-#define SWIGTYPE_p_FIX__RepeatingGroupCountMismatch swig_types[79]
-#define SWIGTYPE_p_FIX__RequiredTagMissing swig_types[80]
-#define SWIGTYPE_p_FIX__RuntimeError swig_types[81]
-#define SWIGTYPE_p_FIX__SSLSocketAcceptor swig_types[82]
-#define SWIGTYPE_p_FIX__SSLSocketInitiator swig_types[83]
-#define SWIGTYPE_p_FIX__ScreenLog swig_types[84]
-#define SWIGTYPE_p_FIX__ScreenLogFactory swig_types[85]
-#define SWIGTYPE_p_FIX__SenderCompID swig_types[86]
-#define SWIGTYPE_p_FIX__Session swig_types[87]
-#define SWIGTYPE_p_FIX__SessionID swig_types[88]
-#define SWIGTYPE_p_FIX__SessionNotFound swig_types[89]
-#define SWIGTYPE_p_FIX__SessionSettings swig_types[90]
-#define SWIGTYPE_p_FIX__SocketAcceptor swig_types[91]
-#define SWIGTYPE_p_FIX__SocketCloseFailed swig_types[92]
-#define SWIGTYPE_p_FIX__SocketException swig_types[93]
-#define SWIGTYPE_p_FIX__SocketInitiator swig_types[94]
-#define SWIGTYPE_p_FIX__SocketRecvFailed swig_types[95]
-#define SWIGTYPE_p_FIX__SocketSendFailed swig_types[96]
-#define SWIGTYPE_p_FIX__StringField swig_types[97]
-#define SWIGTYPE_p_FIX__SynchronizedApplication swig_types[98]
-#define SWIGTYPE_p_FIX__TYPE__Type swig_types[99]
-#define SWIGTYPE_p_FIX__TagNotDefinedForMessage swig_types[100]
-#define SWIGTYPE_p_FIX__TagOutOfOrder swig_types[101]
-#define SWIGTYPE_p_FIX__TargetCompID swig_types[102]
-#define SWIGTYPE_p_FIX__ThreadedSocketAcceptor swig_types[103]
-#define SWIGTYPE_p_FIX__ThreadedSocketInitiator swig_types[104]
-#define SWIGTYPE_p_FIX__Trailer swig_types[105]
-#define SWIGTYPE_p_FIX__UInt64Field swig_types[106]
-#define SWIGTYPE_p_FIX__UnsupportedMessageType swig_types[107]
-#define SWIGTYPE_p_FIX__UnsupportedVersion swig_types[108]
-#define SWIGTYPE_p_FIX__UtcDate swig_types[109]
-#define SWIGTYPE_p_FIX__UtcDateField swig_types[110]
-#define SWIGTYPE_p_FIX__UtcTimeOnly swig_types[111]
-#define SWIGTYPE_p_FIX__UtcTimeOnlyField swig_types[112]
-#define SWIGTYPE_p_FIX__UtcTimeStamp swig_types[113]
-#define SWIGTYPE_p_FIX__UtcTimeStampField swig_types[114]
-#define SWIGTYPE_p_Fields swig_types[115]
-#define SWIGTYPE_p_Group swig_types[116]
-#define SWIGTYPE_p_Groups swig_types[117]
-#define SWIGTYPE_p_IntArray swig_types[118]
-#define SWIGTYPE_p_IntField swig_types[119]
-#define SWIGTYPE_p_Log swig_types[120]
-#define SWIGTYPE_p_MYSQL swig_types[121]
-#define SWIGTYPE_p_MessageStore swig_types[122]
-#define SWIGTYPE_p_MsgType swig_types[123]
-#define SWIGTYPE_p_Mutex swig_types[124]
-#define SWIGTYPE_p_PGconn swig_types[125]
-#define SWIGTYPE_p_RSA swig_types[126]
-#define SWIGTYPE_p_Responder swig_types[127]
-#define SWIGTYPE_p_SessionID swig_types[128]
-#define SWIGTYPE_p_SessionToPort swig_types[129]
-#define SWIGTYPE_p_StringField swig_types[130]
-#define SWIGTYPE_p_TimeRange swig_types[131]
-#define SWIGTYPE_p_UtcDateField swig_types[132]
-#define SWIGTYPE_p_X509 swig_types[133]
-#define SWIGTYPE_p_allocator_type swig_types[134]
-#define SWIGTYPE_p_bool swig_types[135]
-#define SWIGTYPE_p_char swig_types[136]
-#define SWIGTYPE_p_const_iterator swig_types[137]
-#define SWIGTYPE_p_difference_type swig_types[138]
-#define SWIGTYPE_p_double swig_types[139]
-#define SWIGTYPE_p_g_const_iterator swig_types[140]
-#define SWIGTYPE_p_g_iterator swig_types[141]
-#define SWIGTYPE_p_g_value_type swig_types[142]
-#define SWIGTYPE_p_int swig_types[143]
-#define SWIGTYPE_p_iterator swig_types[144]
-#define SWIGTYPE_p_key_type swig_types[145]
-#define SWIGTYPE_p_long_long swig_types[146]
-#define SWIGTYPE_p_message_order swig_types[147]
-#define SWIGTYPE_p_p_FIX__DataDictionary swig_types[148]
-#define SWIGTYPE_p_p_PyObject swig_types[149]
-#define SWIGTYPE_p_short swig_types[150]
-#define SWIGTYPE_p_signed_char swig_types[151]
-#define SWIGTYPE_p_size_type swig_types[152]
-#define SWIGTYPE_p_ssize_t swig_types[153]
-#define SWIGTYPE_p_std__allocatorT_std__string_t swig_types[154]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t swig_types[155]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__const_iterator swig_types[156]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__iterator swig_types[157]
-#define SWIGTYPE_p_std__invalid_argument swig_types[158]
-#define SWIGTYPE_p_std__istream swig_types[159]
-#define SWIGTYPE_p_std__lessT_FIX__SessionID_t swig_types[160]
-#define SWIGTYPE_p_std__logic_error swig_types[161]
-#define SWIGTYPE_p_std__mapT_FIX__SessionID_unsigned_short_t swig_types[162]
-#define SWIGTYPE_p_std__mapT_std__string_std__string_t__const_iterator swig_types[163]
-#define SWIGTYPE_p_std__ostream swig_types[164]
-#define SWIGTYPE_p_std__setT_FIX__SessionID_t swig_types[165]
-#define SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t swig_types[166]
-#define SWIGTYPE_p_std__string swig_types[167]
-#define SWIGTYPE_p_std__string__size_type swig_types[168]
-#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t_t swig_types[169]
-#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t_t swig_types[170]
-#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__const_iterator swig_types[171]
-#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__iterator swig_types[172]
-#define SWIGTYPE_p_std__vectorT_std__string_t swig_types[173]
-#define SWIGTYPE_p_swig__SwigPyIterator swig_types[174]
-#define SWIGTYPE_p_time_t swig_types[175]
-#define SWIGTYPE_p_tm swig_types[176]
-#define SWIGTYPE_p_unsigned_char swig_types[177]
-#define SWIGTYPE_p_unsigned_int swig_types[178]
-#define SWIGTYPE_p_unsigned_long_long swig_types[179]
-#define SWIGTYPE_p_unsigned_short swig_types[180]
-#define SWIGTYPE_p_value_type swig_types[181]
-#define SWIGTYPE_p_void swig_types[182]
-static swig_type_info *swig_types[184];
-static swig_module_info swig_module = {swig_types, 183, 0, 0, 0, 0};
+#define SWIGTYPE_p_FIX__EmbeddedSOH swig_types[25]
+#define SWIGTYPE_p_FIX__Exception swig_types[26]
+#define SWIGTYPE_p_FIX__FieldBase swig_types[27]
+#define SWIGTYPE_p_FIX__FieldConvertError swig_types[28]
+#define SWIGTYPE_p_FIX__FieldMap swig_types[29]
+#define SWIGTYPE_p_FIX__FieldNotFound swig_types[30]
+#define SWIGTYPE_p_FIX__FileLog swig_types[31]
+#define SWIGTYPE_p_FIX__FileLogFactory swig_types[32]
+#define SWIGTYPE_p_FIX__FileStore swig_types[33]
+#define SWIGTYPE_p_FIX__FileStoreFactory swig_types[34]
+#define SWIGTYPE_p_FIX__Group swig_types[35]
+#define SWIGTYPE_p_FIX__GroupArena swig_types[36]
+#define SWIGTYPE_p_FIX__Header swig_types[37]
+#define SWIGTYPE_p_FIX__IOException swig_types[38]
+#define SWIGTYPE_p_FIX__IncorrectDataFormat swig_types[39]
+#define SWIGTYPE_p_FIX__IncorrectMessageStructure swig_types[40]
+#define SWIGTYPE_p_FIX__IncorrectTagValue swig_types[41]
+#define SWIGTYPE_p_FIX__Initiator swig_types[42]
+#define SWIGTYPE_p_FIX__Int64Field swig_types[43]
+#define SWIGTYPE_p_FIX__IntField swig_types[44]
+#define SWIGTYPE_p_FIX__InvalidMessage swig_types[45]
+#define SWIGTYPE_p_FIX__InvalidMessageType swig_types[46]
+#define SWIGTYPE_p_FIX__InvalidTagNumber swig_types[47]
+#define SWIGTYPE_p_FIX__LocalDate swig_types[48]
+#define SWIGTYPE_p_FIX__LocalTimeOnly swig_types[49]
+#define SWIGTYPE_p_FIX__LocalTimeStamp swig_types[50]
+#define SWIGTYPE_p_FIX__Log swig_types[51]
+#define SWIGTYPE_p_FIX__LogFactory swig_types[52]
+#define SWIGTYPE_p_FIX__MemoryStore swig_types[53]
+#define SWIGTYPE_p_FIX__MemoryStoreFactory swig_types[54]
+#define SWIGTYPE_p_FIX__Message swig_types[55]
+#define SWIGTYPE_p_FIX__MessageParseError swig_types[56]
+#define SWIGTYPE_p_FIX__MessageStore swig_types[57]
+#define SWIGTYPE_p_FIX__MessageStoreExceptionWrapper swig_types[58]
+#define SWIGTYPE_p_FIX__MessageStoreFactory swig_types[59]
+#define SWIGTYPE_p_FIX__MessageStoreFactoryExceptionWrapper swig_types[60]
+#define SWIGTYPE_p_FIX__MySQLConnection swig_types[61]
+#define SWIGTYPE_p_FIX__MySQLLog swig_types[62]
+#define SWIGTYPE_p_FIX__MySQLLogFactory swig_types[63]
+#define SWIGTYPE_p_FIX__MySQLQuery swig_types[64]
+#define SWIGTYPE_p_FIX__MySQLStore swig_types[65]
+#define SWIGTYPE_p_FIX__MySQLStoreFactory swig_types[66]
+#define SWIGTYPE_p_FIX__NoTagValue swig_types[67]
+#define SWIGTYPE_p_FIX__NullApplication swig_types[68]
+#define SWIGTYPE_p_FIX__NullLog swig_types[69]
+#define SWIGTYPE_p_FIX__NullStore swig_types[70]
+#define SWIGTYPE_p_FIX__NullStoreFactory swig_types[71]
+#define SWIGTYPE_p_FIX__OutOfOrderGroupMembers swig_types[72]
+#define SWIGTYPE_p_FIX__PostgreSQLConnection swig_types[73]
+#define SWIGTYPE_p_FIX__PostgreSQLLog swig_types[74]
+#define SWIGTYPE_p_FIX__PostgreSQLLogFactory swig_types[75]
+#define SWIGTYPE_p_FIX__PostgreSQLQuery swig_types[76]
+#define SWIGTYPE_p_FIX__PostgreSQLStore swig_types[77]
+#define SWIGTYPE_p_FIX__PostgreSQLStoreFactory swig_types[78]
+#define SWIGTYPE_p_FIX__RejectLogon swig_types[79]
+#define SWIGTYPE_p_FIX__RepeatedTag swig_types[80]
+#define SWIGTYPE_p_FIX__RepeatingGroupCountMismatch swig_types[81]
+#define SWIGTYPE_p_FIX__RequiredTagMissing swig_types[82]
+#define SWIGTYPE_p_FIX__RuntimeError swig_types[83]
+#define SWIGTYPE_p_FIX__SSLSocketAcceptor swig_types[84]
+#define SWIGTYPE_p_FIX__SSLSocketInitiator swig_types[85]
+#define SWIGTYPE_p_FIX__ScreenLog swig_types[86]
+#define SWIGTYPE_p_FIX__ScreenLogFactory swig_types[87]
+#define SWIGTYPE_p_FIX__SenderCompID swig_types[88]
+#define SWIGTYPE_p_FIX__Session swig_types[89]
+#define SWIGTYPE_p_FIX__SessionID swig_types[90]
+#define SWIGTYPE_p_FIX__SessionNotFound swig_types[91]
+#define SWIGTYPE_p_FIX__SessionSettings swig_types[92]
+#define SWIGTYPE_p_FIX__SocketAcceptor swig_types[93]
+#define SWIGTYPE_p_FIX__SocketCloseFailed swig_types[94]
+#define SWIGTYPE_p_FIX__SocketException swig_types[95]
+#define SWIGTYPE_p_FIX__SocketInitiator swig_types[96]
+#define SWIGTYPE_p_FIX__SocketRecvFailed swig_types[97]
+#define SWIGTYPE_p_FIX__SocketSendFailed swig_types[98]
+#define SWIGTYPE_p_FIX__StringField swig_types[99]
+#define SWIGTYPE_p_FIX__SynchronizedApplication swig_types[100]
+#define SWIGTYPE_p_FIX__TYPE__Type swig_types[101]
+#define SWIGTYPE_p_FIX__TagNotDefinedForMessage swig_types[102]
+#define SWIGTYPE_p_FIX__TagOutOfOrder swig_types[103]
+#define SWIGTYPE_p_FIX__TargetCompID swig_types[104]
+#define SWIGTYPE_p_FIX__ThreadedSocketAcceptor swig_types[105]
+#define SWIGTYPE_p_FIX__ThreadedSocketInitiator swig_types[106]
+#define SWIGTYPE_p_FIX__Trailer swig_types[107]
+#define SWIGTYPE_p_FIX__UInt64Field swig_types[108]
+#define SWIGTYPE_p_FIX__UnsupportedMessageType swig_types[109]
+#define SWIGTYPE_p_FIX__UnsupportedVersion swig_types[110]
+#define SWIGTYPE_p_FIX__UtcDate swig_types[111]
+#define SWIGTYPE_p_FIX__UtcDateField swig_types[112]
+#define SWIGTYPE_p_FIX__UtcTimeOnly swig_types[113]
+#define SWIGTYPE_p_FIX__UtcTimeOnlyField swig_types[114]
+#define SWIGTYPE_p_FIX__UtcTimeStamp swig_types[115]
+#define SWIGTYPE_p_FIX__UtcTimeStampField swig_types[116]
+#define SWIGTYPE_p_Fields swig_types[117]
+#define SWIGTYPE_p_Group swig_types[118]
+#define SWIGTYPE_p_Groups swig_types[119]
+#define SWIGTYPE_p_IntArray swig_types[120]
+#define SWIGTYPE_p_IntField swig_types[121]
+#define SWIGTYPE_p_Log swig_types[122]
+#define SWIGTYPE_p_MYSQL swig_types[123]
+#define SWIGTYPE_p_MessageStore swig_types[124]
+#define SWIGTYPE_p_MsgType swig_types[125]
+#define SWIGTYPE_p_Mutex swig_types[126]
+#define SWIGTYPE_p_PGconn swig_types[127]
+#define SWIGTYPE_p_RSA swig_types[128]
+#define SWIGTYPE_p_Responder swig_types[129]
+#define SWIGTYPE_p_SessionID swig_types[130]
+#define SWIGTYPE_p_SessionToPort swig_types[131]
+#define SWIGTYPE_p_StringField swig_types[132]
+#define SWIGTYPE_p_TimeRange swig_types[133]
+#define SWIGTYPE_p_UtcDateField swig_types[134]
+#define SWIGTYPE_p_X509 swig_types[135]
+#define SWIGTYPE_p_allocator_type swig_types[136]
+#define SWIGTYPE_p_bool swig_types[137]
+#define SWIGTYPE_p_char swig_types[138]
+#define SWIGTYPE_p_const_iterator swig_types[139]
+#define SWIGTYPE_p_difference_type swig_types[140]
+#define SWIGTYPE_p_double swig_types[141]
+#define SWIGTYPE_p_g_const_iterator swig_types[142]
+#define SWIGTYPE_p_g_iterator swig_types[143]
+#define SWIGTYPE_p_g_value_type swig_types[144]
+#define SWIGTYPE_p_int swig_types[145]
+#define SWIGTYPE_p_iterator swig_types[146]
+#define SWIGTYPE_p_key_type swig_types[147]
+#define SWIGTYPE_p_long_long swig_types[148]
+#define SWIGTYPE_p_message_order swig_types[149]
+#define SWIGTYPE_p_p_FIX__DataDictionary swig_types[150]
+#define SWIGTYPE_p_p_PyObject swig_types[151]
+#define SWIGTYPE_p_short swig_types[152]
+#define SWIGTYPE_p_signed_char swig_types[153]
+#define SWIGTYPE_p_size_type swig_types[154]
+#define SWIGTYPE_p_ssize_t swig_types[155]
+#define SWIGTYPE_p_std__allocatorT_std__string_t swig_types[156]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t swig_types[157]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__const_iterator swig_types[158]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__iterator swig_types[159]
+#define SWIGTYPE_p_std__invalid_argument swig_types[160]
+#define SWIGTYPE_p_std__istream swig_types[161]
+#define SWIGTYPE_p_std__lessT_FIX__SessionID_t swig_types[162]
+#define SWIGTYPE_p_std__logic_error swig_types[163]
+#define SWIGTYPE_p_std__mapT_FIX__SessionID_unsigned_short_t swig_types[164]
+#define SWIGTYPE_p_std__mapT_std__string_std__string_t__const_iterator swig_types[165]
+#define SWIGTYPE_p_std__ostream swig_types[166]
+#define SWIGTYPE_p_std__setT_FIX__SessionID_t swig_types[167]
+#define SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t swig_types[168]
+#define SWIGTYPE_p_std__string swig_types[169]
+#define SWIGTYPE_p_std__string__size_type swig_types[170]
+#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t_t swig_types[171]
+#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t_t swig_types[172]
+#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__const_iterator swig_types[173]
+#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__iterator swig_types[174]
+#define SWIGTYPE_p_std__vectorT_std__string_t swig_types[175]
+#define SWIGTYPE_p_swig__SwigPyIterator swig_types[176]
+#define SWIGTYPE_p_time_t swig_types[177]
+#define SWIGTYPE_p_tm swig_types[178]
+#define SWIGTYPE_p_unsigned_char swig_types[179]
+#define SWIGTYPE_p_unsigned_int swig_types[180]
+#define SWIGTYPE_p_unsigned_long_long swig_types[181]
+#define SWIGTYPE_p_unsigned_short swig_types[182]
+#define SWIGTYPE_p_value_type swig_types[183]
+#define SWIGTYPE_p_void swig_types[184]
+static swig_type_info *swig_types[186];
+static swig_module_info swig_module = {swig_types, 185, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -17166,6 +17168,572 @@ SWIGINTERN PyObject *TagOutOfOrder_swigregister(PyObject *SWIGUNUSEDPARM(self), 
 }
 
 SWIGINTERN PyObject *TagOutOfOrder_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  return SWIG_Python_InitShadowInstance(args);
+}
+
+SWIGINTERN PyObject *_wrap_new_EmbeddedSOH__SWIG_0(PyObject *self, Py_ssize_t nobjs, PyObject **swig_obj) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  std::string *arg2 = 0 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  int res2 = SWIG_OLDOBJ ;
+  FIX::EmbeddedSOH *result = 0 ;
+  
+  (void)self;
+  if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(swig_obj[0], &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_EmbeddedSOH" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = static_cast< int >(val1);
+  {
+    std::string *ptr = (std::string *)0;
+    res2 = SWIG_AsPtr_std_string(swig_obj[1], &ptr);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_EmbeddedSOH" "', argument " "2"" of type '" "std::string const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_EmbeddedSOH" "', argument " "2"" of type '" "std::string const &""'"); 
+    }
+    arg2 = ptr;
+  }
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (FIX::EmbeddedSOH *)new FIX::EmbeddedSOH(arg1,(std::string const &)*arg2);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__EmbeddedSOH, SWIG_POINTER_NEW |  0 );
+  {
+    if( std::string("std::string const &") == "std::string &" )
+    {
+      if( !PyDict_Check(resultobj) )
+      resultobj = PyDict_New();
+      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+    }
+  }
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_EmbeddedSOH__SWIG_1(PyObject *self, Py_ssize_t nobjs, PyObject **swig_obj) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  FIX::EmbeddedSOH *result = 0 ;
+  
+  (void)self;
+  if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(swig_obj[0], &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_EmbeddedSOH" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = static_cast< int >(val1);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (FIX::EmbeddedSOH *)new FIX::EmbeddedSOH(arg1);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__EmbeddedSOH, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_EmbeddedSOH__SWIG_2(PyObject *self, Py_ssize_t nobjs, PyObject **SWIGUNUSEDPARM(swig_obj)) {
+  PyObject *resultobj = 0;
+  FIX::EmbeddedSOH *result = 0 ;
+  
+  (void)self;
+  if ((nobjs < 0) || (nobjs > 0)) SWIG_fail;
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (FIX::EmbeddedSOH *)new FIX::EmbeddedSOH();
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__EmbeddedSOH, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_EmbeddedSOH(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[3] = {
+    0
+  };
+  
+  if (!(argc = SWIG_Python_UnpackTuple(args, "new_EmbeddedSOH", 0, 2, argv))) SWIG_fail;
+  --argc;
+  if (argc == 0) {
+    return _wrap_new_EmbeddedSOH__SWIG_2(self, argc, argv);
+  }
+  if (argc == 1) {
+    int _v = 0;
+    {
+      int res = SWIG_AsVal_int(argv[0], NULL);
+      _v = SWIG_CheckState(res);
+    }
+    if (_v) {
+      return _wrap_new_EmbeddedSOH__SWIG_1(self, argc, argv);
+    }
+  }
+  if (argc == 2) {
+    int _v = 0;
+    {
+      int res = SWIG_AsVal_int(argv[0], NULL);
+      _v = SWIG_CheckState(res);
+    }
+    if (_v) {
+      int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_new_EmbeddedSOH__SWIG_0(self, argc, argv);
+      }
+    }
+  }
+  
+fail:
+  SWIG_Python_RaiseOrModifyTypeError("Wrong number or type of arguments for overloaded function 'new_EmbeddedSOH'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    FIX::EmbeddedSOH::EmbeddedSOH(int,std::string const &)\n"
+    "    FIX::EmbeddedSOH::EmbeddedSOH(int)\n"
+    "    FIX::EmbeddedSOH::EmbeddedSOH()\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_EmbeddedSOH_field_set(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::EmbeddedSOH *arg1 = (FIX::EmbeddedSOH *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject *swig_obj[2] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "EmbeddedSOH_field_set", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__EmbeddedSOH, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EmbeddedSOH_field_set" "', argument " "1"" of type '" "FIX::EmbeddedSOH *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::EmbeddedSOH * >(argp1);
+  ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "EmbeddedSOH_field_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    if (arg1) (arg1)->field = arg2;
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_EmbeddedSOH_field_get(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::EmbeddedSOH *arg1 = (FIX::EmbeddedSOH *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  int result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__EmbeddedSOH, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EmbeddedSOH_field_get" "', argument " "1"" of type '" "FIX::EmbeddedSOH *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::EmbeddedSOH * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (int) ((arg1)->field);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_EmbeddedSOH(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::EmbeddedSOH *arg1 = (FIX::EmbeddedSOH *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__EmbeddedSOH, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_EmbeddedSOH" "', argument " "1"" of type '" "FIX::EmbeddedSOH *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::EmbeddedSOH * >(argp1);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            delete arg1;
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *EmbeddedSOH_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj = NULL;
+  if (!SWIG_Python_UnpackTuple(args, "swigregister", 1, 1, &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_FIX__EmbeddedSOH, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *EmbeddedSOH_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  return SWIG_Python_InitShadowInstance(args);
+}
+
+SWIGINTERN PyObject *_wrap_new_OutOfOrderGroupMembers__SWIG_0(PyObject *self, Py_ssize_t nobjs, PyObject **swig_obj) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  std::string *arg2 = 0 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  int res2 = SWIG_OLDOBJ ;
+  FIX::OutOfOrderGroupMembers *result = 0 ;
+  
+  (void)self;
+  if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(swig_obj[0], &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_OutOfOrderGroupMembers" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = static_cast< int >(val1);
+  {
+    std::string *ptr = (std::string *)0;
+    res2 = SWIG_AsPtr_std_string(swig_obj[1], &ptr);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_OutOfOrderGroupMembers" "', argument " "2"" of type '" "std::string const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_OutOfOrderGroupMembers" "', argument " "2"" of type '" "std::string const &""'"); 
+    }
+    arg2 = ptr;
+  }
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (FIX::OutOfOrderGroupMembers *)new FIX::OutOfOrderGroupMembers(arg1,(std::string const &)*arg2);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__OutOfOrderGroupMembers, SWIG_POINTER_NEW |  0 );
+  {
+    if( std::string("std::string const &") == "std::string &" )
+    {
+      if( !PyDict_Check(resultobj) )
+      resultobj = PyDict_New();
+      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+    }
+  }
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_OutOfOrderGroupMembers__SWIG_1(PyObject *self, Py_ssize_t nobjs, PyObject **swig_obj) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  FIX::OutOfOrderGroupMembers *result = 0 ;
+  
+  (void)self;
+  if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(swig_obj[0], &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_OutOfOrderGroupMembers" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = static_cast< int >(val1);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (FIX::OutOfOrderGroupMembers *)new FIX::OutOfOrderGroupMembers(arg1);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__OutOfOrderGroupMembers, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_OutOfOrderGroupMembers__SWIG_2(PyObject *self, Py_ssize_t nobjs, PyObject **SWIGUNUSEDPARM(swig_obj)) {
+  PyObject *resultobj = 0;
+  FIX::OutOfOrderGroupMembers *result = 0 ;
+  
+  (void)self;
+  if ((nobjs < 0) || (nobjs > 0)) SWIG_fail;
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (FIX::OutOfOrderGroupMembers *)new FIX::OutOfOrderGroupMembers();
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__OutOfOrderGroupMembers, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_OutOfOrderGroupMembers(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[3] = {
+    0
+  };
+  
+  if (!(argc = SWIG_Python_UnpackTuple(args, "new_OutOfOrderGroupMembers", 0, 2, argv))) SWIG_fail;
+  --argc;
+  if (argc == 0) {
+    return _wrap_new_OutOfOrderGroupMembers__SWIG_2(self, argc, argv);
+  }
+  if (argc == 1) {
+    int _v = 0;
+    {
+      int res = SWIG_AsVal_int(argv[0], NULL);
+      _v = SWIG_CheckState(res);
+    }
+    if (_v) {
+      return _wrap_new_OutOfOrderGroupMembers__SWIG_1(self, argc, argv);
+    }
+  }
+  if (argc == 2) {
+    int _v = 0;
+    {
+      int res = SWIG_AsVal_int(argv[0], NULL);
+      _v = SWIG_CheckState(res);
+    }
+    if (_v) {
+      int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_new_OutOfOrderGroupMembers__SWIG_0(self, argc, argv);
+      }
+    }
+  }
+  
+fail:
+  SWIG_Python_RaiseOrModifyTypeError("Wrong number or type of arguments for overloaded function 'new_OutOfOrderGroupMembers'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    FIX::OutOfOrderGroupMembers::OutOfOrderGroupMembers(int,std::string const &)\n"
+    "    FIX::OutOfOrderGroupMembers::OutOfOrderGroupMembers(int)\n"
+    "    FIX::OutOfOrderGroupMembers::OutOfOrderGroupMembers()\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_OutOfOrderGroupMembers_field_set(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::OutOfOrderGroupMembers *arg1 = (FIX::OutOfOrderGroupMembers *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject *swig_obj[2] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "OutOfOrderGroupMembers_field_set", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__OutOfOrderGroupMembers, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "OutOfOrderGroupMembers_field_set" "', argument " "1"" of type '" "FIX::OutOfOrderGroupMembers *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::OutOfOrderGroupMembers * >(argp1);
+  ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "OutOfOrderGroupMembers_field_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    if (arg1) (arg1)->field = arg2;
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_OutOfOrderGroupMembers_field_get(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::OutOfOrderGroupMembers *arg1 = (FIX::OutOfOrderGroupMembers *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  int result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__OutOfOrderGroupMembers, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "OutOfOrderGroupMembers_field_get" "', argument " "1"" of type '" "FIX::OutOfOrderGroupMembers *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::OutOfOrderGroupMembers * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (int) ((arg1)->field);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_OutOfOrderGroupMembers(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::OutOfOrderGroupMembers *arg1 = (FIX::OutOfOrderGroupMembers *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__OutOfOrderGroupMembers, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_OutOfOrderGroupMembers" "', argument " "1"" of type '" "FIX::OutOfOrderGroupMembers *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::OutOfOrderGroupMembers * >(argp1);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            delete arg1;
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *OutOfOrderGroupMembers_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj = NULL;
+  if (!SWIG_Python_UnpackTuple(args, "swigregister", 1, 1, &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_FIX__OutOfOrderGroupMembers, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *OutOfOrderGroupMembers_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   return SWIG_Python_InitShadowInstance(args);
 }
 
@@ -42659,6 +43227,110 @@ SWIGINTERN PyObject *_wrap_Message_hasValidStructure(PyObject *self, PyObject *a
       {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (bool)((FIX::Message const *)arg1)->hasValidStructure(*arg2);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  {
+    if( std::string("int &") == "int &" )
+    {
+      if( !PyDict_Check(resultobj) )
+      resultobj = PyDict_New();
+      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyLong_FromLong(*arg2) );    
+    }
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_Message_hasEmbeddedSOH(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::Message *arg1 = (FIX::Message *) 0 ;
+  int *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int temp2 ;
+  PyObject *swig_obj[2] ;
+  bool result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "Message_hasEmbeddedSOH", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasEmbeddedSOH" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::Message * >(argp1);
+  {
+    SWIG_AsVal_int(swig_obj[1], &temp2);
+    arg2 = &temp2;
+  }
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (bool)((FIX::Message const *)arg1)->hasEmbeddedSOH(*arg2);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  {
+    if( std::string("int &") == "int &" )
+    {
+      if( !PyDict_Check(resultobj) )
+      resultobj = PyDict_New();
+      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyLong_FromLong(*arg2) );    
+    }
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_Message_hasOutOfOrderGroupMembers(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::Message *arg1 = (FIX::Message *) 0 ;
+  int *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int temp2 ;
+  PyObject *swig_obj[2] ;
+  bool result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "Message_hasOutOfOrderGroupMembers", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasOutOfOrderGroupMembers" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::Message * >(argp1);
+  {
+    SWIG_AsVal_int(swig_obj[1], &temp2);
+    arg2 = &temp2;
+  }
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (bool)((FIX::Message const *)arg1)->hasOutOfOrderGroupMembers(*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -160026,6 +160698,18 @@ static PyMethodDef SwigMethods[] = {
 	 { "delete_TagOutOfOrder", _wrap_delete_TagOutOfOrder, METH_O, NULL},
 	 { "TagOutOfOrder_swigregister", TagOutOfOrder_swigregister, METH_O, NULL},
 	 { "TagOutOfOrder_swiginit", TagOutOfOrder_swiginit, METH_VARARGS, NULL},
+	 { "new_EmbeddedSOH", _wrap_new_EmbeddedSOH, METH_VARARGS, NULL},
+	 { "EmbeddedSOH_field_set", _wrap_EmbeddedSOH_field_set, METH_VARARGS, NULL},
+	 { "EmbeddedSOH_field_get", _wrap_EmbeddedSOH_field_get, METH_O, NULL},
+	 { "delete_EmbeddedSOH", _wrap_delete_EmbeddedSOH, METH_O, NULL},
+	 { "EmbeddedSOH_swigregister", EmbeddedSOH_swigregister, METH_O, NULL},
+	 { "EmbeddedSOH_swiginit", EmbeddedSOH_swiginit, METH_VARARGS, NULL},
+	 { "new_OutOfOrderGroupMembers", _wrap_new_OutOfOrderGroupMembers, METH_VARARGS, NULL},
+	 { "OutOfOrderGroupMembers_field_set", _wrap_OutOfOrderGroupMembers_field_set, METH_VARARGS, NULL},
+	 { "OutOfOrderGroupMembers_field_get", _wrap_OutOfOrderGroupMembers_field_get, METH_O, NULL},
+	 { "delete_OutOfOrderGroupMembers", _wrap_delete_OutOfOrderGroupMembers, METH_O, NULL},
+	 { "OutOfOrderGroupMembers_swigregister", OutOfOrderGroupMembers_swigregister, METH_O, NULL},
+	 { "OutOfOrderGroupMembers_swiginit", OutOfOrderGroupMembers_swiginit, METH_VARARGS, NULL},
 	 { "new_RepeatedTag", _wrap_new_RepeatedTag, METH_VARARGS, NULL},
 	 { "RepeatedTag_field_set", _wrap_RepeatedTag_field_set, METH_VARARGS, NULL},
 	 { "RepeatedTag_field_get", _wrap_RepeatedTag_field_get, METH_O, NULL},
@@ -160339,6 +161023,8 @@ static PyMethodDef SwigMethods[] = {
 	 { "Message_getHeader", _wrap_Message_getHeader, METH_VARARGS, NULL},
 	 { "Message_getTrailer", _wrap_Message_getTrailer, METH_VARARGS, NULL},
 	 { "Message_hasValidStructure", _wrap_Message_hasValidStructure, METH_VARARGS, NULL},
+	 { "Message_hasEmbeddedSOH", _wrap_Message_hasEmbeddedSOH, METH_VARARGS, NULL},
+	 { "Message_hasOutOfOrderGroupMembers", _wrap_Message_hasOutOfOrderGroupMembers, METH_VARARGS, NULL},
 	 { "Message_bodyLength", _wrap_Message_bodyLength, METH_VARARGS, NULL},
 	 { "Message_checkSum", _wrap_Message_checkSum, METH_VARARGS, NULL},
 	 { "Message_isAdmin", _wrap_Message_isAdmin, METH_O, NULL},
@@ -160986,6 +161672,9 @@ static void *_p_FIX__DoNotSendTo_p_FIX__Exception(void *x, int *SWIGUNUSEDPARM(n
 static void *_p_FIX__DuplicateFieldNumberTo_p_FIX__Exception(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::Exception *)  ((FIX::DuplicateFieldNumber *) x));
 }
+static void *_p_FIX__EmbeddedSOHTo_p_FIX__Exception(void *x, int *SWIGUNUSEDPARM(newmemory)) {
+    return (void *)((FIX::Exception *)  ((FIX::EmbeddedSOH *) x));
+}
 static void *_p_FIX__FieldConvertErrorTo_p_FIX__Exception(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::Exception *)  ((FIX::FieldConvertError *) x));
 }
@@ -161018,6 +161707,9 @@ static void *_p_FIX__MessageParseErrorTo_p_FIX__Exception(void *x, int *SWIGUNUS
 }
 static void *_p_FIX__NoTagValueTo_p_FIX__Exception(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::Exception *)  ((FIX::NoTagValue *) x));
+}
+static void *_p_FIX__OutOfOrderGroupMembersTo_p_FIX__Exception(void *x, int *SWIGUNUSEDPARM(newmemory)) {
+    return (void *)((FIX::Exception *)  ((FIX::OutOfOrderGroupMembers *) x));
 }
 static void *_p_FIX__RejectLogonTo_p_FIX__Exception(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::Exception *)  ((FIX::RejectLogon *) x));
@@ -161211,6 +161903,9 @@ static void *_p_FIX__DoNotSendTo_p_std__logic_error(void *x, int *SWIGUNUSEDPARM
 static void *_p_FIX__DuplicateFieldNumberTo_p_std__logic_error(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((std::logic_error *) (FIX::Exception *) ((FIX::DuplicateFieldNumber *) x));
 }
+static void *_p_FIX__EmbeddedSOHTo_p_std__logic_error(void *x, int *SWIGUNUSEDPARM(newmemory)) {
+    return (void *)((std::logic_error *) (FIX::Exception *) ((FIX::EmbeddedSOH *) x));
+}
 static void *_p_FIX__ExceptionTo_p_std__logic_error(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((std::logic_error *)  ((FIX::Exception *) x));
 }
@@ -161246,6 +161941,9 @@ static void *_p_FIX__MessageParseErrorTo_p_std__logic_error(void *x, int *SWIGUN
 }
 static void *_p_FIX__NoTagValueTo_p_std__logic_error(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((std::logic_error *) (FIX::Exception *) ((FIX::NoTagValue *) x));
+}
+static void *_p_FIX__OutOfOrderGroupMembersTo_p_std__logic_error(void *x, int *SWIGUNUSEDPARM(newmemory)) {
+    return (void *)((std::logic_error *) (FIX::Exception *) ((FIX::OutOfOrderGroupMembers *) x));
 }
 static void *_p_FIX__RejectLogonTo_p_std__logic_error(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((std::logic_error *) (FIX::Exception *) ((FIX::RejectLogon *) x));
@@ -161314,6 +162012,7 @@ static swig_type_info _swigt__p_FIX__Dictionary = {"_p_FIX__Dictionary", "FIX::D
 static swig_type_info _swigt__p_FIX__DoNotSend = {"_p_FIX__DoNotSend", "FIX::DoNotSend *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__DoubleField = {"_p_FIX__DoubleField", "FIX::AmtField *|FIX::FloatField *|FIX::PercentageField *|FIX::PriceField *|FIX::PriceOffsetField *|FIX::QtyField *|FIX::DoubleField *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__DuplicateFieldNumber = {"_p_FIX__DuplicateFieldNumber", "FIX::DuplicateFieldNumber *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_FIX__EmbeddedSOH = {"_p_FIX__EmbeddedSOH", "FIX::EmbeddedSOH *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__Exception = {"_p_FIX__Exception", "FIX::Exception *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__FieldBase = {"_p_FIX__FieldBase", "FIX::FieldBase *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__FieldConvertError = {"_p_FIX__FieldConvertError", "FIX::FieldConvertError *", 0, 0, (void*)0, 0};
@@ -161360,6 +162059,7 @@ static swig_type_info _swigt__p_FIX__NullApplication = {"_p_FIX__NullApplication
 static swig_type_info _swigt__p_FIX__NullLog = {"_p_FIX__NullLog", "FIX::NullLog *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__NullStore = {"_p_FIX__NullStore", "FIX::NullStore *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__NullStoreFactory = {"_p_FIX__NullStoreFactory", "FIX::NullStoreFactory *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_FIX__OutOfOrderGroupMembers = {"_p_FIX__OutOfOrderGroupMembers", "FIX::OutOfOrderGroupMembers *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__PostgreSQLConnection = {"_p_FIX__PostgreSQLConnection", "FIX::PostgreSQLConnection *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__PostgreSQLLog = {"_p_FIX__PostgreSQLLog", "FIX::PostgreSQLLog *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__PostgreSQLLogFactory = {"_p_FIX__PostgreSQLLogFactory", "FIX::PostgreSQLLogFactory *", 0, 0, (void*)0, 0};
@@ -161499,6 +162199,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_FIX__DoNotSend,
   &_swigt__p_FIX__DoubleField,
   &_swigt__p_FIX__DuplicateFieldNumber,
+  &_swigt__p_FIX__EmbeddedSOH,
   &_swigt__p_FIX__Exception,
   &_swigt__p_FIX__FieldBase,
   &_swigt__p_FIX__FieldConvertError,
@@ -161545,6 +162246,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_FIX__NullLog,
   &_swigt__p_FIX__NullStore,
   &_swigt__p_FIX__NullStoreFactory,
+  &_swigt__p_FIX__OutOfOrderGroupMembers,
   &_swigt__p_FIX__PostgreSQLConnection,
   &_swigt__p_FIX__PostgreSQLLog,
   &_swigt__p_FIX__PostgreSQLLogFactory,
@@ -161684,7 +162386,8 @@ static swig_cast_info _swigc__p_FIX__Dictionary[] = {  {&_swigt__p_FIX__Dictiona
 static swig_cast_info _swigc__p_FIX__DoNotSend[] = {  {&_swigt__p_FIX__DoNotSend, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__DoubleField[] = {  {&_swigt__p_FIX__DoubleField, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__DuplicateFieldNumber[] = {  {&_swigt__p_FIX__DuplicateFieldNumber, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_FIX__Exception[] = {  {&_swigt__p_FIX__Exception, 0, 0, 0},  {&_swigt__p_FIX__ConfigError, _p_FIX__ConfigErrorTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__DataDictionaryNotFound, _p_FIX__DataDictionaryNotFoundTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__DoNotSend, _p_FIX__DoNotSendTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__DuplicateFieldNumber, _p_FIX__DuplicateFieldNumberTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__FieldConvertError, _p_FIX__FieldConvertErrorTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__FieldNotFound, _p_FIX__FieldNotFoundTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__IOException, _p_FIX__IOExceptionTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__IncorrectDataFormat, _p_FIX__IncorrectDataFormatTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__IncorrectMessageStructure, _p_FIX__IncorrectMessageStructureTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__IncorrectTagValue, _p_FIX__IncorrectTagValueTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__InvalidMessage, _p_FIX__InvalidMessageTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__InvalidMessageType, _p_FIX__InvalidMessageTypeTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__InvalidTagNumber, _p_FIX__InvalidTagNumberTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__MessageParseError, _p_FIX__MessageParseErrorTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__NoTagValue, _p_FIX__NoTagValueTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__RejectLogon, _p_FIX__RejectLogonTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__RepeatedTag, _p_FIX__RepeatedTagTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__RepeatingGroupCountMismatch, _p_FIX__RepeatingGroupCountMismatchTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__RequiredTagMissing, _p_FIX__RequiredTagMissingTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__RuntimeError, _p_FIX__RuntimeErrorTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__SessionNotFound, _p_FIX__SessionNotFoundTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__SocketCloseFailed, _p_FIX__SocketCloseFailedTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__SocketException, _p_FIX__SocketExceptionTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__SocketRecvFailed, _p_FIX__SocketRecvFailedTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__SocketSendFailed, _p_FIX__SocketSendFailedTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__TagNotDefinedForMessage, _p_FIX__TagNotDefinedForMessageTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__TagOutOfOrder, _p_FIX__TagOutOfOrderTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__UnsupportedMessageType, _p_FIX__UnsupportedMessageTypeTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__UnsupportedVersion, _p_FIX__UnsupportedVersionTo_p_FIX__Exception, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_FIX__EmbeddedSOH[] = {  {&_swigt__p_FIX__EmbeddedSOH, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_FIX__Exception[] = {  {&_swigt__p_FIX__Exception, 0, 0, 0},  {&_swigt__p_FIX__ConfigError, _p_FIX__ConfigErrorTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__DataDictionaryNotFound, _p_FIX__DataDictionaryNotFoundTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__DoNotSend, _p_FIX__DoNotSendTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__DuplicateFieldNumber, _p_FIX__DuplicateFieldNumberTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__EmbeddedSOH, _p_FIX__EmbeddedSOHTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__FieldConvertError, _p_FIX__FieldConvertErrorTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__FieldNotFound, _p_FIX__FieldNotFoundTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__IOException, _p_FIX__IOExceptionTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__IncorrectDataFormat, _p_FIX__IncorrectDataFormatTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__IncorrectMessageStructure, _p_FIX__IncorrectMessageStructureTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__IncorrectTagValue, _p_FIX__IncorrectTagValueTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__InvalidMessage, _p_FIX__InvalidMessageTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__InvalidMessageType, _p_FIX__InvalidMessageTypeTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__InvalidTagNumber, _p_FIX__InvalidTagNumberTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__MessageParseError, _p_FIX__MessageParseErrorTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__NoTagValue, _p_FIX__NoTagValueTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__OutOfOrderGroupMembers, _p_FIX__OutOfOrderGroupMembersTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__RejectLogon, _p_FIX__RejectLogonTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__RepeatedTag, _p_FIX__RepeatedTagTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__RepeatingGroupCountMismatch, _p_FIX__RepeatingGroupCountMismatchTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__RequiredTagMissing, _p_FIX__RequiredTagMissingTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__RuntimeError, _p_FIX__RuntimeErrorTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__SessionNotFound, _p_FIX__SessionNotFoundTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__SocketCloseFailed, _p_FIX__SocketCloseFailedTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__SocketException, _p_FIX__SocketExceptionTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__SocketRecvFailed, _p_FIX__SocketRecvFailedTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__SocketSendFailed, _p_FIX__SocketSendFailedTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__TagNotDefinedForMessage, _p_FIX__TagNotDefinedForMessageTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__TagOutOfOrder, _p_FIX__TagOutOfOrderTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__UnsupportedMessageType, _p_FIX__UnsupportedMessageTypeTo_p_FIX__Exception, 0, 0},  {&_swigt__p_FIX__UnsupportedVersion, _p_FIX__UnsupportedVersionTo_p_FIX__Exception, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FieldBase[] = {  {&_swigt__p_FIX__FieldBase, 0, 0, 0},  {&_swigt__p_FIX__BeginString, _p_FIX__BeginStringTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__BoolField, _p_FIX__BoolFieldTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__CharField, _p_FIX__CharFieldTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__CheckSumField, _p_FIX__CheckSumFieldTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__DoubleField, _p_FIX__DoubleFieldTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__Int64Field, _p_FIX__Int64FieldTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__IntField, _p_FIX__IntFieldTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__SenderCompID, _p_FIX__SenderCompIDTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__StringField, _p_FIX__StringFieldTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__TargetCompID, _p_FIX__TargetCompIDTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__UInt64Field, _p_FIX__UInt64FieldTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__UtcDateField, _p_FIX__UtcDateFieldTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__UtcTimeOnlyField, _p_FIX__UtcTimeOnlyFieldTo_p_FIX__FieldBase, 0, 0},  {&_swigt__p_FIX__UtcTimeStampField, _p_FIX__UtcTimeStampFieldTo_p_FIX__FieldBase, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FieldConvertError[] = {  {&_swigt__p_FIX__FieldConvertError, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FieldMap[] = {  {&_swigt__p_FIX__FieldMap, 0, 0, 0},  {&_swigt__p_FIX__Group, _p_FIX__GroupTo_p_FIX__FieldMap, 0, 0},  {&_swigt__p_FIX__Header, _p_FIX__HeaderTo_p_FIX__FieldMap, 0, 0},  {&_swigt__p_FIX__Message, _p_FIX__MessageTo_p_FIX__FieldMap, 0, 0},  {&_swigt__p_FIX__Trailer, _p_FIX__TrailerTo_p_FIX__FieldMap, 0, 0},{0, 0, 0, 0}};
@@ -161730,6 +162433,7 @@ static swig_cast_info _swigc__p_FIX__NullApplication[] = {  {&_swigt__p_FIX__Nul
 static swig_cast_info _swigc__p_FIX__NullLog[] = {  {&_swigt__p_FIX__NullLog, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__NullStore[] = {  {&_swigt__p_FIX__NullStore, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__NullStoreFactory[] = {  {&_swigt__p_FIX__NullStoreFactory, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_FIX__OutOfOrderGroupMembers[] = {  {&_swigt__p_FIX__OutOfOrderGroupMembers, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__PostgreSQLConnection[] = {  {&_swigt__p_FIX__PostgreSQLConnection, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__PostgreSQLLog[] = {  {&_swigt__p_FIX__PostgreSQLLog, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__PostgreSQLLogFactory[] = {  {&_swigt__p_FIX__PostgreSQLLogFactory, 0, 0, 0},{0, 0, 0, 0}};
@@ -161820,7 +162524,7 @@ static swig_cast_info _swigc__p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_
 static swig_cast_info _swigc__p_std__invalid_argument[] = {  {&_swigt__p_std__invalid_argument, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__istream[] = {  {&_swigt__p_std__istream, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__lessT_FIX__SessionID_t[] = {  {&_swigt__p_std__lessT_FIX__SessionID_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__logic_error[] = {  {&_swigt__p_std__logic_error, 0, 0, 0},  {&_swigt__p_FIX__ConfigError, _p_FIX__ConfigErrorTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__DataDictionaryNotFound, _p_FIX__DataDictionaryNotFoundTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__DoNotSend, _p_FIX__DoNotSendTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__DuplicateFieldNumber, _p_FIX__DuplicateFieldNumberTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__Exception, _p_FIX__ExceptionTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__FieldConvertError, _p_FIX__FieldConvertErrorTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__FieldNotFound, _p_FIX__FieldNotFoundTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__IOException, _p_FIX__IOExceptionTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__IncorrectDataFormat, _p_FIX__IncorrectDataFormatTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__IncorrectMessageStructure, _p_FIX__IncorrectMessageStructureTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__IncorrectTagValue, _p_FIX__IncorrectTagValueTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__InvalidMessage, _p_FIX__InvalidMessageTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__InvalidMessageType, _p_FIX__InvalidMessageTypeTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__InvalidTagNumber, _p_FIX__InvalidTagNumberTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__MessageParseError, _p_FIX__MessageParseErrorTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__NoTagValue, _p_FIX__NoTagValueTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__RejectLogon, _p_FIX__RejectLogonTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__RepeatedTag, _p_FIX__RepeatedTagTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__RepeatingGroupCountMismatch, _p_FIX__RepeatingGroupCountMismatchTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__RequiredTagMissing, _p_FIX__RequiredTagMissingTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__RuntimeError, _p_FIX__RuntimeErrorTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__SessionNotFound, _p_FIX__SessionNotFoundTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__SocketCloseFailed, _p_FIX__SocketCloseFailedTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__SocketException, _p_FIX__SocketExceptionTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__SocketRecvFailed, _p_FIX__SocketRecvFailedTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__SocketSendFailed, _p_FIX__SocketSendFailedTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__TagNotDefinedForMessage, _p_FIX__TagNotDefinedForMessageTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__TagOutOfOrder, _p_FIX__TagOutOfOrderTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__UnsupportedMessageType, _p_FIX__UnsupportedMessageTypeTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__UnsupportedVersion, _p_FIX__UnsupportedVersionTo_p_std__logic_error, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__logic_error[] = {  {&_swigt__p_std__logic_error, 0, 0, 0},  {&_swigt__p_FIX__ConfigError, _p_FIX__ConfigErrorTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__DataDictionaryNotFound, _p_FIX__DataDictionaryNotFoundTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__DoNotSend, _p_FIX__DoNotSendTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__DuplicateFieldNumber, _p_FIX__DuplicateFieldNumberTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__EmbeddedSOH, _p_FIX__EmbeddedSOHTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__Exception, _p_FIX__ExceptionTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__FieldConvertError, _p_FIX__FieldConvertErrorTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__FieldNotFound, _p_FIX__FieldNotFoundTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__IOException, _p_FIX__IOExceptionTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__IncorrectDataFormat, _p_FIX__IncorrectDataFormatTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__IncorrectMessageStructure, _p_FIX__IncorrectMessageStructureTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__IncorrectTagValue, _p_FIX__IncorrectTagValueTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__InvalidMessage, _p_FIX__InvalidMessageTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__InvalidMessageType, _p_FIX__InvalidMessageTypeTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__InvalidTagNumber, _p_FIX__InvalidTagNumberTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__MessageParseError, _p_FIX__MessageParseErrorTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__NoTagValue, _p_FIX__NoTagValueTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__OutOfOrderGroupMembers, _p_FIX__OutOfOrderGroupMembersTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__RejectLogon, _p_FIX__RejectLogonTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__RepeatedTag, _p_FIX__RepeatedTagTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__RepeatingGroupCountMismatch, _p_FIX__RepeatingGroupCountMismatchTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__RequiredTagMissing, _p_FIX__RequiredTagMissingTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__RuntimeError, _p_FIX__RuntimeErrorTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__SessionNotFound, _p_FIX__SessionNotFoundTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__SocketCloseFailed, _p_FIX__SocketCloseFailedTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__SocketException, _p_FIX__SocketExceptionTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__SocketRecvFailed, _p_FIX__SocketRecvFailedTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__SocketSendFailed, _p_FIX__SocketSendFailedTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__TagNotDefinedForMessage, _p_FIX__TagNotDefinedForMessageTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__TagOutOfOrder, _p_FIX__TagOutOfOrderTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__UnsupportedMessageType, _p_FIX__UnsupportedMessageTypeTo_p_std__logic_error, 0, 0},  {&_swigt__p_FIX__UnsupportedVersion, _p_FIX__UnsupportedVersionTo_p_std__logic_error, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__mapT_FIX__SessionID_unsigned_short_t[] = {  {&_swigt__p_std__mapT_FIX__SessionID_unsigned_short_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__mapT_std__string_std__string_t__const_iterator[] = {  {&_swigt__p_std__mapT_std__string_std__string_t__const_iterator, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__ostream[] = {  {&_swigt__p_std__ostream, 0, 0, 0},{0, 0, 0, 0}};
@@ -161869,6 +162573,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_FIX__DoNotSend,
   _swigc__p_FIX__DoubleField,
   _swigc__p_FIX__DuplicateFieldNumber,
+  _swigc__p_FIX__EmbeddedSOH,
   _swigc__p_FIX__Exception,
   _swigc__p_FIX__FieldBase,
   _swigc__p_FIX__FieldConvertError,
@@ -161915,6 +162620,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_FIX__NullLog,
   _swigc__p_FIX__NullStore,
   _swigc__p_FIX__NullStoreFactory,
+  _swigc__p_FIX__OutOfOrderGroupMembers,
   _swigc__p_FIX__PostgreSQLConnection,
   _swigc__p_FIX__PostgreSQLLog,
   _swigc__p_FIX__PostgreSQLLogFactory,

@@ -221,9 +221,12 @@ the Release configuration.
 The Debug leg also covers the checked-in SWIG output, which went 33 commits without compiling at
 all before anyone noticed. It configures with `-DHAVE_PYTHON3=ON`, so CMake compiles and links
 `src/python/QuickfixPython.cpp` into `_quickfix.so`; Ruby has no CMake path, so the same leg
-builds `src/ruby/QuickfixRuby.cpp` with the project's own `make_ruby.sh`. If a change to `src/C++`
-breaks either, regenerate with `src/python/swig.sh` and `src/ruby/swig.sh` rather than
-hand-editing the output.
+builds `src/ruby/QuickfixRuby.cpp` with the project's own `make_ruby.sh`. Before either, it
+regenerates both wrappers and fails if the result differs from what is checked in, so **a change
+to a header `src/quickfix.i` wraps must commit the regenerated output with it**: run
+`src/python/swig.sh` and `src/ruby/swig.sh` (from their own directories) and never hand-edit the
+output. The check needs the SWIG version the wrappers were generated with, 4.3.0 at present; a
+SWIG upgrade means regenerating once and committing the result.
 
 The Debug leg additionally syntax-checks all six database backends, which no build configures — CI
 never sets `HAVE_MYSQL`, `HAVE_POSTGRESQL` or `HAVE_ODBC`, so `MySQLStore.cpp`, `MySQLLog.cpp`,

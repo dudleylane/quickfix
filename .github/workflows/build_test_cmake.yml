@@ -26,6 +26,38 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Check the SWIG wrappers are current
+        # The binding steps below prove the checked-in wrappers compile and
+        # pass their tests. They cannot see public C++ API that was added and
+        # never wrapped, because the old output keeps compiling -- which is how
+        # EmbeddedSOH, OutOfOrderGroupMembers and Message::hasEmbeddedSOH /
+        # hasOutOfOrderGroupMembers (26aa506c, 74fe9320) went unexposed while
+        # every job stayed green (#14). Regenerating and diffing catches it.
+        #
+        # This pins CI to the runner's SWIG, since output differs between
+        # versions: an upgrade turns this red until the wrappers are
+        # regenerated and committed, and the version check says so rather
+        # than leaving a thousand-line diff to explain itself. It cannot see
+        # a wholly new header that quickfix.i never includes.
+        #
+        # Before Configure, so a stale wrapper fails in seconds rather than
+        # after the build. The regenerated files are what the later steps
+        # compile, and they are identical to the checked-in ones or this
+        # step has already failed.
+        if: matrix.configuration == 'Debug'
+        shell: bash
+        run: |
+          want=$(sed -n 's/^ \* Version \([0-9.]*\)$/\1/p' src/python/QuickfixPython.cpp)
+          have=$(swig -version | sed -n 's/^SWIG Version \([0-9.]*\)$/\1/p')
+          if [ "$want" != "$have" ]; then
+            echo "::error::the checked-in wrappers come from SWIG $want but the runner has SWIG $have -- regenerate with src/python/swig.sh and src/ruby/swig.sh and commit the result"
+            exit 1
+          fi
+          (cd src/python && sh swig.sh)
+          (cd src/ruby && sh swig.sh)
+          git diff --exit-code --stat -- src/python src/ruby \
+            || { echo "::error::the SWIG wrappers are stale -- run src/python/swig.sh and src/ruby/swig.sh and commit the result"; exit 1; }
+
       - name: Configure
         shell: bash
         run: |
