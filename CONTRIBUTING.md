@@ -211,7 +211,9 @@ cd test
 
 `runat.sh` and `runut.sh` start with `killall ut at`, so don't run them alongside another `ut`.
 `runut.sh` can be invoked from any directory. Both exit with their suite's real status, and
-`runat.sh` prints its verdict last: `470 tests passed`, or `FAILED n out of 470 tests`.
+`runat.sh` prints its verdict last: `470 tests passed`, or `FAILED n out of 470 tests`. Arguments
+after the port go to `at`: `./runat.sh 54321 -l` logs session events on stdout, and `-t` runs the
+threaded transport instead of the reactor.
 
 CI runs the unit tests on every push, the acceptance suite on pull requests only, and `pt` only in
 the Release configuration.

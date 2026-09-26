@@ -12,9 +12,12 @@ killall ut at
 RUBY="ruby -I."
 DIR=`pwd`
 PORT=$1
+# Anything after the port goes to at: -t for the threaded transport, -l to log
+# session events on stdout.
+shift
 ./setup.sh $PORT
 
-./at -f cfg/at.cfg &
+./at -f cfg/at.cfg "$@" &
 PROCID=$!
 cd $DIR
 $RUBY Runner.rb 127.0.0.1 $PORT definitions/server/fix4*/*.def definitions/server/fix50/*.def definitions/server/fix50sp1/*.def definitions/server/fix50sp2/*.def definitions/server/validate/*.def definitions/server/future/*.def

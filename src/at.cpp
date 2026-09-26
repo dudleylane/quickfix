@@ -23,6 +23,7 @@
 #include "config.h"
 
 #include "FileStore.h"
+#include "Log.h"
 #include "SessionSettings.h"
 #include "SocketAcceptor.h"
 #include "ThreadedSocketAcceptor.h"
@@ -39,20 +40,33 @@ int main(int argc, char **argv)
 {
     std::string file;
     bool threaded = false;
+    bool eventLog = false;
+    bool usage = false;
 
-    if (getopt(argc, argv, "+f:") == 'f')
+    int option;
+    while ((option = getopt(argc, argv, "+f:tl")) != -1)
     {
-        file = optarg;
+        switch (option)
+        {
+        case 'f':
+            file = optarg;
+            break;
+        case 't':
+            threaded = true;
+            break;
+        case 'l':
+            eventLog = true;
+            break;
+        default:
+            usage = true;
+            break;
+        }
     }
-    else
+
+    if (usage || file.empty())
     {
-        std::cout << "usage: " << argv[0] << " -f FILE [-t]" << std::endl;
+        std::cout << "usage: " << argv[0] << " -f FILE [-t] [-l]" << std::endl;
         return 1;
-    }
-
-    if (getopt(argc, argv, "+t") == 't')
-    {
-        threaded = true;
     }
 
     try
@@ -61,14 +75,25 @@ int main(int argc, char **argv)
         Application application;
         FIX::FileStoreFactory factory("store");
 
+        // -l: session events only, on stdout. Without it every session gets a
+        // null log, so seeing what the engine did during a run meant editing
+        // this file. Declared before the acceptor, which holds a reference.
+        std::unique_ptr<FIX::LogFactory> pLogFactory;
+        if (eventLog)
+        {
+            pLogFactory = std::make_unique<FIX::ScreenLogFactory>(false, false, true);
+        }
+
         AcceptorPtr pAcceptor;
         if (threaded)
         {
-            pAcceptor.reset(new FIX::ThreadedSocketAcceptor(application, factory, settings));
+            pAcceptor.reset(pLogFactory ? new FIX::ThreadedSocketAcceptor(application, factory, settings, *pLogFactory)
+                                        : new FIX::ThreadedSocketAcceptor(application, factory, settings));
         }
         else
         {
-            pAcceptor.reset(new FIX::SocketAcceptor(application, factory, settings));
+            pAcceptor.reset(pLogFactory ? new FIX::SocketAcceptor(application, factory, settings, *pLogFactory)
+                                        : new FIX::SocketAcceptor(application, factory, settings));
         }
 
         pAcceptor->start();
