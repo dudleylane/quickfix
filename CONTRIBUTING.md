@@ -338,6 +338,14 @@ cd doc
 
 3. **Enable clang-format integration** in your IDE/editor
 
+4. **Enable the commit-msg hook** once per clone:
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+   It rejects a commit touching executable content — C++, CMake, workflows, scripts, spec XML —
+   whose message carries neither the five framing lines of CLAUDE.md's "Decision-making policy"
+   (`Issue:`, `Impact:`, `Found:`, `Fix:`, `Success:`) nor a `Deviation:` trailer.
+
 ### Debugging
 
 - Build with `-DCMAKE_BUILD_TYPE=Debug`

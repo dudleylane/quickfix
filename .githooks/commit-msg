@@ -1,0 +1,46 @@
+#!/bin/sh
+# Reject a commit touching executable content whose message carries neither the
+# five framing lines from CLAUDE.md "Issue framing" nor a Deviation: trailer.
+#
+# This catches a forgotten artifact, not a skipped decision -- the framing is
+# supposed to exist before the work starts, and nothing here can check that.
+# Bypass with --no-verify only to record a Deviation: in the same breath.
+
+msg_file="$1"
+[ -f "$msg_file" ] || exit 0
+
+# Merges and reverts carry generated messages.
+case "$(head -1 "$msg_file")" in
+    "Merge "*|"Revert "*|"fixup!"*|"squash!"*) exit 0 ;;
+esac
+
+executable=$(git diff --cached --name-only --diff-filter=ACMR | grep -Ec \
+    '\.(cpp|cc|cxx|h|hpp|hh|hxx|ixx|c|cmake|sh|rb|py|xsl|xml|i|yml|yaml)$|(^|/)CMakeLists\.txt$')
+[ "$executable" -eq 0 ] && exit 0
+
+grep -q '^Deviation:' "$msg_file" && exit 0
+
+missing=""
+for marker in Issue Impact Found Fix Success; do
+    grep -q "^${marker}:" "$msg_file" || missing="$missing $marker:"
+done
+[ -z "$missing" ] && exit 0
+
+cat >&2 <<EOF
+
+commit-msg: $executable executable file(s) staged, but the message is missing:
+           $missing
+
+CLAUDE.md "Issue framing" wants all five, stated before the first edit:
+
+  Issue:   the precise failure or gap
+  Impact:  what it costs -- if this is unclear, that alone blocks the change
+  Found:   a failing test, a sanitizer report, a benchmark. Not a reading of the source
+  Fix:     is this the root cause, and if not, why the feasible one differs
+  Success: probability, naming the dominant failure mode. A bare "high" is not an estimate
+
+A prose-only change needs 1-3. Anything else needs a Deviation: trailer saying
+what was skipped and why.
+
+EOF
+exit 1
