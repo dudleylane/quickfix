@@ -271,14 +271,19 @@ void ThreadedSSLSocketInitiator::onStop()
         m_threads.clear();
     }
 
+    // Nothing is closed, and no SSL object touched, until its thread has been
+    // joined: a connection thread may be inside SSL_read, and an SSL object is not
+    // safe for concurrent use (#27). Shutting a socket down is what wakes its
+    // thread -- only the read side for a connection, so the write side stays open
+    // for the close_notify sent once the thread is gone.
     for (i = threads.begin(); i != threads.end(); ++i)
     {
-        ssl_socket_close(i->first.first, i->first.second);
+        ::shutdown(i->first.first, i->first.second != 0 ? SHUT_RD : SHUT_RDWR);
     }
-
     for (i = threads.begin(); i != threads.end(); ++i)
     {
         thread_join(i->second);
+        ssl_socket_close(i->first.first, i->first.second);
         if (i->first.second != 0)
         {
             SSL_free(i->first.second);

@@ -91,8 +91,14 @@ bool ThreadedSocketConnection::connect()
 
 void ThreadedSocketConnection::disconnect()
 {
+    // Any thread can get here -- Session::disconnect() through the responder, or
+    // a transport's onStop -- while this connection's own thread polls the
+    // socket. Shutting it down wakes that thread. Closing it would free the
+    // number for reuse while the reader still used it, and the reader's failure
+    // path would close it again (#28): the transport closes it, once, when it
+    // retires the connection's thread.
     m_disconnect = true;
-    socket_close(m_socket);
+    ::shutdown(m_socket, SHUT_RDWR);
 }
 
 bool ThreadedSocketConnection::read()

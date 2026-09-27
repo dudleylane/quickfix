@@ -29,6 +29,7 @@
 #include "Parser.h"
 #include "Responder.h"
 #include "SessionID.h"
+#include <atomic>
 #include <map>
 #include <set>
 
@@ -75,7 +76,7 @@ private:
     Parser m_parser;
     Sessions m_sessions;
     Session *m_pSession;
-    bool m_disconnect;
+    std::atomic<bool> m_disconnect;
 #if _MSC_VER
     fd_set m_fds;
 #endif

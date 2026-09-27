@@ -40,6 +40,7 @@ if (QUICKFIX_TESTS)
   ${PROJECT_SOURCE_DIR}/src/C++/test/SocketServerTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/StringUtilitiesTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/TestHelper.cpp
+  ${PROJECT_SOURCE_DIR}/src/C++/test/ThreadedTransportTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/TimeRangeTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/UtcTimeOnlyTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/UtcTimeStampTestCase.cpp

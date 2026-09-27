@@ -151,13 +151,18 @@ void ThreadedSocketAcceptor::onStop()
         m_threads.clear();
     }
 
+    // Each thread's socket is closed here only after the thread has been joined.
+    // Shutting it down is what wakes the thread, from accept() or poll(); closing
+    // it first would free the number while the thread still used it, and a
+    // connection thread's failure path would close it again (#28).
     for (i = threads.begin(); i != threads.end(); ++i)
     {
-        socket_close(i->first);
+        ::shutdown(i->first, SHUT_RDWR);
     }
     for (i = threads.begin(); i != threads.end(); ++i)
     {
         thread_join(i->second);
+        socket_close(i->first);
     }
 }
 
@@ -176,6 +181,11 @@ void ThreadedSocketAcceptor::removeThread(socket_handle s)
     {
         thread_detach(i->second);
         m_threads.erase(i);
+
+        // The socket is retired with its thread, under the same lock: m_threads
+        // is keyed by the fd number, which is free for reuse once it is closed,
+        // so erasing the entry first means no new socket can collide with it.
+        socket_close(s);
     }
 }
 
@@ -233,6 +243,7 @@ THREAD_PROC ThreadedSocketAcceptor::socketAcceptorThread(void *p)
             {
                 delete info;
                 delete pConnection;
+                socket_close(socket);
             }
             else
             {

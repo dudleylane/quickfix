@@ -204,6 +204,16 @@ bool ThreadedSSLSocketConnection::connect() { return socket_connect(getSocket(),
 void ThreadedSSLSocketConnection::disconnect()
 {
     m_disconnect = true;
+
+    // Any thread can get here while this connection's own thread is inside
+    // SSL_read, and an SSL object is not safe for concurrent use (#27). Shutting
+    // the read side down first wakes that thread, or fails the read it is
+    // blocked in, so it gives up m_mutex promptly; the write side stays open for
+    // the close_notify. The TLS shutdown then runs under the lock, like every
+    // other use of m_ssl. ssl_socket_close shuts the socket down but never
+    // closes it: the BIO owns the fd.
+    ::shutdown(m_socket, SHUT_RD);
+    Locker locker(m_mutex);
     ssl_socket_close(m_socket, m_ssl);
 }
 
