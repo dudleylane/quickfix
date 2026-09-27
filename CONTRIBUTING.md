@@ -242,9 +242,32 @@ otherwise exit 0 and prove nothing. That is a second full build (~2m15s), which 
 every push. It also restores `src/C++/config.h`, which `configure_file` rewrites — that file is
 tracked.
 
-One limit remains: linking proves the symbols exist, not that they behave. Exercising them needs
-live database servers, so `ut` is not run in that configuration — enabling the backends takes it
-from 56 test cases to 60, and the four new ones fail to connect.
+The same step then runs `ut` in that configuration, so the PostgreSQL and ODBC stores are
+exercised rather than just linked; the ODBC tests go through psqlODBC to the same PostgreSQL
+server. MySQL stays link-only: the runner has no MySQL server, and its client library is MariaDB's
+`libmariadb`, an API-compatible replacement for `libmysqlclient` rather than the same library.
+
+The runner's database is set up once (PostgreSQL 18 from the PGDG repository):
+
+```bash
+sudo /usr/pgsql-18/bin/postgresql-18-setup initdb
+sudo systemctl enable --now postgresql-18
+sudo -u postgres psql -c "CREATE ROLE quickfix LOGIN"
+sudo -u postgres createdb quickfix
+cat src/sql/postgresql/{sessions,messages,messages_log,event_log}_table.sql \
+  | sudo -u postgres psql -d quickfix
+echo "GRANT INSERT, UPDATE, DELETE, SELECT ON ALL TABLES IN SCHEMA public TO quickfix;" \
+  | sudo -u postgres psql -d quickfix
+# In /var/lib/pgsql/18/data/pg_hba.conf, above the default host rules, trust this one
+# role and database on loopback only:
+#   host  quickfix  quickfix  127.0.0.1/32  trust
+#   host  quickfix  quickfix  ::1/128       trust
+sudo systemctl reload postgresql-18
+sudo dnf install postgresql-odbc   # /etc/odbcinst.ini already names the driver [PostgreSQL]
+```
+
+`test/cfg/ut.cfg` connects as `quickfix` with no password; the ODBC tests use the DSN-less string
+`DRIVER={PostgreSQL};SERVER=localhost;DATABASE=quickfix;`.
 
 The Debug leg then **runs** both binding suites: the Python bindings' 32 tests
 (`src/python/test/`) and the Ruby bindings' 33 (`src/ruby/test/`, via `TestSuite.rb`). Ruby has no

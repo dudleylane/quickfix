@@ -118,10 +118,9 @@ jobs:
         # scripted tree-wide edit that silently damaged other files it touched.
         #
         # A syntax check rather than a CMake build with the options on. Enabling
-        # them pulls in 4 test cases needing live database servers (ut goes
-        # 56 -> 60, and the new ones fail with "Unable to connect to postgres
-        # database"), and configure_file would rewrite the *tracked*
-        # src/C++/config.h. A second full build costs ~2m per push on a runner
+        # them pulls in store test cases that need live database servers, which
+        # the link step below runs, and configure_file would rewrite the
+        # *tracked* src/C++/config.h. A second full build costs ~2m per push on a runner
         # that already shares this machine, to guard leaf implementations whose
         # realistic breakage -- a MessageStore or Log interface they no longer
         # satisfy -- is a compile error. The limit: this does not link, so a
@@ -173,11 +172,15 @@ jobs:
         # too much on every push for drift that only needs catching before a
         # merge; the syntax check stays as the fast per-push guard.
         #
-        # ut is deliberately not run in this configuration: enabling the
-        # backends adds four test cases that require live database servers.
-        # This proves the symbols exist, not that they behave.
+        # It then runs ut in this configuration, so the PostgreSQL and ODBC
+        # stores are exercised, not just linked (#12): the ODBC tests go
+        # through psqlODBC to the same server. MySQL stays link-only -- the
+        # runner has no MySQL server, and its client library is MariaDB's.
         #
-        # Runner needs mariadb-connector-c-devel, libpq5-devel, unixODBC-devel.
+        # Runner needs mariadb-connector-c-devel, libpq5-devel, unixODBC-devel,
+        # postgresql-odbc, and a PostgreSQL server on localhost with a
+        # passwordless quickfix role owning nothing but able to use the quickfix
+        # database's tables; CONTRIBUTING has the setup.
         if: github.event_name != 'push' && matrix.configuration == 'Debug'
         shell: bash
         run: |
@@ -197,6 +200,13 @@ jobs:
             ldd "$lib" | grep -q "$want" \
               || { echo "::error::$want is not linked into $lib"; exit 1; }
           done
+
+          # Fail on the missing server itself rather than on six test cases
+          # timing out against it.
+          psql -h localhost -U quickfix -d quickfix -qtAc 'select 1' > /dev/null \
+            || { echo "::error::cannot reach the quickfix database on localhost -- see CONTRIBUTING"; exit 1; }
+          (cd test && ../build-db/out/ut "~*MySQLStore*" \
+              --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
 
           # configure_file rewrote the *tracked* src/C++/config.h to define
           # HAVE_MYSQL and friends. Harmless on a fresh checkout, but left dirty
