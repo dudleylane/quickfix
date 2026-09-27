@@ -263,6 +263,34 @@ TEST_CASE("MessageTests")
         CHECK(str == object.toString());
     }
 
+    SECTION("setStringWithEmbeddedSOH")
+    {
+        // FIX 14k. A value cut short by an embedded SOH leaves an orphan token
+        // with no '='. The parser steps over it, notes the tag it cut, and counts
+        // its bytes toward BodyLength and CheckSum, so a correctly framed message
+        // still validates and can be rejected rather than dropped. Until now only
+        // the acceptance suite covered this, which CI runs on pull requests only.
+        const std::string body = std::string("35=D\00134=2\00149=TW\00152=20000426-12:05:06\00156=ISLD\001") +
+                                 "11=ID\00121=1\00140=1\00154=1\00138=200\00155=INTC\001" + "336=PRE-\001OPEN\001" +
+                                 "60=20000426-12:05:06\001";
+        std::string framed = "8=FIX.4.2\0019=" + std::to_string(body.size()) + "\001" + body;
+        int sum = 0;
+        for (unsigned char c : framed)
+        {
+            sum += c;
+        }
+        const std::string checksum = std::to_string(1000 + sum % 256).substr(1);
+        framed += "10=" + checksum + "\001";
+
+        FIX::Message object;
+        object.setString(framed); // validates BodyLength and CheckSum
+        int tag = 0;
+        CHECK(object.hasEmbeddedSOH(tag));
+        CHECK(336 == tag);
+        CHECK("PRE-" == object.getField(336));
+        CHECK("20000426-12:05:06" == object.getField(FIX::FIELD::TransactTime)); // parsing resumed after it
+    }
+
     SECTION("setStringWithDataFieldWithoutDataLength")
     {
         FIX::Message object;
