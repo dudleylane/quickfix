@@ -52,6 +52,13 @@ SocketMonitor::~SocketMonitor()
         socket_close(*i);
     }
 
+    // Dropped sockets whose drop was never reported are still open.
+    while (!m_dropped.empty())
+    {
+        socket_close(m_dropped.front());
+        m_dropped.pop();
+    }
+
     socket_close(m_signal);
     socket_term();
 }
@@ -108,7 +115,13 @@ bool SocketMonitor::drop(socket_handle s)
 
     if (i != m_readSockets.end() || j != m_writeSockets.end() || k != m_connectSockets.end())
     {
-        socket_close(s);
+        // Shut the socket down now, so the peer sees the FIN when it always did,
+        // but keep the descriptor until block() has reported the drop. The report
+        // names the socket by number, and a number that is still open cannot be
+        // handed to a socket created in the meantime -- by a connect() between
+        // block() calls, or an accept() later in the same poll pass -- which the
+        // report would otherwise tear down (#26).
+        ::shutdown(s, SHUT_RDWR);
         m_readSockets.erase(s);
         m_writeSockets.erase(s);
         m_connectSockets.erase(s);
@@ -180,8 +193,10 @@ void SocketMonitor::block(Strategy &strategy, bool should_poll, double timeout)
 {
     while (m_dropped.size())
     {
-        strategy.onError(*this, m_dropped.front());
+        const socket_handle dropped = m_dropped.front();
+        strategy.onError(*this, dropped);
         m_dropped.pop();
+        socket_close(dropped); // its report is out, so the number may be reused now
         if (m_dropped.size() == 0)
         {
             return;

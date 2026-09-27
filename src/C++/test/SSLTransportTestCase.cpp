@@ -26,6 +26,16 @@ namespace
 {
 bool isOpen(int fd) { return ::fcntl(fd, F_GETFD) != -1; }
 
+// Drives SocketMonitor::block() to deliver queued drop reports, and nothing else.
+struct IgnoringStrategy : public SocketMonitor::Strategy
+{
+    void onConnect(SocketMonitor &, socket_handle) override {}
+    void onEvent(SocketMonitor &, socket_handle) override {}
+    void onWrite(SocketMonitor &, socket_handle) override {}
+    void onError(SocketMonitor &, socket_handle) override {}
+    void onError(SocketMonitor &) override {}
+};
+
 SSL *newSsl(SSL_CTX *ctx, int fd, int closeFlag)
 {
     SSL *ssl = SSL_new(ctx);
@@ -59,7 +69,13 @@ TEST_CASE("SSLTransportTests")
         SSLSocketConnection *connection =
             new SSLSocketConnection(fd, newSsl(ctx, fd, BIO_NOCLOSE), SSLSocketConnection::Sessions(), &monitor);
 
+        // A drop shuts the socket down at once but keeps the descriptor until the
+        // next block() has reported it, so the number cannot be reused before the
+        // report is out (#26); the monitor closes it then.
         REQUIRE(monitor.drop(fd));
+        CHECK(isOpen(fd));
+        IgnoringStrategy strategy;
+        monitor.block(strategy, true);
         CHECK_FALSE(isOpen(fd));
 
         // Something else now receives that descriptor number -- another
@@ -98,7 +114,9 @@ TEST_CASE("SSLTransportTests")
         delete connection; // the monitor still owns the fd
         CHECK(isOpen(fd));
 
-        REQUIRE(monitor.drop(fd)); // and closes it, once
+        REQUIRE(monitor.drop(fd));
+        IgnoringStrategy strategy;
+        monitor.block(strategy, true); // reports the drop, then closes it, once
         CHECK_FALSE(isOpen(fd));
 
         ::close(pair[1]);

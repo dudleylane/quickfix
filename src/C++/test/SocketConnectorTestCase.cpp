@@ -28,6 +28,10 @@
 
 #include "catch_amalgamated.hpp"
 
+#include <fcntl.h>
+#include <unistd.h>
+#include <vector>
+
 using namespace FIX;
 
 // Named for this file: SocketServerTestCase.cpp already defines a global
@@ -118,6 +122,66 @@ TEST_CASE("SocketConnectorTests")
         }
         CHECK(1 == strategy.disconnect);
 
+        server.close();
+    }
+
+    SECTION("dropped_socket_number_is_not_reused_before_the_drop_is_reported")
+    {
+        // #26. A dropped socket is reported on the next block(), and
+        // SocketInitiator::onTimeout connects new sockets in between. A new
+        // socket takes the lowest free number -- typically the one just dropped
+        // -- so if that number were free already, the queued report would reach
+        // the new socket: drop() would close it, and the initiator's
+        // onDisconnect would delete the new connection and strand the old one's
+        // session.
+        SocketServer server(0);
+        socket_handle serverSocket = server.add(0, true, true);
+        const uint16_t port = socket_hostport(serverSocket);
+
+        SocketConnector connector(1);
+        SocketConnectorTestStrategy strategy;
+        const socket_handle old = connector.connect("127.0.0.1", port, false, 1024, 1024);
+        REQUIRE(old >= 0);
+        REQUIRE(server.accept(serverSocket) >= 0);
+        for (int i = 0; i < 20 && strategy.connect == 0; ++i)
+        {
+            connector.block(strategy, true);
+        }
+        REQUIRE(1 == strategy.connect);
+
+        // Take every free number below old's, so that old's is the lowest free
+        // one the moment it is released.
+        std::vector<int> fillers;
+        for (;;)
+        {
+            const int fd = ::open("/dev/null", O_RDONLY);
+            REQUIRE(fd >= 0);
+            if (fd > old)
+            {
+                ::close(fd);
+                break;
+            }
+            fillers.push_back(fd);
+        }
+
+        REQUIRE(connector.getMonitor().drop(old));
+        const socket_handle fresh = connector.connect("127.0.0.1", port, false, 1024, 1024);
+        REQUIRE(fresh >= 0);
+        REQUIRE(server.accept(serverSocket) >= 0);
+        for (int i = 0; i < 20 && strategy.connect < 2; ++i)
+        {
+            connector.block(strategy, true);
+        }
+
+        CHECK(fresh != old);
+        CHECK(2 == strategy.connect);
+        CHECK(1 == strategy.disconnect);
+        CHECK(connector.getMonitor().drop(fresh));
+
+        for (int fd : fillers)
+        {
+            ::close(fd);
+        }
         server.close();
     }
 }

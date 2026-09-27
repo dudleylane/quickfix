@@ -27,6 +27,11 @@
 
 #include "catch_amalgamated.hpp"
 
+#include <cerrno>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 using namespace FIX;
 
 struct TestStrategy : public SocketServer::Strategy
@@ -148,5 +153,46 @@ TEST_CASE("SocketServerTests")
         object.add(0, true, true);
         object.close();
         object.block(strategy);
+    }
+
+    SECTION("droppedSocketNumberIsNotReusedBeforeTheDropIsReported")
+    {
+        // #26. A connection that fails in a poll pass is dropped there, and the
+        // drop is reported on the next block(). An accept later in the same pass
+        // takes the lowest free number; if the dropped one were free already,
+        // the report would tear down the connection just accepted. The failing
+        // socket is arranged to sit below the listener, so the pass reaches it
+        // first.
+        const int placeholder = ::open("/dev/null", O_RDONLY);
+        REQUIRE(placeholder >= 0);
+        SocketServer object(0);
+        socket_handle serverS = object.add(0, true, true);
+        REQUIRE(serverS > placeholder);
+        const int port = socket_hostport(serverS);
+
+        socket_handle first = createSocket(port, "127.0.0.1");
+        REQUIRE(first >= 0);
+        ::close(placeholder);
+        process_sleep(0.1);
+        object.block(strategy); // accepts first, below the listener
+        const socket_handle failing = strategy.connectSocket;
+        REQUIRE(failing < serverS);
+        object.block(strategy); // and moves it to the read set
+
+        destroySocket(first);
+        socket_handle second = createSocket(port, "127.0.0.1");
+        REQUIRE(second >= 0);
+        process_sleep(0.1);
+        object.block(strategy, true); // one pass: EOF on the failing socket, then the accept
+        CHECK(strategy.connectSocket != failing);
+
+        object.block(strategy, true); // the drop is reported
+        char byte = 0;
+        errno = 0;
+        CHECK(::recv(second, &byte, 1, MSG_DONTWAIT) == -1); // no EOF: the new connection survived
+        CHECK(errno == EAGAIN);
+
+        destroySocket(second);
+        object.close();
     }
 }
