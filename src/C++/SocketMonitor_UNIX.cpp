@@ -52,6 +52,17 @@ SocketMonitor::~SocketMonitor()
         socket_close(*i);
     }
 
+    // A socket accepted in the last poll pass is still in the connect set; it
+    // moves to the read set only on its first POLLOUT (#29). The write set holds
+    // nothing that is not in the read set.
+    for (i = m_connectSockets.begin(); i != m_connectSockets.end(); ++i)
+    {
+        if (m_readSockets.find(*i) == m_readSockets.end())
+        {
+            socket_close(*i);
+        }
+    }
+
     // Dropped sockets whose drop was never reported are still open.
     while (!m_dropped.empty())
     {

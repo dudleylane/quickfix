@@ -155,6 +155,27 @@ TEST_CASE("SocketServerTests")
         object.block(strategy);
     }
 
+    SECTION("closeLeavesTheListenerToTheMonitor")
+    {
+        // #29. The listener is registered with the monitor, which closes what it
+        // holds when it is destroyed. close() closed it too, so the number was
+        // free in between: the next descriptor opened took it, and destroying
+        // the server then closed that descriptor instead.
+        int bystander = -1;
+        {
+            SocketServer object(0);
+            const socket_handle listener = object.add(0, true, true);
+            object.close();
+            object.close(); // a second close() is harmless
+
+            bystander = ::open("/dev/null", O_RDONLY);
+            REQUIRE(bystander >= 0);
+            CHECK(bystander != listener);
+        }
+        CHECK(::fcntl(bystander, F_GETFD) != -1);
+        ::close(bystander);
+    }
+
     SECTION("droppedSocketNumberIsNotReusedBeforeTheDropIsReported")
     {
         // #26. A connection that fails in a poll pass is dropped there, and the

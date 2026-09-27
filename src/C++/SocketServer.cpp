@@ -139,12 +139,17 @@ socket_handle SocketServer::accept(socket_handle socket)
 
 void SocketServer::close()
 {
+    // The listeners are registered with the monitor, which closes what it holds
+    // when it is destroyed, so closing them here as well closed each one twice
+    // (#29) -- and between the two the number was free for anything to take.
+    // Dropping them shuts them down now and leaves the monitor to close each
+    // exactly once; forgetting them makes a second close() a no-op.
     for (const SocketToInfo::value_type &socketWithInfo : m_socketToInfo)
     {
-        socket_handle socket = socketWithInfo.first;
-        socket_close(socket);
-        socket_invalidate(socket);
+        m_monitor.drop(socketWithInfo.first);
     }
+    m_socketToInfo.clear();
+    m_portToInfo.clear();
 }
 
 bool SocketServer::block(Strategy &strategy, bool poll, double timeout)

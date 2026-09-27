@@ -29,13 +29,13 @@ namespace FIX
 {
 SocketAcceptor::SocketAcceptor(Application &application, MessageStoreFactory &factory, const SessionSettings &settings)
     EXCEPT(ConfigError)
-    : Acceptor(application, factory, settings), m_pServer(0)
+    : Acceptor(application, factory, settings), m_pServer(0), m_reactorActive(false)
 {
 }
 
 SocketAcceptor::SocketAcceptor(Application &application, MessageStoreFactory &factory, const SessionSettings &settings,
                                LogFactory &logFactory) EXCEPT(ConfigError)
-    : Acceptor(application, factory, settings, logFactory), m_pServer(0)
+    : Acceptor(application, factory, settings, logFactory), m_pServer(0), m_reactorActive(false)
 {
 }
 
@@ -112,12 +112,19 @@ void SocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXCEPT
 
 void SocketAcceptor::onStart()
 {
+    {
+        Locker l(m_serverMutex);
+        m_reactorActive = true;
+    }
+
     while (!isStopped() && m_pServer && m_pServer->block(*this))
     {
     }
 
     if (!m_pServer)
     {
+        Locker l(m_serverMutex);
+        m_reactorActive = false;
         return;
     }
 
@@ -134,9 +141,11 @@ void SocketAcceptor::onStart()
         }
     }
 
+    Locker l(m_serverMutex);
     m_pServer->close();
     delete m_pServer;
     m_pServer = 0;
+    m_reactorActive = false;
 }
 
 bool SocketAcceptor::onPoll()
@@ -173,8 +182,25 @@ bool SocketAcceptor::onPoll()
 
 void SocketAcceptor::onStop()
 {
-    if (m_pServer)
+    Locker l(m_serverMutex);
+    if (!m_pServer)
     {
+        return;
+    }
+
+    if (m_reactorActive)
+    {
+        // The reactor loop owns the server: wake it, and it sees isStopped() and
+        // closes the server itself. Closing it from this thread as well closed
+        // each listener up to three times, and could close whatever another
+        // thread had been given the number in between (#29). signal() only
+        // writes to the monitor's own wakeup socket, and for a socket the
+        // monitor does not hold it does nothing else.
+        m_pServer->getMonitor().signal(INVALID_SOCKET_HANDLE);
+    }
+    else
+    {
+        // No reactor loop -- the poll() path -- so the server is closed here.
         m_pServer->close();
     }
 }

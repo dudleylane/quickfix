@@ -24,6 +24,7 @@
 
 #include "catch_amalgamated.hpp"
 
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -75,14 +76,19 @@ std::pair<int, int> connectedTcpPair()
 
 TEST_CASE("SocketMonitorTests")
 {
+    // A socket the monitor registers is the monitor's to close, when it is
+    // destroyed. These used a made-up fd 101 and closed it themselves as well,
+    // so every section closed a number it had never opened, up to twice (#29).
+    int pair[2];
+    REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
+    const int socket = pair[0];
     SocketMonitor monitor;
-    int socket = 101;
 
     SECTION("addWrite_ReadSocketDoesNotExist_False")
     {
         CHECK(!monitor.addWrite(socket));
 
-        socket_close(socket);
+        ::close(socket); // never registered, so still ours
     }
 
     SECTION("addWrite_WriteSocketAlreadyExists_False")
@@ -90,8 +96,6 @@ TEST_CASE("SocketMonitorTests")
         CHECK(monitor.addRead(socket));
         CHECK(monitor.addWrite(socket));
         CHECK(!monitor.addWrite(socket));
-
-        socket_close(socket);
     }
 
     SECTION("Unsignal_SocketExists_WriteSocketErased")
@@ -102,8 +106,6 @@ TEST_CASE("SocketMonitorTests")
 
         monitor.signal(socket);
         monitor.unsignal(socket);
-
-        socket_close(socket);
     }
 
     SECTION("Unsignal_SocketDoesNotExist_WriteSocketErased")
@@ -113,8 +115,31 @@ TEST_CASE("SocketMonitorTests")
 
         monitor.signal(socket);
         monitor.unsignal(socket);
+    }
 
-        socket_close(socket);
+    ::close(pair[1]);
+}
+
+TEST_CASE("SocketMonitorTeardownTests")
+{
+    SECTION("destructorClosesAConnectSetSocket")
+    {
+        // A connection accepted in the last poll pass is still in the connect
+        // set -- it moves to the read set on its first POLLOUT -- and the
+        // destructor closed only the read set, so that socket leaked (#29).
+        int pair[2];
+        REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
+        {
+            SocketMonitor monitor;
+            REQUIRE(monitor.addConnect(pair[0]));
+        }
+        const bool leaked = ::fcntl(pair[0], F_GETFD) != -1;
+        CHECK_FALSE(leaked);
+        if (leaked)
+        {
+            ::close(pair[0]);
+        }
+        ::close(pair[1]);
     }
 }
 

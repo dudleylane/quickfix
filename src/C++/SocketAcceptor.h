@@ -27,6 +27,7 @@
 #endif
 
 #include "Acceptor.h"
+#include "Mutex.h"
 #include "SocketConnection.h"
 #include "SocketServer.h"
 
@@ -69,6 +70,11 @@ private:
     void onTimeout(SocketServer &);
 
     SocketServer *m_pServer;
+    // Guards the hand-over of m_pServer between a reactor loop (onStart) and
+    // stop() on another thread: while the loop runs it owns the server, and
+    // onStop only wakes it (#29).
+    Mutex m_serverMutex;
+    bool m_reactorActive;
     PortToSessions m_portToSessions;
     SessionToPort m_sessionToPort;
     SocketConnections m_connections;
