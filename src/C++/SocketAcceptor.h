@@ -69,12 +69,18 @@ private:
     void onError(SocketServer &);
     void onTimeout(SocketServer &);
 
+    // Drops a connection that has not produced its first message within the
+    // setup deadline, so a peer that stalls its first message does not hold a
+    // slot open indefinitely.
+    void expirePendingReads();
+
     SocketServer *m_pServer;
     // Guards the hand-over of m_pServer between a reactor loop (onStart) and
     // stop() on another thread: while the loop runs it owns the server, and
     // onStop only wakes it (#29).
     Mutex m_serverMutex;
     bool m_reactorActive;
+    time_t m_lastPreSessionSweep;
     PortToSessions m_portToSessions;
     SessionToPort m_sessionToPort;
     SocketConnections m_connections;

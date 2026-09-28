@@ -190,13 +190,13 @@ private:
     HandshakeStep stepHandshake(SSLSocketConnection *);
     bool advanceHandshake(SocketServer &, PendingHandshakes::iterator);
     void abandonHandshake(SocketServer &, PendingHandshakes::iterator, const std::string &reason);
-    void expireHandshakes();
+    void expireSetup();
 
     SocketServer *m_pServer;
     PortToSessions m_portToSessions;
     SocketConnections m_connections;
     PendingHandshakes m_pendingHandshakes;
-    time_t m_lastHandshakeSweep;
+    time_t m_lastSetupSweep;
 
     bool m_sslInit;
     int m_verify;

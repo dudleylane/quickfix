@@ -29,13 +29,14 @@ namespace FIX
 {
 SocketAcceptor::SocketAcceptor(Application &application, MessageStoreFactory &factory, const SessionSettings &settings)
     EXCEPT(ConfigError)
-    : Acceptor(application, factory, settings), m_pServer(0), m_reactorActive(false)
+    : Acceptor(application, factory, settings), m_pServer(0), m_reactorActive(false), m_lastPreSessionSweep(0)
 {
 }
 
 SocketAcceptor::SocketAcceptor(Application &application, MessageStoreFactory &factory, const SessionSettings &settings,
                                LogFactory &logFactory) EXCEPT(ConfigError)
-    : Acceptor(application, factory, settings, logFactory), m_pServer(0), m_reactorActive(false)
+    : Acceptor(application, factory, settings, logFactory), m_pServer(0), m_reactorActive(false),
+      m_lastPreSessionSweep(0)
 {
 }
 
@@ -119,6 +120,7 @@ void SocketAcceptor::onStart()
 
     while (!isStopped() && m_pServer && m_pServer->block(*this))
     {
+        expirePendingReads();
     }
 
     if (!m_pServer)
@@ -177,7 +179,39 @@ bool SocketAcceptor::onPoll()
     }
 
     m_pServer->block(*this, true);
+    expirePendingReads();
     return true;
+}
+
+void SocketAcceptor::expirePendingReads()
+{
+    if (!m_pServer || m_connections.empty())
+    {
+        return;
+    }
+
+    const time_t now = ::time(0);
+    if (now == m_lastPreSessionSweep)
+    {
+        return;
+    }
+    m_lastPreSessionSweep = now;
+
+    for (const SocketConnections::value_type &entry : m_connections)
+    {
+        // A connection with a session is past setup and reads through the normal
+        // path. Dropping is deferred to the monitor, which reports it on the next
+        // block() and closes the socket once (#26); m_connections is not mutated
+        // here, so iterating it is safe.
+        if (entry.second->getSession() == 0 && entry.second->getSecondsFromSetupStart(now) > 10)
+        {
+            if (getLog())
+            {
+                getLog()->onEvent("Timed out a connection that sent no complete message");
+            }
+            m_pServer->getMonitor().drop(entry.first);
+        }
+    }
 }
 
 void SocketAcceptor::onStop()

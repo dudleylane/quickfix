@@ -30,7 +30,8 @@
 namespace FIX
 {
 SocketConnection::SocketConnection(socket_handle s, Sessions sessions, SocketMonitor *pMonitor)
-    : m_socket(s), m_sendLength(0), m_sessions(sessions), m_pSession(0), m_pMonitor(pMonitor)
+    : m_socket(s), m_sendLength(0), m_sessions(sessions), m_pSession(0), m_pMonitor(pMonitor),
+      m_setupStartTime(::time(0))
 {
 #ifdef _MSC_VER
     FD_ZERO(&m_fds);
@@ -40,7 +41,8 @@ SocketConnection::SocketConnection(socket_handle s, Sessions sessions, SocketMon
 
 SocketConnection::SocketConnection(SocketInitiator &i, const SessionID &sessionID, socket_handle s,
                                    SocketMonitor *pMonitor)
-    : m_socket(s), m_sendLength(0), m_pSession(i.getSession(sessionID, *this)), m_pMonitor(pMonitor)
+    : m_socket(s), m_sendLength(0), m_pSession(i.getSession(sessionID, *this)), m_pMonitor(pMonitor),
+      m_setupStartTime(::time(0))
 {
 #ifdef _MSC_VER
     FD_ZERO(&m_fds);
@@ -144,33 +146,15 @@ bool SocketConnection::read(SocketAcceptor &acceptor, SocketServer &server)
     {
         if (!m_pSession)
         {
-#if _MSC_VER
-            struct timeval timeout = {1, 0};
-            fd_set readset = m_fds;
-#else
-            int timeout = 1000; // 1000ms = 1 second
-            struct pollfd pfd = {m_socket, POLLIN | POLLPRI, 0};
-#endif
-
-            while (!readMessage(message))
+            // onData is called only when the socket is readable, so read once and
+            // return to the reactor if the first message is not complete yet.
+            // Looping here on a private poll() instead held the reactor's only
+            // thread for as long as a peer chose to dribble its first message; the
+            // acceptor's setup-deadline sweep now bounds a pre-session connection.
+            readFromSocket();
+            if (!readMessage(message))
             {
-#if _MSC_VER
-                int result = select(0, &readset, 0, 0, &timeout);
-#else
-                int result = poll(&pfd, 1, timeout);
-#endif
-                if (result > 0)
-                {
-                    readFromSocket();
-                }
-                else if (result == 0)
-                {
-                    return false;
-                }
-                else if (result < 0)
-                {
-                    return false;
-                }
+                return true;
             }
 
             m_pSession = Session::lookupSession(message, true);

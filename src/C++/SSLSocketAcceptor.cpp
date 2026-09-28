@@ -132,14 +132,14 @@ int SSLSocketAcceptor::passPhraseHandleCB(char *buf, int bufsize, int verify, vo
 
 SSLSocketAcceptor::SSLSocketAcceptor(Application &application, MessageStoreFactory &factory,
                                      const SessionSettings &settings) EXCEPT(ConfigError)
-    : Acceptor(application, factory, settings), m_pServer(0), m_lastHandshakeSweep(0), m_sslInit(false),
+    : Acceptor(application, factory, settings), m_pServer(0), m_lastSetupSweep(0), m_sslInit(false),
       m_verify(SSL_CLIENT_VERIFY_NOTSET), m_ctx(0), m_revocationStore(0)
 {
 }
 
 SSLSocketAcceptor::SSLSocketAcceptor(Application &application, MessageStoreFactory &factory,
                                      const SessionSettings &settings, LogFactory &logFactory) EXCEPT(ConfigError)
-    : Acceptor(application, factory, settings, logFactory), m_pServer(0), m_lastHandshakeSweep(0), m_sslInit(false),
+    : Acceptor(application, factory, settings, logFactory), m_pServer(0), m_lastSetupSweep(0), m_sslInit(false),
       m_verify(SSL_CLIENT_VERIFY_NOTSET), m_ctx(0), m_revocationStore(0)
 {
 }
@@ -263,7 +263,7 @@ void SSLSocketAcceptor::onStart()
 {
     while (!isStopped() && m_pServer && m_pServer->block(*this))
     {
-        expireHandshakes();
+        expireSetup();
     }
 
     if (!m_pServer)
@@ -318,7 +318,7 @@ bool SSLSocketAcceptor::onPoll()
     }
 
     m_pServer->block(*this, true);
-    expireHandshakes();
+    expireSetup();
     return true;
 }
 
@@ -422,6 +422,8 @@ bool SSLSocketAcceptor::advanceHandshake(SocketServer &server, PendingHandshakes
     const socket_handle s = pending->first;
     const int port = pending->second.port;
     m_pendingHandshakes.erase(pending);
+    // Reuse the setup clock for the first-message phase that follows.
+    connection->setHandshakeStartTime(time(0));
     m_connections[s] = connection;
 
     std::stringstream stream;
@@ -465,19 +467,19 @@ void SSLSocketAcceptor::abandonHandshake(SocketServer &server, PendingHandshakes
     delete connection;           // BIO_NOCLOSE: frees the SSL object and nothing else
 }
 
-void SSLSocketAcceptor::expireHandshakes()
+void SSLSocketAcceptor::expireSetup()
 {
-    if (m_pendingHandshakes.empty() || !m_pServer)
+    if (!m_pServer || (m_pendingHandshakes.empty() && m_connections.empty()))
     {
         return;
     }
 
     const time_t now = time(0);
-    if (now == m_lastHandshakeSweep)
+    if (now == m_lastSetupSweep)
     {
         return;
     }
-    m_lastHandshakeSweep = now;
+    m_lastSetupSweep = now;
 
     for (PendingHandshakes::iterator i = m_pendingHandshakes.begin(); i != m_pendingHandshakes.end();)
     {
@@ -485,6 +487,22 @@ void SSLSocketAcceptor::expireHandshakes()
         if (pending->second.connection->getSecondsFromHandshakeStart(now) > 10)
         {
             abandonHandshake(*m_pServer, pending, "SSL handshake timed out");
+        }
+    }
+
+    // A connection past its handshake but still without a session is reading its
+    // first message; bound that too. Dropping is deferred to the monitor, which
+    // closes the socket once on the next block() (#26), so m_connections is not
+    // mutated here.
+    for (const SocketConnections::value_type &entry : m_connections)
+    {
+        if (entry.second->getSession() == 0 && entry.second->getSecondsFromHandshakeStart(now) > 10)
+        {
+            if (getLog())
+            {
+                getLog()->onEvent("Timed out an SSL connection that sent no complete message");
+            }
+            m_pServer->getMonitor().drop(entry.first);
         }
     }
 }

@@ -298,33 +298,15 @@ bool SSLSocketConnection::read(SSLSocketAcceptor &acceptor, SocketServer &server
     {
         if (!m_pSession)
         {
-#if _MSC_VER
-            struct timeval timeout = {1, 0};
-            fd_set readset = m_fds;
-#else
-            int timeout = 1000; // 1000ms = 1 second
-            struct pollfd pfd = {m_socket, POLLIN | POLLPRI, 0};
-#endif
-
-            while (!readMessage(message))
+            // One read per readiness for the first message, returning to the
+            // reactor while it is incomplete; readFromSocket drains what the SSL
+            // object already holds. Looping here on a private poll() held the
+            // reactor's only thread. The acceptor's setup-deadline sweep bounds a
+            // connection that never completes a first message.
+            readFromSocket();
+            if (!readMessage(message))
             {
-#if _MSC_VER
-                int result = select(1 + m_socket, &readset, 0, 0, &timeout);
-#else
-                int result = poll(&pfd, 1, timeout);
-#endif
-                if (result > 0)
-                {
-                    readFromSocket();
-                }
-                else if (result == 0)
-                {
-                    return false;
-                }
-                else if (result < 0)
-                {
-                    return false;
-                }
+                return true;
             }
 
             m_pSession = Session::lookupSession(message, true);

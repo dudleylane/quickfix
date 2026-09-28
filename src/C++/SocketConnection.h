@@ -55,6 +55,11 @@ public:
     socket_handle getSocket() const { return m_socket; }
     Session *getSession() const { return m_pSession; }
 
+    // Seconds since this accepted connection began its setup: reading the first
+    // message. The acceptor bounds it so a connection that never completes a
+    // first message does not linger.
+    int getSecondsFromSetupStart(time_t now) const { return static_cast<int>(now - m_setupStartTime); }
+
     bool read(SocketConnector &s);
     bool read(SocketAcceptor &, SocketServer &);
     bool processQueue();
@@ -98,6 +103,7 @@ private:
     Sessions m_sessions;
     Session *m_pSession;
     SocketMonitor *m_pMonitor;
+    time_t m_setupStartTime;
     Mutex m_mutex;
 #ifdef _MSC_VER
     fd_set m_fds;
