@@ -1634,7 +1634,6 @@ int acceptSSLConnection(socket_handle socket, SSL *ssl, Log *log, int verify)
 {
     int rc;
     int result = -1;
-    char *subjName = 0;
     time_t timeout = time(0) + 10;
 #ifdef __TOS_AIX__
     int retries = 0;
@@ -1822,40 +1821,44 @@ int acceptSSLConnection(socket_handle socket, SSL *ssl, Log *log, int verify)
             }
             process_sleep(0.01);
         }
-
-        X509 *xs = 0;
-
-        /*
-         * Check for failed client authentication
-         */
-        if ((result = SSL_get_verify_result(ssl)) != X509_V_OK)
-        {
-            if (log)
-            {
-                log->onEvent("SSL client authentication failed: ");
-            }
-            SSL_set_shutdown(ssl, SSL_RECEIVED_SHUTDOWN);
-            ssl_socket_close(socket, ssl);
-            return result;
-        }
-        else
-        {
-            if ((xs = SSL_get_peer_certificate(ssl)) != 0)
-            {
-                subjName = X509_NAME_oneline(X509_get_subject_name(xs), 0, 0);
-                X509_free(xs);
-            }
-        }
     }
 
+    result = checkSSLClient(ssl, log, verify);
+    if (result != 0)
+    {
+        SSL_set_shutdown(ssl, SSL_RECEIVED_SHUTDOWN);
+        ssl_socket_close(socket, ssl);
+    }
+    return result;
+}
+
+int checkSSLClient(SSL *ssl, Log *log, int verify)
+{
+    const long verifyResult = SSL_get_verify_result(ssl);
+    if (verifyResult != X509_V_OK)
+    {
+        if (log)
+        {
+            log->onEvent("SSL client authentication failed: ");
+        }
+        return static_cast<int>(verifyResult);
+    }
+
+    char *subjName = 0;
+    X509 *xs = SSL_get_peer_certificate(ssl);
+    if (xs != 0)
+    {
+        subjName = X509_NAME_oneline(X509_get_subject_name(xs), 0, 0);
+        X509_free(xs);
+    }
+
+    int result = 0;
     if ((verify == SSL_CLIENT_VERIFY_REQUIRE) && subjName == 0)
     {
         if (log)
         {
             log->onEvent("No acceptable peer certificate available");
         }
-        SSL_set_shutdown(ssl, SSL_RECEIVED_SHUTDOWN);
-        ssl_socket_close(socket, ssl);
         result = 2;
     }
 
@@ -1863,7 +1866,6 @@ int acceptSSLConnection(socket_handle socket, SSL *ssl, Log *log, int verify)
     {
         free(subjName);
     }
-
     return result;
 }
 

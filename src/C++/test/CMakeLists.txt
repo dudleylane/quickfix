@@ -46,6 +46,7 @@ if (QUICKFIX_TESTS)
   ${PROJECT_SOURCE_DIR}/src/C++/test/UtcTimeStampTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/UtilityTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/UtilitySSLTestCase.cpp
+  ${PROJECT_SOURCE_DIR}/src/C++/test/SSLSocketAcceptorTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/SSLTransportTestCase.cpp)
 
   add_executable(ut ut.cpp ${ut_SOURCES})

@@ -132,14 +132,14 @@ int SSLSocketAcceptor::passPhraseHandleCB(char *buf, int bufsize, int verify, vo
 
 SSLSocketAcceptor::SSLSocketAcceptor(Application &application, MessageStoreFactory &factory,
                                      const SessionSettings &settings) EXCEPT(ConfigError)
-    : Acceptor(application, factory, settings), m_pServer(0), m_sslInit(false), m_verify(SSL_CLIENT_VERIFY_NOTSET),
-      m_ctx(0), m_revocationStore(0)
+    : Acceptor(application, factory, settings), m_pServer(0), m_lastHandshakeSweep(0), m_sslInit(false),
+      m_verify(SSL_CLIENT_VERIFY_NOTSET), m_ctx(0), m_revocationStore(0)
 {
 }
 
 SSLSocketAcceptor::SSLSocketAcceptor(Application &application, MessageStoreFactory &factory,
                                      const SessionSettings &settings, LogFactory &logFactory) EXCEPT(ConfigError)
-    : Acceptor(application, factory, settings, logFactory), m_pServer(0), m_sslInit(false),
+    : Acceptor(application, factory, settings, logFactory), m_pServer(0), m_lastHandshakeSweep(0), m_sslInit(false),
       m_verify(SSL_CLIENT_VERIFY_NOTSET), m_ctx(0), m_revocationStore(0)
 {
 }
@@ -149,6 +149,10 @@ SSLSocketAcceptor::~SSLSocketAcceptor()
     for (const SocketConnections::value_type &connection : m_connections)
     {
         delete connection.second;
+    }
+    for (const PendingHandshakes::value_type &pending : m_pendingHandshakes)
+    {
+        delete pending.second.connection;
     }
 
     // onStart() owns m_pServer on the blocking path and nulls it there, but the
@@ -259,6 +263,7 @@ void SSLSocketAcceptor::onStart()
 {
     while (!isStopped() && m_pServer && m_pServer->block(*this))
     {
+        expireHandshakes();
     }
 
     if (!m_pServer)
@@ -313,6 +318,7 @@ bool SSLSocketAcceptor::onPoll()
     }
 
     m_pServer->block(*this, true);
+    expireHandshakes();
     return true;
 }
 
@@ -341,34 +347,158 @@ void SSLSocketAcceptor::onConnect(SocketServer &server, socket_handle a, socket_
     SSL_set_verify_result(ssl, X509_V_OK);
 
     SSLSocketConnection *sconn = new SSLSocketConnection(s, ssl, sessions, &server.getMonitor());
-    // SSL accept
-    if (acceptSSLConnection(sconn->getSocket(), sconn->sslObject(), getLog(), m_verify) != 0)
-    {
-        std::stringstream stream;
-        stream << "Failed to accept SSL connection from " << socket_peername(s) << " on port " << port;
-        if (getLog())
-        {
-            getLog()->onEvent(stream.str());
-        }
 
-        server.getMonitor().drop(sconn->getSocket());
-        delete sconn;
-        return;
+    // The handshake is stepped by onData and onWrite as the socket becomes ready,
+    // like every other exchange on this thread, and expireHandshakes() bounds how
+    // long it may take.
+    sconn->setHandshakeStartTime(time(0));
+    m_pendingHandshakes[s] = PendingHandshake{sconn, port};
+}
+
+SSLSocketAcceptor::HandshakeStep SSLSocketAcceptor::stepHandshake(SSLSocketConnection *connection)
+{
+    SSL *ssl = connection->sslObject();
+    ERR_clear_error();
+    const int rc = SSL_accept(ssl);
+    if (rc > 0)
+    {
+        return checkSSLClient(ssl, getLog(), m_verify) == 0 ? HANDSHAKE_COMPLETE : HANDSHAKE_FAILED;
     }
 
-    m_connections[s] = sconn;
-
-    std::stringstream stream;
-    stream << "Accepted SSL connection from " << socket_peername(s) << " on port " << port;
+    const int err = SSL_get_error(ssl, rc);
+    if (err == SSL_ERROR_WANT_READ || (err == SSL_ERROR_SYSCALL && errno == EINTR))
+    {
+        return HANDSHAKE_IN_PROGRESS;
+    }
+    if (err == SSL_ERROR_WANT_WRITE)
+    {
+        connection->subscribeToSocketWriteAvailableEvents();
+        return HANDSHAKE_IN_PROGRESS;
+    }
 
     if (getLog())
     {
+        if (err == SSL_ERROR_ZERO_RETURN)
+        {
+            getLog()->onEvent("SSL handshake stopped: connection was closed");
+        }
+        else if (ERR_GET_REASON(ERR_peek_error()) == SSL_R_HTTP_REQUEST)
+        {
+            getLog()->onEvent("SSL handshake failed: HTTP spoken on HTTPS port");
+        }
+        else
+        {
+            getLog()->onEvent("SSL handshake failed");
+            for (unsigned long e = ERR_get_error(); e != 0; e = ERR_get_error())
+            {
+                const char *reason = ERR_reason_error_string(e);
+                getLog()->onEvent(std::string("SSL failure reason: ") + (reason ? reason : "unknown"));
+            }
+        }
+    }
+    return HANDSHAKE_FAILED;
+}
+
+bool SSLSocketAcceptor::advanceHandshake(SocketServer &server, PendingHandshakes::iterator pending)
+{
+    SSLSocketConnection *connection = pending->second.connection;
+    if (connection->getSecondsFromHandshakeStart(time(0)) > 10)
+    {
+        abandonHandshake(server, pending, "SSL handshake timed out");
+        return true;
+    }
+
+    switch (stepHandshake(connection))
+    {
+    case HANDSHAKE_IN_PROGRESS:
+        return true;
+    case HANDSHAKE_FAILED:
+        abandonHandshake(server, pending, "Failed to accept SSL connection");
+        return true;
+    case HANDSHAKE_COMPLETE:
+        break;
+    }
+
+    const socket_handle s = pending->first;
+    const int port = pending->second.port;
+    m_pendingHandshakes.erase(pending);
+    m_connections[s] = connection;
+
+    std::stringstream stream;
+    stream << "Accepted SSL connection from " << socket_peername(s) << " on port " << port;
+    if (getLog())
+    {
         getLog()->onEvent(stream.str());
+    }
+
+    // Anything the client sent behind its handshake may already sit in the SSL
+    // object's buffer, where poll() cannot see it.
+    if (SSL_pending(connection->sslObject()) > 0)
+    {
+        return connection->read(*this, server);
+    }
+    return true;
+}
+
+void SSLSocketAcceptor::abandonHandshake(SocketServer &server, PendingHandshakes::iterator pending,
+                                         const std::string &reason)
+{
+    const socket_handle s = pending->first;
+    SSLSocketConnection *connection = pending->second.connection;
+
+    std::stringstream stream;
+    stream << reason << " from " << socket_peername(s) << " on port " << pending->second.port;
+    if (getLog())
+    {
+        getLog()->onEvent(stream.str());
+    }
+
+    // A client refused after a completed handshake is told so.
+    SSL *ssl = connection->sslObject();
+    if (SSL_is_init_finished(ssl))
+    {
+        SSL_shutdown(ssl);
+    }
+
+    m_pendingHandshakes.erase(pending);
+    server.getMonitor().drop(s); // the monitor closes the socket, once
+    delete connection;           // BIO_NOCLOSE: frees the SSL object and nothing else
+}
+
+void SSLSocketAcceptor::expireHandshakes()
+{
+    if (m_pendingHandshakes.empty() || !m_pServer)
+    {
+        return;
+    }
+
+    const time_t now = time(0);
+    if (now == m_lastHandshakeSweep)
+    {
+        return;
+    }
+    m_lastHandshakeSweep = now;
+
+    for (PendingHandshakes::iterator i = m_pendingHandshakes.begin(); i != m_pendingHandshakes.end();)
+    {
+        PendingHandshakes::iterator pending = i++;
+        if (pending->second.connection->getSecondsFromHandshakeStart(now) > 10)
+        {
+            abandonHandshake(*m_pServer, pending, "SSL handshake timed out");
+        }
     }
 }
 
 void SSLSocketAcceptor::onWrite(SocketServer &server, socket_handle s)
 {
+    PendingHandshakes::iterator pending = m_pendingHandshakes.find(s);
+    if (pending != m_pendingHandshakes.end())
+    {
+        server.getMonitor().unsignal(s);
+        advanceHandshake(server, pending);
+        return;
+    }
+
     SocketConnections::iterator i = m_connections.find(s);
     if (i == m_connections.end())
     {
@@ -389,6 +519,12 @@ void SSLSocketAcceptor::onWrite(SocketServer &server, socket_handle s)
 
 bool SSLSocketAcceptor::onData(SocketServer &server, socket_handle s)
 {
+    PendingHandshakes::iterator pending = m_pendingHandshakes.find(s);
+    if (pending != m_pendingHandshakes.end())
+    {
+        return advanceHandshake(server, pending);
+    }
+
     SocketConnections::iterator i = m_connections.find(s);
     if (i == m_connections.end())
     {
@@ -407,6 +543,14 @@ bool SSLSocketAcceptor::onData(SocketServer &server, socket_handle s)
 
 void SSLSocketAcceptor::onDisconnect(SocketServer &, socket_handle s)
 {
+    PendingHandshakes::iterator pending = m_pendingHandshakes.find(s);
+    if (pending != m_pendingHandshakes.end())
+    {
+        delete pending->second.connection;
+        m_pendingHandshakes.erase(pending);
+        return;
+    }
+
     SocketConnections::iterator i = m_connections.find(s);
     if (i == m_connections.end())
     {

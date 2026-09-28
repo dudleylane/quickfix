@@ -157,6 +157,22 @@ private:
     typedef std::map<int, Sessions> PortToSessions;
     typedef std::map<socket_handle, SSLSocketConnection *> SocketConnections;
 
+    // A connection whose TLS handshake has not completed yet. The reactor steps
+    // it whenever its socket is ready, and it becomes a connection proper once
+    // the handshake completes and the client passes checkSSLClient().
+    struct PendingHandshake
+    {
+        SSLSocketConnection *connection;
+        int port;
+    };
+    typedef std::map<socket_handle, PendingHandshake> PendingHandshakes;
+    enum HandshakeStep
+    {
+        HANDSHAKE_IN_PROGRESS,
+        HANDSHAKE_FAILED,
+        HANDSHAKE_COMPLETE
+    };
+
     void onConfigure(const SessionSettings &) EXCEPT(ConfigError);
     void onInitialize(const SessionSettings &) EXCEPT(RuntimeError);
 
@@ -171,9 +187,16 @@ private:
     void onError(SocketServer &);
     void onTimeout(SocketServer &);
 
+    HandshakeStep stepHandshake(SSLSocketConnection *);
+    bool advanceHandshake(SocketServer &, PendingHandshakes::iterator);
+    void abandonHandshake(SocketServer &, PendingHandshakes::iterator, const std::string &reason);
+    void expireHandshakes();
+
     SocketServer *m_pServer;
     PortToSessions m_portToSessions;
     SocketConnections m_connections;
+    PendingHandshakes m_pendingHandshakes;
+    time_t m_lastHandshakeSweep;
 
     bool m_sslInit;
     int m_verify;

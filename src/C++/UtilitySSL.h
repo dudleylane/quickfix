@@ -258,6 +258,11 @@ X509_STORE *loadCRLInfo(SSL_CTX *ctx, const SessionSettings &settings, Log *log,
 
 int acceptSSLConnection(socket_handle socket, SSL *ssl, Log *log, int verify);
 
+/// Checks a client whose handshake has completed: 0 if it is acceptable, the
+/// X509 verification result if that failed, or 2 if a certificate is required
+/// and none was presented. Logs why, and shuts nothing down.
+int checkSSLClient(SSL *ssl, Log *log, int verify);
+
 /**
  * Check if a string is an IP address (IPv4 or IPv6).
  * IPv6 addresses in brackets [::1] are also detected.
