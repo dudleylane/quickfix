@@ -21,6 +21,7 @@
 
 #include "Application.h"
 #include "MessageCracker.h"
+#include "Mutex.h"
 #include "Session.h"
 #include "fix40/NewOrderSingle.h"
 #include "fix41/NewOrderSingle.h"
@@ -51,14 +52,17 @@ public:
 
         std::pair<FIX::ClOrdID, FIX::SessionID> pair = std::make_pair(clOrdID, sessionID);
 
-        if (possResend == true)
         {
-            if (m_orderIDs.find(pair) != m_orderIDs.end())
+            // m_orderIDs is shared across sessions, and the threaded transport
+            // calls this from a thread per connection, so guard it. sendToTarget
+            // runs outside the lock.
+            FIX::Locker locker(m_mutex);
+            if (possResend == true && m_orderIDs.find(pair) != m_orderIDs.end())
             {
                 return;
             }
+            m_orderIDs.insert(pair);
         }
-        m_orderIDs.insert(pair);
         FIX::Session::sendToTarget(echo, sessionID);
     }
 
@@ -138,10 +142,15 @@ public:
         process(message, sessionID);
     }
 
+    FIX::Mutex m_mutex;
     std::set<std::pair<FIX::ClOrdID, FIX::SessionID>> m_orderIDs;
 
 public:
-    void reset() { m_orderIDs.clear(); }
+    void reset()
+    {
+        FIX::Locker locker(m_mutex);
+        m_orderIDs.clear();
+    }
 };
 
 class Application : public FIX::Application

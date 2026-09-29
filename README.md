@@ -275,6 +275,38 @@ cmake --build build-asan -j$(nproc)
 build-asan/out/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path spec
 ```
 
+#### Exercising the concurrent paths
+
+`ut` under TSan barely drives what is concurrent in production — the reactor's
+`select()` loop, the per-connection threads of the `Threaded*` transports, and the
+session registry under `s_mutex`. Two runs cover those (this is issue #15):
+
+- The acceptance suite against a TSan build of `at`, in both transports
+  (`./runat.sh 54321` and `./runat.sh 54321 -t`, pointing `test/at` at the TSan
+  binary). It drives one connection at a time.
+- A concurrent-churn driver — many workers repeatedly connect, log on to the
+  configured sessions and close (cleanly, with a reset, or mid-message) — which is
+  what actually races connections against each other, the accept path and the
+  registry.
+
+As of this writing both are clean in both transports: the engine reported no data
+race under either. The one race the churn driver found was in the acceptance
+driver's own `MessageCracker` (a set shared across sessions), now guarded; the
+engine was clean.
+
+**Build the concurrent-path TSan run with the default allocator, not
+`ENABLE_TBB_ALLOCATOR`.** `tbb::scalable_allocator` keeps its own per-thread
+freelists, and TSan cannot see the synchronization in them, so under the threaded
+transport — where one connection's freed message memory is handed to another
+connection's thread — it reports races on recycled `FieldBase`/`std::string`
+blocks that are not races. Measured on this tree: the churn driver produced 31
+such reports under `ENABLE_TBB_ALLOCATOR=ON` and **zero** under the default
+allocator, same code. (The `ut` TSan recipe above keeps `ENABLE_TBB_ALLOCATOR=ON`
+because `ut` does not recycle memory across threads heavily enough to trip this,
+and it stays clean; the heavily threaded run needs the default allocator to be
+readable.) The run is slow — full acceptance twice under TSan — so it is a local
+gate for transport and concurrency changes, not a per-push CI step.
+
 ## License
 
 This fork is licensed under [AGPL-3.0](LICENSE). The original QuickFIX code is under the [QuickFIX Software License](https://www.quickfixengine.org/LICENSE).
