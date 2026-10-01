@@ -1,16 +1,21 @@
 
-Unreleased
-----------
+18.0.1
+------
+
+No exported class changed layout since 18.0.0, so the soname is still libquickfix.so.18 and a
+program built against 18.0.0 runs against 18.0.1 without a rebuild -- except one built against a
+TBB build, whose fix is in the headers it compiles (below). Code that compared QUICKFIX_VERSION as
+text, or matched its "-hardened" suffix, needs the change below.
 
 INCOMPATIBLE: QuickFIXVersion.h is generated from the version project() declares in the top-level
-CMakeLists.txt, so it reports 18.0.0 -- in 18.0.0 it still said 1.16.1-hardened, with major version
-1 -- and QUICKFIX_VERSION drops the "-hardened" suffix, which made it sort before 18.0.0 under
-semantic versioning. QUICKFIX_FORK still names the fork; code that matched the suffix should test
-that instead. The header now also reaches include/quickfix/, so a project that builds quickfix as
-part of its own tree (add_subdirectory, FetchContent) can include it.
+CMakeLists.txt, so it reports the release it ships with -- in 18.0.0 it still said 1.16.1-hardened,
+with major version 1 -- and QUICKFIX_VERSION drops the "-hardened" suffix, which semantic
+versioning sorts before the plain version. QUICKFIX_FORK still names the fork; code that matched
+the suffix should test that instead. The header now also reaches include/quickfix/, so a project
+that builds quickfix as part of its own tree (add_subdirectory, FetchContent) can include it.
 
-The Python extension module is versioned with the library, _quickfix.so.18.0.0 with soname
-_quickfix.so.18, instead of upstream's 16.0.1. Python imports _quickfix.so, which is unchanged.
+The Python extension module is versioned with the library, with soname _quickfix.so.18, instead of
+upstream's 16.0.1. Python imports _quickfix.so, which is unchanged.
 
 Installed headers record whether the library was built with ENABLE_TBB_ALLOCATOR, in a generated
 QuickFIXBuildConfig.h that Utility.h includes. A program compiled against an installed TBB build
@@ -31,11 +36,14 @@ LICENSE-QuickFIX restores upstream's QuickFIX Software License, Version 1.0, ver
 file headers name it as "the file LICENSE", which in this fork holds the AGPL-3.0. README now
 carries the acknowledgment that license's clause 3 asks end-user documentation to include.
 
+Security problems can be reported privately, through the repository's private vulnerability
+reporting; SECURITY.md says how.
+
 18.0.0
 ------
 
 First tagged release of the fork. This section was headed 1.16.1-hardened while it accumulated;
-18.0.0's QuickFIXVersion.h still reports that string (see Unreleased).
+18.0.0's QuickFIXVersion.h still reports that string (see 18.0.1).
 
 The shared library's soname is libquickfix.so.18. Upstream's is libquickfix.so.17, and this fork
 changed the layout of exported classes (FieldBase, Message; see below), so a binary built against
