@@ -1,6 +1,41 @@
 
-1.16.1-hardened
----------------
+Unreleased
+----------
+
+INCOMPATIBLE: QuickFIXVersion.h is generated from the version project() declares in the top-level
+CMakeLists.txt, so it reports 18.0.0 -- in 18.0.0 it still said 1.16.1-hardened, with major version
+1 -- and QUICKFIX_VERSION drops the "-hardened" suffix, which made it sort before 18.0.0 under
+semantic versioning. QUICKFIX_FORK still names the fork; code that matched the suffix should test
+that instead. The header now also reaches include/quickfix/, so a project that builds quickfix as
+part of its own tree (add_subdirectory, FetchContent) can include it.
+
+The Python extension module is versioned with the library, _quickfix.so.18.0.0 with soname
+_quickfix.so.18, instead of upstream's 16.0.1. Python imports _quickfix.so, which is unchanged.
+
+18.0.0
+------
+
+First tagged release of the fork. This section was headed 1.16.1-hardened while it accumulated;
+18.0.0's QuickFIXVersion.h still reports that string (see Unreleased).
+
+The shared library's soname is libquickfix.so.18. Upstream's is libquickfix.so.17, and this fork
+changed the layout of exported classes (FieldBase, Message; see below), so a binary built against
+upstream must not load it. From this release on, a layout change to an exported class bumps the
+major version again.
+
+Fixes two remotely triggerable denial-of-service issues in the single-threaded reactor acceptors,
+both now published. GHSA-ph6x-vg87-665p (medium): SSLSocketAcceptor completed each TLS handshake in
+the reactor's only thread, so a client that never sent a ClientHello stalled every session for
+about 10 s; the reactor now steps the handshake as the socket becomes ready, with a deadline.
+GHSA-4jw9-9f3x-55wx (high): SocketAcceptor and SSLSocketAcceptor read a connection's first message
+in the reactor thread, so a slowly sent first message stalled every session; the first message is
+now read incrementally, with a setup deadline. The Threaded* transports were not affected.
+
+Upgrading from an untagged build of master: builds since 7e351412 (2026-09-26) already produced
+libquickfix.so.18.0.0, but exported classes changed layout after that without a soname change --
+among them SocketAcceptor and SSLSocketAcceptor -- and builds from before 2026-09-28 lack the fixes
+above although they report 18.0.0. Rebuild your application against this release's headers; don't
+replace only the library.
 
 INCOMPATIBLE: FIXnn::Message::getHeader() and getTrailer() now return FIX::Header& and
 FIX::Trailer& rather than the per-version subclass. The previous accessors downcast a FIX::Header
