@@ -18,6 +18,9 @@ Thank you for your interest in contributing to QuickFIX! This document provides 
 
 ### Reporting Bugs
 
+Security vulnerabilities don't go in issues: report them privately, as [SECURITY.md](SECURITY.md)
+describes.
+
 Before creating a bug report:
 1. Check the [existing issues](https://github.com/dudleylane/quickfix/issues) to avoid duplicates
 2. Collect relevant information about your environment

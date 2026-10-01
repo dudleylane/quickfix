@@ -341,4 +341,4 @@ This is a fork of [quickfix/quickfix](https://github.com/quickfix/quickfix). Con
 
 ## Issues
 
-Report bugs and request features on [GitHub Issues](https://github.com/dudleylane/quickfix/issues).
+Report bugs and request features on [GitHub Issues](https://github.com/dudleylane/quickfix/issues). Report security vulnerabilities privately instead, as [SECURITY.md](SECURITY.md) describes.
