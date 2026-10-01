@@ -46,6 +46,7 @@ if (QUICKFIX_TESTS)
   ${PROJECT_SOURCE_DIR}/src/C++/test/UtcTimeStampTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/UtilityTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/UtilitySSLTestCase.cpp
+  ${PROJECT_SOURCE_DIR}/src/C++/test/VersionTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/SSLSocketAcceptorTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/SSLTransportTestCase.cpp)
 
@@ -60,6 +61,13 @@ if (QUICKFIX_TESTS)
     ${PROJECT_SOURCE_DIR})
     
   target_link_libraries(ut ${PROJECT_NAME})
+
+  # VersionTestCase checks the generated quickfix/QuickFIXVersion.h against the version project()
+  # declares, passed here from the same project() call.
+  target_compile_definitions(ut PRIVATE
+    QUICKFIX_EXPECTED_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+    QUICKFIX_EXPECTED_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+    QUICKFIX_EXPECTED_VERSION_PATCH=${PROJECT_VERSION_PATCH})
   
   if (NOT WIN32)
   ADD_CUSTOM_TARGET(ut_target ALL

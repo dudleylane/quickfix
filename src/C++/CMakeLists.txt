@@ -1,14 +1,5 @@
 add_subdirectory(test)
 
-# The major version is the soname. It is 18 rather than upstream's 17 because
-# the fork has changed the layout of exported classes (FieldBase, Message), so
-# a binary built against upstream 17 must not load this library. Bump it again
-# for the first such change after a release is tagged.
-set(quickfix_VERSION_MAJOR 18)
-set(quickfix_VERSION_MINOR 0)
-set(quickfix_VERSION_PATCH 0)
-set(quickfix_VERSION ${quickfix_VERSION_MAJOR}.${quickfix_VERSION_MINOR}.${quickfix_VERSION_PATCH} )
-
 set(quickfix_SOURCES
   Acceptor.cpp
   DataDictionary.cpp
@@ -105,6 +96,12 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 target_include_directories(${PROJECT_NAME} INTERFACE ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/src/C++)
 
+# The version, and its major as the soname, come from project() in the top-level CMakeLists.txt,
+# which defines quickfix_VERSION and quickfix_VERSION_MAJOR. Don't set them here: a second copy
+# shadows project() and keeps the old soname without a warning. The soname is 18 rather than
+# upstream's 17 because the fork changed the layout of exported classes (FieldBase, Message), so
+# a binary built against upstream 17 must not load this library. Since v18.0.0, a layout change
+# to an exported class bumps the major in project().
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${quickfix_VERSION} SOVERSION ${quickfix_VERSION_MAJOR} )
 
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)

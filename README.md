@@ -104,7 +104,7 @@ remains in git history.
 - **TBB allocator**: New `ENABLE_TBB_ALLOCATOR` CMake option with automatic `tbbmalloc` link dependency
 - **HAVE_ODBC**: Moved from `add_definitions()` to `cmake_config.h.in` for consistency with MySQL/PostgreSQL
 - **Removed**: Dead AIX/Solaris platform code, duplicate `configure_file` call
-- **Soname `libquickfix.so.18`**: upstream uses 17, and the fork has changed the layout of exported classes (`FieldBase`, `Message`), so a binary built against upstream must not load this library. The fork has never tagged a release, so 18 covers the untagged series; after the first tag, any layout change to an exported class bumps `quickfix_VERSION_MAJOR` again
+- **Soname `libquickfix.so.18`**: upstream uses 17, and the fork has changed the layout of exported classes (`FieldBase`, `Message`), so a binary built against upstream must not load this library. 18 also covered the untagged series before the first release, v18.0.0; from v18.0.0 on, any layout change to an exported class bumps the major version in `project()` (top-level `CMakeLists.txt`), the one place the version is set — the soname, `QuickFIXVersion.h` and the Python module all take it from there
 
 ## Supported Platforms
 
