@@ -1,0 +1,73 @@
+name: Release tag check
+
+# A release tag must name the version project() declares in CMakeLists.txt -- the one the soname,
+# QuickFIXVersion.h, the Python module and the CMake and pkg-config files all derive from -- and NEWS
+# must have a section for it. No other workflow builds or checks a tag (#44). This runs once the tag
+# exists, however it was made: git push, gh release create, or the web UI. A failure means delete the
+# tag, fix the commit, and tag again.
+#
+# To exercise it without creating a tag:
+#   gh workflow run release_tag_check.yml --ref master -f tag=v18.0.0
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name to check against the selected ref, e.g. v18.0.1'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Tag matches project() and NEWS
+    runs-on: [self-hosted, Linux, X64, quickfix-dev]
+    env:
+      PATH: /opt/rh/gcc-toolset-15/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      LD_LIBRARY_PATH: /opt/rh/gcc-toolset-15/root/usr/lib64
+      CC: /opt/rh/gcc-toolset-15/root/usr/bin/gcc
+      CXX: /opt/rh/gcc-toolset-15/root/usr/bin/g++
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Compare the tag with project() and NEWS
+        # Configure only: the version is read from files CMake generates from project() -- the
+        # installed version header and quickfix.pc, what consumers compare -- not by parsing
+        # CMakeLists.txt. -DHAVE_SSL=ON leaves the tracked src/C++/config.h unchanged.
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$TAG' is not vMAJOR.MINOR.PATCH, which is all project(VERSION) can express"
+            exit 1
+          fi
+          version=${TAG#v}
+          if ! cmake -S . -B build-tag-check -G Ninja -DHAVE_SSL=ON > tag-check-configure.log 2>&1; then
+            cat tag-check-configure.log
+            echo "::error::Configure failed, so the version project() declares could not be read"
+            exit 1
+          fi
+          header=$(sed -n 's/^#define QUICKFIX_VERSION "\(.*\)"$/\1/p' include/quickfix/QuickFIXVersion.h 2>/dev/null)
+          pc=$(sed -n 's/^Version: //p' build-tag-check/quickfix.pc 2>/dev/null)
+          failed=0
+          if [ "$header" != "$version" ]; then
+            echo "::error::include/quickfix/QuickFIXVersion.h says '${header:-nothing}', the tag says $version: set project(... VERSION $version) in CMakeLists.txt"
+            failed=1
+          fi
+          if [ "$pc" != "$version" ]; then
+            echo "::error::quickfix.pc says '${pc:-nothing}', the tag says $version"
+            failed=1
+          fi
+          if ! awk -v v="$version" 'prev == v && /^-+$/ { found = 1 } { prev = $0 } END { exit !found }' NEWS; then
+            echo "::error::NEWS has no '$version' section heading"
+            failed=1
+          fi
+          if [ "$failed" -ne 0 ]; then
+            echo "Delete the tag, fix the commit, and tag again."
+            exit 1
+          fi
+          echo "$TAG matches project() and NEWS has its section."
