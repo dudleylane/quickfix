@@ -158,15 +158,18 @@ cmake --build build -j$(nproc)
 ## Testing
 
 ```bash
-# Unit tests (Catch2)
-./lib/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path spec
+# All three run from test/, through the ut, at and pt links the build creates there.
+cd test
 
-# Acceptance tests (Ruby)
-cd test && bash setup.sh <port> && ../lib/at -f cfg/at.cfg &
-ruby -I. Runner.rb 127.0.0.1 <port> definitions/server/fix4*/*.def
+# Unit tests (Catch2)
+./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
+
+# Acceptance tests (Ruby): regenerates cfg/at.cfg, starts at and runs every definition.
+# runat.sh begins with `killall ut at`, so don't run it beside another ut or at.
+./runat.sh <port>
 
 # Performance tests (pooled vs unpooled benchmarks included)
-./lib/pt -p <port> -c <count>
+./pt -p <port> -c <count>
 ```
 
 ### Message pooling
