@@ -38,6 +38,13 @@
 #include "Allocator.h"
 #endif
 
+// Build options that change inline code, generated per CMake build tree from QuickFIXBuildConfig.h.in
+// and installed beside this header. A compile of these sources outside CMake, such as CI's syntax
+// checks, has no build tree and keeps the defaults below.
+#if __has_include("QuickFIXBuildConfig.h")
+#include "QuickFIXBuildConfig.h"
+#endif
+
 #include "Except.h"
 
 #ifdef ENABLE_DEBUG_ALLOCATOR

@@ -62,12 +62,14 @@ if (QUICKFIX_TESTS)
     
   target_link_libraries(ut ${PROJECT_NAME})
 
-  # VersionTestCase checks the generated quickfix/QuickFIXVersion.h against the version project()
-  # declares, passed here from the same project() call.
+  # Expected values for the generated headers, from the same CMake settings that generate them:
+  # VersionTestCase checks quickfix/QuickFIXVersion.h against project(), and UtilityTests checks
+  # QuickFIXBuildConfig.h against ENABLE_TBB_ALLOCATOR.
   target_compile_definitions(ut PRIVATE
     QUICKFIX_EXPECTED_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
     QUICKFIX_EXPECTED_VERSION_MINOR=${PROJECT_VERSION_MINOR}
-    QUICKFIX_EXPECTED_VERSION_PATCH=${PROJECT_VERSION_PATCH})
+    QUICKFIX_EXPECTED_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+    QUICKFIX_EXPECTED_TBB_ALLOCATOR=$<BOOL:${ENABLE_TBB_ALLOCATOR}>)
   
   if (NOT WIN32)
   ADD_CUSTOM_TARGET(ut_target ALL

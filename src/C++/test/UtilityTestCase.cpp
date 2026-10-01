@@ -19,9 +19,13 @@
 
 #include "config.h"
 
+#include <FieldMap.h>
 #include <Utility.h>
 
 #include "catch_amalgamated.hpp"
+
+#include <memory>
+#include <type_traits>
 
 using namespace FIX;
 
@@ -233,5 +237,15 @@ TEST_CASE("UtilityTests")
     {
         std::string unknownFile = "unknownfile.txt";
         CHECK(!file_exists(unknownFile.c_str()));
+    }
+
+    SECTION("allocatorMatchesBuild")
+    {
+        // QuickFIXBuildConfig.h, which Utility.h includes, records whether the library was built with the
+        // TBB allocator, and FieldMap's storage must use the same allocator as the library, or inline
+        // code frees with one what the library allocated with the other.
+        constexpr bool usesStdAllocator = std::is_same_v<FieldMap::Fields::allocator_type, std::allocator<FieldBase>>;
+        CHECK(QUICKFIX_TBB_ALLOCATOR == QUICKFIX_EXPECTED_TBB_ALLOCATOR);
+        CHECK(usesStdAllocator == !QUICKFIX_EXPECTED_TBB_ALLOCATOR);
     }
 }

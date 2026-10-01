@@ -12,6 +12,13 @@ part of its own tree (add_subdirectory, FetchContent) can include it.
 The Python extension module is versioned with the library, _quickfix.so.18.0.0 with soname
 _quickfix.so.18, instead of upstream's 16.0.1. Python imports _quickfix.so, which is unchanged.
 
+Installed headers record whether the library was built with ENABLE_TBB_ALLOCATOR, in a generated
+QuickFIXBuildConfig.h that Utility.h includes. A program compiled against an installed TBB build
+used to free, in inline FieldMap code, with std::allocator what the library had allocated with
+tbb::scalable_allocator, and corrupted the heap; it now gets the library's allocator without
+defining anything. Defining ENABLE_TBB_ALLOCATOR against a library built without it is a compile
+error.
+
 18.0.0
 ------
 

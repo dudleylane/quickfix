@@ -86,6 +86,16 @@ if(ENABLE_TBB_ALLOCATOR)
   message("-- Building with TBB scalable allocator")
 endif()
 
+# QuickFIXBuildConfig.h records, for consumers, the build options that change code they compile
+# inline -- today ENABLE_TBB_ALLOCATOR, which selects the allocator behind FieldMap::Fields and the
+# socket send queues. A compile definition reaches only targets in this build; without the header,
+# installed headers are identical to a default build's. It is generated per build tree, since two
+# trees sharing this source tree can differ, and installed beside Utility.h, which includes it.
+set(QUICKFIX_TBB_ALLOCATOR ${ENABLE_TBB_ALLOCATOR})
+configure_file(QuickFIXBuildConfig.h.in ${PROJECT_BINARY_DIR}/generated/QuickFIXBuildConfig.h @ONLY)
+target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/generated>)
+install(FILES ${PROJECT_BINARY_DIR}/generated/QuickFIXBuildConfig.h DESTINATION include/quickfix)
+
 include(CheckFunctionExists)
 check_symbol_exists(ftime "sys/timeb.h" HAVE_FTIME)
 if(HAVE_FTIME)

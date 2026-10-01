@@ -7,7 +7,7 @@ release
 *~
 *.lib
 *.lo
-*.in
+Makefile.in
 Makefile
 .deps
 *.png

@@ -155,6 +155,9 @@ cmake -S . -B build \
 cmake --build build -j$(nproc)
 ```
 
+Programs built against the installed headers get the matching allocator from the generated
+`QuickFIXBuildConfig.h`; don't define `ENABLE_TBB_ALLOCATOR` yourself.
+
 ## Testing
 
 ```bash
