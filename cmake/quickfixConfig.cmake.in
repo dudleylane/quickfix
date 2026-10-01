@@ -1,0 +1,17 @@
+@PACKAGE_INIT@
+
+# find_package(quickfix) for an installed quickfix: imports the quickfix::quickfix target. The
+# dependencies found here are the imported targets its link interface names, so a consumer does not
+# have to find them itself; the options are the ones this quickfix was built with.
+include(CMakeFindDependencyMacro)
+set(quickfix_ENABLE_TBB_ALLOCATOR @ENABLE_TBB_ALLOCATOR@)
+set(quickfix_HAVE_ODBC @HAVE_ODBC@)
+if(quickfix_ENABLE_TBB_ALLOCATOR)
+  find_dependency(TBB COMPONENTS tbbmalloc)
+endif()
+if(quickfix_HAVE_ODBC)
+  find_dependency(ODBC)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/quickfixTargets.cmake")
+check_required_components(quickfix)

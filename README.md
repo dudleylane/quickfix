@@ -158,6 +158,22 @@ cmake --build build -j$(nproc)
 Programs built against the installed headers get the matching allocator from the generated
 `QuickFIXBuildConfig.h`; don't define `ENABLE_TBB_ALLOCATOR` yourself.
 
+### Using the installed library
+
+`cmake --install` ships a CMake package and a pkg-config file. The headers need C++23.
+
+```cmake
+find_package(quickfix 18 CONFIG REQUIRED)   # any 18.x: the major version is the soname
+target_link_libraries(app PRIVATE quickfix::quickfix)
+```
+
+```bash
+g++ -std=c++23 app.cpp $(pkg-config --cflags --libs quickfix)
+```
+
+A project that adds this tree with `add_subdirectory` or `FetchContent` links `quickfix::quickfix`
+too.
+
 ## Testing
 
 ```bash

@@ -79,6 +79,10 @@ else()
   target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES} ${MYSQL_CLIENT_LIBS} ${PostgreSQL_LIBRARIES} ${ODBC_LIBRARIES} pthread)
 endif()
 
+# The name an installed consumer gets from find_package(quickfix), for projects that add this tree
+# with add_subdirectory or FetchContent instead.
+add_library(quickfix::quickfix ALIAS ${PROJECT_NAME})
+
 if(ENABLE_TBB_ALLOCATOR)
   find_package(TBB REQUIRED COMPONENTS tbbmalloc)
   target_compile_definitions(${PROJECT_NAME} PUBLIC ENABLE_TBB_ALLOCATOR)
@@ -103,7 +107,7 @@ if(HAVE_FTIME)
 endif()
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
-target_include_directories(${PROJECT_NAME} INTERFACE ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/src/C++)
 
 # The version, and its major as the soname, come from project() in the top-level CMakeLists.txt,
@@ -114,7 +118,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR} ${PROJE
 # to an exported class bumps the major in project().
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${quickfix_VERSION} SOVERSION ${quickfix_VERSION_MAJOR} )
 
-install(TARGETS ${PROJECT_NAME} DESTINATION lib)
+install(TARGETS ${PROJECT_NAME} EXPORT quickfixTargets DESTINATION lib)
 
 get_target_property(debug_postfix ${PROJECT_NAME} DEBUG_POSTFIX)
 if(${debug_postfix} STREQUAL debug_postfix-NOTFOUND)
@@ -134,3 +138,37 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/C++/ DESTINATION include/quickfix
         FILES_MATCHING PATTERN "*.h"
         PATTERN double-conversion EXCLUDE
         PATTERN test EXCLUDE)
+
+# Discovery for installed consumers: a CMake package, find_package(quickfix 18) -> quickfix::quickfix,
+# and a pkg-config file. Any 18.x satisfies a request for 18, since the major version is the soname.
+# The package config finds the imported targets the exported link interface names (TBB, ODBC).
+include(CMakePackageConfigHelpers)
+install(EXPORT quickfixTargets NAMESPACE quickfix:: DESTINATION lib/cmake/quickfix)
+configure_package_config_file(${PROJECT_SOURCE_DIR}/cmake/quickfixConfig.cmake.in
+  ${PROJECT_BINARY_DIR}/quickfixConfig.cmake INSTALL_DESTINATION lib/cmake/quickfix)
+write_basic_package_version_file(${PROJECT_BINARY_DIR}/quickfixConfigVersion.cmake
+  VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
+install(FILES ${PROJECT_BINARY_DIR}/quickfixConfig.cmake ${PROJECT_BINARY_DIR}/quickfixConfigVersion.cmake
+  DESTINATION lib/cmake/quickfix)
+
+# The pkg-config file's Libs.private is the library's own link dependencies, which a static link of it
+# needs, as -l flags. TBB goes in Libs instead: a consumer compiled against a TBB build calls
+# tbb::scalable_allocator from inline code (QuickFIXBuildConfig.h), so it links tbbmalloc itself.
+set(quickfix_pc_link_items ${OPENSSL_LIBRARIES} ${MYSQL_CLIENT_LIBS} ${PostgreSQL_LIBRARIES})
+if(HAVE_ODBC)
+  get_target_property(quickfix_odbc_location ODBC::ODBC IMPORTED_LOCATION)
+  list(APPEND quickfix_pc_link_items ${quickfix_odbc_location})
+endif()
+set(QUICKFIX_PC_LIBS_PRIVATE "")
+foreach(item IN LISTS quickfix_pc_link_items)
+  get_filename_component(name "${item}" NAME_WE)
+  string(REGEX REPLACE "^lib" "" name "${name}")
+  string(APPEND QUICKFIX_PC_LIBS_PRIVATE " -l${name}")
+endforeach()
+string(APPEND QUICKFIX_PC_LIBS_PRIVATE " -lpthread")
+set(QUICKFIX_PC_LIBS "")
+if(ENABLE_TBB_ALLOCATOR)
+  set(QUICKFIX_PC_LIBS " -ltbbmalloc")
+endif()
+configure_file(${PROJECT_SOURCE_DIR}/quickfix.pc.in ${PROJECT_BINARY_DIR}/quickfix.pc @ONLY)
+install(FILES ${PROJECT_BINARY_DIR}/quickfix.pc DESTINATION lib/pkgconfig)

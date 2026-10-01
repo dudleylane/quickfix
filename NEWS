@@ -19,6 +19,14 @@ tbb::scalable_allocator, and corrupted the heap; it now gets the library's alloc
 defining anything. Defining ENABLE_TBB_ALLOCATOR against a library built without it is a compile
 error.
 
+cmake --install ships a CMake package and a pkg-config file. find_package(quickfix 18 CONFIG)
+imports the quickfix::quickfix target, with C++23 and the library's link dependencies attached, and
+accepts any 18.x, since the major version is the soname; pkg-config --cflags --libs quickfix gives
+the same for other builds, and finds its prefix from its own location, so it stays right after
+cmake --install --prefix. An in-tree quickfix::quickfix alias serves add_subdirectory and
+FetchContent. quickfix.pc.in, an autotools template nothing configured, is now the CMake template
+for that file.
+
 18.0.0
 ------
 
