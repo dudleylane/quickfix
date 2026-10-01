@@ -331,7 +331,9 @@ gate for transport and concurrency changes, not a per-push CI step.
 
 ## License
 
-This fork is licensed under [AGPL-3.0](LICENSE). The original QuickFIX code is under the [QuickFIX Software License](https://www.quickfixengine.org/LICENSE).
+This fork is licensed under [AGPL-3.0](LICENSE). The original QuickFIX code remains under the QuickFIX Software License, Version 1.0, in [LICENSE-QuickFIX](LICENSE-QuickFIX) — upstream's file headers, which say that license appears "in the file LICENSE", refer to that text.
+
+This product includes software developed by quickfixengine.org (http://www.quickfixengine.org/).
 
 ## Upstream
 
