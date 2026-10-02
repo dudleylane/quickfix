@@ -45,10 +45,11 @@ reporting; SECURITY.md says how.
 First tagged release of the fork. This section was headed 1.16.1-hardened while it accumulated;
 18.0.0's QuickFIXVersion.h still reports that string (see 18.0.1).
 
-The shared library's soname is libquickfix.so.18. Upstream's is libquickfix.so.17, and this fork
-changed the layout of exported classes (FieldBase, Message; see below), so a binary built against
-upstream must not load it. From this release on, a layout change to an exported class bumps the
-major version again.
+The shared library's soname is libquickfix.so.18. Upstream's CMake build uses libquickfix.so.17,
+and this fork changed the layout of exported classes (FieldBase, Message; see below), so a binary
+built against upstream must not load it. Upstream's autotools build produces libquickfix.so.18 too,
+so where both are installed the soname does not keep them apart (#51). From this release on, a
+layout change to an exported class bumps the major version again.
 
 Fixes two remotely triggerable denial-of-service issues in the single-threaded reactor acceptors,
 both now published. GHSA-ph6x-vg87-665p (medium): SSLSocketAcceptor completed each TLS handshake in
