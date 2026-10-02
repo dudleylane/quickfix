@@ -337,7 +337,7 @@ This product includes software developed by quickfixengine.org (http://www.quick
 
 ## Upstream
 
-This is a fork of [quickfix/quickfix](https://github.com/quickfix/quickfix). Contributions that are not fork-specific should be submitted upstream.
+This is a fork of [quickfix/quickfix](https://github.com/quickfix/quickfix). It no longer merges from upstream; fixes from there are ported by hand when they are wanted. Send contributions here, fork-specific or not: a change submitted upstream does not reach this fork.
 
 ## Issues
 

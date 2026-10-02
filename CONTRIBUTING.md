@@ -86,9 +86,10 @@ We actively welcome pull requests!
    git push origin feature/your-feature-name
    ```
 
-7. **Open a PR**: Target `dudleylane/quickfix:master`. Changes that are not specific to this
-   fork's hardening work belong upstream at
-   [`quickfix/quickfix`](https://github.com/quickfix/quickfix) instead.
+7. **Open a PR**: Target `dudleylane/quickfix:master`, whether or not the change is specific to
+   this fork's hardening work. The fork no longer merges from
+   [`quickfix/quickfix`](https://github.com/quickfix/quickfix), so a change sent there does not
+   reach it.
 
 #### Pull Request Guidelines
 
