@@ -111,12 +111,14 @@ target_include_directories(${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${PROJECT
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/src/C++)
 
 # The version, and its major as the soname, come from project() in the top-level CMakeLists.txt,
-# which defines quickfix_VERSION and quickfix_VERSION_MAJOR. Don't set them here: a second copy
-# shadows project() and keeps the old soname without a warning. The soname is 18 rather than
-# upstream's 17 because the fork changed the layout of exported classes (FieldBase, Message), so
-# a binary built against upstream 17 must not load this library. Since v18.0.0, a layout change
-# to an exported class bumps the major in project().
-set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${quickfix_VERSION} SOVERSION ${quickfix_VERSION_MAJOR} )
+# read as PROJECT_VERSION*: the variables QuickFIXVersion.h, quickfix.pc, the package config and
+# VersionTestCase read too (#64). project() also defines quickfix_VERSION*, but a set() of those in
+# a subdirectory shadows them without a warning, so nothing reads them. The soname is 18 rather
+# than upstream's 17 because the fork changed the layout of exported classes (FieldBase, Message),
+# so a binary built against upstream 17 must not load this library. Since v18.0.0, a layout change
+# to an exported class bumps the major in project(). release_tag_check.yml compares the built
+# library's soname with the release tag.
+set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} )
 
 install(TARGETS ${PROJECT_NAME} EXPORT quickfixTargets DESTINATION lib)
 

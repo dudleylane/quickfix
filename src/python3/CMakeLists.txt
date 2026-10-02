@@ -16,9 +16,10 @@ if (HAVE_SSL)
   target_link_libraries(${quickfix_python_lib_name} ${PROJECT_NAME} ${OPENSSL_LIBRARIES})
 endif()
 
-# The module takes the library's version from project() in the top-level CMakeLists.txt, so its
-# soname names the ABI it was built against.
-set_target_properties(${quickfix_python_lib_name} PROPERTIES VERSION ${quickfix_VERSION} SOVERSION ${quickfix_VERSION_MAJOR} PREFIX "")
+# The module takes the library's version from project() in the top-level CMakeLists.txt, read as
+# PROJECT_VERSION* like the library's (see src/C++/CMakeLists.txt), so its soname names the ABI it
+# was built against.
+set_target_properties(${quickfix_python_lib_name} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} PREFIX "")
 
 install(TARGETS ${quickfix_python_lib_name} DESTINATION lib/python3)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/python/ DESTINATION lib/python3

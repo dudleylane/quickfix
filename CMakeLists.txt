@@ -121,9 +121,10 @@ endif()
 configure_file(cmake_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/C++/config.h @ONLY)
 configure_file(cmake_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/quickfix/config.h @ONLY)
 
-# QuickFIXVersion.h is generated from project() above, so it cannot drift from the soname. It exists
-# only in include/quickfix/, the quickfix target's INTERFACE include directory, which the
-# install(DIRECTORY src/C++/) rule does not cover, so it is installed by name.
+# QuickFIXVersion.h is generated from project() above, from the same PROJECT_VERSION* variables the
+# soname is set from, so it cannot drift from the soname. It exists only in include/quickfix/, the
+# quickfix target's INTERFACE include directory, which the install(DIRECTORY src/C++/) rule does
+# not cover, so it is installed by name.
 configure_file(src/C++/QuickFIXVersion.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/quickfix/QuickFIXVersion.h @ONLY)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/quickfix/QuickFIXVersion.h DESTINATION include/quickfix)
 

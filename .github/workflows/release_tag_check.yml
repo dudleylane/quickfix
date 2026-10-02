@@ -1,13 +1,14 @@
 name: Release tag check
 
 # A release tag must name the version project() declares in CMakeLists.txt -- the one the soname,
-# QuickFIXVersion.h, the Python module and the CMake and pkg-config files all derive from -- and NEWS
-# must have a section for it. No other workflow builds or checks a tag (#44). This runs once the tag
-# exists, however it was made: git push, gh release create, or the web UI. A failure means delete the
-# tag, fix the commit, and tag again.
+# QuickFIXVersion.h, the Python module and the CMake and pkg-config files all derive from -- the
+# built library must carry the matching soname, and NEWS must have a section for it. No other
+# workflow builds or checks a tag (#44). This runs once the tag exists, however it was made: git
+# push, gh release create, or the web UI. A failure means delete the tag, fix the commit, and tag
+# again.
 #
-# To exercise it without creating a tag:
-#   gh workflow run release_tag_check.yml --ref master -f tag=v18.0.0
+# To exercise it without creating a tag, name the version project() declares on that ref:
+#   gh workflow run release_tag_check.yml --ref master -f tag=v<project() version>
 
 on:
   push:
@@ -23,7 +24,7 @@ permissions:
 
 jobs:
   check:
-    name: Tag matches project() and NEWS
+    name: Tag matches project(), the built soname and NEWS
     runs-on: [self-hosted, Linux, X64, quickfix-dev]
     env:
       PATH: /opt/rh/gcc-toolset-15/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -34,10 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Compare the tag with project() and NEWS
-        # Configure only: the version is read from files CMake generates from project() -- the
-        # installed version header and quickfix.pc, what consumers compare -- not by parsing
-        # CMakeLists.txt. -DHAVE_SSL=ON leaves the tracked src/C++/config.h unchanged.
+      - name: Compare the tag with project(), the built soname and NEWS
+        # The version is read from files CMake generates from project() -- the installed version
+        # header and quickfix.pc, what consumers compare -- not by parsing CMakeLists.txt, and the
+        # soname from the library itself, built alone into build-tag-check/out so lib/ is left
+        # alone (#64). -DHAVE_SSL=ON leaves the tracked src/C++/config.h unchanged.
         shell: bash
         run: |
           set -uo pipefail
@@ -46,13 +48,22 @@ jobs:
             exit 1
           fi
           version=${TAG#v}
-          if ! cmake -S . -B build-tag-check -G Ninja -DHAVE_SSL=ON > tag-check-configure.log 2>&1; then
+          major=${version%%.*}
+          rm -rf build-tag-check
+          if ! cmake -S . -B build-tag-check -G Ninja -DHAVE_SSL=ON \
+              -DQUICKFIX_LIB_OUTPUT_DIR="$PWD/build-tag-check/out" > tag-check-configure.log 2>&1; then
             cat tag-check-configure.log
             echo "::error::Configure failed, so the version project() declares could not be read"
             exit 1
           fi
+          if ! cmake --build build-tag-check --target quickfix -j"$(nproc)" > tag-check-build.log 2>&1; then
+            tail -n 50 tag-check-build.log
+            echo "::error::Building the library failed, so its soname could not be read"
+            exit 1
+          fi
           header=$(sed -n 's/^#define QUICKFIX_VERSION "\(.*\)"$/\1/p' include/quickfix/QuickFIXVersion.h 2>/dev/null)
           pc=$(sed -n 's/^Version: //p' build-tag-check/quickfix.pc 2>/dev/null)
+          soname=$(readelf -d "build-tag-check/out/libquickfix.so.$version" 2>/dev/null | sed -n 's/.*Library soname: \[\(.*\)\]$/\1/p')
           failed=0
           if [ "$header" != "$version" ]; then
             echo "::error::include/quickfix/QuickFIXVersion.h says '${header:-nothing}', the tag says $version: set project(... VERSION $version) in CMakeLists.txt"
@@ -60,6 +71,11 @@ jobs:
           fi
           if [ "$pc" != "$version" ]; then
             echo "::error::quickfix.pc says '${pc:-nothing}', the tag says $version"
+            failed=1
+          fi
+          if [ "$soname" != "libquickfix.so.$major" ]; then
+            built=$(find build-tag-check/out -maxdepth 1 -type f -name 'libquickfix.so.*' -printf '%f\n' 2>/dev/null | paste -sd ' ')
+            echo "::error::The tag needs libquickfix.so.$version with soname libquickfix.so.$major; the build produced '${built:-nothing}'${soname:+ with soname $soname}"
             failed=1
           fi
           if ! awk -v v="$version" 'prev == v && /^-+$/ { found = 1 } { prev = $0 } END { exit !found }' NEWS; then
@@ -70,4 +86,4 @@ jobs:
             echo "Delete the tag, fix the commit, and tag again."
             exit 1
           fi
-          echo "$TAG matches project() and NEWS has its section."
+          echo "$TAG matches project() and the built library's soname ($soname), and NEWS has its section."
