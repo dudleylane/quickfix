@@ -6,13 +6,15 @@ A correctness-hardened fork of [QuickFIX](https://github.com/quickfix/quickfix),
 
 ## Changes from upstream
 
-This fork applies the following fixes and improvements over [quickfix/quickfix](https://github.com/quickfix/quickfix):
+This fork applies the following fixes and improvements over [quickfix/quickfix](https://github.com/quickfix/quickfix). It no longer merges from upstream (see [Upstream](#upstream)), so check a hand-ported upstream fix against this list: a port into a file changed here can quietly undo one of these changes.
 
 ### Thread safety
 - **Mutex**: Replaced hand-rolled recursive lock (data race on `m_count`/`m_threadID`) with `PTHREAD_MUTEX_RECURSIVE`
 - **Session::send()**: Added missing lock on `m_pResponder` read — fixes use-after-free on concurrent send + disconnect
 - **Session::setResponder()**: Added missing lock on `m_pResponder` write — fixes race during connection establishment
 - **Session::s_mutex**: Replaced global `Mutex` with `std::shared_mutex` — concurrent session lookups no longer serialize under multi-session load. Fixed unprotected `getSessions()`
+- **SessionState**: the flags and counters read and written from several threads (`m_enabled`, `m_receivedLogon`, `m_sentLogon`, `m_logonTimeout`, …) are `std::atomic` (`0852bc4a`)
+- **Thread helpers** (`Utility.cpp`): the two-argument `thread_spawn` detaches the thread it starts, since it returns no id that anything could join (`f4c9c0c3`)
 
 ### Memory safety
 - **FieldMap copy assignment**: Copy-and-swap idiom for strong exception guarantee — fixes memory leak when copy throws mid-group
@@ -23,18 +25,28 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **`FieldBase` is not polymorphic** (`Field.h`): the virtual destructor was removed — nothing owned a `FieldBase *` — taking every field from 88 to 80 bytes and making the class standard-layout.
 - **No per-field encoded-string cache** (`Field.h`): `m_data`, a `mutable std::string` holding `tag=value<SOH>`, was another 32 bytes and a data race waiting to happen — it was written from `const` methods. `appendTo()` writes the field straight into the caller's buffer instead, and `getLength()`/`getTotal()` compute from the tag and value rather than building the string to measure it. A field is 48 bytes `FIX_ASSERT_FIELD_LAYOUT` in the `DEFINE_*` macros is the guard that replaces UBSan's `vptr` check
 - **`FieldRef<F>`** (`FieldMap.h`): `FIELD_GET_REF`, `FIELD_GET_PTR` and `getField<T>()` no longer cast the stored `FieldBase` to a derived field type — `FieldMap` slices on `addField`, so that cast was undefined behaviour. They now read the value through `F::valueOf`, which takes a `FieldBase`. This is what makes the sanitizer suite clean; see "Known baseline". Note the one change a compiler will not catch: `auto x = msg.getField<T>()` used to copy the field, and now copies a view that aliases the stored `FieldBase`, so it must not outlive the next `setString()` or `clear()` on that message — bind the value (`const std::string &`, `SEQNUM`) instead of the view when it needs to
+- **Generated `getHeader()`/`getTrailer()`**: the per-version message classes no longer cast a `FIX::Header` or `FIX::Trailer` to a subclass it never was; typed get and set moved to `FieldMap` (`85f53b62`)
+- **SocketServer under `poll()`**: `SocketAcceptor` and `SSLSocketAcceptor` free their `SocketServer` when driven through `poll()`, which never runs `onStart()` (`7383a9ef`)
 
 ### SSL/OpenSSL
-- **X509 leak**: Added `X509_free()` after `SSL_get_peer_certificate()` in `acceptSSLConnection()`
+- **X509 leak**: Added `X509_free()` after `SSL_get_peer_certificate()`, now in `checkSSLClient()`, which `ee3b1780` split out of `acceptSSLConnection()`
 - **EVP_PKEY leak**: Added `EVP_PKEY_free()` after `X509_get_pubkey()` in `typeofSSLAlgo()`
-- **ssl_socket_close**: Added missing `socket_close()` after `SSL_shutdown()` — fixes socket fd leak on every SSL connection teardown; implemented proper two-phase shutdown
-- **ERR_load_BIO_strings**: Removed deprecated no-op call
+- **findCAList leaks**: fixed the leaks it had on every call (`7bc5c74e`)
+- **SSL descriptors closed once**: each SSL connection's descriptor has exactly one owner and is closed once (#25, `d0819d09`)
+
+### Transport
+- **TLS handshake stepped from the reactor**: `SSLSocketAcceptor` steps `SSL_accept` from the reactor's read and write events, with a 10 s deadline, instead of completing each handshake inline (GHSA-ph6x-vg87-665p, `ee3b1780`)
+- **First message read incrementally**: both reactor acceptors read a connection's first message one readiness event at a time, with a 10 s setup deadline (GHSA-4jw9-9f3x-55wx, `98e23483`)
+- **One owner per reactor descriptor**: teardown closes the listening socket once instead of up to three times, and closes connections still waiting in the monitor's connect set, which it used to leak (#29, `bd123e3a`)
+- **Dropped sockets stay open until reported**: `SocketMonitor::drop()` keeps a descriptor open until its drop has been reported, so a reused number cannot receive another socket's report (#26, `f5d9c9ab`)
+- **Threaded teardown from the owning thread**: other threads shut a threaded connection's socket down, and the connection's own thread closes it, once (#27, #28, `c3ce6f24`)
 
 ### Latency
-- **GroupArena**: Per-message bump-pointer arena for repeating group allocation — eliminates per-group `new`/`delete` during parsing. 32-slot arena (3.8 KB) lazily allocated on first group, bulk-reset on `clear()`. Pooled messages reuse the arena across parse cycles.
+- **GroupArena**: Per-message bump-pointer arena for repeating group allocation — eliminates per-group `new`/`delete` during parsing. 32-slot arena (3.8 KB) lazily allocated on first group, bulk-reset on `clear()`. Pooled messages reuse the arena across parse cycles. (Under review in #52, which found that parsing allocates its groups with `new` and does not use the arena.)
 - **Move-semantic appendField**: Eliminates one string copy per field during message deserialization
 - **Sorted-check guard**: `sortFields()` skips redundant `std::sort` for well-ordered messages
 - **Group slicing fix**: Virtual `cloneInto()` preserves `Group::m_field`/`m_delim` during copy — `addGroup` and copy constructor previously sliced to `FieldMap`
+- **Groups in a `std::flat_map`**: `FieldMap::Groups` is a `std::flat_map` rather than a `std::map` (`02f84c2d`)
 
 #### Benchmark baseline
 
@@ -96,14 +108,24 @@ remains in git history.
 
 ### FIX protocol
 - **SequenceReset-GapFill**: Allow `NewSeqNo < ExpectedTargetNum` when `GapFillFlag=Y`, per FIX spec (was incorrectly rejected)
+- **Queued messages a SequenceReset skips over are discarded**, in GapFill mode (`9c2865b9`) and in Reset mode (#8, `73f1c5a5`), instead of staying in the queue for good
+- **Embedded SOH**: a message whose field value is cut short by an embedded SOH is rejected with a session-level Reject naming the field, instead of being dropped as garbled (`26aa506c`)
+- **Out-of-order repeating group members**: rejected with the misplaced member named, instead of a misleading diagnosis (`74fe9320`)
+- **FIX 4.2 QuoteAcknowledgement**: uses QuoteStatus (297), as `FIX42.xml` requires, instead of tag 1865, which FIX 4.2 does not define (`25b23432`)
 
 ### Build system
-- **C++23**: Minimum standard raised from C++17; `CMAKE_CXX_STANDARD_REQUIRED=ON`
+- **C++23**: Minimum standard raised from C++17; `CMAKE_CXX_STANDARD_REQUIRED=ON`. The code uses `std::flat_map` and `std::move_only_function`, so it needs GCC 15
+- **CMake only**: the autotools build was retired (`3d832348`)
+- **Linux only**: the Windows-specific sources, the MSVC precompiled header and their build wiring were removed (`4604c72d`, `6ff4a20f`)
+- **Reformatted**: the whole tree follows `.clang-format` (BSD/Allman braces, 4-space indent, 120 columns), so upstream patches do not apply textually and are ported by hand (`7e48e4ff`, `98339fae`)
 - **CMake 3.31**: Minimum version raised from 3.5
 - **Conditional compilation**: MySQL, PostgreSQL, ODBC sources now conditionally compiled (matching SSL pattern) — no longer requires database headers when features are disabled
-- **TBB allocator**: New `ENABLE_TBB_ALLOCATOR` CMake option with automatic `tbbmalloc` link dependency
+- **TBB allocator**: New `ENABLE_TBB_ALLOCATOR` CMake option with automatic `tbbmalloc` link dependency; the choice is recorded in the installed `QuickFIXBuildConfig.h`, so a consumer compiles against the library's allocator (`3a112309`)
+- **Package files**: `cmake --install` ships a CMake package config (`quickfix::quickfix`) and `quickfix.pc` (`a19da887`)
 - **HAVE_ODBC**: Moved from `add_definitions()` to `cmake_config.h.in` for consistency with MySQL/PostgreSQL
 - **Removed**: Dead AIX/Solaris platform code, duplicate `configure_file` call
+- **Generated code**: `spec/generate.sh` reproduces the checked-in tree (`d0214a62`), and the generated `FixFields.h` and `FixFieldNumbers.h` restore a caller's `ReplaceText` macro instead of losing it (`52d7a4f7`)
+- **Bindings**: the Python and Ruby bindings build again from the current headers, and CI builds and tests both (`4cb3d655`, `68bb468f`, `d0ff75c7`, `96abec8a`)
 - **Soname `libquickfix.so.18`**: the fork has changed the layout of exported classes (`FieldBase`, `Message`), so a binary built against upstream must not load this library. Upstream's CMake build uses 17, but its autotools build also produces `libquickfix.so.18`, so where both are installed the soname alone does not keep them apart (#51). 18 also covered the untagged series before the first release, v18.0.0; from v18.0.0 on, any layout change to an exported class bumps the major version in `project()` (top-level `CMakeLists.txt`), the one place the version is set — the soname, `QuickFIXVersion.h` and the Python module all take it from there
 
 ## Supported Platforms
