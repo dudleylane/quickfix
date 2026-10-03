@@ -42,7 +42,7 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Threaded teardown from the owning thread**: other threads shut a threaded connection's socket down, and the connection's own thread closes it, once (#27, #28, `c3ce6f24`)
 
 ### Latency
-- **GroupArena**: Per-message bump-pointer arena for repeating group allocation — eliminates per-group `new`/`delete` during parsing. 32-slot arena (3.8 KB) lazily allocated on first group, bulk-reset on `clear()`. Pooled messages reuse the arena across parse cycles. (Under review in #52, which found that parsing allocates its groups with `new` and does not use the arena.)
+- **GroupArena**: Per-message bump-pointer arena for the groups a message gets through `addGroup()` or a copy: building or copying a message with repeating groups takes each `Group` object from the arena instead of `new`/`delete` (its field vector still allocates). 32 slots of 128 bytes (4 KB), allocated on first use and bulk-reset on `clear()`. Parsing does not use it: `setString()` allocates each group with `new`, and moving those onto the arena measured at no more than about 4% of a QuoteRequest parse, which did not justify the risk (#52).
 - **Move-semantic appendField**: Eliminates one string copy per field during message deserialization
 - **Sorted-check guard**: `sortFields()` skips redundant `std::sort` for well-ordered messages
 - **Group slicing fix**: Virtual `cloneInto()` preserves `Group::m_field`/`m_delim` during copy — `addGroup` and copy constructor previously sliced to `FieldMap`
@@ -84,17 +84,23 @@ serialises each message once and hands that one string to both `persist()` and `
 why the round-trip rows did not move and the parse rows improved.
 
 Message pooling, measured in the same process as reusing one `Message` across `setString()` calls
-versus constructing a new one each time:
+versus constructing a new one each time. Both sides parse with the FIX 4.2 data dictionary; before
+`ed9178c6` the unpooled rows had no dictionary, built no repeating groups, and so credited pooling
+with the cost of group construction (#52). Captured at `ed9178c6` the same way as the table above:
+`./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c 1,2,3`, Release build, started once the
+1-minute load average was below 0.20.
 
 | Operation | Unpooled (μs) | Pooled (μs) | Delta |
 |---|---|---|---|
-| Heartbeat | 0.269 (cv 2.1%) | 0.205 (cv 2.1%) | −24% |
-| NewOrderSingle | 0.528 (cv 5.0%) | 0.537 (cv 3.2%) | +2% |
-| QuoteRequest (10 groups) | 6.124 (cv 0.4%) | 5.269 (cv 2.2%) | −14% |
+| Heartbeat | 0.334 (cv 5.7%) | 0.221 (cv 5.7%) | −34% |
+| NewOrderSingle | 0.675 (cv 2.7%) | 0.597 (cv 16.7%) | −12% |
+| QuoteRequest (10 groups) | 5.636 (cv 0.8%) | 5.344 (cv 1.2%) | −5% |
 
-Read these as indicative, not as guarantees. Pooling helps on Heartbeat and on the group-heavy
-QuoteRequest, where the arena avoids repeated group allocation; on NewOrderSingle the +2% is inside
-its own cv and resolves nothing either way. A difference smaller than roughly twice the cv is not
+Read these as indicative, not as guarantees. What reuse saves is constructing the `Message` and
+regrowing its field vectors on every parse: 0.11 μs on Heartbeat, a third of its parse, and 0.29 μs
+on QuoteRequest, about 5%. Repeating groups are allocated afresh on every parse either way, so
+pooling saves nothing per group. NewOrderSingle's −12% is inside twice its pooled cv, which one slow
+repetition inflated, and resolves nothing. A difference smaller than roughly twice the cv is not
 resolvable on this hardware.
 
 These figures are absolute, not a comparison against upstream: the previous table's upstream column
@@ -215,14 +221,14 @@ cd test
 
 ### Message pooling
 
-For latency-critical applications, reuse `Message` objects instead of creating new ones per FIX string. The internal `GroupArena` survives `clear()` and is reused on the next `setString()` call — no arena reallocation between parse cycles:
+For latency-critical applications, reuse `Message` objects instead of creating new ones per FIX string. `setString()` clears the message first, and clearing keeps the field vectors' capacity, so a reused message reallocates less. Repeating groups are still built afresh on every parse (#52):
 
 ```cpp
 FIX::Message pooledMsg;
 while (auto raw = receiveFromSocket()) {
   pooledMsg.setString(raw, false, &dataDictionary);
   processMessage(pooledMsg);
-  // pooledMsg.clear() is called by the next setString() — arena is reset, not freed
+  // the next setString() clears pooledMsg; its field storage is kept for reuse
 }
 ```
 
