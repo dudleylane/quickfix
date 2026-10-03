@@ -850,13 +850,16 @@ long testValidateDictQuoteRequest(int count)
     return sampleLoop(count, [&] { s_dataDictionary->validate(message); });
 }
 
+// The unpooled rows parse with the same data dictionary as the pooled ones, so the two differ only in
+// whether the Message is reused. Without it they built no repeating groups, and the comparison
+// credited pooling with the cost of group construction (#52).
 long testNoPoolHeartbeat(int count)
 {
     FIX42::Heartbeat tmp;
     std::string str = tmp.toString();
     count = count - 1;
 
-    return sampleLoop(count, [&] { FIX::Message message(str, DONT_VALIDATE); });
+    return sampleLoop(count, [&] { FIX::Message message(str, *s_dataDictionary, DONT_VALIDATE); });
 }
 
 long testNoPoolNewOrderSingle(int count)
@@ -871,7 +874,7 @@ long testNoPoolNewOrderSingle(int count)
     std::string str = tmp.toString();
     count = count - 1;
 
-    return sampleLoop(count, [&] { FIX::Message message(str, DONT_VALIDATE); });
+    return sampleLoop(count, [&] { FIX::Message message(str, *s_dataDictionary, DONT_VALIDATE); });
 }
 
 long testNoPoolQuoteRequest(int count)
@@ -893,7 +896,7 @@ long testNoPoolQuoteRequest(int count)
     std::string str = tmp.toString();
     count = count - 1;
 
-    return sampleLoop(count, [&] { FIX::Message message(str, DONT_VALIDATE); });
+    return sampleLoop(count, [&] { FIX::Message message(str, *s_dataDictionary, DONT_VALIDATE); });
 }
 
 class TestApplication : public FIX::NullApplication
