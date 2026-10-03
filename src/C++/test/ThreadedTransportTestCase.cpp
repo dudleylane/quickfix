@@ -13,12 +13,14 @@
 #include "TestHelper.h"
 #include "catch_amalgamated.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <dirent.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sstream>
+#include <sys/resource.h>
 #include <sys/socket.h>
 #include <thread>
 #include <unistd.h>
@@ -201,6 +203,77 @@ TEST_CASE("ThreadedTransportTests")
         ::close(pair[1]);
         SSL_CTX_free(clientCtx);
         SSL_CTX_free(serverCtx);
+    }
+
+    SECTION("readWorksOnADescriptorAtOrAboveFdSetsize")
+    {
+        // The threaded TLS connection must wait on its socket with poll(), not a fixed
+        // fd_set: a descriptor of FD_SETSIZE (1024) or more cannot be held in an fd_set, and
+        // FD_SET on it writes outside the 128-byte member. Put the connection's socket at a
+        // descriptor >= 1024 and drive one read through it. Under AddressSanitizer this fails
+        // on the fd_set path and passes on poll(); without it, it still checks poll() serves a
+        // high descriptor.
+        rlimit limit{};
+        REQUIRE(::getrlimit(RLIMIT_NOFILE, &limit) == 0);
+        if (limit.rlim_cur <= FD_SETSIZE)
+        {
+            rlimit raised = limit;
+            raised.rlim_cur = std::min<rlim_t>(limit.rlim_max, FD_SETSIZE + 16);
+            if (::setrlimit(RLIMIT_NOFILE, &raised) != 0 || raised.rlim_cur <= FD_SETSIZE)
+            {
+                SKIP("cannot raise RLIMIT_NOFILE above FD_SETSIZE");
+            }
+        }
+
+        SSL_CTX *serverCtx = SSL_CTX_new(TLS_server_method());
+        REQUIRE(SSL_CTX_use_certificate_file(serverCtx, certPath("127_0_0_1_server.crt").c_str(), SSL_FILETYPE_PEM) ==
+                1);
+        REQUIRE(SSL_CTX_use_PrivateKey_file(serverCtx, certPath("127_0_0_1_server.key").c_str(), SSL_FILETYPE_PEM) ==
+                1);
+        SSL_CTX *clientCtx = SSL_CTX_new(TLS_client_method());
+        SSL_CTX_set_verify(clientCtx, SSL_VERIFY_NONE, nullptr);
+
+        int pair[2];
+        REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
+
+        // Move the server side to the lowest free descriptor >= FD_SETSIZE.
+        const int high = ::fcntl(pair[0], F_DUPFD, FD_SETSIZE);
+        REQUIRE(high >= FD_SETSIZE);
+        ::close(pair[0]);
+
+        SSL *server = SSL_new(serverCtx);
+        BIO *bio = BIO_new_socket(high, BIO_CLOSE);
+        SSL_set_bio(server, bio, bio);
+        SSL *client = SSL_new(clientCtx);
+        SSL_set_fd(client, pair[1]);
+
+        int accepted = 0;
+        std::thread handshake([server, &accepted] { accepted = SSL_accept(server); });
+        REQUIRE(SSL_connect(client) == 1);
+        handshake.join();
+        REQUIRE(accepted == 1);
+
+        ThreadedSSLSocketConnection *connection =
+            new ThreadedSSLSocketConnection(high, server, ThreadedSSLSocketConnection::Sessions(), nullptr);
+
+        REQUIRE(SSL_write(client, "x", 1) == 1);
+        std::atomic<bool> done{false};
+        std::thread reader(
+            [connection, &done]
+            {
+                connection->read();
+                done = true;
+            });
+        reader.join();
+        CHECK(done.load());
+
+        delete connection;
+        SSL_free(server);
+        SSL_free(client);
+        ::close(pair[1]);
+        SSL_CTX_free(clientCtx);
+        SSL_CTX_free(serverCtx);
+        ::setrlimit(RLIMIT_NOFILE, &limit);
     }
 #endif
 }
