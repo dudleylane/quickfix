@@ -161,6 +161,25 @@ bool ThreadedSocketConnection::read()
 
         return false;
     }
+    catch (MessageParseError &e)
+    {
+        if (m_disconnect)
+        {
+            return false;
+        }
+
+        if (m_pSession)
+        {
+            m_pSession->getLog()->onEvent(e.what());
+            m_pSession->disconnect();
+        }
+        else
+        {
+            disconnect();
+        }
+
+        return false;
+    }
 }
 
 bool ThreadedSocketConnection::readMessage(std::string &msg) EXCEPT(SocketRecvFailed)

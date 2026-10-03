@@ -288,6 +288,11 @@ bool SSLSocketConnection::read(SocketConnector &connector)
         m_pSession->getLog()->onEvent(e.what());
         return false;
     }
+    catch (MessageParseError &e)
+    {
+        m_pSession->getLog()->onEvent(e.what());
+        return false;
+    }
     return true;
 }
 
@@ -353,6 +358,18 @@ bool SSLSocketConnection::read(SSLSocketAcceptor &acceptor, SocketServer &server
     }
     catch (InvalidMessage &)
     {
+        server.getMonitor().drop(m_socket);
+    }
+    catch (MessageParseError &e)
+    {
+        if (m_pSession)
+        {
+            m_pSession->getLog()->onEvent(e.what());
+        }
+        else if (acceptor.getLog())
+        {
+            acceptor.getLog()->onEvent(e.what());
+        }
         server.getMonitor().drop(m_socket);
     }
     return false;

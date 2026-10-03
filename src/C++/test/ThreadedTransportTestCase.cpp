@@ -238,3 +238,74 @@ TEST_CASE("ThreadedTransportStopTests")
         CHECK(openDescriptors() == before);
     }
 }
+
+namespace
+{
+// Send every byte of a buffer, looping past short writes.
+bool sendAll(int fd, const std::string &bytes)
+{
+    size_t sent = 0;
+    while (sent < bytes.size())
+    {
+        ssize_t n = ::send(fd, bytes.data() + sent, bytes.size() - sent, MSG_NOSIGNAL);
+        if (n <= 0)
+        {
+            return false;
+        }
+        sent += static_cast<size_t>(n);
+    }
+    return true;
+}
+} // namespace
+
+TEST_CASE("ThreadedTransportParserCapTests")
+{
+    SECTION("anOversizedStreamDropsOnlyItsConnection")
+    {
+        // A peer that sends more than Parser::MAX_MESSAGE_SIZE without completing a
+        // message makes addToStream throw MessageParseError. The connection's read
+        // loop must catch it and drop just this connection; left uncaught it reaches
+        // the thread entry and terminates the whole process, every session with it.
+        // Unfixed, this section aborts the ut binary (exit 134) rather than failing a
+        // CHECK; fixed, the acceptor keeps serving and stop() stays prompt.
+        const int port = freePort();
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=acceptor\nSocketAcceptPort=" << port
+               << "\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n"
+               << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=THREADEDCAP\nTargetCompID=TW\n";
+        SessionSettings settings(config);
+        NullApplication application;
+        MemoryStoreFactory factory;
+
+        const std::size_t before = openDescriptors();
+        {
+            ThreadedSocketAcceptor acceptor(application, factory, settings);
+            acceptor.start();
+
+            const int flooder = connectTo(port);
+            REQUIRE(flooder >= 0);
+            // A header declaring a body far larger than the stream will ever hold, so
+            // the parser keeps buffering and never frames a message, then filler to
+            // carry the buffer past the 8 MB cap.
+            std::string flood = "8=FIX.4.2\0019=99999999\001";
+            flood.append(9 * 1024 * 1024, 'A');
+            sendAll(flooder, flood);
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            ::close(flooder);
+
+            // The process is still alive: a second peer can connect and the acceptor
+            // stops promptly.
+            const int survivor = connectTo(port);
+            CHECK(survivor >= 0);
+            if (survivor >= 0)
+            {
+                ::close(survivor);
+            }
+
+            const auto start = std::chrono::steady_clock::now();
+            acceptor.stop();
+            CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(3));
+        }
+        CHECK(openDescriptors() == before);
+    }
+}
