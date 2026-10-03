@@ -76,6 +76,15 @@ bool Parser::readFixMessage(std::string &str) EXCEPT(MessageParseError)
     pos = m_buffer.find("8=");
     if (pos == std::string::npos)
     {
+        // No message start anywhere in the buffer. Drop the scanned bytes, keeping only a
+        // trailing byte that could be the '8' of a "8=" split across reads, so the next read
+        // does not rescan them. Without this a stream that never yields "8=" is rescanned from
+        // the front on every read -- quadratic in the buffered size, which the caller lets grow
+        // to MAX_MESSAGE_SIZE.
+        if (m_buffer.size() > 1)
+        {
+            m_buffer.erase(0, m_buffer.size() - 1);
+        }
         return false;
     }
     m_buffer.erase(0, pos);

@@ -25,6 +25,7 @@
 #include <Utility.h>
 #include <sstream>
 #include <string>
+#include <sys/resource.h>
 
 #include "catch_amalgamated.hpp"
 
@@ -138,5 +139,35 @@ TEST_CASE("ParserTests")
             object.addToStream(chunk);
         }
         CHECK_THROWS_AS(object.addToStream(chunk), MessageParseError);
+    }
+
+    SECTION("readFixMessageDoesNotRescanTheWholeBuffer")
+    {
+        // A stream that never yields "8=" must not be rescanned from the front on every
+        // read: that is quadratic in the buffered size and the caller lets the buffer grow
+        // to MAX_MESSAGE_SIZE. '8' bytes are the worst input -- each one is a candidate
+        // start of "8=". Feed 1 MB in recv-sized chunks, reading after each as a transport
+        // does, and bound the CPU it takes. Linear parsing spends a few milliseconds here;
+        // the rescan spent on the order of a second on this input at 1 MB, and far more at
+        // the 8 MB cap.
+        auto cpuMillis = []
+        {
+            rusage usage{};
+            getrusage(RUSAGE_SELF, &usage);
+            return (usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1000.0 +
+                   (usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000.0;
+        };
+
+        const std::string chunk(4096, '8');
+        const double start = cpuMillis();
+        std::string readFixMsg;
+        for (int i = 0; i < 256; ++i) // 256 * 4096 == 1 MB, under the 8 MB cap
+        {
+            object.addToStream(chunk);
+            while (object.readFixMessage(readFixMsg))
+            {
+            }
+        }
+        CHECK(cpuMillis() - start < 500.0);
     }
 }
