@@ -1054,17 +1054,25 @@ void Session::generateReject(const Message &message, const std::string &text, in
     }
     reject.setField(RefSeqNum(msgSeqNum));
 
-    if (msgType != MsgType_Logon && msgType != MsgType_SequenceReset)
+    if (msgType != MsgType_Logon && msgType != MsgType_SequenceReset && msgSeqNum == getExpectedTargetNum())
     {
         m_state.incrNextTargetMsgSeqNum();
     }
 
-    if (field != 0 && beginString >= FIX::BeginString_FIX42)
+    if (field != 0)
     {
-        reject.setField(RefTagID(field));
+        populateRejectReason(reject, field, text);
+    }
+    else
+    {
+        reject.setField(Text(text));
     }
 
-    reject.setField(Text(text));
+    if (!m_state.receivedLogon())
+    {
+        throw std::runtime_error("Tried to send a reject while not logged on");
+    }
+
     sendRaw(reject);
     m_state.onEvent("Message " + msgSeqNum.getString() + " Rejected: " + text);
 }

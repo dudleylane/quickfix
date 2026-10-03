@@ -1867,6 +1867,32 @@ TEST_CASE_METHOD(initiatorFixture, "InitiatorSessionTestCase")
 
 TEST_CASE_METHOD(acceptorFixture, "AcceptorSessionTestCase")
 {
+    SECTION("sessionLevelRejectBeforeLogonSendsNothingAndKeepsSequenceNumbers")
+    {
+        // A first message (before logon) that fails a session-level validation must not change
+        // session state: the string generateReject overload used to persist a Reject and advance
+        // the sender sequence number with no logon, unlike the int overload, which refuses to send
+        // a reject while not logged on. Both overloads now behave the same. Drive the out-of-order
+        // repeating-group message from 14j_OutOfRepeatingGroupMembers.def as the very first message.
+        object->setValidateLengthAndChecksum(false); // placeholder 9=/10= below
+        const std::string soh = "\001";
+        const std::string sendingTime = UtcTimeStampConvertor::convert(now);
+        const std::string message = "8=FIX.4.2" + soh + "9=0" + soh + "35=D" + soh + "34=1" + soh + "49=ISLD" + soh +
+                                    "52=" + sendingTime + soh + "56=TW" + soh + "11=ID" + soh + "21=1" + soh + "40=1" +
+                                    soh + "54=1" + soh + "38=200.00" + soh + "55=INTC" + soh + "78=2" + soh + "80=50" +
+                                    soh + "79=acct1" + soh + "80=150" + soh + "79=acct2" + soh + "60=" + sendingTime +
+                                    soh + "10=000" + soh;
+
+        object->next(message, now);
+
+        CHECK(!object->receivedLogon());
+        CHECK(0 == toReject);                       // no Reject was sent
+        CHECK(1 == object->getExpectedSenderNum()); // the sender sequence number did not advance
+        // The target sequence number does advance here, as it already did on the int-overload
+        // path: whether a rejected pre-logon message should advance it at all is the separate,
+        // broader question of pre-logon session state, tracked apart from this fix.
+    }
+
     SECTION("nextLogon")
     {
         // send with an incorrect SenderCompID
