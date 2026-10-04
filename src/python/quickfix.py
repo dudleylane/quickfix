@@ -7650,6 +7650,7 @@ MILLISECONDS_IN_TIMESTAMP = cvar.MILLISECONDS_IN_TIMESTAMP
 TIMESTAMP_PRECISION = cvar.TIMESTAMP_PRECISION
 HTTP_ACCEPT_PORT = cvar.HTTP_ACCEPT_PORT
 HTTP_ACCEPT_ADDRESS = cvar.HTTP_ACCEPT_ADDRESS
+MAX_PENDING_CONNECTIONS = cvar.MAX_PENDING_CONNECTIONS
 PERSIST_MESSAGES = cvar.PERSIST_MESSAGES
 SERVER_CERTIFICATE_FILE = cvar.SERVER_CERTIFICATE_FILE
 SERVER_CERTIFICATE_KEY_FILE = cvar.SERVER_CERTIFICATE_KEY_FILE
@@ -8508,6 +8509,9 @@ class Acceptor(object):
 
     def isStopped(self):
         return _quickfix.Acceptor_isStopped(self)
+
+    def getMaxPendingConnections(self):
+        return _quickfix.Acceptor_getMaxPendingConnections(self)
 
     def getApplication(self):
         return _quickfix.Acceptor_getApplication(self)

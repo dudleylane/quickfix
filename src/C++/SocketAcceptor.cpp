@@ -183,6 +183,20 @@ bool SocketAcceptor::onPoll()
     return true;
 }
 
+size_t SocketAcceptor::pendingConnections() const
+{
+    size_t pending = 0;
+    for (const SocketConnections::value_type &entry : m_connections)
+    {
+        Session *pSession = entry.second->getSession();
+        if (pSession == 0 || !pSession->receivedLogon())
+        {
+            ++pending;
+        }
+    }
+    return pending;
+}
+
 void SocketAcceptor::expirePendingReads()
 {
     if (!m_pServer || m_connections.empty())
@@ -253,6 +267,19 @@ void SocketAcceptor::onConnect(SocketServer &server, socket_handle a, socket_han
     SocketConnections::iterator i = m_connections.find(s);
     if (i != m_connections.end())
     {
+        return;
+    }
+    // MaxPendingConnections: past the limit a new connection is refused at once,
+    // so connections that never log on cannot exhaust the process's descriptors.
+    // Logged-on sessions do not count against it.
+    if (getMaxPendingConnections() > 0 && pendingConnections() >= static_cast<size_t>(getMaxPendingConnections()))
+    {
+        if (getLog())
+        {
+            getLog()->onEvent("Refused a connection from " + std::string(socket_peername(s)) + ": " +
+                              std::to_string(getMaxPendingConnections()) + " connections are waiting to log on");
+        }
+        server.getMonitor().drop(s);
         return;
     }
     uint16_t port = server.socketToPort(a);

@@ -873,6 +873,21 @@ AppDataDictionary.FIX.4.4=FIX44.xml
         </tr>
 
         <tr align="left" valign="middle">
+          <td><b>MaxPendingConnections</b></td>
+
+          <td>The most accepted connections that have not logged on yet
+          the acceptor holds at once; a new connection beyond it is closed at
+          once. Logged-on sessions do not count. Each pending connection is
+          dropped anyway if it has not logged on within ten seconds; this bounds
+          how many there can be in that time. 0 means no limit. Applies to
+          every acceptor type. Must be in DEFAULT section.</td>
+
+          <td>non-negative integer</td>
+
+          <td>0</td>
+        </tr>
+
+        <tr align="left" valign="middle">
           <td><b>SocketReuseAddress</b></td>
 
           <td>Indicates a socket should be created with

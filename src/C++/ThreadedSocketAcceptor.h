@@ -29,6 +29,7 @@
 #include "Acceptor.h"
 #include "Mutex.h"
 #include "ThreadedSocketConnection.h"
+#include <atomic>
 
 namespace FIX
 {
@@ -93,6 +94,9 @@ private:
     SocketToPort m_socketToPort;
     SocketToThread m_threads;
     Mutex m_mutex;
+    /// Connection threads whose session has not received a logon yet, bounded by
+    /// getMaxPendingConnections().
+    std::atomic<int> m_pendingConnections{0};
 };
 /*! @} */
 } // namespace FIX

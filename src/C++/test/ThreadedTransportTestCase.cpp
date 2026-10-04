@@ -2,6 +2,7 @@
 
 #include <Application.h>
 #include <MessageStore.h>
+#include <SSLSocketAcceptor.h>
 #include <SessionSettings.h>
 #include <SocketAcceptor.h>
 #include <ThreadedSocketAcceptor.h>
@@ -504,5 +505,145 @@ TEST_CASE("SetupDeadlineTests")
 #endif
         reactor.stop();
         threaded.stop();
+    }
+}
+
+namespace
+{
+SessionSettings limitSettings(int port, const std::string &sender, const std::string &maxPending)
+{
+    std::stringstream config;
+    config << "[DEFAULT]\nConnectionType=acceptor\nSocketAcceptPort=" << port
+           << "\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\nMaxPendingConnections=" << maxPending
+           << "\n"
+#if (HAVE_SSL > 0)
+           << "ServerCertificateFile=" << certPath("127_0_0_1_server.crt") << "\n"
+           << "ServerCertificateKeyFile=" << certPath("127_0_0_1_server.key") << "\n"
+#endif
+           << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=" << sender << "\nTargetCompID=TW\n";
+    return SessionSettings(config);
+}
+
+std::string logonTo(const std::string &target)
+{
+    Message message;
+    message.getHeader().setField(BeginString("FIX.4.2"));
+    message.getHeader().setField(MsgType("A"));
+    message.getHeader().setField(SenderCompID("TW"));
+    message.getHeader().setField(TargetCompID(target));
+    message.getHeader().setField(MsgSeqNum(1));
+    message.getHeader().setField(SendingTime(UtcTimeStamp::now()));
+    message.setField(EncryptMethod(0));
+    message.setField(HeartBtInt(30));
+    message.setField(ResetSeqNumFlag(true));
+    return message.toString();
+}
+
+// True if the peer closes the connection within the given time.
+bool closesWithin(int fd, std::chrono::milliseconds limit)
+{
+    const auto start = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - start < limit)
+    {
+        if (closedByPeer(fd))
+        {
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    return false;
+}
+
+// Exercises one acceptor started with MaxPendingConnections=2. A Logon is sent
+// only when the transport can carry one without TLS.
+void checkPendingLimit(int port, const std::string &sender, bool canLogOn)
+{
+    INFO("acceptor for " << sender);
+    std::vector<int> open;
+    if (canLogOn)
+    {
+        // A logged-on session does not count against the limit.
+        const int loggedOn = connectTo(port);
+        REQUIRE(loggedOn >= 0);
+        REQUIRE(sendAll(loggedOn, logonTo(sender)));
+        char reply[512];
+        CHECK(::recv(loggedOn, reply, sizeof(reply), 0) > 0); // the Logon reply
+        open.push_back(loggedOn);
+    }
+
+    const int first = connectTo(port);
+    const int second = connectTo(port);
+    REQUIRE(first >= 0);
+    REQUIRE(second >= 0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+    const int third = connectTo(port);
+    REQUIRE(third >= 0);
+    CHECK(closesWithin(third, std::chrono::milliseconds(2000))); // refused: two already waiting
+    ::close(third);
+    CHECK_FALSE(closedByPeer(first));
+    CHECK_FALSE(closedByPeer(second));
+    for (const int fd : open)
+    {
+        CHECK_FALSE(closedByPeer(fd));
+    }
+
+    // One waiting connection leaves, and its place is free again.
+    ::close(first);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+    const int fourth = connectTo(port);
+    REQUIRE(fourth >= 0);
+    CHECK_FALSE(closesWithin(fourth, std::chrono::milliseconds(1000)));
+
+    ::close(second);
+    ::close(fourth);
+    for (const int fd : open)
+    {
+        ::close(fd);
+    }
+}
+} // namespace
+
+TEST_CASE("PendingConnectionLimitTests")
+{
+    SECTION("eachAcceptorRefusesConnectionsBeyondTheLimitOfThoseWaitingToLogOn")
+    {
+        NullApplication application;
+        MemoryStoreFactory factory;
+
+        const int threadedPort = freePort();
+        ThreadedSocketAcceptor threaded(application, factory, limitSettings(threadedPort, "LIMIT1", "2"));
+        threaded.start();
+        checkPendingLimit(threadedPort, "LIMIT1", true);
+        threaded.stop();
+
+        const int reactorPort = freePort();
+        SocketAcceptor reactor(application, factory, limitSettings(reactorPort, "LIMIT2", "2"));
+        reactor.start();
+        checkPendingLimit(reactorPort, "LIMIT2", true);
+        reactor.stop();
+
+#if (HAVE_SSL > 0)
+        // No TLS client here, so these hold connections in their handshake.
+        const int tlsThreadedPort = freePort();
+        ThreadedSSLSocketAcceptor tlsThreaded(application, factory, limitSettings(tlsThreadedPort, "LIMIT3", "2"));
+        tlsThreaded.start();
+        checkPendingLimit(tlsThreadedPort, "LIMIT3", false);
+        tlsThreaded.stop();
+
+        const int tlsReactorPort = freePort();
+        SSLSocketAcceptor tlsReactor(application, factory, limitSettings(tlsReactorPort, "LIMIT4", "2"));
+        tlsReactor.start();
+        checkPendingLimit(tlsReactorPort, "LIMIT4", false);
+        tlsReactor.stop();
+#endif
+    }
+
+    SECTION("aNegativeLimitIsAConfigurationError")
+    {
+        NullApplication application;
+        MemoryStoreFactory factory;
+        CHECK_THROWS_AS(ThreadedSocketAcceptor(application, factory, limitSettings(freePort(), "LIMIT5", "-1")),
+                        ConfigError);
     }
 }

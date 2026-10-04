@@ -86,6 +86,11 @@ public:
 
     bool isStopped() const { return m_stop; }
 
+    /// How many accepted connections that have not logged on yet the acceptor
+    /// holds at once (MaxPendingConnections); a new one beyond it is refused.
+    /// 0, the default, means no limit.
+    int getMaxPendingConnections() const { return m_maxPendingConnections; }
+
     Application &getApplication() const { return m_application; }
     MessageStoreFactory &getMessageStoreFactory() const { return m_messageStoreFactory; }
 
@@ -124,6 +129,7 @@ private:
     std::atomic<bool> m_processing;
     std::atomic<bool> m_firstPoll;
     std::atomic<bool> m_stop;
+    int m_maxPendingConnections = 0;
 };
 /*! @} */
 } // namespace FIX

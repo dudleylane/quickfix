@@ -73,6 +73,8 @@ private:
     // setup deadline, so a peer that stalls its first message does not hold a
     // slot open indefinitely.
     void expirePendingReads();
+    /// Accepted connections whose session has not received a logon.
+    size_t pendingConnections() const;
 
     SocketServer *m_pServer;
     // Guards the hand-over of m_pServer between a reactor loop (onStart) and

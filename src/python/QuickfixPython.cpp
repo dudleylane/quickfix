@@ -131338,6 +131338,20 @@ SWIGINTERN PyObject *Swig_var_HTTP_ACCEPT_ADDRESS_get(void) {
 }
 
 
+SWIGINTERN int Swig_var_MAX_PENDING_CONNECTIONS_set(PyObject *) {
+  SWIG_Error(SWIG_AttributeError,"Variable MAX_PENDING_CONNECTIONS is read-only.");
+  return 1;
+}
+
+
+SWIGINTERN PyObject *Swig_var_MAX_PENDING_CONNECTIONS_get(void) {
+  PyObject *pyobj = 0;
+  
+  pyobj = SWIG_FromCharPtr(FIX::MAX_PENDING_CONNECTIONS);
+  return pyobj;
+}
+
+
 SWIGINTERN int Swig_var_PERSIST_MESSAGES_set(PyObject *) {
   SWIG_Error(SWIG_AttributeError,"Variable PERSIST_MESSAGES is read-only.");
   return 1;
@@ -146600,6 +146614,45 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_Acceptor_getMaxPendingConnections(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::Acceptor *arg1 = (FIX::Acceptor *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  int result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getMaxPendingConnections" "', argument " "1"" of type '" "FIX::Acceptor const *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (int)((FIX::Acceptor const *)arg1)->getMaxPendingConnections();
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_Acceptor_getApplication(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   FIX::Acceptor *arg1 = (FIX::Acceptor *) 0 ;
@@ -161405,6 +161458,7 @@ static PyMethodDef SwigMethods[] = {
 	 { "Acceptor_getSessionSettings", _wrap_Acceptor_getSessionSettings, METH_VARARGS, NULL},
 	 { "Acceptor_has", _wrap_Acceptor_has, METH_VARARGS, NULL},
 	 { "Acceptor_isStopped", _wrap_Acceptor_isStopped, METH_O, NULL},
+	 { "Acceptor_getMaxPendingConnections", _wrap_Acceptor_getMaxPendingConnections, METH_O, NULL},
 	 { "Acceptor_getApplication", _wrap_Acceptor_getApplication, METH_O, NULL},
 	 { "Acceptor_getMessageStoreFactory", _wrap_Acceptor_getMessageStoreFactory, METH_O, NULL},
 	 { "Acceptor_swigregister", Acceptor_swigregister, METH_O, NULL},
@@ -169198,6 +169252,7 @@ SWIG_init(void) {
   SWIG_addvarlink(globals, "TIMESTAMP_PRECISION", Swig_var_TIMESTAMP_PRECISION_get, Swig_var_TIMESTAMP_PRECISION_set);
   SWIG_addvarlink(globals, "HTTP_ACCEPT_PORT", Swig_var_HTTP_ACCEPT_PORT_get, Swig_var_HTTP_ACCEPT_PORT_set);
   SWIG_addvarlink(globals, "HTTP_ACCEPT_ADDRESS", Swig_var_HTTP_ACCEPT_ADDRESS_get, Swig_var_HTTP_ACCEPT_ADDRESS_set);
+  SWIG_addvarlink(globals, "MAX_PENDING_CONNECTIONS", Swig_var_MAX_PENDING_CONNECTIONS_get, Swig_var_MAX_PENDING_CONNECTIONS_set);
   SWIG_addvarlink(globals, "PERSIST_MESSAGES", Swig_var_PERSIST_MESSAGES_get, Swig_var_PERSIST_MESSAGES_set);
   SWIG_addvarlink(globals, "SERVER_CERTIFICATE_FILE", Swig_var_SERVER_CERTIFICATE_FILE_get, Swig_var_SERVER_CERTIFICATE_FILE_set);
   SWIG_addvarlink(globals, "SERVER_CERTIFICATE_KEY_FILE", Swig_var_SERVER_CERTIFICATE_KEY_FILE_get, Swig_var_SERVER_CERTIFICATE_KEY_FILE_set);

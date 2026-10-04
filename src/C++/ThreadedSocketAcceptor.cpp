@@ -19,6 +19,7 @@
 
 #include "config.h"
 
+#include "Session.h"
 #include "Settings.h"
 #include "ThreadedSocketAcceptor.h"
 #include "Utility.h"
@@ -228,6 +229,21 @@ THREAD_PROC ThreadedSocketAcceptor::socketAcceptorThread(void *p)
             continue;
         }
 
+        // MaxPendingConnections: past the limit a new connection is refused at once,
+        // so connections that never log on cannot exhaust threads and descriptors.
+        // Logged-on sessions do not count against it.
+        const int maxPending = pAcceptor->getMaxPendingConnections();
+        if (maxPending > 0 && pAcceptor->m_pendingConnections.load() >= maxPending)
+        {
+            if (pAcceptor->getLog())
+            {
+                pAcceptor->getLog()->onEvent("Refused a connection from " + std::string(socket_peername(socket)) +
+                                             ": " + std::to_string(maxPending) + " connections are waiting to log on");
+            }
+            socket_close(socket);
+            continue;
+        }
+
         if (noDelay)
         {
             socket_setsockopt(socket, TCP_NODELAY);
@@ -271,8 +287,10 @@ THREAD_PROC ThreadedSocketAcceptor::socketAcceptorThread(void *p)
             }
 
             thread_id thread;
+            ++pAcceptor->m_pendingConnections; // the connection thread gives it back
             if (!thread_spawn(&socketConnectionThread, info, thread))
             {
+                --pAcceptor->m_pendingConnections;
                 delete info;
                 delete pConnection;
                 socket_close(socket);
@@ -302,8 +320,18 @@ THREAD_PROC ThreadedSocketAcceptor::socketConnectionThread(void *p)
 
     socket_handle socket = pConnection->getSocket();
 
+    bool pending = true;
     while (pConnection->read())
     {
+        if (pending && pConnection->getSession() && pConnection->getSession()->receivedLogon())
+        {
+            pending = false;
+            --pAcceptor->m_pendingConnections;
+        }
+    }
+    if (pending)
+    {
+        --pAcceptor->m_pendingConnections;
     }
     delete pConnection;
     if (!pAcceptor->isStopped())

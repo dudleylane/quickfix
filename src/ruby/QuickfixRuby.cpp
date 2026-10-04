@@ -98418,6 +98418,15 @@ _wrap_HTTP_ACCEPT_ADDRESS_get(VALUE self) {
 
 
 SWIGINTERN VALUE
+_wrap_MAX_PENDING_CONNECTIONS_get(VALUE self) {
+  VALUE _val;
+  
+  _val = SWIG_FromCharPtr(FIX::MAX_PENDING_CONNECTIONS);
+  return _val;
+}
+
+
+SWIGINTERN VALUE
 _wrap_PERSIST_MESSAGES_get(VALUE self) {
   VALUE _val;
   
@@ -112068,6 +112077,41 @@ _wrap_Acceptor_isStopped(int argc, VALUE *argv, VALUE self) {
     }
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
+  return vresult;
+fail:
+  return Qnil;
+}
+
+
+SWIGINTERN VALUE
+_wrap_Acceptor_getMaxPendingConnections(int argc, VALUE *argv, VALUE self) {
+  FIX::Acceptor *arg1 = (FIX::Acceptor *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int result;
+  VALUE vresult = Qnil;
+  
+  if ((argc < 0) || (argc > 0)) {
+    rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
+  }
+  res1 = SWIG_ConvertPtr(self, &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Acceptor const *","getMaxPendingConnections", 1, self )); 
+  }
+  arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
+  {
+    if(tryRubyException([&]() mutable 
+        {
+      result = (int)((FIX::Acceptor const *)arg1)->getMaxPendingConnections();
+          return self;
+        fail:
+          return Qnil;
+        }) == Qnil) 
+    {
+      SWIG_fail;
+    }
+  }
+  vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
 fail:
   return Qnil;
@@ -132750,6 +132794,7 @@ SWIGEXPORT void Init_quickfix(void) {
   rb_define_singleton_method(mQuickfix, "TIMESTAMP_PRECISION", VALUEFUNC(_wrap_TIMESTAMP_PRECISION_get), 0);
   rb_define_singleton_method(mQuickfix, "HTTP_ACCEPT_PORT", VALUEFUNC(_wrap_HTTP_ACCEPT_PORT_get), 0);
   rb_define_singleton_method(mQuickfix, "HTTP_ACCEPT_ADDRESS", VALUEFUNC(_wrap_HTTP_ACCEPT_ADDRESS_get), 0);
+  rb_define_singleton_method(mQuickfix, "MAX_PENDING_CONNECTIONS", VALUEFUNC(_wrap_MAX_PENDING_CONNECTIONS_get), 0);
   rb_define_singleton_method(mQuickfix, "PERSIST_MESSAGES", VALUEFUNC(_wrap_PERSIST_MESSAGES_get), 0);
   rb_define_singleton_method(mQuickfix, "SERVER_CERTIFICATE_FILE", VALUEFUNC(_wrap_SERVER_CERTIFICATE_FILE_get), 0);
   rb_define_singleton_method(mQuickfix, "SERVER_CERTIFICATE_KEY_FILE", VALUEFUNC(_wrap_SERVER_CERTIFICATE_KEY_FILE_get), 0);
@@ -133150,6 +133195,7 @@ SWIGEXPORT void Init_quickfix(void) {
   rb_define_method(SwigClassAcceptor.klass, "getSessionSettings", VALUEFUNC(_wrap_Acceptor_getSessionSettings), -1);
   rb_define_method(SwigClassAcceptor.klass, "has", VALUEFUNC(_wrap_Acceptor_has), -1);
   rb_define_method(SwigClassAcceptor.klass, "isStopped", VALUEFUNC(_wrap_Acceptor_isStopped), -1);
+  rb_define_method(SwigClassAcceptor.klass, "getMaxPendingConnections", VALUEFUNC(_wrap_Acceptor_getMaxPendingConnections), -1);
   rb_define_method(SwigClassAcceptor.klass, "getApplication", VALUEFUNC(_wrap_Acceptor_getApplication), -1);
   rb_define_method(SwigClassAcceptor.klass, "getMessageStoreFactory", VALUEFUNC(_wrap_Acceptor_getMessageStoreFactory), -1);
   SwigClassAcceptor.mark = 0;

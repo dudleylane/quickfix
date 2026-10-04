@@ -134,6 +134,7 @@ const char MILLISECONDS_IN_TIMESTAMP[] = "MillisecondsInTimeStamp";
 const char TIMESTAMP_PRECISION[] = "TimestampPrecision";
 const char HTTP_ACCEPT_PORT[] = "HttpAcceptPort";
 const char HTTP_ACCEPT_ADDRESS[] = "HttpAcceptAddress";
+const char MAX_PENDING_CONNECTIONS[] = "MaxPendingConnections";
 const char PERSIST_MESSAGES[] = "PersistMessages";
 const char SERVER_CERTIFICATE_FILE[] = "ServerCertificateFile";
 const char SERVER_CERTIFICATE_KEY_FILE[] = "ServerCertificateKeyFile";

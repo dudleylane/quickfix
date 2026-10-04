@@ -125,6 +125,7 @@
 #include "Acceptor.h"
 #include "Mutex.h"
 #include "ThreadedSSLSocketConnection.h"
+#include <atomic>
 
 namespace FIX
 {
@@ -199,6 +200,9 @@ private:
     SocketToPort m_socketToPort;
     SocketToThread m_threads;
     Mutex m_mutex;
+    /// Connection threads whose session has not received a logon yet, bounded by
+    /// getMaxPendingConnections().
+    std::atomic<int> m_pendingConnections{0};
     bool m_sslInit;
     int m_verify;
     SSL_CTX *m_ctx;

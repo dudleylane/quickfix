@@ -335,6 +335,19 @@ void SSLSocketAcceptor::onConnect(SocketServer &server, socket_handle a, socket_
     {
         return;
     }
+    // MaxPendingConnections: past the limit a new connection is refused at once,
+    // so connections that never log on cannot exhaust the process's descriptors.
+    // Logged-on sessions do not count against it.
+    if (getMaxPendingConnections() > 0 && pendingConnections() >= static_cast<size_t>(getMaxPendingConnections()))
+    {
+        if (getLog())
+        {
+            getLog()->onEvent("Refused a connection from " + std::string(socket_peername(s)) + ": " +
+                              std::to_string(getMaxPendingConnections()) + " connections are waiting to log on");
+        }
+        server.getMonitor().drop(s);
+        return;
+    }
     int port = server.socketToPort(a);
     Sessions sessions = m_portToSessions[port];
 
@@ -353,6 +366,20 @@ void SSLSocketAcceptor::onConnect(SocketServer &server, socket_handle a, socket_
     // long it may take.
     sconn->setHandshakeStartTime(time(0));
     m_pendingHandshakes[s] = PendingHandshake{sconn, port};
+}
+
+size_t SSLSocketAcceptor::pendingConnections() const
+{
+    size_t pending = m_pendingHandshakes.size();
+    for (const SocketConnections::value_type &entry : m_connections)
+    {
+        Session *pSession = entry.second->getSession();
+        if (pSession == 0 || !pSession->receivedLogon())
+        {
+            ++pending;
+        }
+    }
+    return pending;
 }
 
 SSLSocketAcceptor::HandshakeStep SSLSocketAcceptor::stepHandshake(SSLSocketConnection *connection)

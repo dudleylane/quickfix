@@ -116,6 +116,7 @@
 
 #if (HAVE_SSL > 0)
 
+#include "Session.h"
 #include "Settings.h"
 #include "ThreadedSSLSocketAcceptor.h"
 #include "Utility.h"
@@ -389,6 +390,21 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketAcceptorThread(void *p)
             continue;
         }
 
+        // MaxPendingConnections: past the limit a new connection is refused at once,
+        // so connections that never log on cannot exhaust threads and descriptors.
+        // Logged-on sessions do not count against it.
+        const int maxPending = pAcceptor->getMaxPendingConnections();
+        if (maxPending > 0 && pAcceptor->m_pendingConnections.load() >= maxPending)
+        {
+            if (pAcceptor->getLog())
+            {
+                pAcceptor->getLog()->onEvent("Refused a connection from " + std::string(socket_peername(socket)) +
+                                             ": " + std::to_string(maxPending) + " connections are waiting to log on");
+            }
+            socket_close(socket);
+            continue;
+        }
+
         if (noDelay)
         {
             socket_setsockopt(socket, TCP_NODELAY);
@@ -440,8 +456,10 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketAcceptorThread(void *p)
             }
 
             thread_id thread;
+            ++pAcceptor->m_pendingConnections; // the connection thread gives it back
             if (!thread_spawn(&socketConnectionThread, info, thread))
             {
+                --pAcceptor->m_pendingConnections;
                 delete info;
                 delete pConnection;
                 SSL_free(ssl);
@@ -478,6 +496,7 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketConnectionThread(void *p)
         {
             pAcceptor->getLog()->onEvent("Failed to accept new SSL connection");
         }
+        --pAcceptor->m_pendingConnections;
         SSL *ssl = pConnection->sslObject();
         delete pConnection;
         if (!pAcceptor->isStopped())
@@ -487,8 +506,18 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketConnectionThread(void *p)
         return 0;
     }
 
+    bool pending = true;
     while (pConnection->read())
     {
+        if (pending && pConnection->getSession() && pConnection->getSession()->receivedLogon())
+        {
+            pending = false;
+            --pAcceptor->m_pendingConnections;
+        }
+    }
+    if (pending)
+    {
+        --pAcceptor->m_pendingConnections;
     }
     SSL *ssl = pConnection->sslObject();
     delete pConnection;

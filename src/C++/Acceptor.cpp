@@ -57,6 +57,16 @@ void Acceptor::initialize() EXCEPT(ConfigError)
         throw ConfigError("No sessions defined");
     }
 
+    if (m_settings.get().has(MAX_PENDING_CONNECTIONS))
+    {
+        const int maxPending = m_settings.get().getInt(MAX_PENDING_CONNECTIONS);
+        if (maxPending < 0)
+        {
+            throw ConfigError(std::string(MAX_PENDING_CONNECTIONS) + " must not be negative");
+        }
+        m_maxPendingConnections = maxPending;
+    }
+
     SessionFactory factory(m_application, m_messageStoreFactory, m_pLogFactory);
 
     for (i = sessions.begin(); i != sessions.end(); ++i)
