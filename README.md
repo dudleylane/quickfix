@@ -47,6 +47,7 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Dropped sockets stay open until reported**: `SocketMonitor::drop()` keeps a descriptor open until its drop has been reported, so a reused number cannot receive another socket's report (#26, `f5d9c9ab`)
 - **Threaded teardown from the owning thread**: other threads shut a threaded connection's socket down, and the connection's own thread closes it, once (#27, #28, `c3ce6f24`)
 - **Setup deadline on every acceptor**: an accepted connection that has not logged on within ten seconds is dropped — including one whose first Logon drew only a reject (#71) — and the threaded acceptors keep listening after a failed `accept()` (GHSA-x32r-xvq9-g2g9, `063a9e5b`, `b51bde5f`)
+- **Pending-connection limit**: `MaxPendingConnections` bounds how many accepted connections that have not logged on each acceptor holds; a new one beyond it is closed at once. Off by default (#72, `8106631a`)
 - **Allow-list before the first message**: `AllowedRemoteAddresses` is checked on every acceptor before the first message reaches the session (GHSA-2ppv-6433-rfh2, `6347ee9d`)
 - **HTTP admin server restricted**: it listens on 127.0.0.1 unless `HttpAcceptAddress` says otherwise, changes state only on a POST, refuses a Host that is a DNS name other than `localhost` and a POST from another Origin, and closes each request's socket once; it still has no authentication (GHSA-7hm8-h6g7-8vf3, `da37aab8`)
 
@@ -145,7 +146,7 @@ remains in git history.
 - **Removed**: Dead AIX/Solaris platform code, duplicate `configure_file` call
 - **Generated code**: `spec/generate.sh` reproduces the checked-in tree (`d0214a62`), and the generated `FixFields.h` and `FixFieldNumbers.h` restore a caller's `ReplaceText` macro instead of losing it (`52d7a4f7`)
 - **Bindings**: the Python and Ruby bindings build again from the current headers, and CI builds and tests both (`4cb3d655`, `68bb468f`, `d0ff75c7`, `96abec8a`)
-- **Soname `libquickfix.so.19`**: the fork has changed the layout of exported classes (`FieldBase`, `Message`), so a binary built against upstream must not load this library. 19.0.0 changed the layout of `Parser`, `Session` and the connection classes again, so a binary built against 18.x must be rebuilt. Upstream's CMake build uses 17 and its autotools build `libquickfix.so.18`, which collided with this fork's 18.x where both were installed (#51); 19 no longer does. 18 also covered the untagged series before the first release, v18.0.0; from v18.0.0 on, any layout change to an exported class bumps the major version in `project()` (top-level `CMakeLists.txt`), the one place the version is set — the soname, `QuickFIXVersion.h` and the Python module all take it from there
+- **Soname `libquickfix.so.20`**: the fork has changed the layout of exported classes (`FieldBase`, `Message`), so a binary built against upstream must not load this library. 19.0.0 changed the layout of `Parser`, `Session` and the connection classes again, and 20.0.0 that of `Acceptor` and the threaded acceptors, so a binary built against an earlier major must be rebuilt. Upstream's CMake build uses 17 and its autotools build `libquickfix.so.18`, which collided with this fork's 18.x where both were installed (#51); 19 and later no longer do. 18 also covered the untagged series before the first release, v18.0.0; from v18.0.0 on, any layout change to an exported class bumps the major version in `project()` (top-level `CMakeLists.txt`), the one place the version is set — the soname, `QuickFIXVersion.h` and the Python module all take it from there
 
 ## Supported Platforms
 
@@ -204,7 +205,7 @@ Programs built against the installed headers get the matching allocator from the
 `cmake --install` ships a CMake package and a pkg-config file. The headers need C++23.
 
 ```cmake
-find_package(quickfix 19 CONFIG REQUIRED)   # any 19.x: the major version is the soname
+find_package(quickfix 20 CONFIG REQUIRED)   # any 20.x: the major version is the soname
 target_link_libraries(app PRIVATE quickfix::quickfix)
 ```
 

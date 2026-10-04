@@ -1,3 +1,20 @@
+20.0.0
+------
+
+The soname is libquickfix.so.20. Acceptor, ThreadedSocketAcceptor and ThreadedSSLSocketAcceptor
+gained data members, so a program built against 19.x does not load this library and must be
+rebuilt against these headers. find_package(quickfix 20) and pkg-config pick it up. Nothing else
+in the API changed.
+
+New setting MaxPendingConnections ([DEFAULT]) bounds how many accepted connections that have not
+logged on yet each acceptor holds at once; a new connection beyond it is closed at once and logged.
+Logged-on sessions do not count. 0, the default, means no limit, as before; a negative value is a
+configuration error. With 19.0.0's ten-second setup deadline it bounds what a peer that connects
+without logging on can hold, which completes GHSA-x32r-xvq9-g2g9 (#72). Acceptor gains
+getMaxPendingConnections(), and the Python and Ruby bindings expose it and MAX_PENDING_CONNECTIONS.
+
+README's "Changes from upstream" now lists the divergences 19.0.0 introduced.
+
 19.0.0
 ------
 
