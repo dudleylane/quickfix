@@ -15,11 +15,15 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Session::s_mutex**: Replaced global `Mutex` with `std::shared_mutex` — concurrent session lookups no longer serialize under multi-session load. Fixed unprotected `getSessions()`
 - **SessionState**: the flags and counters read and written from several threads (`m_enabled`, `m_receivedLogon`, `m_sentLogon`, `m_logonTimeout`, …) are `std::atomic` (`0852bc4a`)
 - **Thread helpers** (`Utility.cpp`): the two-argument `thread_spawn` detaches the thread it starts, since it returns no id that anything could join (`f4c9c0c3`)
+- **Session settings**: the run-time-settable members behind `setCheckLatency`, `setResetOnLogon` and the rest are `std::atomic`, and `SessionState`'s last-sent and last-received times are read and written under its mutex, since any thread may send or change a setting while the session's own thread reads them (GHSA-7hm8-h6g7-8vf3, `da37aab8`)
+- **SocketMonitor owner thread**: `drop()` called from a thread other than the one blocking on the monitor only shuts the socket down, and the blocking thread drops it, so the socket sets are touched by one thread (`da37aab8`)
+- **Threaded acceptor shutdown**: a connection accepted while the acceptor stops is closed rather than spawned after `onStop()`'s snapshot of its threads (`edacfa1e`)
 
 ### Memory safety
 - **FieldMap copy assignment**: Copy-and-swap idiom for strong exception guarantee — fixes memory leak when copy throws mid-group
 - **FieldMap copy constructor**: Direct member initialization instead of delegating to `operator=`
 - **Parser**: Added `MAX_MESSAGE_SIZE` (8 MB) bound on `addToStream()` — prevents unbounded memory growth from malicious/malformed peers
+- **Parser bound handled and linear**: every connection class catches the bound's `MessageParseError` and drops just that connection, and the parser neither rescans bytes that hold no `8=` nor restarts its length-header search from the front on each read (GHSA-gmqc-6vqm-j7w7, `548109ca`, `197692dc`, `6a6c9a78`, `ff1e0ac5`)
 - **Message**: Bounds check on `RawDataLength`-computed iterator — prevents out-of-bounds read from corrupted data length fields
 - **FileStoreTestCase**: Added missing `destroy()` call — fixes test fixture memory leak
 - **`FieldBase` is not polymorphic** (`Field.h`): the virtual destructor was removed — nothing owned a `FieldBase *` — taking every field from 88 to 80 bytes and making the class standard-layout.
@@ -33,6 +37,8 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **EVP_PKEY leak**: Added `EVP_PKEY_free()` after `X509_get_pubkey()` in `typeofSSLAlgo()`
 - **findCAList leaks**: fixed the leaks it had on every call (`7bc5c74e`)
 - **SSL descriptors closed once**: each SSL connection's descriptor has exactly one owner and is closed once (#25, `d0819d09`)
+- **Server verified by default**: an SSL initiator verifies the server's certificate — against the configured CA, or the system's default trust store when none is configured — and checks that it names the host or address connected to; `CertificateVerifyLevel=0` is the only opt-out. A configured CA is the only trust anchor, and an acceptor honours `CertificateVerifyLevel` with or without one. Upstream verifies nothing unless a CA is configured and never checks the name (GHSA-rh2f-46w4-p7j3, `36c2baaf`)
+- **Threaded TLS**: `ThreadedSSLSocketConnection` waits with `poll()` rather than `select()` (GHSA-ppch-w7ph-7qw4, `1c707427`), and its handshake runs on a non-blocking socket so the ten-second deadline fires (`b51bde5f`)
 
 ### Transport
 - **TLS handshake stepped from the reactor**: `SSLSocketAcceptor` steps `SSL_accept` from the reactor's read and write events, with a 10 s deadline, instead of completing each handshake inline (GHSA-ph6x-vg87-665p, `ee3b1780`)
@@ -40,6 +46,9 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **One owner per reactor descriptor**: teardown closes the listening socket once instead of up to three times, and closes connections still waiting in the monitor's connect set, which it used to leak (#29, `bd123e3a`)
 - **Dropped sockets stay open until reported**: `SocketMonitor::drop()` keeps a descriptor open until its drop has been reported, so a reused number cannot receive another socket's report (#26, `f5d9c9ab`)
 - **Threaded teardown from the owning thread**: other threads shut a threaded connection's socket down, and the connection's own thread closes it, once (#27, #28, `c3ce6f24`)
+- **Setup deadline on every acceptor**: an accepted connection that has not logged on within ten seconds is dropped — including one whose first Logon drew only a reject (#71) — and the threaded acceptors keep listening after a failed `accept()` (GHSA-x32r-xvq9-g2g9, `063a9e5b`, `b51bde5f`)
+- **Allow-list before the first message**: `AllowedRemoteAddresses` is checked on every acceptor before the first message reaches the session (GHSA-2ppv-6433-rfh2, `6347ee9d`)
+- **HTTP admin server restricted**: it listens on 127.0.0.1 unless `HttpAcceptAddress` says otherwise, changes state only on a POST, refuses a Host that is a DNS name other than `localhost` and a POST from another Origin, and closes each request's socket once; it still has no authentication (GHSA-7hm8-h6g7-8vf3, `da37aab8`)
 
 ### Latency
 - **GroupArena**: Per-message bump-pointer arena for the groups a message gets through `addGroup()` or a copy: building or copying a message with repeating groups takes each `Group` object from the arena instead of `new`/`delete` (its field vector still allocates). 32 slots of 128 bytes (4 KB), allocated on first use and bulk-reset on `clear()`. Parsing does not use it: `setString()` allocates each group with `new`, and moving those onto the arena measured at no more than about 4% of a QuoteRequest parse, which did not justify the risk (#52).
@@ -118,6 +127,10 @@ remains in git history.
 - **Embedded SOH**: a message whose field value is cut short by an embedded SOH is rejected with a session-level Reject naming the field, instead of being dropped as garbled (`26aa506c`)
 - **Out-of-order repeating group members**: rejected with the misplaced member named, instead of a misleading diagnosis (`74fe9320`)
 - **FIX 4.2 QuoteAcknowledgement**: uses QuoteStatus (297), as `FIX42.xml` requires, instead of tag 1865, which FIX 4.2 does not define (`25b23432`)
+- **Logon reset after verification**: `ResetSeqNumFlag=Y` and `ResetOnLogon` reset the sequence numbers only once `verify()` — and the application's `fromAdmin` — has accepted the Logon, and a reset or `setNextTargetMsgSeqNum` also clears the inbound queue and resend range (GHSA-jg3m-mc7p-8mww, `389a9d38`)
+- **No reject before logon**: the string-reason `generateReject` refuses to send while not logged on, like the int-reason one, and formats Text the same way (GHSA-fgwx-rgmv-2fgh, `1ba01631`)
+- **Canonical field metrics**: a field parsed from a non-canonical tag carries the length and checksum of what `appendTo()` writes, so copies of it serialise consistently (GHSA-4459-9vwq-69r6, `1d9a6fcd`)
+- **SQL stores**: `MySQLStore` and `PostgreSQLStore` escape the message in their UPDATE fallback as in the INSERT (GHSA-ghf2-fj46-jv6p, `4a9628ac`)
 
 ### Build system
 - **C++23**: Minimum standard raised from C++17; `CMAKE_CXX_STANDARD_REQUIRED=ON`. The code uses `std::flat_map` and `std::move_only_function`, so it needs GCC 15
