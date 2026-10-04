@@ -440,6 +440,17 @@ bool ThreadedSSLSocketConnection::setSession(const std::string &message)
         return false;
     }
 
+    if (m_pSession->isAcceptor())
+    {
+        std::string remote_address = socket_peername(m_socket);
+        if (!m_pSession->getAllowedRemoteAddresses().empty() && !m_pSession->inAllowedRemoteAddresses(remote_address))
+        {
+            m_pSession->getLog()->onEvent("Deny connections to the acceptor from " + remote_address);
+            return false;
+        }
+        m_pSession->getLog()->onEvent("Allows connections to the acceptor from " + remote_address);
+    }
+
     m_pSession->setResponder(this);
     return true;
 }

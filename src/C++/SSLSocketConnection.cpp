@@ -328,16 +328,28 @@ bool SSLSocketConnection::read(SSLSocketAcceptor &acceptor, SocketServer &server
             {
                 m_pSession = acceptor.getSession(message, *this);
             }
-            if (m_pSession)
-            {
-                m_pSession->next(message, UtcTimeStamp::now());
-            }
             if (!m_pSession)
             {
                 server.getMonitor().drop(m_socket);
                 return false;
             }
 
+            // Enforce the acceptor's address allow-list before the first message is handed to the
+            // session. The plain reactor acceptor does the same; this path did not check at all.
+            if (m_pSession->isAcceptor())
+            {
+                std::string remote_address = socket_peername(m_socket);
+                if (!m_pSession->getAllowedRemoteAddresses().empty() &&
+                    !m_pSession->inAllowedRemoteAddresses(remote_address))
+                {
+                    m_pSession->getLog()->onEvent("Deny connections to the acceptor from " + remote_address);
+                    server.getMonitor().drop(m_socket);
+                    return false;
+                }
+                m_pSession->getLog()->onEvent("Allows connections to the acceptor from " + remote_address);
+            }
+
+            m_pSession->next(message, UtcTimeStamp::now());
             Session::registerSession(m_pSession->getSessionID());
             return true;
         }

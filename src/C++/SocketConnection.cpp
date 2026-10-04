@@ -176,16 +176,15 @@ bool SocketConnection::read(SocketAcceptor &acceptor, SocketServer &server)
             {
                 m_pSession = acceptor.getSession(message, *this);
             }
-            if (m_pSession)
-            {
-                m_pSession->next(message, UtcTimeStamp::now());
-            }
             if (!m_pSession)
             {
                 server.getMonitor().drop(m_socket);
                 return false;
             }
 
+            // Enforce the acceptor's address allow-list before the first message is handed to the
+            // session, not after: processing it first ran the application's callbacks and advanced
+            // session state for a peer that is then refused.
             if (m_pSession->isAcceptor())
             {
                 std::string remote_address = socket_peername(m_socket);
@@ -193,11 +192,13 @@ bool SocketConnection::read(SocketAcceptor &acceptor, SocketServer &server)
                     !m_pSession->inAllowedRemoteAddresses(remote_address))
                 {
                     m_pSession->getLog()->onEvent("Deny connections to the acceptor from " + remote_address);
+                    server.getMonitor().drop(m_socket);
                     return false;
                 }
                 m_pSession->getLog()->onEvent("Allows connections to the acceptor from " + remote_address);
             }
 
+            m_pSession->next(message, UtcTimeStamp::now());
             Session::registerSession(m_pSession->getSessionID());
             return true;
         }
