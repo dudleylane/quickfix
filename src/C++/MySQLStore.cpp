@@ -197,8 +197,8 @@ void MySQLStoreFactory::destroy(MessageStore *pStore) { delete pStore; }
 
 bool MySQLStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException)
 {
-    char *msgCopy = new char[(msg.size() * 2) + 1];
-    mysql_escape_string(msgCopy, msg.c_str(), msg.size());
+    std::string msgCopy((msg.size() * 2) + 1, '\0');
+    msgCopy.resize(mysql_escape_string(msgCopy.data(), msg.c_str(), msg.size()));
 
     std::stringstream queryString;
     queryString << "INSERT INTO messages "
@@ -210,13 +210,11 @@ bool MySQLStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOExceptio
                 << "\"" << m_sessionID.getSessionQualifier() << "\"," << msgSeqNum << ","
                 << "\"" << msgCopy << "\")";
 
-    delete[] msgCopy;
-
     MySQLQuery query(queryString.str());
     if (!m_pConnection->execute(query))
     {
         std::stringstream queryString2;
-        queryString2 << "UPDATE messages SET message=\"" << msg << "\" WHERE "
+        queryString2 << "UPDATE messages SET message=\"" << msgCopy << "\" WHERE "
                      << "beginstring=" << "\"" << m_sessionID.getBeginString().getValue() << "\" and "
                      << "sendercompid=" << "\"" << m_sessionID.getSenderCompID().getValue() << "\" and "
                      << "targetcompid=" << "\"" << m_sessionID.getTargetCompID().getValue() << "\" and "

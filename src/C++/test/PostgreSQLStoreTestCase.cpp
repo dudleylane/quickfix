@@ -77,6 +77,8 @@ TEST_CASE_METHOD(resetPostgreSQLStoreFixture,
 
                                               SECTION("setGetWithQuote"){CHECK_MESSAGE_STORE_SET_GET_WITH_QUOTE}
 
+                                              SECTION("setTwiceWithQuote"){CHECK_MESSAGE_STORE_SET_TWICE_WITH_QUOTE}
+
                                               SECTION("other"){CHECK_MESSAGE_STORE_OTHER}
 
                                               SECTION("otherUint64"){CHECK_MESSAGE_STORE_OTHER_UINT64}

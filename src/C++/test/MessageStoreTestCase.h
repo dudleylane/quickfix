@@ -79,6 +79,20 @@
     CHECK(heartbeat.toString() == messages[1]);                                                                        \
     CHECK(newOrderSingle.toString() == messages[2]);
 
+#define CHECK_MESSAGE_STORE_SET_TWICE_WITH_QUOTE                                                                       \
+    FIX42::ExecutionReport first;                                                                                      \
+    first.setField(Text("first ' \" \\ text"));                                                                        \
+    object->set(1, first.toString());                                                                                  \
+                                                                                                                       \
+    FIX42::ExecutionReport second;                                                                                     \
+    second.setField(Text("second ' \" \\ text"));                                                                      \
+    object->set(1, second.toString());                                                                                 \
+                                                                                                                       \
+    std::vector<std::string> stored;                                                                                   \
+    object->get(1, 1, stored);                                                                                         \
+    REQUIRE(1U == stored.size());                                                                                      \
+    CHECK(second.toString() == stored[0]);
+
 #define CHECK_MESSAGE_STORE_SET_GET_WITH_QUOTE                                                                         \
     FIX42::ExecutionReport singleQuote;                                                                                \
     singleQuote.setField(Text("Some Text"));                                                                           \
