@@ -1,3 +1,43 @@
+19.0.0
+------
+
+The soname is libquickfix.so.19. Exported classes changed layout -- Parser, and with it every
+connection class that embeds one; Session, SessionState, HttpServer, HttpConnection, HttpMessage,
+SocketMonitor and the Threaded*SocketConnection classes -- so a program built against 18.x does
+not load this library and must be rebuilt against these headers. find_package(quickfix 19) and
+pkg-config pick it up. The number no
+longer collides with upstream's autotools build, which also produces libquickfix.so.18 (#51).
+
+Fixes ten security advisories, published with this release: GHSA-gmqc-6vqm-j7w7,
+GHSA-ppch-w7ph-7qw4, GHSA-fgwx-rgmv-2fgh, GHSA-2ppv-6433-rfh2, GHSA-jg3m-mc7p-8mww,
+GHSA-4459-9vwq-69r6, GHSA-rh2f-46w4-p7j3, GHSA-7hm8-h6g7-8vf3, GHSA-ghf2-fj46-jv6p and
+GHSA-x32r-xvq9-g2g9. Each advisory says what it covers. A build that includes the fixes reports
+QUICKFIX_VERSION_MAJOR >= 19 in QuickFIXVersion.h.
+
+INCOMPATIBLE: an SSL initiator verifies the server's certificate by default, against
+CertificationAuthoritiesFile/Directory or, when neither is set, the system's default trust store,
+and checks that the certificate names the host or address it connected to. A configuration that
+connected without a verifiable certificate now fails the handshake. CertificateVerifyLevel=0 on an
+initiator turns verification off. A configured CA is now the only trust anchor; the system store
+is no longer added to it. An acceptor honours CertificateVerifyLevel whether or not a CA is set.
+README.SSL called the setting VerifyLevel; it is CertificateVerifyLevel.
+
+INCOMPATIBLE: the HTTP admin server (HttpAcceptPort) listens on 127.0.0.1 unless the new
+HttpAcceptAddress says otherwise, changes session state only on a POST (its pages now use
+buttons), and refuses a request whose Host is a DNS name other than localhost or a POST from
+another Origin. It still has no authentication. HttpServer::stopGlobal takes the settings that
+startGlobal was given.
+
+An accepted connection that has not logged on within ten seconds is dropped, on every acceptor,
+including one whose first Logon drew only a reject (#71). The threaded acceptors keep listening
+after a failed accept(), and the threaded TLS handshake has a working ten-second deadline.
+
+Session's run-time settings, and SessionState's last-sent and last-received times, are safe to
+set from any thread; a disconnect requested from a thread other than the reactor's no longer
+touches the reactor's socket sets. Fields parsed from non-canonical tags serialise with a
+consistent BodyLength and CheckSum. A sequence reset, or setNextTargetMsgSeqNum, discards
+messages queued for the old numbering.
+
 
 18.0.1
 ------

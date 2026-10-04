@@ -132,7 +132,7 @@ remains in git history.
 - **Removed**: Dead AIX/Solaris platform code, duplicate `configure_file` call
 - **Generated code**: `spec/generate.sh` reproduces the checked-in tree (`d0214a62`), and the generated `FixFields.h` and `FixFieldNumbers.h` restore a caller's `ReplaceText` macro instead of losing it (`52d7a4f7`)
 - **Bindings**: the Python and Ruby bindings build again from the current headers, and CI builds and tests both (`4cb3d655`, `68bb468f`, `d0ff75c7`, `96abec8a`)
-- **Soname `libquickfix.so.18`**: the fork has changed the layout of exported classes (`FieldBase`, `Message`), so a binary built against upstream must not load this library. Upstream's CMake build uses 17, but its autotools build also produces `libquickfix.so.18`, so where both are installed the soname alone does not keep them apart (#51). 18 also covered the untagged series before the first release, v18.0.0; from v18.0.0 on, any layout change to an exported class bumps the major version in `project()` (top-level `CMakeLists.txt`), the one place the version is set — the soname, `QuickFIXVersion.h` and the Python module all take it from there
+- **Soname `libquickfix.so.19`**: the fork has changed the layout of exported classes (`FieldBase`, `Message`), so a binary built against upstream must not load this library. 19.0.0 changed the layout of `Parser`, `Session` and the connection classes again, so a binary built against 18.x must be rebuilt. Upstream's CMake build uses 17 and its autotools build `libquickfix.so.18`, which collided with this fork's 18.x where both were installed (#51); 19 no longer does. 18 also covered the untagged series before the first release, v18.0.0; from v18.0.0 on, any layout change to an exported class bumps the major version in `project()` (top-level `CMakeLists.txt`), the one place the version is set — the soname, `QuickFIXVersion.h` and the Python module all take it from there
 
 ## Supported Platforms
 
@@ -191,7 +191,7 @@ Programs built against the installed headers get the matching allocator from the
 `cmake --install` ships a CMake package and a pkg-config file. The headers need C++23.
 
 ```cmake
-find_package(quickfix 18 CONFIG REQUIRED)   # any 18.x: the major version is the soname
+find_package(quickfix 19 CONFIG REQUIRED)   # any 19.x: the major version is the soname
 target_link_libraries(app PRIVATE quickfix::quickfix)
 ```
 

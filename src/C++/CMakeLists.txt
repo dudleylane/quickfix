@@ -113,10 +113,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR} ${PROJE
 # The version, and its major as the soname, come from project() in the top-level CMakeLists.txt,
 # read as PROJECT_VERSION*: the variables QuickFIXVersion.h, quickfix.pc, the package config and
 # VersionTestCase read too (#64). project() also defines quickfix_VERSION*, but a set() of those in
-# a subdirectory shadows them without a warning, so nothing reads them. The soname is 18 rather
-# than upstream's 17 because the fork changed the layout of exported classes (FieldBase, Message),
-# so a binary built against upstream 17 must not load this library. Since v18.0.0, a layout change
-# to an exported class bumps the major in project(). release_tag_check.yml compares the built
+# a subdirectory shadows them without a warning, so nothing reads them. The soname is the major
+# version, 18 from the first release, because the fork changed the layout of exported classes
+# (FieldBase, Message) from upstream's 17. Since v18.0.0, a layout change to an exported class
+# bumps the major in project(); 19.0.0 was the first such bump. release_tag_check.yml compares the built
 # library's soname with the release tag.
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} )
 
@@ -141,8 +141,8 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/C++/ DESTINATION include/quickfix
         PATTERN double-conversion EXCLUDE
         PATTERN test EXCLUDE)
 
-# Discovery for installed consumers: a CMake package, find_package(quickfix 18) -> quickfix::quickfix,
-# and a pkg-config file. Any 18.x satisfies a request for 18, since the major version is the soname.
+# Discovery for installed consumers: a CMake package, find_package(quickfix 19) -> quickfix::quickfix,
+# and a pkg-config file. Any 19.x satisfies a request for 19, since the major version is the soname.
 # The package config finds the imported targets the exported link interface names (TBB, ODBC).
 include(CMakePackageConfigHelpers)
 install(EXPORT quickfixTargets NAMESPACE quickfix:: DESTINATION lib/cmake/quickfix)
