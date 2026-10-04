@@ -26,6 +26,7 @@
 #include <sstream>
 #include <string>
 #include <sys/resource.h>
+#include <vector>
 
 #include "catch_amalgamated.hpp"
 
@@ -197,5 +198,39 @@ TEST_CASE("ParserTests")
             }
         }
         CHECK(cpuMillis() - start < 500.0);
+    }
+
+    SECTION("readFixMessageFramesEveryReadBoundary")
+    {
+        // However the stream is cut into reads, each message comes out whole and in order.
+        // A cut inside "9=<length>" leaves the header present but unfinished; the next read
+        // must resume at that header, not past it, or it frames the message on the next
+        // message's header instead.
+        const std::string first = "8=FIX.4.2\0019=12\00135=A\001108=30\00110=031\001";
+        const std::string second = "8=FIX.4.2\0019=5\00135=0\00110=161\001";
+        const std::string stream = first + second + first;
+        for (std::string::size_type cut1 = 1; cut1 < stream.size(); ++cut1)
+        {
+            for (std::string::size_type cut2 = cut1; cut2 < stream.size(); ++cut2)
+            {
+                Parser parser;
+                std::vector<std::string> framed;
+                std::string message;
+                for (const std::string &read :
+                     {stream.substr(0, cut1), stream.substr(cut1, cut2 - cut1), stream.substr(cut2)})
+                {
+                    parser.addToStream(read);
+                    while (parser.readFixMessage(message))
+                    {
+                        framed.push_back(message);
+                    }
+                }
+                INFO("cuts at " << cut1 << " and " << cut2);
+                REQUIRE(framed.size() == 3);
+                CHECK(framed[0] == first);
+                CHECK(framed[1] == second);
+                CHECK(framed[2] == first);
+            }
+        }
     }
 }

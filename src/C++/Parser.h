@@ -60,10 +60,12 @@ public:
 
 private:
     std::string m_buffer;
-    // How far readFixMessage has already searched the buffer for a message's "\0019=" length header
-    // while a "8=" sits at the front with no header yet. Lets the next read resume instead of
-    // rescanning from the front, which would be quadratic in the buffered size (bounded by
-    // MAX_MESSAGE_SIZE). Reset to 0 whenever the front of the buffer changes.
+    // Where readFixMessage's next search for the front message's "\0019=" length header starts,
+    // while a "8=" sits at the front and the message cannot be framed yet: at that header if it
+    // has arrived without its value's end, otherwise just short of what was already searched.
+    // Lets the next read resume instead of rescanning from the front, which would be quadratic
+    // in the buffered size (bounded by MAX_MESSAGE_SIZE). Reset to 0 whenever the front of the
+    // buffer changes.
     std::string::size_type m_lengthSearchFrom = 0;
 };
 } // namespace FIX

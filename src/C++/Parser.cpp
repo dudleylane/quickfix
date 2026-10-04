@@ -99,10 +99,8 @@ bool Parser::readFixMessage(std::string &str) EXCEPT(MessageParseError)
 
     try
     {
-        // Resume the "\0019=" search where the last read left off, overlapping by the needle length
-        // less one so a header split across reads is still found.
-        std::string::size_type searchFrom = m_lengthSearchFrom > 2 ? m_lengthSearchFrom - 2 : 0;
-        if (extractLength(length, pos, m_buffer, searchFrom))
+        // Resume the "\0019=" search where the last read left off (see below).
+        if (extractLength(length, pos, m_buffer, m_lengthSearchFrom))
         {
             m_lengthSearchFrom = 0;
             pos += length;
@@ -130,9 +128,21 @@ bool Parser::readFixMessage(std::string &str) EXCEPT(MessageParseError)
         }
         else
         {
-            // "8=" is at the front but the buffer holds no "\0019=" yet. Remember how far we
-            // scanned so the next read resumes here instead of from the front.
-            m_lengthSearchFrom = m_buffer.size();
+            // "8=" is at the front but the message cannot be framed yet. If its "\0019=" header
+            // has arrived but its value has not finished, the next read must start at that
+            // header: resuming past it would frame this message on the next message's header.
+            // Otherwise no header has arrived, and the next read resumes near the end,
+            // overlapping by the needle length less one so a header split across reads is still
+            // found.
+            const std::string::size_type header = m_buffer.find("\0019=", m_lengthSearchFrom);
+            if (header != std::string::npos)
+            {
+                m_lengthSearchFrom = header;
+            }
+            else
+            {
+                m_lengthSearchFrom = m_buffer.size() > 2 ? m_buffer.size() - 2 : 0;
+            }
         }
     }
     catch (MessageParseError &e)
