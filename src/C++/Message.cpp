@@ -788,6 +788,20 @@ FIX::FieldBase Message::extractField(const std::string &string, std::string::siz
         pos = std::distance(string.begin(), tagEnd);
 #endif
 
+        // A tag written other than as the encoder writes it would leave the field
+        // with metrics that do not match what appendTo() emits, and every copy
+        // of it would carry them into the messages it is set on. Keep the
+        // field's metrics canonical; the difference was on the wire and counted
+        // toward the peer's BodyLength and CheckSum, so validate() adds it back.
+        if ((*tagStart == '0' && equalSign - tagStart > 1) || *tagStart == '-') [[unlikely]]
+        {
+            FieldBase canonical(field, std::string(valueStart, soh));
+            const FieldBase received(field, valueStart, soh, tagStart, tagEnd);
+            m_embeddedSOHSkippedLength += received.getLength() - canonical.getLength();
+            m_embeddedSOHSkippedChecksum += received.getTotal() - canonical.getTotal();
+            return canonical;
+        }
+
         return FieldBase(field, valueStart, soh, tagStart, tagEnd);
     }
 }

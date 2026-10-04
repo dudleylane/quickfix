@@ -291,6 +291,41 @@ TEST_CASE("MessageTests")
         CHECK("20000426-12:05:06" == object.getField(FIX::FIELD::TransactTime)); // parsing resumed after it
     }
 
+    SECTION("parsedFieldsCopyWithTheirSerialisedMetrics")
+    {
+        // A message framed by the peer over the bytes it sent validates, and a
+        // field copied out of it into another message serialises with a
+        // BodyLength and CheckSum that match the bytes written.
+        auto frame = [](const std::string &body)
+        {
+            std::string framed = "8=FIX.4.2\0019=" + std::to_string(body.size()) + "\001" + body;
+            int sum = 0;
+            for (unsigned char c : framed)
+            {
+                sum += c;
+            }
+            return framed + "10=" + std::to_string(1000 + sum % 256).substr(1) + "\001";
+        };
+        const std::string body =
+            std::string("35=0\00134=2\00149=TW\00152=20000426-12:05:06\00156=ISLD\001") + "00112=TEST\001";
+
+        FIX::Message received;
+        received.setString(frame(body)); // validates BodyLength and CheckSum
+        CHECK("TEST" == received.getField(FIX::FIELD::TestReqID));
+
+        FIX::Message reply;
+        reply.getHeader().setField(FIX::BeginString("FIX.4.2"));
+        reply.getHeader().setField(FIX::MsgType("0"));
+        FIX::TestReqID testReqID;
+        received.getField(testReqID);
+        reply.setField(testReqID);
+
+        const std::string sent = reply.toString();
+        FIX::Message reparsed;
+        CHECK_NOTHROW(reparsed.setString(sent));
+        CHECK(sent == frame("35=0\001112=TEST\001"));
+    }
+
     SECTION("setStringWithDataFieldWithoutDataLength")
     {
         FIX::Message object;

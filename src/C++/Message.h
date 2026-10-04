@@ -430,9 +430,11 @@ protected:
     int m_tag;
     int m_embeddedSOHTag = 0;
     int m_outOfOrderGroupTag = 0;
-    /// Bytes of orphan tokens stepped over, and their byte sum. They were on the
-    /// wire and counted toward the peer's BodyLength and CheckSum, so validate()
-    /// has to add them back or it rejects a correctly framed message.
+    /// Bytes of orphan tokens stepped over, and their byte sum, plus the bytes by
+    /// which a received tag's text differs from its canonical form. They were on
+    /// the wire and counted toward the peer's BodyLength and CheckSum but are not
+    /// in any field's metrics, so validate() has to add them back or it rejects a
+    /// correctly framed message.
     int m_embeddedSOHSkippedLength = 0;
     int m_embeddedSOHSkippedChecksum = 0;
     static std::unique_ptr<DataDictionary> s_dataDictionary;
