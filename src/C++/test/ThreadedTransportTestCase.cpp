@@ -207,12 +207,14 @@ TEST_CASE("ThreadedTransportTests")
 
     SECTION("readWorksOnADescriptorAtOrAboveFdSetsize")
     {
-        // The threaded TLS connection must wait on its socket with poll(), not a fixed
-        // fd_set: a descriptor of FD_SETSIZE (1024) or more cannot be held in an fd_set, and
-        // FD_SET on it writes outside the 128-byte member. Put the connection's socket at a
-        // descriptor >= 1024 and drive one read through it. Under AddressSanitizer this fails
-        // on the fd_set path and passes on poll(); without it, it still checks poll() serves a
-        // high descriptor.
+        // The threaded TLS connection waits on its socket with poll(), like the other
+        // transports, so a descriptor of FD_SETSIZE (1024) or more is served normally. Put the
+        // connection's socket at a descriptor >= 1024 and drive one read through it.
+        //
+        // This checks the poll() path works at a high descriptor; it does not detect a return
+        // to the fd_set path. Verified 2026-10-04: with the fd_set code restored, this section
+        // still passes, AddressSanitizer included (likely because the overrun lands inside the
+        // connection object, which ASan does not instrument).
         rlimit limit{};
         REQUIRE(::getrlimit(RLIMIT_NOFILE, &limit) == 0);
         if (limit.rlim_cur <= FD_SETSIZE)
