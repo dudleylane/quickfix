@@ -22,6 +22,7 @@
 #include <FieldMap.h>
 #include <Group.h>
 #include <Message.h>
+#include <malloc.h>
 #include <vector>
 
 #include "catch_amalgamated.hpp"
@@ -279,5 +280,50 @@ TEST_CASE("FieldMapTests")
         CHECK(parent.groupCount(268) == 40);
         parent.clear();
         CHECK(parent.groupCount(268) == 0);
+    }
+
+    SECTION("moveAssignmentReleasesTheTargetsGroups")
+    {
+        // Move-assigning onto a map that already holds groups must destroy them, nested ones and
+        // their field vectors included, or each assignment leaks them. Heap use is sampled after a
+        // warm-up and must not grow with the number of assignments. (Under AddressSanitizer
+        // mallinfo2 does not see the heap, so this passes trivially there; LeakSanitizer reports
+        // the leak instead.)
+        auto withGroups = []
+        {
+            FieldMap map;
+            map.setField(1, "account");
+            for (int i = 0; i < 4; ++i)
+            {
+                FieldMap inner;
+                inner.setField(55, "SYMBOL" + std::to_string(i));
+                FieldMap group;
+                group.setField(11, std::string(64, 'x'));
+                group.addGroup(146, inner);                // nested, through the arena
+                map.addGroup(78, group);                   // through the arena
+                FieldMap *heapGroup = new FieldMap(group); // owned by the map, not in the arena
+                map.addGroupPtr(73, heapGroup);
+            }
+            return map;
+        };
+
+        FieldMap target = withGroups();
+        size_t before = 0;
+        for (int i = 0; i < 2000; ++i)
+        {
+            target = withGroups();
+            if (i == 200)
+            {
+                before = mallinfo2().uordblks;
+            }
+        }
+        const long growth = static_cast<long>(mallinfo2().uordblks) - static_cast<long>(before);
+        CHECK(growth < 64 * 1024);
+        CHECK(target.groupCount(78) == 4);
+        CHECK(target.groupCount(73) == 4);
+
+        FieldMap &self = target;
+        target = std::move(self); // self-move leaves a valid map
+        CHECK(target.groupCount(78) == 4);
     }
 }

@@ -51,6 +51,9 @@ FieldMap::FieldMap(FieldMap &&rhs)
     : m_fields(std::move(rhs.m_fields)), m_groups(std::move(rhs.m_groups)), m_order(std::move(rhs.m_order)),
       m_arena(std::move(rhs.m_arena))
 {
+    // As in move assignment: rhs's destructor must not find the groups this map now owns.
+    rhs.m_groups.clear();
+    rhs.m_fields.clear();
 }
 
 FieldMap::~FieldMap() { clear(); }
@@ -64,10 +67,25 @@ FieldMap &FieldMap::operator=(const FieldMap &rhs)
 
 FieldMap &FieldMap::operator=(FieldMap &&rhs)
 {
+    if (this == &rhs)
+    {
+        return *this;
+    }
+
+    // Destroy the groups this map holds before taking over rhs's: moving over m_groups and
+    // m_arena would drop the pointers without destroying the groups, leaking them and their
+    // field vectors. clear() deallocates into the current arena and resets it before that arena
+    // is replaced below.
+    clear();
     m_fields = std::move(rhs.m_fields);
     m_groups = std::move(rhs.m_groups);
     m_order = std::move(rhs.m_order);
     m_arena = std::move(rhs.m_arena);
+    // rhs's destructor clears it again. A moved-from container is only "valid but unspecified",
+    // so empty it explicitly rather than rely on the library to: groups left in it would be
+    // destroyed twice.
+    rhs.m_groups.clear();
+    rhs.m_fields.clear();
     return *this;
 }
 
