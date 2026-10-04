@@ -1,12 +1,16 @@
 #include "config.h"
 
 #include <Application.h>
+#include <DataDictionaryProvider.h>
 #include <MessageStore.h>
+#include <Parser.h>
 #include <SSLSocketAcceptor.h>
+#include <Session.h>
 #include <SessionSettings.h>
 #include <SocketAcceptor.h>
 #include <ThreadedSocketAcceptor.h>
 #include <ThreadedSocketConnection.h>
+#include <TimeRange.h>
 #if (HAVE_SSL > 0)
 #include <ThreadedSSLSocketAcceptor.h>
 #include <ThreadedSSLSocketConnection.h>
@@ -19,10 +23,12 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <csignal>
 #include <dirent.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <poll.h>
+#include <pthread.h>
 #include <sstream>
 #include <sys/resource.h>
 #include <sys/socket.h>
@@ -645,5 +651,106 @@ TEST_CASE("PendingConnectionLimitTests")
         MemoryStoreFactory factory;
         CHECK_THROWS_AS(ThreadedSocketAcceptor(application, factory, limitSettings(freePort(), "LIMIT5", "-1")),
                         ConfigError);
+    }
+}
+
+namespace
+{
+void ignoreSignal(int) {}
+} // namespace
+
+TEST_CASE("ThreadedSendTests")
+{
+    SECTION("aShortSendResumesWithTheRemainingBytes")
+    {
+        // send() on a blocking socket returns a short count when a signal interrupts it after part of
+        // the message has gone. The rest must follow -- exactly the rest, not the whole length again
+        // from the advanced position, which reads past the message and puts those bytes on the wire.
+        int pair[2];
+        REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
+        const int small = 4096;
+        ::setsockopt(pair[0], SOL_SOCKET, SO_SNDBUF, &small, sizeof(small));
+        ::setsockopt(pair[1], SOL_SOCKET, SO_RCVBUF, &small, sizeof(small));
+
+        struct sigaction action{};
+        struct sigaction previous{};
+        action.sa_handler = ignoreSignal; // no SA_RESTART: an interrupted send() returns
+        ::sigemptyset(&action.sa_mask);
+        REQUIRE(::sigaction(SIGUSR1, &action, &previous) == 0);
+
+        NullApplication application;
+        MemoryStoreFactory factory;
+        const SessionID sessionID(BeginString("FIX.4.2"), SenderCompID("SHORTSEND"), TargetCompID("TW"));
+        DataDictionaryProvider provider;
+        TimeRange always(UtcTimeOnly(0, 0, 0), UtcTimeOnly(0, 0, 0));
+        {
+            Session session([] { return UtcTimeStamp::now(); }, application, factory, sessionID, provider, always, 30,
+                            nullptr);
+            ThreadedSocketConnection connection(sessionID, pair[0], "", 0, nullptr);
+
+            Message logout;
+            logout.getHeader().setField(MsgType(MsgType_Logout));
+            logout.setField(Text(std::string(1024 * 1024, 'T'))); // far larger than the socket buffers
+
+            std::atomic<bool> sent{false};
+            std::thread sender(
+                [&]
+                {
+                    session.send(logout);
+                    sent = true;
+                });
+
+            // Drain on its own thread, slowly at first so the sender blocks with the buffers full,
+            // until the sender has finished and nothing more arrives.
+            std::string received;
+            std::thread reader(
+                [&]
+                {
+                    char buffer[65536];
+                    for (;;)
+                    {
+                        struct pollfd pfd = {pair[1], POLLIN, 0};
+                        if (::poll(&pfd, 1, 200) <= 0)
+                        {
+                            if (sent)
+                            {
+                                return;
+                            }
+                            continue;
+                        }
+                        const ssize_t n =
+                            ::recv(pair[1], buffer, received.size() < 64 * 1024 ? 512 : sizeof(buffer), 0);
+                        if (n <= 0)
+                        {
+                            return;
+                        }
+                        received.append(buffer, static_cast<size_t>(n));
+                        if (received.size() < 64 * 1024)
+                        {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                        }
+                    }
+                });
+
+            // Interrupt the blocked sender mid-message, a few times.
+            for (int round = 0; round < 5 && !sent; ++round)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                ::pthread_kill(sender.native_handle(), SIGUSR1);
+            }
+            sender.join();
+            reader.join();
+
+            // Exactly one well-framed message, and nothing after it.
+            Parser parser;
+            parser.addToStream(received);
+            std::string message;
+            REQUIRE(parser.readFixMessage(message));
+            CHECK(message.size() == received.size());
+            CHECK_NOTHROW(Message(message, true)); // BodyLength and CheckSum match the bytes
+        }
+        ::sigaction(SIGUSR1, &previous, nullptr);
+        ::close(pair[0]);
+        ::close(pair[1]);
     }
 }

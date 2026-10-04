@@ -18,6 +18,8 @@
 ****************************************************************************/
 
 #include "config.h"
+
+#include <cerrno>
 #include <poll.h>
 
 #include "Session.h"
@@ -65,15 +67,23 @@ ThreadedSocketConnection::~ThreadedSocketConnection()
 
 bool ThreadedSocketConnection::send(const std::string &msg)
 {
-    ssize_t totalSent = 0;
-    while (totalSent < (int)msg.length())
+    size_t totalSent = 0;
+    while (totalSent < msg.length())
     {
-        ssize_t sent = socket_send(m_socket, msg.c_str() + totalSent, msg.length());
+        // A signal can interrupt a blocking send() after part of the message has gone, and
+        // send() then returns a short count: continue with what remains, not the whole length
+        // again from the advanced position, which read past the message onto the wire. One
+        // interrupted before anything went returns EINTR and is simply retried.
+        const ssize_t sent = socket_send(m_socket, msg.c_str() + totalSent, msg.length() - totalSent);
         if (sent < 0)
         {
+            if (errno == EINTR)
+            {
+                continue;
+            }
             return false;
         }
-        totalSent += sent;
+        totalSent += static_cast<size_t>(sent);
     }
 
     return true;
