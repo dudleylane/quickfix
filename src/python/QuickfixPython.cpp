@@ -131324,6 +131324,20 @@ SWIGINTERN PyObject *Swig_var_HTTP_ACCEPT_PORT_get(void) {
 }
 
 
+SWIGINTERN int Swig_var_HTTP_ACCEPT_ADDRESS_set(PyObject *) {
+  SWIG_Error(SWIG_AttributeError,"Variable HTTP_ACCEPT_ADDRESS is read-only.");
+  return 1;
+}
+
+
+SWIGINTERN PyObject *Swig_var_HTTP_ACCEPT_ADDRESS_get(void) {
+  PyObject *pyobj = 0;
+  
+  pyobj = SWIG_FromCharPtr(FIX::HTTP_ACCEPT_ADDRESS);
+  return pyobj;
+}
+
+
 SWIGINTERN int Swig_var_PERSIST_MESSAGES_set(PyObject *) {
   SWIG_Error(SWIG_AttributeError,"Variable PERSIST_MESSAGES is read-only.");
   return 1;
@@ -169183,6 +169197,7 @@ SWIG_init(void) {
   SWIG_addvarlink(globals, "MILLISECONDS_IN_TIMESTAMP", Swig_var_MILLISECONDS_IN_TIMESTAMP_get, Swig_var_MILLISECONDS_IN_TIMESTAMP_set);
   SWIG_addvarlink(globals, "TIMESTAMP_PRECISION", Swig_var_TIMESTAMP_PRECISION_get, Swig_var_TIMESTAMP_PRECISION_set);
   SWIG_addvarlink(globals, "HTTP_ACCEPT_PORT", Swig_var_HTTP_ACCEPT_PORT_get, Swig_var_HTTP_ACCEPT_PORT_set);
+  SWIG_addvarlink(globals, "HTTP_ACCEPT_ADDRESS", Swig_var_HTTP_ACCEPT_ADDRESS_get, Swig_var_HTTP_ACCEPT_ADDRESS_set);
   SWIG_addvarlink(globals, "PERSIST_MESSAGES", Swig_var_PERSIST_MESSAGES_get, Swig_var_PERSIST_MESSAGES_set);
   SWIG_addvarlink(globals, "SERVER_CERTIFICATE_FILE", Swig_var_SERVER_CERTIFICATE_FILE_get, Swig_var_SERVER_CERTIFICATE_FILE_set);
   SWIG_addvarlink(globals, "SERVER_CERTIFICATE_KEY_FILE", Swig_var_SERVER_CERTIFICATE_KEY_FILE_get, Swig_var_SERVER_CERTIFICATE_KEY_FILE_set);

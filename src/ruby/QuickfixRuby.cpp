@@ -98409,6 +98409,15 @@ _wrap_HTTP_ACCEPT_PORT_get(VALUE self) {
 
 
 SWIGINTERN VALUE
+_wrap_HTTP_ACCEPT_ADDRESS_get(VALUE self) {
+  VALUE _val;
+  
+  _val = SWIG_FromCharPtr(FIX::HTTP_ACCEPT_ADDRESS);
+  return _val;
+}
+
+
+SWIGINTERN VALUE
 _wrap_PERSIST_MESSAGES_get(VALUE self) {
   VALUE _val;
   
@@ -132740,6 +132749,7 @@ SWIGEXPORT void Init_quickfix(void) {
   rb_define_singleton_method(mQuickfix, "MILLISECONDS_IN_TIMESTAMP", VALUEFUNC(_wrap_MILLISECONDS_IN_TIMESTAMP_get), 0);
   rb_define_singleton_method(mQuickfix, "TIMESTAMP_PRECISION", VALUEFUNC(_wrap_TIMESTAMP_PRECISION_get), 0);
   rb_define_singleton_method(mQuickfix, "HTTP_ACCEPT_PORT", VALUEFUNC(_wrap_HTTP_ACCEPT_PORT_get), 0);
+  rb_define_singleton_method(mQuickfix, "HTTP_ACCEPT_ADDRESS", VALUEFUNC(_wrap_HTTP_ACCEPT_ADDRESS_get), 0);
   rb_define_singleton_method(mQuickfix, "PERSIST_MESSAGES", VALUEFUNC(_wrap_PERSIST_MESSAGES_get), 0);
   rb_define_singleton_method(mQuickfix, "SERVER_CERTIFICATE_FILE", VALUEFUNC(_wrap_SERVER_CERTIFICATE_FILE_get), 0);
   rb_define_singleton_method(mQuickfix, "SERVER_CERTIFICATE_KEY_FILE", VALUEFUNC(_wrap_SERVER_CERTIFICATE_KEY_FILE_get), 0);
