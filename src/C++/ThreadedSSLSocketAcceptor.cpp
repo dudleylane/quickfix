@@ -427,6 +427,18 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketAcceptorThread(void *p)
                 pAcceptor->getLog()->onEvent(stream.str());
             }
 
+            // stop() sets the stopped flag before onStop() snapshots m_threads under this
+            // mutex, and it joins only that snapshot. A connection accepted as stop() begins
+            // would be spawned after the snapshot -- never joined, its socket never closed
+            // -- so it is closed here instead (freeing the SSL object closes it, through its BIO), and accepting ends.
+            if (pAcceptor->isStopped())
+            {
+                delete info;
+                delete pConnection;
+                SSL_free(ssl);
+                break;
+            }
+
             thread_id thread;
             if (!thread_spawn(&socketConnectionThread, info, thread))
             {
