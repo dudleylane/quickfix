@@ -490,17 +490,20 @@ void SSLSocketAcceptor::expireSetup()
         }
     }
 
-    // A connection past its handshake but still without a session is reading its
-    // first message; bound that too. Dropping is deferred to the monitor, which
+    // A connection past its handshake is set up once its session has received a
+    // logon; bound the rest too, including one that bound a session with
+    // messages that drew only rejects. Dropping is deferred to the monitor, which
     // closes the socket once on the next block() (#26), so m_connections is not
     // mutated here.
     for (const SocketConnections::value_type &entry : m_connections)
     {
-        if (entry.second->getSession() == 0 && entry.second->getSecondsFromHandshakeStart(now) > 10)
+        Session *pSession = entry.second->getSession();
+        if ((pSession == 0 || !pSession->receivedLogon()) && entry.second->getSecondsFromHandshakeStart(now) > 10)
         {
             if (getLog())
             {
-                getLog()->onEvent("Timed out an SSL connection that sent no complete message");
+                getLog()->onEvent(pSession ? "Timed out an SSL connection that did not log on"
+                                           : "Timed out an SSL connection that sent no complete message");
             }
             m_pServer->getMonitor().drop(entry.first);
         }

@@ -199,15 +199,20 @@ void SocketAcceptor::expirePendingReads()
 
     for (const SocketConnections::value_type &entry : m_connections)
     {
-        // A connection with a session is past setup and reads through the normal
-        // path. Dropping is deferred to the monitor, which reports it on the next
+        // A connection is past setup once its session has received a logon. One
+        // that has bound a session without logging on -- its first messages drew
+        // only rejects -- would otherwise hold that session until the peer left,
+        // since a session not logged on has no timer of its own on an acceptor.
+        // Dropping is deferred to the monitor, which reports it on the next
         // block() and closes the socket once (#26); m_connections is not mutated
         // here, so iterating it is safe.
-        if (entry.second->getSession() == 0 && entry.second->getSecondsFromSetupStart(now) > 10)
+        Session *pSession = entry.second->getSession();
+        if ((pSession == 0 || !pSession->receivedLogon()) && entry.second->getSecondsFromSetupStart(now) > 10)
         {
             if (getLog())
             {
-                getLog()->onEvent("Timed out a connection that sent no complete message");
+                getLog()->onEvent(pSession ? "Timed out a connection that did not log on"
+                                           : "Timed out a connection that sent no complete message");
             }
             m_pServer->getMonitor().drop(entry.first);
         }

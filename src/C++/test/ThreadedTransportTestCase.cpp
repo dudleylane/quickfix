@@ -3,9 +3,11 @@
 #include <Application.h>
 #include <MessageStore.h>
 #include <SessionSettings.h>
+#include <SocketAcceptor.h>
 #include <ThreadedSocketAcceptor.h>
 #include <ThreadedSocketConnection.h>
 #if (HAVE_SSL > 0)
+#include <ThreadedSSLSocketAcceptor.h>
 #include <ThreadedSSLSocketConnection.h>
 #include <UtilitySSL.h>
 #endif
@@ -19,6 +21,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sstream>
 #include <sys/resource.h>
 #include <sys/socket.h>
@@ -382,5 +385,124 @@ TEST_CASE("ThreadedTransportParserCapTests")
             CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(3));
         }
         CHECK(openDescriptors() == before);
+    }
+}
+
+namespace
+{
+SessionSettings deadlineSettings(int port, const std::string &sender)
+{
+    std::stringstream config;
+    config << "[DEFAULT]\nConnectionType=acceptor\nSocketAcceptPort=" << port
+           << "\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=Y\nDataDictionary="
+           << TestSettings::pathForSpec("FIX42") << "\n"
+#if (HAVE_SSL > 0)
+           << "ServerCertificateFile=" << certPath("127_0_0_1_server.crt") << "\n"
+           << "ServerCertificateKeyFile=" << certPath("127_0_0_1_server.key") << "\n"
+#endif
+           << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=" << sender << "\nTargetCompID=TW\n";
+    return SessionSettings(config);
+}
+
+// A well-framed Logon that binds the session but fails its dictionary check --
+// it carries a field a Logon does not define -- so it draws a session-level
+// reject instead of a disconnect, and the session is not logged on.
+std::string rejectedFirstMessage(const std::string &target)
+{
+    Message message;
+    message.getHeader().setField(BeginString("FIX.4.2"));
+    message.getHeader().setField(MsgType("A"));
+    message.setField(EncryptMethod(0));
+    message.setField(HeartBtInt(30));
+    message.setField(Symbol("IBM"));
+    message.getHeader().setField(SenderCompID("TW"));
+    message.getHeader().setField(TargetCompID(target));
+    message.getHeader().setField(MsgSeqNum(1));
+    message.getHeader().setField(SendingTime(UtcTimeStamp::now()));
+    return message.toString();
+}
+
+// True once the peer has closed the connection.
+bool closedByPeer(int fd)
+{
+    struct pollfd pfd = {fd, POLLIN, 0};
+    if (::poll(&pfd, 1, 0) <= 0)
+    {
+        return false;
+    }
+    char byte;
+    return ::recv(fd, &byte, 1, MSG_DONTWAIT) == 0 || (pfd.revents & (POLLHUP | POLLERR));
+}
+} // namespace
+
+TEST_CASE("SetupDeadlineTests")
+{
+    SECTION("aConnectionThatDoesNotLogOnIsDroppedOnEveryAcceptor")
+    {
+        // An accepted connection must log on within ten seconds, whether it sends
+        // nothing at all or only messages that bind its session and draw rejects
+        // (#71). One wait covers every acceptor, so this costs ~12 s once.
+        NullApplication application;
+        MemoryStoreFactory factory;
+
+        const int threadedPort = freePort();
+        ThreadedSocketAcceptor threaded(application, factory, deadlineSettings(threadedPort, "DEADLINE1"));
+        threaded.start();
+        const int reactorPort = freePort();
+        SocketAcceptor reactor(application, factory, deadlineSettings(reactorPort, "DEADLINE2"));
+        reactor.start();
+
+        std::vector<int> clients;
+        const int threadedBound = connectTo(threadedPort);
+        REQUIRE(threadedBound >= 0);
+        REQUIRE(sendAll(threadedBound, rejectedFirstMessage("DEADLINE1")));
+        clients.push_back(threadedBound);
+        const int threadedSilent = connectTo(threadedPort);
+        REQUIRE(threadedSilent >= 0);
+        clients.push_back(threadedSilent);
+        const int reactorBound = connectTo(reactorPort);
+        REQUIRE(reactorBound >= 0);
+        REQUIRE(sendAll(reactorBound, rejectedFirstMessage("DEADLINE2")));
+        clients.push_back(reactorBound);
+
+#if (HAVE_SSL > 0)
+        const int tlsPort = freePort();
+        ThreadedSSLSocketAcceptor tls(application, factory, deadlineSettings(tlsPort, "DEADLINE3"));
+        tls.start();
+        const int tlsSilent = connectTo(tlsPort); // never starts its handshake
+        REQUIRE(tlsSilent >= 0);
+        clients.push_back(tlsSilent);
+#endif
+
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+        for (std::size_t i = 0; i < clients.size(); ++i)
+        {
+            INFO("client " << i);
+            CHECK_FALSE(closedByPeer(clients[i])); // well inside the deadline
+        }
+
+        const auto start = std::chrono::steady_clock::now();
+        std::vector<bool> closed(clients.size(), false);
+        while (std::chrono::steady_clock::now() - start < std::chrono::seconds(12) &&
+               std::count(closed.begin(), closed.end(), false) > 0)
+        {
+            for (std::size_t i = 0; i < clients.size(); ++i)
+            {
+                closed[i] = closed[i] || closedByPeer(clients[i]);
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        for (std::size_t i = 0; i < clients.size(); ++i)
+        {
+            INFO("client " << i);
+            CHECK(closed[i]);
+            ::close(clients[i]);
+        }
+
+#if (HAVE_SSL > 0)
+        tls.stop();
+#endif
+        reactor.stop();
+        threaded.stop();
     }
 }

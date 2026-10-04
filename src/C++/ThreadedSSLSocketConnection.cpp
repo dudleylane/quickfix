@@ -129,7 +129,8 @@
 namespace FIX
 {
 ThreadedSSLSocketConnection::ThreadedSSLSocketConnection(socket_handle socket, SSL *ssl, Sessions sessions, Log *pLog)
-    : m_socket(socket), m_ssl(ssl), m_pLog(pLog), m_sessions(sessions), m_pSession(0), m_disconnect(false)
+    : m_socket(socket), m_ssl(ssl), m_pLog(pLog), m_sessions(sessions), m_pSession(0), m_disconnect(false),
+      m_setupDeadline(::time(0) + SETUP_SECONDS)
 {
 #if _MSC_VER
     FD_ZERO(&m_fds);
@@ -225,8 +226,48 @@ void ThreadedSSLSocketConnection::disconnect()
     ssl_socket_close(m_socket, m_ssl);
 }
 
+bool ThreadedSSLSocketConnection::setupExpired()
+{
+    if (m_setupDeadline == 0)
+    {
+        return false;
+    }
+    if (m_pSession && m_pSession->receivedLogon())
+    {
+        m_setupDeadline = 0; // set up; from here on the session times itself
+        return false;
+    }
+    if (::time(0) <= m_setupDeadline)
+    {
+        return false;
+    }
+
+    // Accepted, but not logged on in time: whether it sent nothing, an incomplete
+    // message, or only messages that drew a reject, the connection and the
+    // session it bound are freed for the counterparty.
+    if (m_pSession)
+    {
+        m_pSession->getLog()->onEvent("Timed out a connection that did not log on");
+        m_pSession->disconnect();
+    }
+    else
+    {
+        if (m_pLog)
+        {
+            m_pLog->onEvent("Timed out a connection that did not log on");
+        }
+        disconnect();
+    }
+    return true;
+}
+
 bool ThreadedSSLSocketConnection::read()
 {
+    if (setupExpired())
+    {
+        return false;
+    }
+
 #if _MSC_VER
     struct timeval timeout = {1, 0};
     fd_set readset = m_fds;

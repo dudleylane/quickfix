@@ -30,6 +30,7 @@
 #include "Responder.h"
 #include "SessionID.h"
 #include <atomic>
+#include <ctime>
 #include <map>
 #include <set>
 
@@ -59,6 +60,8 @@ public:
     bool read();
 
 private:
+    static constexpr int SETUP_SECONDS = 10;
+    bool setupExpired();
     bool readMessage(std::string &msg) EXCEPT(SocketRecvFailed);
     void processStream();
     bool send(const std::string &);
@@ -77,6 +80,9 @@ private:
     Sessions m_sessions;
     Session *m_pSession;
     std::atomic<bool> m_disconnect;
+    /// When an accepted connection must have logged on by; 0 once it has, and
+    /// for an initiator's connection, which its session times instead.
+    time_t m_setupDeadline = 0;
 #if _MSC_VER
     fd_set m_fds;
 #endif

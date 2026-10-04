@@ -118,6 +118,11 @@
 #include "Mutex.h"
 #include "UtilitySSL.h"
 
+#ifndef _MSC_VER
+#include <fcntl.h>
+#include <poll.h>
+#endif
+
 // #include "openssl/applink.c" // To prevent crashing (see the OpenSSL FAQ)
 
 #include "openssl/bio.h" // BIO objects for I/O
@@ -1691,6 +1696,14 @@ int acceptSSLConnection(socket_handle socket, SSL *ssl, Log *log, int verify)
 #ifdef __TOS_AIX__
     int retries = 0;
 #endif
+#ifndef _MSC_VER
+    // The deadline is checked between handshake attempts, so on a blocking socket
+    // a peer that sends nothing would hold the calling thread for as long as it
+    // liked. Step the handshake on a non-blocking socket, waiting in poll(), and
+    // give the socket its blocking mode back once the handshake is done.
+    const int socketFlags = ::fcntl(socket, F_GETFL, 0);
+    ::fcntl(socket, F_SETFL, socketFlags | O_NONBLOCK);
+#endif
     /*
      * Now enter the SSL Handshake Phase
      */
@@ -1867,16 +1880,24 @@ int acceptSSLConnection(socket_handle socket, SSL *ssl, Log *log, int verify)
             {
                 if (log)
                 {
-                    log->onEvent("SSL handshake stopped: connection was closed");
+                    log->onEvent("SSL handshake timed out");
                 }
                 SSL_set_shutdown(ssl, SSL_RECEIVED_SHUTDOWN);
                 ssl_socket_close(socket, ssl);
                 return result;
             }
+#ifndef _MSC_VER
+            struct pollfd pfd = {socket, static_cast<short>(result == SSL_ERROR_WANT_WRITE ? POLLOUT : POLLIN), 0};
+            ::poll(&pfd, 1, 100);
+#else
             process_sleep(0.01);
+#endif
         }
     }
 
+#ifndef _MSC_VER
+    ::fcntl(socket, F_SETFL, socketFlags);
+#endif
     result = checkSSLClient(ssl, log, verify);
     if (result != 0)
     {
