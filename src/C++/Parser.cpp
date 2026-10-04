@@ -26,15 +26,15 @@
 
 namespace FIX
 {
-bool Parser::extractLength(int &length, std::string::size_type &pos, const std::string &buffer)
-    EXCEPT(MessageParseError)
+bool Parser::extractLength(int &length, std::string::size_type &pos, const std::string &buffer,
+                           std::string::size_type searchFrom) EXCEPT(MessageParseError)
 {
     if (!buffer.size())
     {
         return false;
     }
 
-    std::string::size_type startPos = buffer.find("\0019=", 0);
+    std::string::size_type startPos = buffer.find("\0019=", searchFrom);
     if (startPos == std::string::npos)
     {
         return false;
@@ -85,16 +85,26 @@ bool Parser::readFixMessage(std::string &str) EXCEPT(MessageParseError)
         {
             m_buffer.erase(0, m_buffer.size() - 1);
         }
+        m_lengthSearchFrom = 0;
         return false;
     }
-    m_buffer.erase(0, pos);
+    if (pos > 0)
+    {
+        // Discarding leading garbage moves the front, so the resumed length search no longer applies.
+        m_buffer.erase(0, pos);
+        m_lengthSearchFrom = 0;
+    }
 
     int length = 0;
 
     try
     {
-        if (extractLength(length, pos, m_buffer))
+        // Resume the "\0019=" search where the last read left off, overlapping by the needle length
+        // less one so a header split across reads is still found.
+        std::string::size_type searchFrom = m_lengthSearchFrom > 2 ? m_lengthSearchFrom - 2 : 0;
+        if (extractLength(length, pos, m_buffer, searchFrom))
         {
+            m_lengthSearchFrom = 0;
             pos += length;
             if (m_buffer.size() < pos)
             {
@@ -118,6 +128,12 @@ bool Parser::readFixMessage(std::string &str) EXCEPT(MessageParseError)
             m_buffer.erase(0, pos);
             return true;
         }
+        else
+        {
+            // "8=" is at the front but the buffer holds no "\0019=" yet. Remember how far we
+            // scanned so the next read resumes here instead of from the front.
+            m_lengthSearchFrom = m_buffer.size();
+        }
     }
     catch (MessageParseError &e)
     {
@@ -129,6 +145,7 @@ bool Parser::readFixMessage(std::string &str) EXCEPT(MessageParseError)
         {
             m_buffer.erase();
         }
+        m_lengthSearchFrom = 0;
 
         throw e;
     }

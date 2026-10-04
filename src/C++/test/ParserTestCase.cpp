@@ -170,4 +170,32 @@ TEST_CASE("ParserTests")
         }
         CHECK(cpuMillis() - start < 500.0);
     }
+
+    SECTION("readFixMessageDoesNotRescanForTheLengthHeader")
+    {
+        // The companion case: "8=" is present but the "\0019=" length header never arrives, so
+        // readFixMessage cannot frame a message. It must resume the header search where it left
+        // off rather than rescan from the front each read. SOH bytes after "8=" are the worst
+        // input -- every byte is a candidate start of "\0019=". Bound the CPU as above.
+        auto cpuMillis = []
+        {
+            rusage usage{};
+            getrusage(RUSAGE_SELF, &usage);
+            return (usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1000.0 +
+                   (usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000.0;
+        };
+
+        object.addToStream(std::string("8="));
+        const std::string chunk(4096, '\001');
+        const double start = cpuMillis();
+        std::string readFixMsg;
+        for (int i = 0; i < 256; ++i) // 1 MB of SOH after the "8="
+        {
+            object.addToStream(chunk);
+            while (object.readFixMessage(readFixMsg))
+            {
+            }
+        }
+        CHECK(cpuMillis() - start < 500.0);
+    }
 }

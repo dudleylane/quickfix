@@ -41,7 +41,8 @@ public:
     Parser() {}
     ~Parser() {}
 
-    bool extractLength(int &length, std::string::size_type &pos, const std::string &buffer) EXCEPT(MessageParseError);
+    bool extractLength(int &length, std::string::size_type &pos, const std::string &buffer,
+                       std::string::size_type searchFrom = 0) EXCEPT(MessageParseError);
     [[nodiscard]] bool readFixMessage(std::string &str) EXCEPT(MessageParseError);
 
     void addToStream(const char *str, size_t len)
@@ -59,6 +60,11 @@ public:
 
 private:
     std::string m_buffer;
+    // How far readFixMessage has already searched the buffer for a message's "\0019=" length header
+    // while a "8=" sits at the front with no header yet. Lets the next read resume instead of
+    // rescanning from the front, which would be quadratic in the buffered size (bounded by
+    // MAX_MESSAGE_SIZE). Reset to 0 whenever the front of the buffer changes.
+    std::string::size_type m_lengthSearchFrom = 0;
 };
 } // namespace FIX
 #endif // FIX_PARSER_H
