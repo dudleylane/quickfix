@@ -113,6 +113,26 @@ socket_handle SocketServer::add(int port, bool reuse, bool noDelay, int sendBufS
     return socket;
 }
 
+socket_handle SocketServer::add(const std::string &address, int port, bool reuse) EXCEPT(SocketException &)
+{
+    if (m_portToInfo.find(port) != m_portToInfo.end())
+    {
+        return m_portToInfo[port].m_socket;
+    }
+
+    socket_handle socket = socket_createAcceptor(address, port, reuse);
+    if (socket == INVALID_SOCKET_HANDLE)
+    {
+        throw SocketException();
+    }
+    m_monitor.addRead(socket);
+
+    SocketInfo info(socket, port, false, 0, 0);
+    m_socketToInfo[socket] = info;
+    m_portToInfo[port] = info;
+    return socket;
+}
+
 socket_handle SocketServer::accept(socket_handle socket)
 {
     SocketInfo info = m_socketToInfo[socket];

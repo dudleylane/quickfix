@@ -35,6 +35,7 @@
 #include "SessionID.h"
 #include "SessionState.h"
 #include "TimeRange.h"
+#include <atomic>
 
 #include <functional>
 #include <map>
@@ -183,7 +184,7 @@ public:
     }
     int getSupportedTimestampPrecision()
     {
-        return supportsSubSecondTimestamps(m_sessionID.getBeginString()) ? m_timestampPrecision : 0;
+        return supportsSubSecondTimestamps(m_sessionID.getBeginString()) ? m_timestampPrecision.load() : 0;
     }
     static bool supportsSubSecondTimestamps(const std::string &beginString)
     {
@@ -337,19 +338,22 @@ private:
 
     std::string m_senderDefaultApplVerID;
     std::string m_targetDefaultApplVerID;
-    bool m_sendRedundantResendRequests;
-    bool m_checkCompId;
-    bool m_checkLatency;
-    int m_maxLatency;
-    bool m_resetOnLogon;
-    bool m_resetOnLogout;
-    bool m_resetOnDisconnect;
-    bool m_refreshOnLogon;
-    int m_timestampPrecision;
-    bool m_persistMessages;
-    bool m_validateLengthAndChecksum;
-    bool m_sendNextExpectedMsgSeqNum;
-    bool m_isNonStopSession;
+    // Settable at run time from any thread -- an application, or the HTTP admin
+    // server -- while the session's own thread reads them, so atomic, like
+    // SessionState's equivalents.
+    std::atomic<bool> m_sendRedundantResendRequests;
+    std::atomic<bool> m_checkCompId;
+    std::atomic<bool> m_checkLatency;
+    std::atomic<int> m_maxLatency;
+    std::atomic<bool> m_resetOnLogon;
+    std::atomic<bool> m_resetOnLogout;
+    std::atomic<bool> m_resetOnDisconnect;
+    std::atomic<bool> m_refreshOnLogon;
+    std::atomic<int> m_timestampPrecision;
+    std::atomic<bool> m_persistMessages;
+    std::atomic<bool> m_validateLengthAndChecksum;
+    std::atomic<bool> m_sendNextExpectedMsgSeqNum;
+    std::atomic<bool> m_isNonStopSession;
     std::set<std::string> m_allowedRemoteAddresses;
 
     SessionState m_state;

@@ -30,9 +30,11 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
+#include <atomic>
 #include <poll.h>
 #include <queue>
 #include <set>
+#include <thread>
 #include <time.h>
 
 #include "Utility.h"
@@ -83,6 +85,8 @@ private:
     Sockets m_readSockets;
     Sockets m_writeSockets;
     Queue m_dropped;
+    /// The thread that last called block(). The socket sets are its alone.
+    std::atomic<std::thread::id> m_owner{};
 
 public:
     class Strategy

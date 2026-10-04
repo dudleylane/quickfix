@@ -77,12 +77,24 @@ public:
     int testRequest() const { return m_testRequest; }
     void testRequest(int value) { m_testRequest = value; }
 
-    bool resendRequested() const { return !(m_resendRange.first == 0 && m_resendRange.second == 0); }
+    bool resendRequested() const
+    {
+        Locker l(m_mutex);
+        return !(m_resendRange.first == 0 && m_resendRange.second == 0);
+    }
 
     typedef std::pair<SEQNUM, SEQNUM> ResendRange;
 
-    ResendRange resendRange() const { return m_resendRange; }
-    void resendRange(SEQNUM begin, SEQNUM end) { m_resendRange = std::make_pair(begin, end); }
+    ResendRange resendRange() const
+    {
+        Locker l(m_mutex);
+        return m_resendRange;
+    }
+    void resendRange(SEQNUM begin, SEQNUM end)
+    {
+        Locker l(m_mutex);
+        m_resendRange = std::make_pair(begin, end);
+    }
 
     MessageStore *store() { return m_pStore; }
     void store(MessageStore *pValue) { m_pStore = pValue; }
@@ -93,13 +105,30 @@ public:
     HeartBtInt &heartBtInt() { return m_heartBtInt; }
     const HeartBtInt &heartBtInt() const { return m_heartBtInt; }
 
-    void lastSentTime(const UtcTimeStamp &value) { m_lastSentTime = value; }
-    UtcTimeStamp &lastSentTime() { return m_lastSentTime; }
-    const UtcTimeStamp &lastSentTime() const { return m_lastSentTime; }
+    // Written by whichever thread sends -- an application thread, or the HTTP
+    // admin server resetting a session -- while the session's own thread reads
+    // them in its timer checks, so both take the state's mutex.
+    void lastSentTime(const UtcTimeStamp &value)
+    {
+        Locker l(m_mutex);
+        m_lastSentTime = value;
+    }
+    UtcTimeStamp lastSentTime() const
+    {
+        Locker l(m_mutex);
+        return m_lastSentTime;
+    }
 
-    void lastReceivedTime(const UtcTimeStamp &value) { m_lastReceivedTime = value; }
-    UtcTimeStamp &lastReceivedTime() { return m_lastReceivedTime; }
-    const UtcTimeStamp &lastReceivedTime() const { return m_lastReceivedTime; }
+    void lastReceivedTime(const UtcTimeStamp &value)
+    {
+        Locker l(m_mutex);
+        m_lastReceivedTime = value;
+    }
+    UtcTimeStamp lastReceivedTime() const
+    {
+        Locker l(m_mutex);
+        return m_lastReceivedTime;
+    }
 
     bool shouldSendLogon() const { return initiate() && !sentLogon(); }
     bool alreadySentLogon() const { return initiate() && sentLogon(); }

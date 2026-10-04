@@ -255,6 +255,36 @@ socket_handle socket_createAcceptor(int port, bool reuse)
     return socket;
 }
 
+socket_handle socket_createAcceptor(const std::string &address, int port, bool reuse)
+{
+    const char *hostname = socket_hostname(address.c_str());
+    sockaddr_in sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sin_family = AF_INET;
+    sa.sin_port = htons(port);
+    if (hostname == 0 || ::inet_pton(AF_INET, hostname, &sa.sin_addr) != 1)
+    {
+        return INVALID_SOCKET_HANDLE;
+    }
+
+    socket_handle socket = ::socket(PF_INET, SOCK_STREAM, 0);
+    if (socket == INVALID_SOCKET_HANDLE)
+    {
+        return INVALID_SOCKET_HANDLE;
+    }
+    if (reuse)
+    {
+        socket_setsockopt(socket, SO_REUSEADDR);
+    }
+    if (::bind(socket, reinterpret_cast<sockaddr *>(&sa), sizeof(sa)) == BIND_SOCKET_ERROR ||
+        ::listen(socket, SOMAXCONN) == LISTEN_SOCKET_ERROR)
+    {
+        socket_close(socket);
+        return INVALID_SOCKET_HANDLE;
+    }
+    return socket;
+}
+
 socket_handle socket_createConnector() { return ::socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); }
 
 int socket_connect(socket_handle socket, const char *address, int port)

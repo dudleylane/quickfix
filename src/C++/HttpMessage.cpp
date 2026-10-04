@@ -53,18 +53,56 @@ void HttpMessage::setString(const std::string &string) EXCEPT(InvalidMessage)
         throw InvalidMessage();
     }
     std::string line = string.substr(0, eolPos);
-    std::string::size_type getPos = line.find("GET ");
-    if (getPos != 0)
+    std::string::size_type methodEnd = line.find(' ');
+    if (methodEnd == std::string::npos)
     {
         throw InvalidMessage();
     }
-    std::string::size_type httpPos = line.rfind("HTTP", std::string::npos);
-    if (httpPos == std::string::npos)
+    m_method = line.substr(0, methodEnd);
+    if (m_method != "GET" && m_method != "POST")
+    {
+        throw InvalidMessage();
+    }
+    std::string::size_type httpPos = line.rfind(" HTTP", std::string::npos);
+    if (httpPos == std::string::npos || httpPos <= methodEnd)
     {
         throw InvalidMessage();
     }
 
-    m_root = line.substr(getPos + 4, httpPos - 5);
+    // Header names are case-insensitive; only Host and Origin are kept.
+    std::string::size_type lineStart = eolPos + 2;
+    while (lineStart < string.size())
+    {
+        std::string::size_type lineEnd = string.find("\r\n", lineStart);
+        if (lineEnd == std::string::npos || lineEnd == lineStart)
+        {
+            break;
+        }
+        const std::string header = string.substr(lineStart, lineEnd - lineStart);
+        lineStart = lineEnd + 2;
+
+        const std::string::size_type colon = header.find(':');
+        if (colon == std::string::npos)
+        {
+            continue;
+        }
+        std::string name = header.substr(0, colon);
+        for (char &c : name)
+        {
+            c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
+        }
+        std::string value = string_strip(header.substr(colon + 1));
+        if (name == "host")
+        {
+            m_host = value;
+        }
+        else if (name == "origin")
+        {
+            m_origin = value;
+        }
+    }
+
+    m_root = line.substr(methodEnd + 1, httpPos - methodEnd - 1);
     std::string::size_type paramPos = m_root.find_first_of('?');
     if (paramPos == std::string::npos)
     {

@@ -39,18 +39,34 @@ void HttpServer::startGlobal(const SessionSettings &s) EXCEPT(ConfigError, Runti
         return;
     }
 
-    s_count += 1;
     if (!s_pServer)
     {
-        s_pServer = new HttpServer(s);
-        s_pServer->start();
+        HttpServer *pServer = new HttpServer(s);
+        try
+        {
+            pServer->start();
+        }
+        catch (...)
+        {
+            delete pServer;
+            throw;
+        }
+        s_pServer = pServer;
     }
+    s_count += 1;
 }
 
-void HttpServer::stopGlobal()
+void HttpServer::stopGlobal(const SessionSettings &s)
 {
     Locker l(s_mutex);
 
+    // Only settings that counted in startGlobal -- those with an HttpAcceptPort
+    // -- are uncounted here. Others must not stop a server that another
+    // acceptor or initiator started.
+    if (!s.get().has(HTTP_ACCEPT_PORT) || s_count == 0)
+    {
+        return;
+    }
     s_count -= 1;
     if (!s_count && s_pServer)
     {
@@ -68,6 +84,8 @@ HttpServer::HttpServer(const SessionSettings &settings) EXCEPT(ConfigError)
 void HttpServer::onConfigure(const SessionSettings &s) EXCEPT(ConfigError)
 {
     m_port = s.get().getInt(HTTP_ACCEPT_PORT);
+    // The server has no authentication, so by default only this host reaches it.
+    m_address = s.get().has(HTTP_ACCEPT_ADDRESS) ? s.get().getString(HTTP_ACCEPT_ADDRESS) : "127.0.0.1";
 }
 
 void HttpServer::onInitialize(const SessionSettings &s) EXCEPT(RuntimeError)
@@ -75,11 +93,13 @@ void HttpServer::onInitialize(const SessionSettings &s) EXCEPT(RuntimeError)
     try
     {
         m_pServer = new SocketServer(1);
-        m_pServer->add(m_port, true, false, 0, 0);
+        m_pServer->add(m_address, m_port, true);
     }
     catch (std::exception &)
     {
-        throw RuntimeError("Unable to create, bind, or listen to port " +
+        delete m_pServer;
+        m_pServer = 0;
+        throw RuntimeError("Unable to create, bind, or listen to " + m_address + " port " +
                            IntConvertor::convert((unsigned short)m_port));
     }
 }

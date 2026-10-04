@@ -61,6 +61,8 @@ public:
 
     socket_handle add(int port, bool reuse = false, bool noDelay = false, int sendBufSize = 0, int rcvBufSize = 0)
         EXCEPT(SocketException &);
+    /// Listen on one local address only, an IPv4 literal or a host name.
+    socket_handle add(const std::string &address, int port, bool reuse = false) EXCEPT(SocketException &);
     socket_handle accept(socket_handle socket);
     void close();
     bool block(Strategy &strategy, bool poll = 0, double timeout = 0.0);

@@ -263,7 +263,7 @@ void Initiator::stop(bool force)
         return;
     }
 
-    HttpServer::stopGlobal();
+    HttpServer::stopGlobal(m_settings);
 
     std::vector<Session *> enabledSessions;
 

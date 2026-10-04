@@ -32,7 +32,7 @@
 namespace FIX
 {
 /**
- * HTTP Message that implemented GET functionality
+ * HTTP request line and the headers the admin server checks, for GET and POST
  */
 class HttpMessage
 {
@@ -44,11 +44,8 @@ public:
     /// Construct a message from a string
     HttpMessage(const std::string &string) EXCEPT(InvalidMessage);
 
-    HttpMessage(const HttpMessage &copy)
-    {
-        m_root = copy.m_root;
-        m_parameters = copy.m_parameters;
-    }
+    HttpMessage(const HttpMessage &copy) = default;
+    HttpMessage &operator=(const HttpMessage &copy) = default;
 
 public:
     /// Get a string representation of the message
@@ -66,9 +63,19 @@ public:
         m_root.clear();
 #endif
         m_parameters.clear();
+        m_method.clear();
+        m_host.clear();
+        m_origin.clear();
     }
 
     const std::string &getRootString() const { return m_root; }
+
+    /// The request method, "GET" or "POST".
+    const std::string &getMethod() const { return m_method; }
+    /// The Host header's value, empty if the request had none.
+    const std::string &getHost() const { return m_host; }
+    /// The Origin header's value, empty if the request had none.
+    const std::string &getOrigin() const { return m_origin; }
 
     const std::string getParameterString() const
     {
@@ -108,6 +115,9 @@ public:
 private:
     std::string m_root;
     Parameters m_parameters;
+    std::string m_method;
+    std::string m_host;
+    std::string m_origin;
 };
 /*! @} */
 

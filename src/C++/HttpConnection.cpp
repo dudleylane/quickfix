@@ -18,6 +18,7 @@
 ****************************************************************************/
 
 #include "config.h"
+#include <arpa/inet.h>
 #include <poll.h>
 
 #include "HtmlBuilder.h"
@@ -30,6 +31,119 @@ using namespace HTML;
 
 namespace FIX
 {
+namespace
+{
+std::string escapeAttribute(const std::string &value)
+{
+    std::string result;
+    for (const char c : value)
+    {
+        switch (c)
+        {
+        case '&':
+            result += "&amp;";
+            break;
+        case '\'':
+            result += "&#39;";
+            break;
+        case '"':
+            result += "&quot;";
+            break;
+        case '<':
+            result += "&lt;";
+            break;
+        case '>':
+            result += "&gt;";
+            break;
+        default:
+            result += c;
+        }
+    }
+    return result;
+}
+
+/// Everything that changes session state goes through a POST, rendered as a
+/// one-button form, so that following a link or loading an image never does.
+void postButton(std::ostream &s, const std::string &action, const std::string &text)
+{
+    s << "<FORM method='post' action='" << escapeAttribute(action) << "' style='display:inline'>"
+      << "<BUTTON type='submit'>" << escapeAttribute(text) << "</BUTTON></FORM>";
+}
+
+bool hasStateParameter(const HttpMessage &request, bool sessionPage)
+{
+    for (const auto &parameter : request.getParameters())
+    {
+        if (parameter.first == "confirm")
+        {
+            if (parameter.second != "0")
+            {
+                return true;
+            }
+        }
+        else if (sessionPage && parameter.first != "BeginString" && parameter.first != "SenderCompID" &&
+                 parameter.first != "TargetCompID" && parameter.first != "SessionQualifier")
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+/// A Host that is a DNS name other than localhost is refused: a page that
+/// rebinds its own name to this address would otherwise be same-origin with
+/// the admin server.
+bool acceptableHost(const std::string &hostHeader)
+{
+    std::string host = hostHeader;
+    if (!host.empty() && host[0] == '[')
+    {
+        const std::string::size_type close = host.find(']');
+        if (close == std::string::npos)
+        {
+            return false;
+        }
+        host = host.substr(1, close - 1);
+    }
+    else
+    {
+        host = host.substr(0, host.find(':'));
+    }
+    if (host == "localhost")
+    {
+        return true;
+    }
+    unsigned char address[sizeof(struct in6_addr)];
+    return ::inet_pton(AF_INET, host.c_str(), address) == 1 || ::inet_pton(AF_INET6, host.c_str(), address) == 1;
+}
+} // namespace
+
+int HttpConnection::checkRequest(const HttpMessage &request)
+{
+    if (!acceptableHost(request.getHost()))
+    {
+        return 403;
+    }
+
+    const std::string &root = request.getRootString();
+    const bool changesState = hasStateParameter(request, root == "/session");
+    if (!changesState)
+    {
+        return 0;
+    }
+    if (request.getMethod() != "POST")
+    {
+        return 405;
+    }
+    // Browsers send Origin with a POST; one naming another site is a page
+    // submitting a form to this server, and is refused.
+    if (!request.getOrigin().empty() && request.getOrigin() != "http://" + request.getHost())
+    {
+        return 403;
+    }
+    return 0;
+}
+
 HttpConnection::HttpConnection(socket_handle s) : m_socket(s)
 {
 #ifdef _MSC_VER
@@ -47,11 +161,19 @@ void HttpConnection::disconnect(int error)
         send(HttpMessage::createResponse(error));
     }
 
-    socket_close(m_socket);
+    // The socket belongs to the server's monitor, which closes it once when the
+    // connection is dropped; closing it here as well closed it two or three
+    // times per request.
+    m_done = true;
 }
 
 bool HttpConnection::read()
 {
+    if (m_done)
+    {
+        return false;
+    }
+
 #if _MSC_VER
     struct timeval timeout = {2, 0};
     fd_set readset = m_fds;
@@ -91,7 +213,7 @@ bool HttpConnection::read()
         }
 
         processStream();
-        return true;
+        return !m_done;
     }
     catch (SocketRecvFailed &)
     {
@@ -136,6 +258,12 @@ void HttpConnection::processStream()
 
 void HttpConnection::processRequest(const HttpMessage &request)
 {
+    if (const int refused = checkRequest(request))
+    {
+        disconnect(refused);
+        return;
+    }
+
     int error = 200;
     std::stringstream h;
     std::stringstream b;
@@ -397,8 +525,7 @@ void HttpConnection::processResetSessions(const HttpMessage &request, std::strin
                 center.text();
                 b << "[";
                 {
-                    A a(b);
-                    a.href(request.toString() + "?confirm=1").text("YES, reset sessions");
+                    postButton(b, request.toString() + "?confirm=1", "YES, reset sessions");
                 }
                 b << "]" << NBSP << "[";
                 {
@@ -460,8 +587,7 @@ void HttpConnection::processRefreshSessions(const HttpMessage &request, std::str
                 center.text();
                 b << "[";
                 {
-                    A a(b);
-                    a.href(request.toString() + "?confirm=1").text("YES, refresh sessions");
+                    postButton(b, request.toString() + "?confirm=1", "YES, refresh sessions");
                 }
                 b << "]" << NBSP << "[";
                 {
@@ -523,8 +649,7 @@ void HttpConnection::processEnableSessions(const HttpMessage &request, std::stri
                 center.text();
                 b << "[";
                 {
-                    A a(b);
-                    a.href(request.toString() + "?confirm=1").text("YES, enable sessions");
+                    postButton(b, request.toString() + "?confirm=1", "YES, enable sessions");
                 }
                 b << "]" << NBSP << "[";
                 {
@@ -586,8 +711,7 @@ void HttpConnection::processDisableSessions(const HttpMessage &request, std::str
                 center.text();
                 b << "[";
                 {
-                    A a(b);
-                    a.href(request.toString() + "?confirm=1").text("YES, disable sessions");
+                    postButton(b, request.toString() + "?confirm=1", "YES, disable sessions");
                 }
                 b << "]" << NBSP << "[";
                 {
@@ -831,8 +955,7 @@ void HttpConnection::processResetSession(const HttpMessage &request, std::string
                 center.text();
                 b << "[";
                 {
-                    A a(b);
-                    a.href(request.toString() + "&confirm=1").text("YES, reset session");
+                    postButton(b, request.toString() + "&confirm=1", "YES, reset session");
                 }
                 b << "]" << NBSP << "[";
                 {
@@ -912,8 +1035,7 @@ void HttpConnection::processRefreshSession(const HttpMessage &request, std::stri
                 center.text();
                 b << "[";
                 {
-                    A a(b);
-                    a.href(request.toString() + "&confirm=1").text("YES, refresh session");
+                    postButton(b, request.toString() + "&confirm=1", "YES, refresh session");
                 }
                 b << "]" << NBSP << "[";
                 {
@@ -952,8 +1074,7 @@ void HttpConnection::showRow(std::stringstream &s, const std::string &name, bool
             {
                 std::stringstream href;
                 href << url << "&" << name << "=" << !value;
-                A a(s);
-                a.href(href.str()).text("toggle");
+                postButton(s, href.str(), "toggle");
             }
         }
     }
@@ -1003,29 +1124,25 @@ void HttpConnection::showRow(std::stringstream &s, const std::string &name, int 
             {
                 std::stringstream href;
                 href << url << "&" << name << "=" << value - 10;
-                A a(s);
-                a.href(href.str()).text("<<");
+                postButton(s, href.str(), "<<");
             }
             s << NBSP;
             {
                 std::stringstream href;
                 href << url << "&" << name << "=" << value - 1;
-                A a(s);
-                a.href(href.str()).text("<");
+                postButton(s, href.str(), "<");
             }
             s << NBSP << "|" << NBSP;
             {
                 std::stringstream href;
                 href << url << "&" << name << "=" << value + 1;
-                A a(s);
-                a.href(href.str()).text(">");
+                postButton(s, href.str(), ">");
             }
             s << NBSP;
             {
                 std::stringstream href;
                 href << url << "&" << name << "=" << value + 10;
-                A a(s);
-                a.href(href.str()).text(">>");
+                postButton(s, href.str(), ">>");
             }
         }
     }

@@ -120,6 +120,18 @@ bool SocketMonitor::addWrite(socket_handle s)
 
 bool SocketMonitor::drop(socket_handle s)
 {
+    const std::thread::id owner = m_owner.load(std::memory_order_acquire);
+    if (owner != std::thread::id() && owner != std::this_thread::get_id())
+    {
+        // Called from outside the thread that blocks on this monitor -- an
+        // application thread, or the HTTP admin server resetting a session --
+        // which may be walking the sets right now. Shutting the socket down is
+        // safe from here and is all the drop needs: the blocking thread sees the
+        // hang-up as a read event and drops the socket itself.
+        ::shutdown(s, SHUT_RDWR);
+        return true;
+    }
+
     Sockets::iterator i = m_readSockets.find(s);
     Sockets::iterator j = m_writeSockets.find(s);
     Sockets::iterator k = m_connectSockets.find(s);
@@ -202,6 +214,8 @@ void SocketMonitor::unsignal(socket_handle s)
 
 void SocketMonitor::block(Strategy &strategy, bool should_poll, double timeout)
 {
+    m_owner.store(std::this_thread::get_id(), std::memory_order_release);
+
     while (m_dropped.size())
     {
         const socket_handle dropped = m_dropped.front();

@@ -40,7 +40,13 @@ public:
     HttpConnection(socket_handle s);
 
     socket_handle getSocket() const { return m_socket; }
+    /// Serves one request; false once it has been answered or the peer has gone.
     bool read();
+
+    /// 0 if the request may be processed, else the HTTP status refusing it:
+    /// 403 for a Host that is a DNS name other than localhost, 405 for a state
+    /// change requested other than by POST, 403 for a POST from another origin.
+    static int checkRequest(const HttpMessage &);
 
 private:
     bool readMessage(std::string &msg) EXCEPT(SocketRecvFailed);
@@ -64,6 +70,7 @@ private:
     void disconnect(int error = 0);
 
     socket_handle m_socket;
+    bool m_done = false;
     char m_buffer[BUFSIZ];
 
     HttpParser m_parser;

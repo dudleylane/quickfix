@@ -30,6 +30,7 @@
 #include "Mutex.h"
 #include "SessionSettings.h"
 #include "SocketServer.h"
+#include <atomic>
 
 namespace FIX
 {
@@ -40,7 +41,9 @@ public:
     HttpServer(const SessionSettings &) EXCEPT(ConfigError);
 
     static void startGlobal(const SessionSettings &) EXCEPT(ConfigError, RuntimeError);
-    static void stopGlobal();
+    /// Undoes startGlobal with the same settings: settings without an
+    /// HttpAcceptPort neither started nor counted a server, so they stop none.
+    static void stopGlobal(const SessionSettings &);
 
     void start() EXCEPT(ConfigError, RuntimeError);
     void stop();
@@ -66,7 +69,9 @@ private:
     SessionSettings m_settings;
     thread_id m_threadid;
     int m_port;
-    bool m_stop;
+    std::string m_address;
+    /// Written by stop() on the caller's thread, read by the server thread's loop.
+    std::atomic<bool> m_stop;
 
     static Mutex s_mutex;
     static int s_count;
