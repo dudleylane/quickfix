@@ -1794,7 +1794,8 @@ int acceptSSLConnection(socket_handle socket, SSL *ssl, Log *log, int verify)
                 {
                     if (log)
                     {
-                        log->onEvent(std::string("SSL failure reason: ") + ERR_reason_error_string(err));
+                        const char *reason = ERR_reason_error_string(err);
+                        log->onEvent(std::string("SSL failure reason: ") + (reason ? reason : "unknown"));
                     }
                     err = ERR_get_error();
                 }

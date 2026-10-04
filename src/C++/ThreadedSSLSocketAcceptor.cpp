@@ -366,9 +366,29 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketAcceptorThread(void *p)
     socket_getsockopt(s, SO_SNDBUF, sendBufSize);
     socket_getsockopt(s, SO_RCVBUF, rcvBufSize);
 
-    socket_handle socket = 0;
-    while ((!pAcceptor->isStopped() && (socket = socket_accept(s)) != INVALID_SOCKET_HANDLE))
+    while (!pAcceptor->isStopped())
     {
+        socket_handle socket = socket_accept(s);
+        if (socket == INVALID_SOCKET_HANDLE)
+        {
+            if (pAcceptor->isStopped())
+            {
+                break; // stop() closed the listener to wake this accept
+            }
+            // A transient accept() failure -- the process's descriptor limit, say -- must not end
+            // the accept loop and leave the acceptor silently deaf. Log it and keep listening,
+            // backing off so a persistent failure does not spin the thread; the reactor acceptor
+            // likewise continues past a failed accept.
+            if (pAcceptor->getLog())
+            {
+                std::stringstream stream;
+                stream << "accept() failed on port " << port << "; still listening";
+                pAcceptor->getLog()->onEvent(stream.str());
+            }
+            process_sleep(1);
+            continue;
+        }
+
         if (noDelay)
         {
             socket_setsockopt(socket, TCP_NODELAY);
