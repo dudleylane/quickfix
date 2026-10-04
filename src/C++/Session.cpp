@@ -214,15 +214,6 @@ void Session::nextLogon(const Message &logon, const UtcTimeStamp &now)
     logon.getFieldIfSet(resetSeqNumFlag);
     m_state.receivedReset(resetSeqNumFlag);
 
-    if (m_state.receivedReset())
-    {
-        m_state.onEvent("Logon contains ResetSeqNumFlag=Y, reseting sequence numbers to 1");
-        if (!m_state.sentReset())
-        {
-            m_state.reset(m_timestamper());
-        }
-    }
-
     if (m_state.shouldSendLogon() && !m_state.receivedReset())
     {
         m_state.onEvent("Received logon response before sending request");
@@ -230,14 +221,31 @@ void Session::nextLogon(const Message &logon, const UtcTimeStamp &now)
         return;
     }
 
-    if (!m_state.initiate() && m_resetOnLogon)
-    {
-        m_state.reset(m_timestamper());
-    }
+    // A reset is applied only once verify() has accepted the Logon, including the
+    // application's fromAdmin: a Logon that is then refused must leave the store
+    // and the sequence numbers as they were. The too-low check is deferred to
+    // after the reset, since a resetting Logon is numbered from 1.
+    const bool resetRequested = m_state.receivedReset() && !m_state.sentReset();
+    const bool resetOnLogon = !m_state.initiate() && m_resetOnLogon;
 
-    if (!verify(logon, false, true))
+    if (!verify(logon, false, !(resetRequested || resetOnLogon)))
     {
         return;
+    }
+
+    if (m_state.receivedReset())
+    {
+        m_state.onEvent("Logon contains ResetSeqNumFlag=Y, reseting sequence numbers to 1");
+    }
+    if (resetRequested || resetOnLogon)
+    {
+        m_state.reset(m_timestamper());
+
+        if (isTargetTooLow(logon.getHeader().getField<MsgSeqNum>().getValue()))
+        {
+            doTargetTooLow(logon);
+            return;
+        }
     }
     m_state.receivedLogon(true);
 

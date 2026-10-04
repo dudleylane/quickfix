@@ -77,7 +77,13 @@ public:
     }
     void refresh() EXCEPT(IOException) { m_state.refresh(); }
     void setNextSenderMsgSeqNum(SEQNUM num) EXCEPT(IOException) { m_state.setNextSenderMsgSeqNum(num); }
-    void setNextTargetMsgSeqNum(SEQNUM num) EXCEPT(IOException) { m_state.setNextTargetMsgSeqNum(num); }
+    void setNextTargetMsgSeqNum(SEQNUM num) EXCEPT(IOException)
+    {
+        // Queued messages and a pending resend range belong to the old numbering.
+        m_state.setNextTargetMsgSeqNum(num);
+        m_state.clearQueue();
+        m_state.resendRange(0, 0);
+    }
 
     const SessionID &getSessionID() const { return m_sessionID; }
     void setDataDictionaryProvider(const DataDictionaryProvider &dataDictionaryProvider)

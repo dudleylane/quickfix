@@ -211,10 +211,14 @@ public:
         Locker l(m_mutex);
         return m_pStore->getCreationTime();
     }
+    /// Reset the store, and with it the inbound queue and the resend range:
+    /// both are numbered in the sequence the reset ends.
     void reset(const UtcTimeStamp &now) EXCEPT(IOException)
     {
         Locker l(m_mutex);
         m_pStore->reset(now);
+        m_queue.clear();
+        m_resendRange = std::make_pair(0, 0);
     }
     void refresh() EXCEPT(IOException)
     {

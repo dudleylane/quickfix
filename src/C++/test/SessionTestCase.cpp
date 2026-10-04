@@ -351,6 +351,12 @@ public:
         message.getHeader().getField(msgType);
         switch (msgType.getValue()[0])
         {
+        case 'A':
+            if (refuseLogons)
+            {
+                throw RejectLogon("refused by test");
+            }
+            break;
         case '0':
             fromHeartbeat++;
             break;
@@ -433,6 +439,7 @@ public:
     int disconnected = 0;
 
     int checkForDoNotSend = false;
+    bool refuseLogons = false;
 
     MemoryStoreFactory factory;
 };
@@ -1867,6 +1874,70 @@ TEST_CASE_METHOD(initiatorFixture, "InitiatorSessionTestCase")
 
 TEST_CASE_METHOD(acceptorFixture, "AcceptorSessionTestCase")
 {
+    SECTION("refusedLogonKeepsSequenceState")
+    {
+        // A Logon the application refuses must leave the store and the sequence
+        // numbers as they were, whatever it asks for.
+        object->setNextSenderMsgSeqNum(4);
+        object->setNextTargetMsgSeqNum(4);
+        refuseLogons = true;
+
+        FIX42::Logon logon = createLogon("ISLD", "TW", 1);
+        logon.set(FIX::ResetSeqNumFlag(true));
+        object->next(logon, now);
+        CHECK(!object->receivedLogon());
+        CHECK(4 == object->getExpectedTargetNum());
+
+        object->setResetOnLogon(true);
+        object->next(createLogon("ISLD", "TW", 4), now);
+        CHECK(!object->receivedLogon());
+        CHECK(4 == object->getExpectedTargetNum());
+
+        // Accepted, the same Logon resets as before.
+        refuseLogons = false;
+        object->setResetOnLogon(false);
+        object->next(logon, now);
+        CHECK(object->receivedLogon());
+        CHECK(2 == object->getExpectedTargetNum());
+    }
+
+    SECTION("resetDiscardsQueuedMessages")
+    {
+        // Messages queued ahead of a gap are numbered in the sequence a reset
+        // ends; none of them may be delivered in the new one.
+        object->next(createLogon("ISLD", "TW", 1), now);
+        object->next(createTestRequest("ISLD", "TW", 5, "old"), now);
+        CHECK(0 == fromTestRequest);
+
+        FIX42::Logon logon = createLogon("ISLD", "TW", 1);
+        logon.set(FIX::ResetSeqNumFlag(true));
+        object->next(logon, now);
+        CHECK(2 == object->getExpectedTargetNum());
+
+        object->next(createTestRequest("ISLD", "TW", 2, "A"), now);
+        object->next(createTestRequest("ISLD", "TW", 3, "B"), now);
+        object->next(createTestRequest("ISLD", "TW", 4, "C"), now);
+        CHECK(3 == fromTestRequest);
+        CHECK(5 == object->getExpectedTargetNum());
+
+        object->next(createTestRequest("ISLD", "TW", 5, "new"), now);
+        CHECK(4 == fromTestRequest);
+        CHECK(6 == object->getExpectedTargetNum());
+        CHECK(object->isLoggedOn());
+    }
+
+    SECTION("settingTargetSequenceDiscardsQueuedMessages")
+    {
+        object->next(createLogon("ISLD", "TW", 1), now);
+        object->next(createTestRequest("ISLD", "TW", 3, "old"), now);
+        CHECK(0 == fromTestRequest);
+
+        object->setNextTargetMsgSeqNum(2);
+        object->next(createTestRequest("ISLD", "TW", 2, "A"), now);
+        CHECK(1 == fromTestRequest);
+        CHECK(3 == object->getExpectedTargetNum());
+    }
+
     SECTION("sessionLevelRejectBeforeLogonSendsNothingAndKeepsSequenceNumbers")
     {
         // A first message (before logon) that fails a session-level validation must not change
@@ -2311,11 +2382,10 @@ TEST_CASE_METHOD(acceptorFixture, "AcceptorSessionTestCase")
     {
         // The two sections above pass with or without the fix: the first never
         // observes the queue, and the second's draining already happens through
-        // the nextQueued call at the end of Session::next. This one fails
-        // without it. Messages a GapFill skipped over must be discarded, not
-        // merely left unreached -- otherwise they are retained for the life of
-        // the session, and if the expected number ever comes back into that
-        // range they are delivered to the application after all.
+        // the nextQueued call at the end of Session::next. This one failed
+        // without it until setNextTargetMsgSeqNum cleared the queue too. Messages a GapFill skipped over must be
+        // discarded, not merely left unreached -- otherwise they are retained for the life of the session, and if the
+        // expected number ever comes back into that range they are delivered to the application after all.
         object->setResponder(this);
         object->next(createLogon("ISLD", "TW", 1), now);
 
@@ -2329,10 +2399,11 @@ TEST_CASE_METHOD(acceptorFixture, "AcceptorSessionTestCase")
         object->next(gapFill, now);
         CHECK(8 == object->getExpectedTargetNum());
 
-        // setNextTargetMsgSeqNum is public and is the only way back into the
-        // skipped range without a reset, which would clear the queue anyway. A
-        // fresh 5 must be the only message delivered: if 6 and 7 had been
-        // retained, nextQueued would hand them to the application here.
+        // A fresh 5 must be the only message delivered: if 6 and 7 had been
+        // retained, nextQueued would hand them to the application here. Both
+        // setNextTargetMsgSeqNum and a reset now clear the queue themselves, so
+        // this no longer isolates the GapFill's own discard, which with no other
+        // way back into the skipped range only bounds what the queue retains.
         object->setNextTargetMsgSeqNum(5);
         object->next(createTestRequest("ISLD", "TW", 5, "fresh"), now);
         CHECK(1 == fromTestRequest);
