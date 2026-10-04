@@ -21,7 +21,18 @@
 
 #if (HAVE_SSL > 0)
 
+#include <Log.h>
+#include <SessionSettings.h>
 #include <UtilitySSL.h>
+
+#include <openssl/pem.h>
+#include <openssl/x509v3.h>
+
+#include <cstdio>
+#include <filesystem>
+#include <sstream>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include "TestHelper.h"
 #include "catch_amalgamated.hpp"
@@ -132,6 +143,209 @@ TEST_CASE("FindCAListTests")
         CHECK(sk_X509_NAME_num(caList) == 0);
         sk_X509_NAME_pop_free(caList, X509_NAME_free);
     }
+}
+
+namespace
+{
+// A throwaway CA and a server certificate it signs, made per run: the checked-in
+// certificates under bin/cfg/certs expired years ago and carry no SAN.
+struct TestPki
+{
+    EVP_PKEY *caKey = EVP_EC_gen("P-256");
+    X509 *caCert = nullptr;
+    EVP_PKEY *serverKey = EVP_EC_gen("P-256");
+    X509 *serverCert = nullptr;
+    EVP_PKEY *otherKey = EVP_EC_gen("P-256");
+    X509 *otherCert = nullptr; // self-signed, trusted by nothing
+    std::string caFile;
+
+    TestPki()
+    {
+        caCert = makeCert(caKey, caKey, nullptr, "Test CA", nullptr, true);
+        serverCert = makeCert(serverKey, caKey, caCert, "server", "DNS:localhost,IP:127.0.0.1", false);
+        otherCert = makeCert(otherKey, otherKey, nullptr, "server", "DNS:localhost,IP:127.0.0.1", false);
+
+        caFile = (std::filesystem::temp_directory_path() / ("quickfix-ut-ca-" + std::to_string(::getpid()) + ".pem"))
+                     .string();
+        FILE *f = std::fopen(caFile.c_str(), "w");
+        PEM_write_X509(f, caCert);
+        std::fclose(f);
+    }
+
+    ~TestPki()
+    {
+        std::remove(caFile.c_str());
+        X509_free(otherCert);
+        X509_free(serverCert);
+        X509_free(caCert);
+        EVP_PKEY_free(otherKey);
+        EVP_PKEY_free(serverKey);
+        EVP_PKEY_free(caKey);
+    }
+
+    static X509 *makeCert(EVP_PKEY *key, EVP_PKEY *signer, X509 *issuer, const char *cn, const char *san, bool ca)
+    {
+        X509 *cert = X509_new();
+        X509_set_version(cert, 2);
+        ASN1_INTEGER_set(X509_get_serialNumber(cert), ca ? 1 : 2);
+        X509_gmtime_adj(X509_getm_notBefore(cert), -3600);
+        X509_gmtime_adj(X509_getm_notAfter(cert), 3600);
+        X509_set_pubkey(cert, key);
+        X509_NAME_add_entry_by_txt(X509_get_subject_name(cert), "CN", MBSTRING_ASC,
+                                   reinterpret_cast<const unsigned char *>(cn), -1, -1, 0);
+        X509_set_issuer_name(cert, X509_get_subject_name(issuer ? issuer : cert));
+
+        X509V3_CTX ctx;
+        X509V3_set_ctx_nodb(&ctx);
+        X509V3_set_ctx(&ctx, issuer ? issuer : cert, cert, nullptr, nullptr, 0);
+        addExtension(cert, &ctx, NID_basic_constraints, ca ? "critical,CA:TRUE" : "CA:FALSE");
+        if (ca)
+        {
+            addExtension(cert, &ctx, NID_key_usage, "critical,keyCertSign,cRLSign");
+        }
+        if (san)
+        {
+            addExtension(cert, &ctx, NID_subject_alt_name, san);
+        }
+        X509_sign(cert, signer, EVP_sha256());
+        return cert;
+    }
+
+    static void addExtension(X509 *cert, X509V3_CTX *ctx, int nid, const char *value)
+    {
+        X509_EXTENSION *ext = X509V3_EXT_conf_nid(nullptr, ctx, nid, value);
+        X509_add_ext(cert, ext, -1);
+        X509_EXTENSION_free(ext);
+    }
+};
+
+SessionSettings settingsFrom(const std::string &defaults)
+{
+    std::istringstream stream("[DEFAULT]\n" + defaults);
+    return SessionSettings(stream);
+}
+
+SSL_CTX *serverContext(X509 *cert, EVP_PKEY *key)
+{
+    SSL_CTX *ctx = SSL_CTX_new(TLS_server_method());
+    SSL_CTX_use_certificate(ctx, cert);
+    SSL_CTX_use_PrivateKey(ctx, key);
+    return ctx;
+}
+
+// Runs a client and a server handshake against each other over a socket pair,
+// non-blocking, until both finish or either fails.
+bool handshake(SSL_CTX *clientCtx, SSL_CTX *serverCtx, const std::string &host)
+{
+    int pair[2];
+    REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, pair) == 0);
+    SSL *client = SSL_new(clientCtx);
+    SSL *server = SSL_new(serverCtx);
+    SSL_set_fd(client, pair[0]);
+    SSL_set_fd(server, pair[1]);
+    ssl_set_sni_hostname(client, host);
+    ssl_set_peer_host(client, host);
+
+    bool clientDone = false;
+    bool serverDone = false;
+    bool failed = false;
+    for (int i = 0; i < 1000 && !failed && !(clientDone && serverDone); ++i)
+    {
+        if (!clientDone)
+        {
+            const int rc = SSL_connect(client);
+            const int err = SSL_get_error(client, rc);
+            clientDone = rc == 1;
+            failed = rc != 1 && err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE;
+        }
+        if (!serverDone && !failed)
+        {
+            const int rc = SSL_accept(server);
+            const int err = SSL_get_error(server, rc);
+            serverDone = rc == 1;
+            failed = rc != 1 && err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE;
+        }
+    }
+    ERR_clear_error();
+    SSL_free(client);
+    SSL_free(server);
+    ::close(pair[0]);
+    ::close(pair[1]);
+    return clientDone && serverDone && !failed;
+}
+
+SSL_CTX *contextFor(bool server, const std::string &defaults, int &verifyLevel)
+{
+    NullLog log;
+    std::string err;
+    SessionSettings settings = settingsFrom(defaults);
+    SSL_CTX *ctx = createSSLContext(server, settings, err);
+    REQUIRE(ctx != nullptr);
+    REQUIRE(loadCAInfo(ctx, server, settings, &log, err, verifyLevel));
+    return ctx;
+}
+} // namespace
+
+TEST_CASE("PeerVerificationTests")
+{
+    TestPki pki;
+    SSL_CTX *server = serverContext(pki.serverCert, pki.serverKey);
+    int verifyLevel = SSL_CLIENT_VERIFY_NOTSET;
+
+    SECTION("anInitiatorWithTheIssuingCAAcceptsTheServerByNameOrAddress")
+    {
+        SSL_CTX *client = contextFor(false, "CertificationAuthoritiesFile=" + pki.caFile + "\n", verifyLevel);
+        CHECK(handshake(client, server, "localhost"));
+        CHECK(handshake(client, server, "127.0.0.1"));
+        SSL_CTX_free(client);
+    }
+
+    SECTION("anInitiatorRefusesACertificateForAnotherHost")
+    {
+        SSL_CTX *client = contextFor(false, "CertificationAuthoritiesFile=" + pki.caFile + "\n", verifyLevel);
+        CHECK_FALSE(handshake(client, server, "example.com"));
+        CHECK_FALSE(handshake(client, server, "127.0.0.2"));
+        SSL_CTX_free(client);
+    }
+
+    SECTION("anInitiatorWithoutAConfiguredCARefusesAnUntrustedServer")
+    {
+        SSL_CTX *client = contextFor(false, "", verifyLevel);
+        CHECK(SSL_CLIENT_VERIFY_REQUIRE == verifyLevel);
+        CHECK_FALSE(handshake(client, server, "localhost"));
+        SSL_CTX_free(client);
+    }
+
+    SECTION("anInitiatorRefusesACertificateItsCADidNotIssue")
+    {
+        SSL_CTX *client = contextFor(false, "CertificationAuthoritiesFile=" + pki.caFile + "\n", verifyLevel);
+        SSL_CTX *impostor = serverContext(pki.otherCert, pki.otherKey);
+        CHECK_FALSE(handshake(client, impostor, "localhost"));
+        SSL_CTX_free(impostor);
+        SSL_CTX_free(client);
+    }
+
+    SECTION("anInitiatorSkipsVerificationOnlyWhenToldTo")
+    {
+        SSL_CTX *client = contextFor(false, "CertificateVerifyLevel=0\n", verifyLevel);
+        CHECK(SSL_CLIENT_VERIFY_NONE == verifyLevel);
+        CHECK(handshake(client, server, "example.com"));
+        SSL_CTX_free(client);
+    }
+
+    SECTION("anAcceptorRequiresAClientCertificateWithoutAConfiguredCA")
+    {
+        SSL_CTX *acceptor = contextFor(true, "CertificateVerifyLevel=1\n", verifyLevel);
+        SSL_CTX_use_certificate(acceptor, pki.serverCert);
+        SSL_CTX_use_PrivateKey(acceptor, pki.serverKey);
+        CHECK(SSL_CLIENT_VERIFY_REQUIRE == verifyLevel);
+        SSL_CTX *client = contextFor(false, "CertificationAuthoritiesFile=" + pki.caFile + "\n", verifyLevel);
+        CHECK_FALSE(handshake(client, acceptor, "localhost")); // the client presents no certificate
+        SSL_CTX_free(client);
+        SSL_CTX_free(acceptor);
+    }
+
+    SSL_CTX_free(server);
 }
 
 #endif // HAVE_SSL

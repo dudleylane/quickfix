@@ -283,6 +283,12 @@ bool is_ip_address(const std::string &address);
  */
 bool ssl_set_sni_hostname(SSL *ssl, const std::string &hostname, Log *log = nullptr);
 
+/// Binds the peer's certificate to host -- a DNS name or an IP address -- so the
+/// handshake fails unless the certificate names it. Does nothing when the SSL
+/// object does not verify its peer. If the name cannot be set the handshake is
+/// made to fail and false is returned.
+bool ssl_set_peer_host(SSL *ssl, const std::string &host, Log *log = nullptr);
+
 } // namespace FIX
 
 #endif

@@ -1570,6 +1570,10 @@ AppDataDictionary.FIX.4.4=FIX44.xml
 
           <td>This directive sets the all-in-one file where you can assemble the
           Certificates of Certification Authorities (CA) whose clients you deal with.
+          When this or CertificationAuthoritiesDirectory is set, the configured CAs are
+          the only ones trusted; otherwise the system's default trust store is used.
+          An initiator always verifies the server's certificate and checks that it names
+          the host or address connected to, unless CertificateVerifyLevel=0.</td>
           <td></td>
 
           <td></td>
@@ -1613,10 +1617,11 @@ AppDataDictionary.FIX.4.4=FIX44.xml
         <tr align="left" valign="middle">
           <td><b>CertificateVerifyLevel</b></td>
 
-          <td>This directive sets the Certificate verification level. 
-          It applies to the authentication process used in the
-          standard SSL handshake when a connection is established. 
-          0 implies do not verify. 1 implies verify.</td>
+          <td>On an acceptor, the client certificate verification level:
+          0 does not request a client certificate, 1 requires one, 2 verifies one if
+          offered. It is honoured whether or not a CA is configured.
+          On an initiator, 0 turns off verification of the server's certificate,
+          which is otherwise always on; use it only for testing.</td>
 
           <td></td>
 

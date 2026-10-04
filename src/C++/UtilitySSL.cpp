@@ -125,6 +125,7 @@
 #include "openssl/crypto.h"
 #include "openssl/err.h" // Error reporting
 #include "openssl/rand.h"
+#include "openssl/x509v3.h"
 #ifndef OPENSSL_NO_DH
 #include "openssl/dh.h"
 #endif
@@ -1520,26 +1521,33 @@ bool loadCAInfo(SSL_CTX *ctx, bool server, const SessionSettings &settings, Log 
         caDir.assign(settings.get().getString(CERTIFICATE_AUTHORITIES_DIRECTORY));
     }
 
-    if (caFile.empty() && caDir.empty())
-    {
-        return true;
-    }
+    const bool haveCA = !caFile.empty() || !caDir.empty();
 
-    if (!SSL_CTX_load_verify_locations(ctx, caFile.empty() ? 0 : caFile.c_str(), caDir.empty() ? 0 : caDir.c_str()) ||
-        !SSL_CTX_set_default_verify_paths(ctx))
+    // A configured CA is the only trust anchor: the system store is added only
+    // when none is configured, so that a private CA does not silently trust
+    // every public root as well.
+    if (haveCA)
     {
-        errStr.assign("Unable to configure verify locations for client authentication");
+        if (!SSL_CTX_load_verify_locations(ctx, caFile.empty() ? 0 : caFile.c_str(), caDir.empty() ? 0 : caDir.c_str()))
+        {
+            errStr.assign("Unable to configure verify locations for client authentication");
+            return false;
+        }
+
+        STACK_OF(X509_NAME) * caList;
+        if ((caList = findCAList(caFile.empty() ? 0 : caFile.c_str(), caDir.empty() ? 0 : caDir.c_str())) == 0)
+        {
+            errStr.assign("Unable to determine list of available CA certificates "
+                          "for client authentication");
+            return false;
+        }
+        SSL_CTX_set_client_CA_list(ctx, caList);
+    }
+    else if (!SSL_CTX_set_default_verify_paths(ctx))
+    {
+        errStr.assign("Unable to configure the default verify locations");
         return false;
     }
-
-    STACK_OF(X509_NAME) * caList;
-    if ((caList = findCAList(caFile.empty() ? 0 : caFile.c_str(), caDir.empty() ? 0 : caDir.c_str())) == 0)
-    {
-        errStr.assign("Unable to determine list of available CA certificates "
-                      "for client authentication");
-        return false;
-    }
-    SSL_CTX_set_client_CA_list(ctx, caList);
 
     if (server)
     {
@@ -1566,10 +1574,55 @@ bool loadCAInfo(SSL_CTX *ctx, bool server, const SessionSettings &settings, Log 
     }
     else
     {
-        /* Set the certificate verification callback */
-        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, callbackVerify);
+        // An initiator verifies the server unless told explicitly not to.
+        verifyLevel = SSL_CLIENT_VERIFY_REQUIRE;
+        if (settings.get().has(CERTIFICATE_VERIFY_LEVEL) &&
+            settings.get().getInt(CERTIFICATE_VERIFY_LEVEL) == SSL_CLIENT_VERIFY_NONE)
+        {
+            verifyLevel = SSL_CLIENT_VERIFY_NONE;
+            log->onEvent("CertificateVerifyLevel=0: the server's certificate will not be verified");
+            SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, 0);
+        }
+        else
+        {
+            SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, callbackVerify);
+        }
     }
 
+    return true;
+}
+
+namespace
+{
+int failVerify(int, X509_STORE_CTX *) { return 0; }
+} // namespace
+
+bool ssl_set_peer_host(SSL *ssl, const std::string &host, Log *log)
+{
+    if (ssl == nullptr)
+    {
+        return false;
+    }
+
+    if (SSL_get_verify_mode(ssl) == SSL_VERIFY_NONE)
+    {
+        return true;
+    }
+
+    X509_VERIFY_PARAM *param = SSL_get0_param(ssl);
+    X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    const bool set = !host.empty() && (is_ip_address(host) ? X509_VERIFY_PARAM_set1_ip_asc(param, host.c_str()) == 1
+                                                           : SSL_set1_host(ssl, host.c_str()) == 1);
+    if (!set)
+    {
+        // Fail closed: a handshake that cannot check the name must not succeed.
+        if (log)
+        {
+            log->onEvent("Unable to set the expected peer name: " + host);
+        }
+        SSL_set_verify(ssl, SSL_VERIFY_PEER, failVerify);
+        return false;
+    }
     return true;
 }
 

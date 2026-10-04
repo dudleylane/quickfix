@@ -342,6 +342,7 @@ void SSLSocketInitiator::doConnect(const SessionID &sessionID, const Dictionary 
 
         // Set SNI hostname for TLS connections
         ssl_set_sni_hostname(ssl, host.address, log);
+        ssl_set_peer_host(ssl, host.address, log);
 
         setPending(sessionID);
         m_pendingConnections[result] =

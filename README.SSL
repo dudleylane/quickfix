@@ -70,10 +70,12 @@ ServerCertificateFile=
 
 ServerCertificateKeyFile=
 
-#This directive sets the Certificate verification level. It applies to the authentication process used in the
-#standard SSL handshake when a connection is established. 0 implies do not verify. 1 implies verify.
+#This directive sets the client certificate verification level. 0 does not
+#request a client certificate, 1 requires one, 2 verifies one if offered. It is
+#honoured whether or not a CA is configured; without one, client certificates are
+#checked against the system's default trust store.
 
-VerifyLevel=
+CertificateVerifyLevel=
 
 #This directive sets the all-in-one file where you can assemble the
 #Certificate Revocation Lists (CRL) of Certification Authorities (CA) whose
@@ -179,8 +181,17 @@ SSLProtocol=
 
 SSLCipherSuite=
 
+#An initiator always verifies the server's certificate, against the CAs
+#configured below or, when none are, the system's default trust store, and
+#checks that the certificate names the host or address it connected to.
+#CertificateVerifyLevel=0 turns that off; do it only for testing.
+
+CertificateVerifyLevel=
+
 #This directive sets the all-in-one file where you can assemble the
 #Certificates of Certification Authorities (CA) whose clients you deal with.
+#When this or CertificationAuthoritiesDirectory is set, the configured CAs are
+#the only ones trusted; otherwise the system's default trust store is used.
 
 CertificationAuthoritiesFile=
 
