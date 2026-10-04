@@ -112,7 +112,7 @@ private:
     SenderCompID m_senderCompID;
     TargetCompID m_targetCompID;
     std::string m_sessionQualifier;
-    bool m_isFIXT;
+    bool m_isFIXT = false; // SessionID() leaves it otherwise unset, and copying one reads it
     std::string m_frozenString;
 };
 /*! @} */
