@@ -232,6 +232,13 @@ TEST_CASE("FieldMapTests")
         parent.getGroup(1, 268, retrieved);
         CHECK(retrieved.getField(269) == "0");
         CHECK(retrieved.getField(270) == "100.5");
+
+        // Field values survive slicing, so the checks above cannot tell a Group from a sliced
+        // FieldMap. The stored object itself must still be a Group, count and delimiter intact (#67).
+        const Group *stored = dynamic_cast<const Group *>(parent.groups().find(268)->second.front());
+        REQUIRE(stored != nullptr);
+        CHECK(stored->field() == 268);
+        CHECK(stored->delim() == 269);
     }
 
     SECTION("copyFieldMapWithGroupsPreservesGroupType")
@@ -247,6 +254,18 @@ TEST_CASE("FieldMapTests")
         FieldMap retrieved;
         copy.getGroup(1, 268, retrieved);
         CHECK(retrieved.getField(269) == "1");
+
+        // As above: the copy's stored group must be a Group, not a FieldMap sliced from one (#67).
+        const Group *stored = dynamic_cast<const Group *>(copy.groups().find(268)->second.front());
+        REQUIRE(stored != nullptr);
+        CHECK(stored->field() == 268);
+        CHECK(stored->delim() == 269);
+
+        FieldMap assigned;
+        assigned = parent;
+        const Group *assignedGroup = dynamic_cast<const Group *>(assigned.groups().find(268)->second.front());
+        REQUIRE(assignedGroup != nullptr);
+        CHECK(assignedGroup->delim() == 269);
     }
 
     SECTION("arenaReusedAcrossClearCycles")
