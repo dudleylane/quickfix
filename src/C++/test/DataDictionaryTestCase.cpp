@@ -1822,3 +1822,26 @@ TEST_CASE("DataDictionaryTests")
         CHECK(TYPE::String == actualType);
     }
 }
+
+TEST_CASE("DataDictionaryCopyTests")
+{
+    SECTION("aCopyLooksUpNamesAndValuesLikeTheOriginal")
+    {
+        // The copy constructor and assignment dropped the name-to-value map, so getNameValue failed
+        // on every copy -- including every session's dictionary, which is a copy (#61).
+        DataDictionary original(FIX::TestSettings::pathForSpec("FIX44"));
+        DataDictionary copied(original);
+        DataDictionary assigned;
+        assigned = original;
+
+        for (const DataDictionary *dictionary : {&original, &copied, &assigned})
+        {
+            std::string value;
+            REQUIRE(dictionary->getNameValue(54, "BUY", value));
+            CHECK(value == "1");
+            std::string name;
+            REQUIRE(dictionary->getValueName(54, "1", name));
+            CHECK(name == "BUY");
+        }
+    }
+}
