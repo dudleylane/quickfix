@@ -329,8 +329,11 @@ build-tsan/out/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path sp
 # ASan + UBSan (memory errors)
 # No -DENABLE_TBB_ALLOCATOR here: it would hide heap errors and leaks in
 # FieldMap::Fields and the socket send queues (see above).
+# -fno-sanitize-recover=undefined makes a UBSan finding fail the run: without it
+# UBSan prints the runtime error and ut still exits 0, while the baseline above
+# is "exits 0" (#65).
 cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug \
-  -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+  -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer" \
   -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
   -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined" \
   -DHAVE_SSL=ON \
