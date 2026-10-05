@@ -251,6 +251,10 @@ void SSLSocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXC
     }
     catch (SocketException &e)
     {
+        // Release the listeners bound before the failing port, as SocketAcceptor does: kept, they
+        // would leak with the server and make a retried start() fail to bind them again (#60).
+        delete m_pServer;
+        m_pServer = 0;
         throw RuntimeError("Unable to create, bind, or listen to port " + IntConvertor::convert((unsigned short)port) +
                            " (" + e.what() + ")");
     }

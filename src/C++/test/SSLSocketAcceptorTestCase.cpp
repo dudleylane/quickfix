@@ -171,4 +171,42 @@ TEST_CASE("CheckSSLClientTests")
     SSL_CTX_free(ctx);
 }
 
+TEST_CASE("SSLSocketAcceptorRestartTests")
+{
+    SECTION("aStartThatFailsToBindCanBeRetried")
+    {
+        // Two sessions on two ports; the second port is taken, so start() binds the first and fails
+        // on the second. That must release the first, so a start() retried once the port is free
+        // binds both instead of failing on a listener left over from the first attempt (#60).
+        const int first = freePort();
+        int second = freePort();
+        while (second == first)
+        {
+            second = freePort();
+        }
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=acceptor\nStartTime=00:00:00\nEndTime=00:00:00\n"
+               << "UseDataDictionary=N\nSocketReuseAddress=N\n"
+               << "ServerCertificateFile=" << certPath("127_0_0_1_server.crt") << "\n"
+               << "ServerCertificateKeyFile=" << certPath("127_0_0_1_server.key") << "\n"
+               << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=RESTART1\nTargetCompID=TW\nSocketAcceptPort=" << first
+               << "\n[SESSION]\nBeginString=FIX.4.2\nSenderCompID=RESTART2\nTargetCompID=TW\nSocketAcceptPort="
+               << second << "\n";
+        SessionSettings settings(config);
+        NullApplication application;
+        MemoryStoreFactory factory;
+        SSLSocketAcceptor acceptor(application, factory, settings);
+
+        const socket_handle occupier = socket_createAcceptor(second, false);
+        REQUIRE(occupier != INVALID_SOCKET_HANDLE);
+        CHECK_THROWS_AS(acceptor.start(), RuntimeError);
+        socket_close(occupier);
+
+        CHECK_NOTHROW(acceptor.start());
+        CHECK(connectTo(first) >= 0);
+        CHECK(connectTo(second) >= 0);
+        acceptor.stop(true);
+    }
+}
+
 #endif
