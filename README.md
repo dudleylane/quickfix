@@ -219,7 +219,10 @@ g++ -std=c++23 app.cpp $(pkg-config --cflags --libs quickfix)
 ```
 
 A project that adds this tree with `add_subdirectory` or `FetchContent` links `quickfix::quickfix`
-too.
+too; the target makes its headers available in the tree before anything that links it compiles
+(#48). Keep `/usr/local/include` or another installed copy of quickfix off that project's include
+path ahead of it, or the compiler can take an installed header that does not match the library it
+links.
 
 ## Testing
 

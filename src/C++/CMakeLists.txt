@@ -109,6 +109,11 @@ endif()
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 target_include_directories(${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+# Those headers are copied there by the QUICKFIX_*_HEADERS_COPY targets, which nothing else orders:
+# without this a target linking quickfix -- an example, an add_subdirectory or FetchContent
+# consumer, a --target build on a fresh tree -- could compile before the copy ran, and either fail
+# or silently use an installed copy of the headers while linking this library (#48).
+add_dependencies(${PROJECT_NAME} QUICKFIX_HEADERS_COPY QUICKFIX_ALLOCATOR_HEADERS_COPY)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/src/C++)
 
 # The version, and its major as the soname, come from project() in the top-level CMakeLists.txt,
