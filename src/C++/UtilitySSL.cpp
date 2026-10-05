@@ -1659,14 +1659,17 @@ X509_STORE *loadCRLInfo(SSL_CTX *ctx, const SessionSettings &settings, Log *log,
     }
 
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-    revocationStore = createX509Store(crlFile.c_str(), crlDir.empty() ? 0 : crlDir.c_str());
+    revocationStore = createX509Store(crlFile.empty() ? 0 : crlFile.c_str(), crlDir.empty() ? 0 : crlDir.c_str());
     if (revocationStore == 0)
     {
         errStr.assign("Unable to create revocation store");
     }
 #else
     X509_STORE *store = SSL_CTX_get_cert_store(ctx);
-    if (!store || !X509_STORE_load_locations(store, crlFile.c_str(), crlDir.c_str()))
+    // An unset path is passed as null, not "": OpenSSL fails on an empty one, so setting only one
+    // of the two settings used to stop the acceptor from starting (#56).
+    if (!store ||
+        !X509_STORE_load_locations(store, crlFile.empty() ? 0 : crlFile.c_str(), crlDir.empty() ? 0 : crlDir.c_str()))
     {
         errStr.assign("Unable to create revocation store");
         return 0;

@@ -348,4 +348,30 @@ TEST_CASE("PeerVerificationTests")
     SSL_CTX_free(server);
 }
 
+TEST_CASE("SSLSettingsTests")
+{
+    NullLog log;
+    std::string err;
+
+    SECTION("eitherRevocationListSettingWorksAlone")
+    {
+        // Setting only one of the two used to hand OpenSSL an empty path for the other, and the
+        // acceptor failed to start (#56).
+        const std::string pem = certPath("certs/cacert.pem");
+        const std::string dir = certPath("certs");
+        for (const std::string &defaults :
+             {"CertificateRevocationListFile=" + pem + "\n", "CertificateRevocationListDirectory=" + dir + "\n"})
+        {
+            INFO(defaults);
+            SessionSettings settings = settingsFrom(defaults);
+            SSL_CTX *ctx = createSSLContext(true, settings, err);
+            REQUIRE(ctx != nullptr);
+            err.clear();
+            loadCRLInfo(ctx, settings, &log, err);
+            CHECK(err.empty());
+            SSL_CTX_free(ctx);
+        }
+    }
+}
+
 #endif // HAVE_SSL
