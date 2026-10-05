@@ -23,7 +23,8 @@ Makefile
 *.dylib
 ChangeLog
 aclocal.m4
-# Anchored: a bare config.h would also match the tracked src/C++/config.h
+# Anchored: a bare config.h would also match the tracked src/C++/config.h. Configure no longer
+# writes one at the root (#62); this keeps a leftover from an older configure out of commits.
 /config.h
 config_unix.h
 config.log
