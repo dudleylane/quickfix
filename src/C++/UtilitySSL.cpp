@@ -1213,6 +1213,13 @@ SSL_CTX *createSSLContext(bool server, const SessionSettings &settings, std::str
     }
 
     long options = protocolOptions(strOptions.c_str());
+    if (options == -1)
+    {
+        // An unrecognised token used to make every protocol bit set, which disables nothing: a
+        // setting meant to restrict the versions silently allowed them all (#55).
+        errStr.append("Unrecognised SSLProtocol: " + strOptions);
+        return 0;
+    }
 
     /* set up the application context */
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)

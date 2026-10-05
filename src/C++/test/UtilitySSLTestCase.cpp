@@ -353,6 +353,34 @@ TEST_CASE("SSLSettingsTests")
     NullLog log;
     std::string err;
 
+    SECTION("anUnrecognisedProtocolTokenIsAConfigurationError")
+    {
+        // A token the parser does not know -- here "TLSv1.3" for TLSv1_3 -- used to disable
+        // nothing, silently, leaving every protocol version enabled (#55).
+        SessionSettings bad = settingsFrom("SSLProtocol=-all +TLSv1.3\n");
+        SSL_CTX *ctx = createSSLContext(true, bad, err);
+        CHECK(ctx == nullptr);
+        CHECK(err.find("SSLProtocol") != std::string::npos);
+        if (ctx)
+        {
+            SSL_CTX_free(ctx);
+        }
+    }
+
+    SECTION("recognisedProtocolTokensStillApply")
+    {
+        SSL_CTX *only13 = createSSLContext(true, settingsFrom("SSLProtocol=-all +TLSv1_3\n"), err);
+        REQUIRE(only13 != nullptr);
+        CHECK((SSL_CTX_get_options(only13) & SSL_OP_NO_TLSv1_2) != 0);
+        CHECK((SSL_CTX_get_options(only13) & SSL_OP_NO_TLSv1_3) == 0);
+        SSL_CTX_free(only13);
+
+        SSL_CTX *no12 = createSSLContext(true, settingsFrom("SSLProtocol=all -TLSv1_2\n"), err);
+        REQUIRE(no12 != nullptr);
+        CHECK((SSL_CTX_get_options(no12) & SSL_OP_NO_TLSv1_2) != 0);
+        SSL_CTX_free(no12);
+    }
+
     SECTION("eitherRevocationListSettingWorksAlone")
     {
         // Setting only one of the two used to hand OpenSSL an empty path for the other, and the
