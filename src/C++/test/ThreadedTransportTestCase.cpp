@@ -545,6 +545,30 @@ std::string logonTo(const std::string &target)
     return message.toString();
 }
 
+// Polls a condition until it holds or the deadline passes. The tests below wait on state another
+// thread sets -- a session's logon, a released slot -- rather than assume it is set at once.
+template <typename Predicate> bool waitUntil(Predicate predicate, std::chrono::milliseconds limit)
+{
+    const auto start = std::chrono::steady_clock::now();
+    while (!predicate())
+    {
+        if (std::chrono::steady_clock::now() - start > limit)
+        {
+            return false;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    return true;
+}
+
+// Stops an acceptor when the scope ends, so a failed REQUIRE cannot leave its threads running
+// against a destroyed acceptor. stop() on a stopped acceptor does nothing.
+struct StopOnExit
+{
+    Acceptor &acceptor;
+    ~StopOnExit() { acceptor.stop(true); }
+};
+
 // True if the peer closes the connection within the given time.
 bool closesWithin(int fd, std::chrono::milliseconds limit)
 {
@@ -562,7 +586,7 @@ bool closesWithin(int fd, std::chrono::milliseconds limit)
 
 // Exercises one acceptor started with MaxPendingConnections=2. A Logon is sent
 // only when the transport can carry one without TLS.
-void checkPendingLimit(int port, const std::string &sender, bool canLogOn)
+void checkPendingLimit(Acceptor &acceptor, int port, const std::string &sender, bool canLogOn)
 {
     INFO("acceptor for " << sender);
     std::vector<int> open;
@@ -575,6 +599,18 @@ void checkPendingLimit(int port, const std::string &sender, bool canLogOn)
         char reply[512];
         CHECK(::recv(loggedOn, reply, sizeof(reply), 0) > 0); // the Logon reply
         open.push_back(loggedOn);
+        // The reply goes out before the session records it sent, and a threaded acceptor gives
+        // the connection's slot back on that connection's thread just after: wait for both, or
+        // under load the logged-on connection still counts and the second below is refused.
+        const SessionID id(BeginString("FIX.4.2"), SenderCompID(sender), TargetCompID("TW"));
+        CHECK(waitUntil(
+            [&]
+            {
+                Session *session = acceptor.getSession(id);
+                return session && session->isLoggedOn();
+            },
+            std::chrono::milliseconds(5000)));
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
     const int first = connectTo(port);
@@ -620,28 +656,36 @@ TEST_CASE("PendingConnectionLimitTests")
         const int threadedPort = freePort();
         ThreadedSocketAcceptor threaded(application, factory, limitSettings(threadedPort, "LIMIT1", "2"));
         threaded.start();
-        checkPendingLimit(threadedPort, "LIMIT1", true);
-        threaded.stop();
+        {
+            StopOnExit stop{threaded};
+            checkPendingLimit(threaded, threadedPort, "LIMIT1", true);
+        }
 
         const int reactorPort = freePort();
         SocketAcceptor reactor(application, factory, limitSettings(reactorPort, "LIMIT2", "2"));
         reactor.start();
-        checkPendingLimit(reactorPort, "LIMIT2", true);
-        reactor.stop();
+        {
+            StopOnExit stop{reactor};
+            checkPendingLimit(reactor, reactorPort, "LIMIT2", true);
+        }
 
 #if (HAVE_SSL > 0)
         // No TLS client here, so these hold connections in their handshake.
         const int tlsThreadedPort = freePort();
         ThreadedSSLSocketAcceptor tlsThreaded(application, factory, limitSettings(tlsThreadedPort, "LIMIT3", "2"));
         tlsThreaded.start();
-        checkPendingLimit(tlsThreadedPort, "LIMIT3", false);
-        tlsThreaded.stop();
+        {
+            StopOnExit stop{tlsThreaded};
+            checkPendingLimit(tlsThreaded, tlsThreadedPort, "LIMIT3", false);
+        }
 
         const int tlsReactorPort = freePort();
         SSLSocketAcceptor tlsReactor(application, factory, limitSettings(tlsReactorPort, "LIMIT4", "2"));
         tlsReactor.start();
-        checkPendingLimit(tlsReactorPort, "LIMIT4", false);
-        tlsReactor.stop();
+        {
+            StopOnExit stop{tlsReactor};
+            checkPendingLimit(tlsReactor, tlsReactorPort, "LIMIT4", false);
+        }
 #endif
     }
 
@@ -780,11 +824,15 @@ TEST_CASE("ReactorTeardownTests")
         REQUIRE(peer >= 0);
         REQUIRE(sendAll(peer, logonTo("TEARDOWN")));
         char reply[512];
-        REQUIRE(::recv(peer, reply, sizeof(reply), 0) > 0); // the Logon reply
+        const ssize_t got = ::recv(peer, reply, sizeof(reply), 0);
+        REQUIRE(got > 0); // the Logon reply
+        INFO("reply: " << std::string(reply, static_cast<size_t>(got)));
         const SessionID id(BeginString("FIX.4.2"), SenderCompID("TEARDOWN"), TargetCompID("TW"));
+        StopOnExit stop{acceptor};
         Session *session = acceptor.getSession(id);
         REQUIRE(session != nullptr);
-        REQUIRE(session->isLoggedOn());
+        // The reply goes out before the session records its Logon as sent.
+        REQUIRE(waitUntil([&] { return session->isLoggedOn(); }, std::chrono::milliseconds(5000)));
 
         acceptor.stop(true); // the peer never answers the Logout
 
