@@ -14,8 +14,10 @@ case "$(head -1 "$msg_file")" in
     "Merge "*|"Revert "*|"fixup!"*|"squash!"*) exit 0 ;;
 esac
 
+# The *.in templates generate headers and package files (the allocator and SSL guards, the version
+# consumers check); the hook itself and env.rc are extensionless or unlisted scripts (#66).
 executable=$(git diff --cached --name-only --diff-filter=ACMR | grep -Ec \
-    '\.(cpp|cc|cxx|h|hpp|hh|hxx|ixx|c|cmake|sh|rb|py|xsl|xml|i|yml|yaml)$|(^|/)CMakeLists\.txt$')
+    '\.(cpp|cc|cxx|h|hpp|hh|hxx|ixx|c|cmake|sh|rb|py|xsl|xml|i|yml|yaml|in|rc)$|(^|/)CMakeLists\.txt$|^\.githooks/')
 [ "$executable" -eq 0 ] && exit 0
 
 grep -q '^Deviation:' "$msg_file" && exit 0
