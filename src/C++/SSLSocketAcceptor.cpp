@@ -146,10 +146,7 @@ SSLSocketAcceptor::SSLSocketAcceptor(Application &application, MessageStoreFacto
 
 SSLSocketAcceptor::~SSLSocketAcceptor()
 {
-    for (const SocketConnections::value_type &connection : m_connections)
-    {
-        delete connection.second;
-    }
+    disconnectRemaining();
     for (const PendingHandshakes::value_type &pending : m_pendingHandshakes)
     {
         delete pending.second.connection;
@@ -284,9 +281,28 @@ void SSLSocketAcceptor::onStart()
         }
     }
 
+    disconnectRemaining();
+
     m_pServer->close();
     delete m_pServer;
     m_pServer = 0;
+}
+
+void SSLSocketAcceptor::disconnectRemaining()
+{
+    // A session whose peer did not answer its Logout within the wait above is still logged on,
+    // with this connection as its responder. Deleting the server deletes the monitor the
+    // connection signals on send(), so a later send -- from any thread -- would use freed memory
+    // (#49). Disconnecting first drops the responder, and the connection is then deleted here.
+    for (const SocketConnections::value_type &entry : m_connections)
+    {
+        if (Session *pSession = entry.second->getSession())
+        {
+            pSession->disconnect();
+        }
+        delete entry.second;
+    }
+    m_connections.clear();
 }
 
 bool SSLSocketAcceptor::onPoll()

@@ -190,6 +190,10 @@ private:
     HandshakeStep stepHandshake(SSLSocketConnection *);
     bool advanceHandshake(SocketServer &, PendingHandshakes::iterator);
     void abandonHandshake(SocketServer &, PendingHandshakes::iterator, const std::string &reason);
+    /// Disconnect every remaining connection's session through the normal path, so it drops the
+    /// connection as its responder, then delete the connections. Must run while the server and
+    /// its monitor still exist.
+    void disconnectRemaining();
     /// Accepted connections still in their handshake, or past it but without a
     /// session that has received a logon.
     size_t pendingConnections() const;

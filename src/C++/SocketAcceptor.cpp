@@ -42,11 +42,7 @@ SocketAcceptor::SocketAcceptor(Application &application, MessageStoreFactory &fa
 
 SocketAcceptor::~SocketAcceptor()
 {
-    SocketConnections::iterator iter;
-    for (iter = m_connections.begin(); iter != m_connections.end(); ++iter)
-    {
-        delete iter->second;
-    }
+    disconnectRemaining();
 
     // onStart() owns m_pServer on the blocking path and nulls it there, but the
     // poll() path never runs onStart(), so without this the server leaks.  Doing
@@ -143,11 +139,30 @@ void SocketAcceptor::onStart()
         }
     }
 
+    disconnectRemaining();
+
     Locker l(m_serverMutex);
     m_pServer->close();
     delete m_pServer;
     m_pServer = 0;
     m_reactorActive = false;
+}
+
+void SocketAcceptor::disconnectRemaining()
+{
+    // A session whose peer did not answer its Logout within the wait above is still logged on,
+    // with this connection as its responder. Deleting the server deletes the monitor the
+    // connection signals on send(), so a later send -- from any thread -- would use freed memory
+    // (#49). Disconnecting first drops the responder, and the connection is then deleted here.
+    for (const SocketConnections::value_type &entry : m_connections)
+    {
+        if (Session *pSession = entry.second->getSession())
+        {
+            pSession->disconnect();
+        }
+        delete entry.second;
+    }
+    m_connections.clear();
 }
 
 bool SocketAcceptor::onPoll()

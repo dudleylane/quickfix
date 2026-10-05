@@ -754,3 +754,48 @@ TEST_CASE("ThreadedSendTests")
         ::close(pair[1]);
     }
 }
+
+TEST_CASE("ReactorTeardownTests")
+{
+    SECTION("stopDisconnectsSessionsWhosePeerIgnoresTheLogout")
+    {
+        // A peer that stays logged on through stop()'s logout wait still has its connection open
+        // when the reactor deletes its server and monitor. stop() must disconnect that session
+        // through the normal path: left holding the connection as its responder, the session still
+        // reports logged on, and a send from another thread reaches the deleted monitor (#49).
+        NullApplication application;
+        MemoryStoreFactory factory;
+        const int port = freePort();
+        // LogoutTimeout longer than the reactor's five-second wait after stop(): with the default
+        // of two seconds the session gives up on the Logout and disconnects itself in time.
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=acceptor\nSocketAcceptPort=" << port
+               << "\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\nLogoutTimeout=10\n"
+               << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=TEARDOWN\nTargetCompID=TW\n";
+        SessionSettings settings(config);
+        SocketAcceptor acceptor(application, factory, settings);
+        acceptor.start();
+
+        const int peer = connectTo(port);
+        REQUIRE(peer >= 0);
+        REQUIRE(sendAll(peer, logonTo("TEARDOWN")));
+        char reply[512];
+        REQUIRE(::recv(peer, reply, sizeof(reply), 0) > 0); // the Logon reply
+        const SessionID id(BeginString("FIX.4.2"), SenderCompID("TEARDOWN"), TargetCompID("TW"));
+        Session *session = acceptor.getSession(id);
+        REQUIRE(session != nullptr);
+        REQUIRE(session->isLoggedOn());
+
+        acceptor.stop(true); // the peer never answers the Logout
+
+        CHECK_FALSE(session->isLoggedOn());
+        // A Logout is sent whatever the session's state, so this reaches the responder if the
+        // session still has one: the connection, whose monitor stop() deleted. A plain build only
+        // reads the freed monitor; under AddressSanitizer it is a reported use-after-free.
+        Message logout;
+        logout.getHeader().setField(MsgType(MsgType_Logout));
+        session->send(logout);
+
+        ::close(peer);
+    }
+}

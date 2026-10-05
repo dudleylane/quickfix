@@ -73,6 +73,10 @@ private:
     // setup deadline, so a peer that stalls its first message does not hold a
     // slot open indefinitely.
     void expirePendingReads();
+    /// Disconnect every remaining connection's session through the normal path, so it drops the
+    /// connection as its responder, then delete the connections. Must run while the server and
+    /// its monitor still exist.
+    void disconnectRemaining();
     /// Accepted connections whose session has not received a logon.
     size_t pendingConnections() const;
 
