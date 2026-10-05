@@ -26,6 +26,7 @@
 #include <sys/conf.h>
 #endif
 #include <algorithm>
+#include <cerrno>
 #include <cstdarg>
 #include <fstream>
 #include <iostream>
@@ -221,6 +222,19 @@ int socket_bind(socket_handle socket, const char *hostname, int port)
     return bind(socket, reinterpret_cast<sockaddr *>(&address), socklen);
 }
 
+namespace
+{
+// Close a socket that failed to become a listener without losing why it failed: callers build
+// their SocketException from errno, and socket_close's shutdown() on an unconnected socket would
+// replace it with ENOTCONN.
+void closeKeepingErrno(socket_handle socket)
+{
+    const int saved = errno;
+    socket_close(socket);
+    errno = saved;
+}
+} // namespace
+
 socket_handle socket_createAcceptor(int port, bool reuse)
 {
     socket_handle socket = ::socket(PF_INET, SOCK_STREAM, 0);
@@ -245,11 +259,13 @@ socket_handle socket_createAcceptor(int port, bool reuse)
 
     if (result == BIND_SOCKET_ERROR)
     {
+        closeKeepingErrno(socket);
         return INVALID_SOCKET_HANDLE;
     }
     result = listen(socket, SOMAXCONN);
     if (result == LISTEN_SOCKET_ERROR)
     {
+        closeKeepingErrno(socket);
         return INVALID_SOCKET_HANDLE;
     }
     return socket;
@@ -279,7 +295,7 @@ socket_handle socket_createAcceptor(const std::string &address, int port, bool r
     if (::bind(socket, reinterpret_cast<sockaddr *>(&sa), sizeof(sa)) == BIND_SOCKET_ERROR ||
         ::listen(socket, SOMAXCONN) == LISTEN_SOCKET_ERROR)
     {
-        socket_close(socket);
+        closeKeepingErrno(socket);
         return INVALID_SOCKET_HANDLE;
     }
     return socket;

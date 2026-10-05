@@ -24,8 +24,13 @@
 
 #include "catch_amalgamated.hpp"
 
+#include <cerrno>
+#include <dirent.h>
 #include <memory>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <type_traits>
+#include <unistd.h>
 
 using namespace FIX;
 
@@ -247,5 +252,48 @@ TEST_CASE("UtilityTests")
         constexpr bool usesStdAllocator = std::is_same_v<FieldMap::Fields::allocator_type, std::allocator<FieldBase>>;
         CHECK(QUICKFIX_TBB_ALLOCATOR == QUICKFIX_EXPECTED_TBB_ALLOCATOR);
         CHECK(usesStdAllocator == !QUICKFIX_EXPECTED_TBB_ALLOCATOR);
+    }
+}
+
+namespace
+{
+std::size_t openDescriptorCount()
+{
+    std::size_t count = 0;
+    if (DIR *dir = ::opendir("/proc/self/fd"))
+    {
+        while (::readdir(dir))
+        {
+            ++count;
+        }
+        ::closedir(dir);
+    }
+    return count;
+}
+} // namespace
+
+TEST_CASE("SocketCreateAcceptorTests")
+{
+    SECTION("aFailedBindClosesItsSocketAndKeepsTheCause")
+    {
+        // A port already in use: every attempt fails at bind(). Each must close the socket it
+        // created, and leave errno saying why, which the callers' SocketException reports (#70).
+        const socket_handle holder = socket_createAcceptor(0, false);
+        REQUIRE(holder != INVALID_SOCKET_HANDLE);
+        const int port = socket_hostport(holder);
+
+        const std::size_t before = openDescriptorCount();
+        for (int i = 0; i < 10; ++i)
+        {
+            errno = 0;
+            CHECK(socket_createAcceptor(port, false) == INVALID_SOCKET_HANDLE);
+            CHECK(errno == EADDRINUSE);
+            errno = 0;
+            CHECK(socket_createAcceptor("127.0.0.1", port, false) == INVALID_SOCKET_HANDLE);
+            CHECK(errno == EADDRINUSE);
+        }
+        CHECK(openDescriptorCount() == before);
+
+        socket_close(holder);
     }
 }
