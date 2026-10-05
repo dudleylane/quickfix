@@ -28,6 +28,7 @@
 #include <dirent.h>
 #include <memory>
 #include <netinet/in.h>
+#include <set>
 #include <sys/socket.h>
 #include <type_traits>
 #include <unistd.h>
@@ -295,5 +296,19 @@ TEST_CASE("SocketCreateAcceptorTests")
         CHECK(openDescriptorCount() == before);
 
         socket_close(holder);
+    }
+}
+
+TEST_CASE("StringSplitTests")
+{
+    SECTION("keepsEveryNonEmptyTokenTrimmed")
+    {
+        // One-character tokens before a delimiter used to be dropped, and surrounding spaces kept,
+        // so "127.0.0.1, 127.0.0.2" never matched its second address (#59).
+        CHECK(string_split("a,bb,c", ',') == std::set<std::string>{"a", "bb", "c"});
+        CHECK(string_split("127.0.0.1, 127.0.0.2", ',') == std::set<std::string>{"127.0.0.1", "127.0.0.2"});
+        CHECK(string_split(" 10.0.0.1 ,\t10.0.0.2\t", ',') == std::set<std::string>{"10.0.0.1", "10.0.0.2"});
+        CHECK(string_split(",, ,", ',').empty());
+        CHECK(string_split("", ',').empty());
     }
 }

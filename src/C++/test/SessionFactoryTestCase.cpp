@@ -101,3 +101,28 @@ TEST_CASE("SessionFactoryTests")
         CHECK_THROWS(object.create(sessionID, settings));
     }
 }
+
+TEST_CASE("SessionFactoryAllowedRemoteAddressesTests")
+{
+    SECTION("aListWrittenWithSpacesAllowsEveryAddress")
+    {
+        // "a, b" used to store " b", which no peer address matches, so the second address was
+        // silently denied (#59).
+        NullApplication application;
+        MemoryStoreFactory messageStoreFactory;
+        SessionFactory object(application, messageStoreFactory, 0);
+
+        SessionID sessionID("FIX.4.2", "ALLOWLIST", "TARGET");
+        Dictionary settings;
+        settings.setString(CONNECTION_TYPE, "acceptor");
+        settings.setString(USE_DATA_DICTIONARY, "N");
+        settings.setString(START_TIME, "12:00:00");
+        settings.setString(END_TIME, "12:00:00");
+        settings.setString(ALLOWED_REMOTE_ADDRESSES, "127.0.0.1, 127.0.0.2");
+        Session *session = object.create(sessionID, settings);
+        CHECK(session->inAllowedRemoteAddresses("127.0.0.1"));
+        CHECK(session->inAllowedRemoteAddresses("127.0.0.2"));
+        CHECK_FALSE(session->inAllowedRemoteAddresses("127.0.0.3"));
+        object.destroy(session);
+    }
+}

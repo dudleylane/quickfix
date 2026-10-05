@@ -151,22 +151,25 @@ std::string string_strip(const std::string &value)
 
 std::set<std::string> string_split(const std::string &value, const char delimiter)
 {
+    // Every non-empty token, trimmed of surrounding spaces and tabs: "a, b" is {"a", "b"}. One-
+    // character tokens before a delimiter used to be dropped and whitespace kept, so an
+    // AllowedRemoteAddresses list written with spaces silently denied all but its first entry.
     std::set<std::string> subStrings;
     std::size_t start = 0;
-    for (std::size_t pos = 0; pos < value.size(); ++pos)
+    while (start <= value.size())
     {
-        if (value[pos] == delimiter)
+        std::size_t end = value.find(delimiter, start);
+        if (end == std::string::npos)
         {
-            if (pos - start > 1)
-            {
-                subStrings.insert(value.substr(start, pos - start));
-            }
-            start = pos + 1;
+            end = value.size();
         }
-    }
-    if (start < value.size())
-    {
-        subStrings.insert(value.substr(start, value.size() - start));
+        const std::size_t first = value.find_first_not_of(" \t", start);
+        if (first != std::string::npos && first < end)
+        {
+            const std::size_t last = value.find_last_not_of(" \t", end - 1);
+            subStrings.insert(value.substr(first, last - first + 1));
+        }
+        start = end + 1;
     }
     return subStrings;
 }
