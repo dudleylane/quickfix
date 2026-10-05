@@ -49,38 +49,59 @@ Acceptor::Acceptor(Application &application, MessageStoreFactory &messageStoreFa
 
 void Acceptor::initialize() EXCEPT(ConfigError)
 {
-    std::set<SessionID> sessions = m_settings.getSessions();
-    std::set<SessionID>::iterator i;
-
-    if (!sessions.size())
+    // A throw anywhere here -- a bad setting, a duplicate session, an application's onCreate --
+    // must not leave the sessions already created alive and registered: the constructor
+    // fails, so the destructor that would delete them never runs.
+    try
     {
-        throw ConfigError("No sessions defined");
-    }
+        std::set<SessionID> sessions = m_settings.getSessions();
+        std::set<SessionID>::iterator i;
 
-    if (m_settings.get().has(MAX_PENDING_CONNECTIONS))
-    {
-        const int maxPending = m_settings.get().getInt(MAX_PENDING_CONNECTIONS);
-        if (maxPending < 0)
+        if (!sessions.size())
         {
-            throw ConfigError(std::string(MAX_PENDING_CONNECTIONS) + " must not be negative");
+            throw ConfigError("No sessions defined");
         }
-        m_maxPendingConnections = maxPending;
-    }
 
-    SessionFactory factory(m_application, m_messageStoreFactory, m_pLogFactory);
-
-    for (i = sessions.begin(); i != sessions.end(); ++i)
-    {
-        if (m_settings.get(*i).getString(CONNECTION_TYPE) == "acceptor")
+        if (m_settings.get().has(MAX_PENDING_CONNECTIONS))
         {
-            m_sessionIDs.insert(*i);
-            m_sessions[*i] = factory.create(*i, m_settings.get(*i));
+            const int maxPending = m_settings.get().getInt(MAX_PENDING_CONNECTIONS);
+            if (maxPending < 0)
+            {
+                throw ConfigError(std::string(MAX_PENDING_CONNECTIONS) + " must not be negative");
+            }
+            m_maxPendingConnections = maxPending;
+        }
+
+        SessionFactory factory(m_application, m_messageStoreFactory, m_pLogFactory);
+
+        for (i = sessions.begin(); i != sessions.end(); ++i)
+        {
+            if (m_settings.get(*i).getString(CONNECTION_TYPE) == "acceptor")
+            {
+                m_sessionIDs.insert(*i);
+                m_sessions[*i] = factory.create(*i, m_settings.get(*i));
+            }
+        }
+
+        if (!m_sessions.size())
+        {
+            throw ConfigError("No sessions defined for acceptor");
         }
     }
-
-    if (!m_sessions.size())
+    catch (...)
     {
-        throw ConfigError("No sessions defined for acceptor");
+        for (Sessions::value_type &session : m_sessions)
+        {
+            delete session.second;
+        }
+        m_sessions.clear();
+        m_sessionIDs.clear();
+        if (m_pLogFactory && m_pLog)
+        {
+            m_pLogFactory->destroy(m_pLog);
+            m_pLog = 0;
+        }
+        throw;
     }
 }
 

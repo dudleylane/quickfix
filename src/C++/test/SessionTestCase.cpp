@@ -28,6 +28,8 @@
 #include <Responder.h>
 #include <Session.h>
 #include <SessionID.h>
+#include <SessionSettings.h>
+#include <SocketAcceptor.h>
 #include <TimeRange.h>
 #include <Values.h>
 #include <fix40/ExecutionReport.h>
@@ -718,13 +720,16 @@ TEST_CASE_METHOD(sessionFixture, "SessionTestCase")
         Session *pSession2 = createSession(SenderCompID("WT"), TargetCompID("ISLD"));
         Session *pSession3 = createSession(SenderCompID("TW"), TargetCompID("DLSI"));
         Session *pSession4 = createSession(SenderCompID("OREN"), TargetCompID("NERO"));
-        Session *pSession5 = createSession(SenderCompID("OREN"), TargetCompID("NERO"));
+        // A second session with an ID already in use is refused: left unregistered, as it used to
+        // be, it would never be looked up and would go dead when the first was destroyed (#46).
+        CHECK_THROWS_AS(createSession(SenderCompID("OREN"), TargetCompID("NERO")), ConfigError);
+        CHECK(Session::lookupSession(SessionID(BeginString("FIX.4.2"), SenderCompID("OREN"), TargetCompID("NERO"))) ==
+              pSession4);
 
         pSession1->setResponder(this);
         pSession2->setResponder(this);
         pSession3->setResponder(this);
         pSession4->setResponder(this);
-        pSession5->setResponder(this);
 
         CHECK(Session::doesSessionExist(SessionID(BeginString("FIX.4.2"), SenderCompID("TW"), TargetCompID("ISLD"))));
         CHECK(Session::doesSessionExist(SessionID(BeginString("FIX.4.2"), SenderCompID("WT"), TargetCompID("ISLD"))));
@@ -748,8 +753,6 @@ TEST_CASE_METHOD(sessionFixture, "SessionTestCase")
         CHECK(0lu == Session::numSessions());
         CHECK(
             !Session::doesSessionExist(SessionID(BeginString("FIX.4.2"), SenderCompID("OREN"), TargetCompID("NERO"))));
-
-        delete pSession5;
     }
 
     SECTION("lookupSession")
@@ -769,13 +772,12 @@ TEST_CASE_METHOD(sessionFixture, "SessionTestCase")
         Session session2 = createSession(SenderCompID("WT"), TargetCompID("ISLD"));
         Session session3 = createSession(SenderCompID("TW"), TargetCompID("DLSI"));
         Session session4 = createSession(SenderCompID("OREN"), TargetCompID("NERO"));
-        Session session5 = createSession(SenderCompID("OREN"), TargetCompID("NERO"));
+        CHECK_THROWS_AS(createSession(SenderCompID("OREN"), TargetCompID("NERO")), ConfigError); // #46
 
         session1.setResponder(this);
         session2.setResponder(this);
         session3.setResponder(this);
         session4.setResponder(this);
-        session5.setResponder(this);
 
         CHECK(&session1 ==
               Session::lookupSession(SessionID(BeginString("FIX.4.2"), SenderCompID("TW"), TargetCompID("ISLD"))));
@@ -3040,4 +3042,63 @@ TEST_CASE_METHOD(initiatorFIX40Fixture, "customFIX40_UnsupportedMessageType_ERRe
 
     object->next(executionReport, now);
     CHECK(1 == toReject);
+}
+
+namespace
+{
+// Refuses, from onCreate, any session whose SenderCompID is REFUSED.
+struct RefusingApplication : public NullApplication
+{
+    void onCreate(const SessionID &id) override
+    {
+        if (id.getSenderCompID().getValue() == "REFUSED")
+        {
+            throw std::runtime_error("refused by the application");
+        }
+    }
+};
+} // namespace
+
+TEST_CASE("SessionRegistryTests")
+{
+    MemoryStoreFactory factory;
+    DataDictionaryProvider provider;
+    provider.addTransportDataDictionary(BeginString("FIX.4.2"), std::shared_ptr<DataDictionary>(new DataDictionary()));
+    const TimeRange always{UtcTimeOnly(), UtcTimeOnly()};
+
+    SECTION("aSessionWhoseOnCreateThrowsIsNotLeftRegistered")
+    {
+        // The constructor throws, so ~Session never runs: the session must not stay in the
+        // registry, where the next lookup would return freed memory.
+        RefusingApplication refusing;
+        const SessionID id(BeginString("FIX.4.2"), SenderCompID("REFUSED"), TargetCompID("TW"));
+        CHECK_THROWS(Session([] { return UtcTimeStamp::now(); }, refusing, factory, id, provider, always, 0, 0));
+        CHECK(nullptr == Session::lookupSession(id));
+        CHECK_FALSE(Session::doesSessionExist(id));
+
+        NullApplication accepting;
+        Session session([] { return UtcTimeStamp::now(); }, accepting, factory, id, provider, always, 0, 0);
+        CHECK(&session == Session::lookupSession(id));
+    }
+
+    SECTION("anAcceptorThatFailsToBuildLeavesNoSessionsRegistered")
+    {
+        // The second session's onCreate throws after the first was created and registered. The
+        // acceptor's constructor fails, so its destructor never runs: the first session must be
+        // destroyed and unregistered here, or it stays registered and blocks the next attempt.
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=acceptor\nSocketAcceptPort=54399\nStartTime=00:00:00\n"
+                  "EndTime=00:00:00\nUseDataDictionary=N\nBeginString=FIX.4.2\nTargetCompID=TW\n"
+                  "[SESSION]\nSenderCompID=ACCEPTED\n[SESSION]\nSenderCompID=REFUSED\n";
+        SessionSettings settings(config);
+        const SessionID accepted(BeginString("FIX.4.2"), SenderCompID("ACCEPTED"), TargetCompID("TW"));
+
+        RefusingApplication refusing;
+        CHECK_THROWS(SocketAcceptor(refusing, factory, settings));
+        CHECK(nullptr == Session::lookupSession(accepted));
+
+        NullApplication accepting;
+        SocketAcceptor acceptor(accepting, factory, settings);
+        CHECK(nullptr != Session::lookupSession(accepted));
+    }
 }

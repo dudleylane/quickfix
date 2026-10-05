@@ -49,29 +49,50 @@ Initiator::Initiator(Application &application, MessageStoreFactory &messageStore
 
 void Initiator::initialize() EXCEPT(ConfigError)
 {
-    std::set<SessionID> sessions = m_settings.getSessions();
-    std::set<SessionID>::iterator i;
-
-    if (!sessions.size())
+    // A throw anywhere here -- a bad setting, a duplicate session, an application's onCreate --
+    // must not leave the sessions already created alive and registered: the constructor
+    // fails, so the destructor that would delete them never runs.
+    try
     {
-        throw ConfigError("No sessions defined");
-    }
+        std::set<SessionID> sessions = m_settings.getSessions();
+        std::set<SessionID>::iterator i;
 
-    SessionFactory factory(m_application, m_messageStoreFactory, m_pLogFactory);
-
-    for (i = sessions.begin(); i != sessions.end(); ++i)
-    {
-        if (m_settings.get(*i).getString("ConnectionType") == "initiator")
+        if (!sessions.size())
         {
-            m_sessionIDs.insert(*i);
-            m_sessions[*i] = factory.create(*i, m_settings.get(*i));
-            setDisconnected(*i);
+            throw ConfigError("No sessions defined");
+        }
+
+        SessionFactory factory(m_application, m_messageStoreFactory, m_pLogFactory);
+
+        for (i = sessions.begin(); i != sessions.end(); ++i)
+        {
+            if (m_settings.get(*i).getString("ConnectionType") == "initiator")
+            {
+                m_sessionIDs.insert(*i);
+                m_sessions[*i] = factory.create(*i, m_settings.get(*i));
+                setDisconnected(*i);
+            }
+        }
+
+        if (!m_sessions.size())
+        {
+            throw ConfigError("No sessions defined for initiator");
         }
     }
-
-    if (!m_sessions.size())
+    catch (...)
     {
-        throw ConfigError("No sessions defined for initiator");
+        for (Sessions::value_type &session : m_sessions)
+        {
+            delete session.second;
+        }
+        m_sessions.clear();
+        m_sessionIDs.clear();
+        if (m_pLogFactory && m_pLog)
+        {
+            m_pLogFactory->destroy(m_pLog);
+            m_pLog = 0;
+        }
+        throw;
     }
 }
 
@@ -134,7 +155,7 @@ void Initiator::connect()
     for (; i != disconnected.end(); ++i)
     {
         Session *pSession = Session::lookupSession(*i);
-        if (pSession->isEnabled() && pSession->isSessionTime(UtcTimeStamp::now()))
+        if (pSession && pSession->isEnabled() && pSession->isSessionTime(UtcTimeStamp::now()))
         {
             doConnect(*i, m_settings.get(*i));
         }

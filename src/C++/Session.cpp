@@ -58,19 +58,44 @@ Session::Session(std::move_only_function<UtcTimeStamp()> timestamper, Applicatio
     m_state.heartBtInt(heartBtInt);
     m_state.initiate(heartBtInt != 0);
     m_state.store(m_messageStoreFactory.create(m_timestamper(), m_sessionID));
-    if (m_pLogFactory)
-    {
-        m_state.log(m_pLogFactory->create(m_sessionID));
-    }
 
-    if (!checkSessionTime(m_timestamper()))
+    // If anything below throws, ~Session will not run: release what was acquired here, and
+    // leave the registry as it was, rather than keep a pointer to this half-built session.
+    bool registered = false;
+    try
     {
-        m_state.reset(m_timestamper());
-    }
+        if (m_pLogFactory)
+        {
+            m_state.log(m_pLogFactory->create(m_sessionID));
+        }
 
-    addSession(*this);
-    m_application.onCreate(m_sessionID);
-    m_state.onEvent("Created session");
+        if (!checkSessionTime(m_timestamper()))
+        {
+            m_state.reset(m_timestamper());
+        }
+
+        // Registered before onCreate, so the application can look the session up from it.
+        if (!addSession(*this))
+        {
+            throw ConfigError("A session with ID " + m_sessionID.toString() + " already exists");
+        }
+        registered = true;
+        m_application.onCreate(m_sessionID);
+        m_state.onEvent("Created session");
+    }
+    catch (...)
+    {
+        if (registered)
+        {
+            removeSession(*this);
+        }
+        m_messageStoreFactory.destroy(m_state.store());
+        if (m_pLogFactory && m_state.log())
+        {
+            m_pLogFactory->destroy(m_state.log());
+        }
+        throw;
+    }
 }
 
 Session::~Session()
@@ -1819,9 +1844,18 @@ bool Session::addSession(Session &s)
 
 void Session::removeSession(Session &s)
 {
+    // Only this session's own entries: another session object with the same ID must keep its.
     std::unique_lock lock(s_mutex);
-    s_sessions.erase(s.m_sessionID);
-    s_sessionIDs.erase(s.m_sessionID);
-    s_registered.erase(s.m_sessionID);
+    Sessions::iterator session = s_sessions.find(s.m_sessionID);
+    if (session != s_sessions.end() && session->second == &s)
+    {
+        s_sessions.erase(session);
+        s_sessionIDs.erase(s.m_sessionID);
+    }
+    Sessions::iterator registered = s_registered.find(s.m_sessionID);
+    if (registered != s_registered.end() && registered->second == &s)
+    {
+        s_registered.erase(registered);
+    }
 }
 } // namespace FIX

@@ -165,19 +165,26 @@ TEST_CASE("SocketConnectionTests")
             dictionaryAcceptor.setString(END_DAY, "Mon");
 
             settingsAcceptor.set(acceptorSessionID, dictionaryAcceptor);
+            // The test sessions are injected through getSession(); the acceptor and initiator
+            // register their own sessions under the configured IDs, so these take a qualifier
+            // rather than register a second session under the same ID, which is refused (#46).
             acceptorSession.reset(
-                new TestSession(application, factory, acceptorSessionID, acceptorProvider, *sessionTime, 1));
+                new TestSession(application, factory, qualified(acceptorSessionID), acceptorProvider, *sessionTime, 1));
             acceptor.reset(
                 new TestSocketAcceptor(application, factory, settingsAcceptor, acceptorSession.get(), logFactory));
 
-            initiator.reset(new SocketInitiator(application, factory, settingsInitiator));
-            initiatorSession.reset(
-                new TestSession(application, factory, initiatorSessionID, initiatorProvider, *sessionTime, 1));
+            initiatorSession.reset(new TestSession(application, factory, qualified(initiatorSessionID),
+                                                   initiatorProvider, *sessionTime, 1));
             testInitiator.reset(
                 new TestSocketInitiator(application, factory, settingsInitiator, initiatorSession.get()));
         };
 
         ~BaseSocketConnection() { socket_close(socket); };
+
+        static SessionID qualified(const SessionID &id)
+        {
+            return SessionID(id.getBeginString(), id.getSenderCompID(), id.getTargetCompID(), "TEST");
+        }
 
         DataDictionaryProvider initiatorProvider;
         DataDictionaryProvider acceptorProvider;
@@ -200,7 +207,6 @@ TEST_CASE("SocketConnectionTests")
         std::unique_ptr<TestSession> initiatorSession;
         std::unique_ptr<TestSession> acceptorSession;
 
-        std::unique_ptr<SocketInitiator> initiator;
         std::unique_ptr<TestSocketInitiator> testInitiator;
 
         std::unique_ptr<SocketAcceptor> acceptor;
