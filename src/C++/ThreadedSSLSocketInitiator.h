@@ -117,6 +117,12 @@
 #ifndef FIX_THREADEDSSLSOCKETINITIATOR_H
 #define FIX_THREADEDSSLSOCKETINITIATOR_H
 
+// Defines HAVE_SSL for a program built against an SSL-enabled install (#63); within the library's
+// own build, and in builds with no build tree, config.h or -DHAVE_SSL does instead.
+#if __has_include("QuickFIXBuildConfig.h")
+#include "QuickFIXBuildConfig.h"
+#endif
+
 #if (HAVE_SSL > 0)
 
 #ifdef _MSC_VER

@@ -96,6 +96,7 @@ endif()
 # installed headers are identical to a default build's. It is generated per build tree, since two
 # trees sharing this source tree can differ, and installed beside Utility.h, which includes it.
 set(QUICKFIX_TBB_ALLOCATOR ${ENABLE_TBB_ALLOCATOR})
+set(QUICKFIX_HAVE_SSL ${HAVE_SSL})
 configure_file(QuickFIXBuildConfig.h.in ${PROJECT_BINARY_DIR}/generated/QuickFIXBuildConfig.h @ONLY)
 target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/generated>)
 install(FILES ${PROJECT_BINARY_DIR}/generated/QuickFIXBuildConfig.h DESTINATION include/quickfix)

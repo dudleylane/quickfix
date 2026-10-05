@@ -17,4 +17,17 @@
 #error "ENABLE_TBB_ALLOCATOR is defined, but this quickfix was built without the TBB allocator"
 #endif
 
+// Whether the library was built with SSL. The SSL headers include this file before they test
+// HAVE_SSL, so a program built against an SSL-enabled install can use them without defining
+// HAVE_SSL itself (#63); nothing else the package provides defines it.
+#cmakedefine01 QUICKFIX_HAVE_SSL
+
+#if QUICKFIX_HAVE_SSL
+#ifndef HAVE_SSL
+#define HAVE_SSL 1
+#endif
+#elif defined(HAVE_SSL) && HAVE_SSL
+#error "HAVE_SSL is defined, but this quickfix was built without SSL"
+#endif
+
 #endif

@@ -168,10 +168,15 @@ A few inline `_MSC_VER` guards remain in shared sources; they are inert here and
 ## Building with CMake
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DHAVE_SSL=ON
 cmake --build build -j$(nproc)
 sudo cmake --install build
 ```
+
+Always configure with `-DHAVE_SSL=ON` or `-DHAVE_SSL=OFF` as you intend: configure rewrites the
+tracked `src/C++/config.h` from it. A program built against an SSL-enabled install can include the
+SSL headers without defining `HAVE_SSL` itself; the generated `QuickFIXBuildConfig.h` records the
+choice (#63).
 
 ### CMake Build Options
 
