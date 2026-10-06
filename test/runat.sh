@@ -2,8 +2,11 @@
 
 # Stop the acceptor on the way out, and only the acceptor. Signalling the whole
 # process group, as this once did, also signalled this script, so it exited 143
-# even when every definition passed.
-trap 'kill "$PROCID" 2>/dev/null' EXIT
+# even when every definition passed. Then wait for it: a dying process keeps
+# its listening socket until its memory is freed, and the kernel goes on
+# accepting connections for it, so a run started straight after this one had
+# its first definition connect to this acceptor and be reset (#74).
+trap 'kill "$PROCID" 2>/dev/null; wait "$PROCID" 2>/dev/null' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
