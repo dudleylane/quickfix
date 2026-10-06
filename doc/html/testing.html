@@ -19,45 +19,18 @@
     functional acceptance tests and unit tests.</p>
 
     <hr/>
-    <h1>Windows</hq>
 
     <h2>Unit Tests</h2>
 
     <p>From the <b>test</b> directory:</p>
     <pre class='fragment'>
-runut release [port]
+./runut.sh [Catch2 arguments]
 </pre>
 
-    <p>The port is used to test socket functionality. If you built
-    QuickFIX with one of its supporting databases, you will need to
-    update <i>cfg/ut.cfg</i> to reflect your database settings.</p>
-
-    <h2>Acceptance Tests</h2>
-
-    <p>From the <b>test</b> directory:</p>
-    <pre class='fragment'>
-runat release [port]
-</pre>
-    <pre class='fragment'>
-runat_threaded release [port]
-</pre>
-
-    <p>The port is used to listen for connections on a socket
-    server.</p>
-
-    <br/><hr/>
-    <h1>Linux / macOS</h1>
-
-    <h2>Unit Tests</h2>
-
-    <p>From the <b>test</b> directory:</p>
-    <pre class='fragment'>
-./runut.sh [port]
-</pre>
-
-    <p>The port is used to test socket functionality. If you built
-    QuickFIX with one of its supporting databases, you will need to
-    update <i>cfg/ut.cfg</i> to reflect your database settings.</p>
+    <p>Arguments go to the Catch2 runner, so a test case's name runs
+    that case alone. If you built QuickFIX with one of its supporting
+    databases, you will need to update <i>cfg/ut.cfg</i> to reflect
+    your database settings.</p>
 
     <h2>Acceptance Tests</h2>
 
