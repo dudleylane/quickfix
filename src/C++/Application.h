@@ -35,8 +35,10 @@ namespace FIX
  * These methods notify your application about events that happen on
  * active %FIX sessions. There is no guarantee how many threads will be calling
  * these functions. If the application is sharing resources among multiple sessions,
- * you must synchronize those resources. You can also use the SynchronizedApplication
- * class to automatically synchronize all function calls into your application.
+ * you must synchronize those resources -- with locks of your own that you never hold
+ * while calling into a Session (sending, logging on or off, resetting): a Session holds
+ * its own lock while it calls toApp, toAdmin and onLogout, so taking yours in the other
+ * order deadlocks. SynchronizedApplication does exactly that and is deprecated (#45).
  * The various MessageCracker classes can be used to parse the generic message
  * structure into specific %FIX messages.
  */
@@ -63,16 +65,18 @@ public:
 };
 
 /**
- * This is a special implementation of the Application interface that takes
- * in another Application interface and synchronizes all of its callbacks. This
- * will guarantee that only one thread will access the applications code at a time.
+ * Takes another Application and serialises all of its callbacks under one mutex, so only
+ * one thread runs the application's code at a time.
  *
- * This class is a great convenience for writing applications where you
- * don't want to worry about synchronization. There is of course a tradeoff
- * in that you may be synchronizing more than you need to. There is also a very
- * minor performance penalty due to the extra virtual table lookup.
+ * Deprecated: it deadlocks an application that sends from fromApp or fromAdmin, or from a
+ * thread of its own. A Session holds its own lock while it calls toApp, toAdmin and onLogout,
+ * which this class then locks; a send made while this class's lock is held takes the two in
+ * the opposite order (#45). Synchronise the application's own state instead, without holding
+ * that lock across calls into a Session.
  */
-class SynchronizedApplication : public Application
+class [[deprecated("SynchronizedApplication deadlocks an application that sends from a callback or its own "
+                   "thread; synchronise the application's own state instead (see Application.h)")]]
+SynchronizedApplication : public Application
 {
 public:
     SynchronizedApplication(Application &app) : m_app(app) {}

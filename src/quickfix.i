@@ -54,6 +54,8 @@ namespace std
 %ignore FIX::DateTime::getHMS;
 
 %{
+// The bindings keep wrapping the deprecated SynchronizedApplication (#45) for existing scripts.
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <config.h>
 #include <Except.h>
 #include <Exceptions.h>
