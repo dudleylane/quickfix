@@ -20,6 +20,18 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Default: <project-root>/lib
 set(QUICKFIX_LIB_OUTPUT_DIR "${CMAKE_SOURCE_DIR}/lib" CACHE PATH "Top-level output directory for quickfix libraries and runtime files")
 
+# Only the tree that builds into the default lib/ points the test/{ut,at,pt} links at its binaries.
+# A second tree -- CI's database build, a sanitizer build -- configured with its own output directory
+# used to re-point them too, so whichever built last owned them and test/ut silently ran the wrong
+# binary (#54). Run such a tree's binaries by path.
+get_filename_component(_quickfix_output_dir "${QUICKFIX_LIB_OUTPUT_DIR}" REALPATH)
+get_filename_component(_quickfix_default_output_dir "${CMAKE_SOURCE_DIR}/lib" REALPATH)
+if(_quickfix_output_dir STREQUAL _quickfix_default_output_dir)
+  set(QUICKFIX_OWNS_TEST_LINKS ON)
+else()
+  set(QUICKFIX_OWNS_TEST_LINKS OFF)
+endif()
+
 # Single-config generators
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${QUICKFIX_LIB_OUTPUT_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${QUICKFIX_LIB_OUTPUT_DIR}")

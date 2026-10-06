@@ -184,9 +184,10 @@ jobs:
         if: github.event_name != 'push' && matrix.configuration == 'Debug'
         shell: bash
         run: |
-          # Its own build dir and output dir: the ut/at/pt symlink targets are
-          # unconditional, so a second tree would otherwise steal them from the
-          # build the later steps use.
+          # Its own build dir and output dir. Since #54 only a tree building into
+          # the default lib/ creates the test/{ut,at,pt} links, so this tree
+          # leaves them on the build the later steps -- acceptance among them --
+          # are meant to test.
           cmake -B build-db -S . -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DHAVE_SSL=ON -DHAVE_MYSQL=ON -DHAVE_POSTGRESQL=ON -DHAVE_ODBC=ON \

@@ -71,8 +71,10 @@ if (QUICKFIX_TESTS)
     QUICKFIX_EXPECTED_TBB_ALLOCATOR=$<BOOL:${ENABLE_TBB_ALLOCATOR}>)
   
   if (NOT WIN32)
+  if (QUICKFIX_OWNS_TEST_LINKS)
   ADD_CUSTOM_TARGET(ut_target ALL
                     COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:ut> ${PROJECT_SOURCE_DIR}/test/ut)
+  endif()
   else()
   set_target_properties(ut PROPERTIES
                         RUNTIME_OUTPUT_DIRECTORY_DEBUG ${PROJECT_SOURCE_DIR}/test/debug/ut/
