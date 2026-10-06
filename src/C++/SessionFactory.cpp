@@ -292,44 +292,63 @@ std::shared_ptr<DataDictionary> SessionFactory::createDataDictionary(const Sessi
                                                                      const Dictionary &settings,
                                                                      const std::string &settingsKey) EXCEPT(ConfigError)
 {
-    std::shared_ptr<DataDictionary> pDD;
-    std::string path = settings.getString(settingsKey);
-    Dictionaries::iterator i = m_dictionaries.find(path);
-    if (i != m_dictionaries.end())
+    // Sessions share dictionaries. Each file is parsed once per PreserveMessageFieldsOrder value, and
+    // sessions whose four validation flags agree share one dictionary with those flags applied; with
+    // none set they use the parsed one as it is. A per-session copy used to cost each session the
+    // whole dictionary -- some 55 MB for FIX 5.0 SP2 -- for at most four flags (#68). Sharing is
+    // safe because a loaded dictionary is read-only and the flags are set here, before it is shared.
+    const std::string path = settings.getString(settingsKey);
+    const bool preserveMsgFldsOrder =
+        settings.has(PRESERVE_MESSAGE_FIELDS_ORDER) ? settings.getBool(PRESERVE_MESSAGE_FIELDS_ORDER) : false;
+    auto flag = [&settings](const char *key) { return settings.has(key) ? (settings.getBool(key) ? '1' : '0') : '-'; };
+    const std::string flags = {flag(VALIDATE_FIELDS_OUT_OF_ORDER), flag(VALIDATE_FIELDS_HAVE_VALUES),
+                               flag(VALIDATE_USER_DEFINED_FIELDS), flag(ALLOW_UNKNOWN_MSG_FIELDS)};
+    const std::string fileKey = path + '\n' + (preserveMsgFldsOrder ? '1' : '0');
+    const std::string sessionKey = fileKey + '\n' + flags;
+
+    Dictionaries::iterator shared = m_dictionaries.find(sessionKey);
+    if (shared != m_dictionaries.end())
     {
-        pDD = i->second;
+        return shared->second;
+    }
+
+    std::shared_ptr<DataDictionary> pDD;
+    Dictionaries::iterator parsed = m_dictionaries.find(fileKey);
+    if (parsed != m_dictionaries.end())
+    {
+        pDD = parsed->second;
     }
     else
     {
-        bool preserveMsgFldsOrder = false;
-        if (settings.has(PRESERVE_MESSAGE_FIELDS_ORDER))
-        {
-            preserveMsgFldsOrder = settings.getBool(PRESERVE_MESSAGE_FIELDS_ORDER);
-        }
-        pDD = std::shared_ptr<DataDictionary>(new DataDictionary(path, preserveMsgFldsOrder));
-        m_dictionaries[path] = pDD;
+        pDD = std::make_shared<DataDictionary>(path, preserveMsgFldsOrder);
+        m_dictionaries[fileKey] = pDD;
     }
 
-    std::shared_ptr<DataDictionary> pCopyOfDD = std::shared_ptr<DataDictionary>(new DataDictionary(*pDD));
+    if (flags == "----")
+    {
+        m_dictionaries[sessionKey] = pDD;
+        return pDD;
+    }
 
+    std::shared_ptr<DataDictionary> pFlagged = std::make_shared<DataDictionary>(*pDD);
     if (settings.has(VALIDATE_FIELDS_OUT_OF_ORDER))
     {
-        pCopyOfDD->checkFieldsOutOfOrder(settings.getBool(VALIDATE_FIELDS_OUT_OF_ORDER));
+        pFlagged->checkFieldsOutOfOrder(settings.getBool(VALIDATE_FIELDS_OUT_OF_ORDER));
     }
     if (settings.has(VALIDATE_FIELDS_HAVE_VALUES))
     {
-        pCopyOfDD->checkFieldsHaveValues(settings.getBool(VALIDATE_FIELDS_HAVE_VALUES));
+        pFlagged->checkFieldsHaveValues(settings.getBool(VALIDATE_FIELDS_HAVE_VALUES));
     }
     if (settings.has(VALIDATE_USER_DEFINED_FIELDS))
     {
-        pCopyOfDD->checkUserDefinedFields(settings.getBool(VALIDATE_USER_DEFINED_FIELDS));
+        pFlagged->checkUserDefinedFields(settings.getBool(VALIDATE_USER_DEFINED_FIELDS));
     }
     if (settings.has(ALLOW_UNKNOWN_MSG_FIELDS))
     {
-        pCopyOfDD->allowUnknownMsgFields(settings.getBool(ALLOW_UNKNOWN_MSG_FIELDS));
+        pFlagged->allowUnknownMsgFields(settings.getBool(ALLOW_UNKNOWN_MSG_FIELDS));
     }
-
-    return pCopyOfDD;
+    m_dictionaries[sessionKey] = pFlagged;
+    return pFlagged;
 }
 
 void SessionFactory::processFixtDataDictionaries(const SessionID &sessionID, const Dictionary &settings,

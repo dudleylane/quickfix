@@ -24,6 +24,8 @@
 #include <Session.h>
 #include <SessionFactory.h>
 
+#include "TestHelper.h"
+
 #include "catch_amalgamated.hpp"
 
 using namespace FIX;
@@ -124,5 +126,59 @@ TEST_CASE("SessionFactoryAllowedRemoteAddressesTests")
         CHECK(session->inAllowedRemoteAddresses("127.0.0.2"));
         CHECK_FALSE(session->inAllowedRemoteAddresses("127.0.0.3"));
         object.destroy(session);
+    }
+}
+
+TEST_CASE("SessionFactoryDataDictionaryTests")
+{
+    NullApplication application;
+    MemoryStoreFactory messageStoreFactory;
+    SessionFactory object(application, messageStoreFactory, 0);
+
+    auto settingsFor = [](const std::string &extraKey, const std::string &extraValue)
+    {
+        Dictionary settings;
+        settings.setString(CONNECTION_TYPE, "acceptor");
+        settings.setString(START_TIME, "00:00:00");
+        settings.setString(END_TIME, "00:00:00");
+        settings.setString(DATA_DICTIONARY, FIX::TestSettings::pathForSpec("FIX44"));
+        if (!extraKey.empty())
+        {
+            settings.setString(extraKey, extraValue);
+        }
+        return settings;
+    };
+    auto dictionaryOf = [](Session *session)
+    { return &session->getDataDictionaryProvider().getSessionDataDictionary(BeginString("FIX.4.4")); };
+
+    SECTION("sessionsWithTheSameFileAndFlagsShareOneDictionary")
+    {
+        // Each session used to get its own deep copy of the dictionary -- some 55 MB for FIX 5.0
+        // SP2 -- just to apply at most four validation flags (#68).
+        Session *a = object.create(SessionID("FIX.4.4", "SHARE1", "T"), settingsFor(VALIDATE_USER_DEFINED_FIELDS, "N"));
+        Session *b = object.create(SessionID("FIX.4.4", "SHARE2", "T"), settingsFor(VALIDATE_USER_DEFINED_FIELDS, "N"));
+        Session *c = object.create(SessionID("FIX.4.4", "SHARE3", "T"), settingsFor(VALIDATE_USER_DEFINED_FIELDS, "Y"));
+        Session *d = object.create(SessionID("FIX.4.4", "SHARE4", "T"), settingsFor("", ""));
+        CHECK(dictionaryOf(a) == dictionaryOf(b));
+        CHECK(dictionaryOf(a) != dictionaryOf(c)); // a different flag gets its own dictionary
+        CHECK(dictionaryOf(a) != dictionaryOf(d));
+        CHECK(dictionaryOf(c) != dictionaryOf(d));
+        for (Session *session : {a, b, c, d})
+        {
+            object.destroy(session);
+        }
+    }
+
+    SECTION("eachSessionGetsTheFieldOrderSettingItAskedFor")
+    {
+        // The parsed dictionary used to be keyed by path alone, so PreserveMessageFieldsOrder counted
+        // only for the first session to load a file.
+        Session *plain = object.create(SessionID("FIX.4.4", "ORDER1", "T"), settingsFor("", ""));
+        Session *ordered =
+            object.create(SessionID("FIX.4.4", "ORDER2", "T"), settingsFor(PRESERVE_MESSAGE_FIELDS_ORDER, "Y"));
+        CHECK_FALSE(dictionaryOf(plain)->isMessageFieldsOrderPreserved());
+        CHECK(dictionaryOf(ordered)->isMessageFieldsOrderPreserved());
+        object.destroy(plain);
+        object.destroy(ordered);
     }
 }

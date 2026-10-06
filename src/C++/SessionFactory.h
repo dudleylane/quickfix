@@ -57,6 +57,8 @@ public:
     void destroy(Session *pSession);
 
 private:
+    // Parsed dictionaries, keyed by path and PreserveMessageFieldsOrder, and the dictionaries
+    // sessions share, keyed by those and the four validation flags (#68).
     typedef std::map<std::string, std::shared_ptr<DataDictionary>> Dictionaries;
 
     std::shared_ptr<DataDictionary> createDataDictionary(const SessionID &sessionID, const Dictionary &settings,
