@@ -1,3 +1,29 @@
+21.0.0
+------
+
+The soname is libquickfix.so.21. No exported class changed layout (checked by sizeof against
+20.1.0's headers), but the Application callback contract did, so a program built against 20.x does
+not load this library and must be rebuilt -- and reviewed, if its toApp or toAdmin reads the
+sequence number. find_package(quickfix 21) and pkg-config pick it up.
+
+INCOMPATIBLE: toApp and toAdmin run before the Session numbers the message, so a new message
+carries no MsgSeqNum in them; a gap-fill SequenceReset carries its explicit number and a resent
+message its original one. What they set in the header stands, as before. Nothing else changes on
+the wire: a message refused with DoNotSend still uses no number, and send still returns once the
+message is handed to the transport (#73).
+
+The Session calls no callback while it holds its own lock -- not toApp, toAdmin or onLogout, and
+not the per-message consultation of a retransmission, which it then sends in one piece, after any
+message sent meanwhile. An application may therefore hold a lock its callbacks take while it
+sends, which deadlocked every session involved before. SynchronizedApplication is no longer
+deprecated: 20.1.0 deprecated it for that deadlock, which is gone. The cost, measured with pt, is
+2-3% on a socket round trip (#73).
+
+Tests: runat.sh waits for its acceptor to exit, so a run started straight after another no longer
+fails its first definition (#74); the four acceptance runner scripts nothing ran are gone, and
+testing.html describes only runut.sh and runat.sh.
+
+
 20.1.0
 ------
 

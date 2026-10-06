@@ -147,7 +147,7 @@ remains in git history.
 - **Removed**: Dead AIX/Solaris platform code, duplicate `configure_file` call
 - **Generated code**: `spec/generate.sh` reproduces the checked-in tree (`d0214a62`), and the generated `FixFields.h` and `FixFieldNumbers.h` restore a caller's `ReplaceText` macro instead of losing it (`52d7a4f7`)
 - **Bindings**: the Python and Ruby bindings build again from the current headers, and CI builds and tests both (`4cb3d655`, `68bb468f`, `d0ff75c7`, `96abec8a`)
-- **Soname `libquickfix.so.20`**: the fork has changed the layout of exported classes (`FieldBase`, `Message`), so a binary built against upstream must not load this library. 19.0.0 changed the layout of `Parser`, `Session` and the connection classes again, and 20.0.0 that of `Acceptor` and the threaded acceptors, so a binary built against an earlier major must be rebuilt. Upstream's CMake build uses 17 and its autotools build `libquickfix.so.18`, which collided with this fork's 18.x where both were installed (#51); 19 and later no longer do. 18 also covered the untagged series before the first release, v18.0.0; from v18.0.0 on, any layout change to an exported class bumps the major version in `project()` (top-level `CMakeLists.txt`), the one place the version is set — the soname, `QuickFIXVersion.h` and the Python module all take it from there
+- **Soname `libquickfix.so.21`**: the fork has changed the layout of exported classes (`FieldBase`, `Message`), so a binary built against upstream must not load this library. 19.0.0 changed the layout of `Parser`, `Session` and the connection classes again, 20.0.0 that of `Acceptor` and the threaded acceptors, and 21.0.0 changed no layout but the callback contract (`toApp` and `toAdmin` no longer see `MsgSeqNum`, #73), so a binary built against an earlier major must be rebuilt. Upstream's CMake build uses 17 and its autotools build `libquickfix.so.18`, which collided with this fork's 18.x where both were installed (#51); 19 and later no longer do. 18 also covered the untagged series before the first release, v18.0.0; from v18.0.0 on, any layout change to an exported class, or a change to the callback contract, bumps the major version in `project()` (top-level `CMakeLists.txt`), the one place the version is set — the soname, `QuickFIXVersion.h` and the Python module all take it from there
 
 ## Supported Platforms
 
@@ -211,7 +211,7 @@ Programs built against the installed headers get the matching allocator from the
 `cmake --install` ships a CMake package and a pkg-config file. The headers need C++23.
 
 ```cmake
-find_package(quickfix 20 CONFIG REQUIRED)   # any 20.x: the major version is the soname
+find_package(quickfix 21 CONFIG REQUIRED)   # any 21.x: the major version is the soname
 target_link_libraries(app PRIVATE quickfix::quickfix)
 ```
 

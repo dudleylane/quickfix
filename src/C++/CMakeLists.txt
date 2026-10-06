@@ -122,7 +122,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR} ${PROJE
 # a subdirectory shadows them without a warning, so nothing reads them. The soname is the major
 # version, 18 from the first release, because the fork changed the layout of exported classes
 # (FieldBase, Message) from upstream's 17. Since v18.0.0, a layout change to an exported class
-# bumps the major in project(); 19.0.0 was the first such bump, 20.0.0 the second. release_tag_check.yml compares the built
+# bumps the major in project(); 19.0.0 was the first such bump, 20.0.0 the second. 21.0.0 changed no
+# layout but the Application callback contract (#73), and bumped so that a binary built for 20 fails
+# to load rather than run under it. release_tag_check.yml compares the built
 # library's soname with the release tag.
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} )
 
@@ -147,8 +149,8 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/C++/ DESTINATION include/quickfix
         PATTERN double-conversion EXCLUDE
         PATTERN test EXCLUDE)
 
-# Discovery for installed consumers: a CMake package, find_package(quickfix 20) -> quickfix::quickfix,
-# and a pkg-config file. Any 20.x satisfies a request for 20, since the major version is the soname.
+# Discovery for installed consumers: a CMake package, find_package(quickfix 21) -> quickfix::quickfix,
+# and a pkg-config file. Any 21.x satisfies a request for 21, since the major version is the soname.
 # The package config finds the imported targets the exported link interface names (TBB, ODBC).
 include(CMakePackageConfigHelpers)
 install(EXPORT quickfixTargets NAMESPACE quickfix:: DESTINATION lib/cmake/quickfix)
