@@ -35,10 +35,14 @@ namespace FIX
  * These methods notify your application about events that happen on
  * active %FIX sessions. There is no guarantee how many threads will be calling
  * these functions. If the application is sharing resources among multiple sessions,
- * you must synchronize those resources -- with locks of your own that you never hold
- * while calling into a Session (sending, logging on or off, resetting): a Session holds
- * its own lock while it calls toApp, toAdmin and onLogout, so taking yours in the other
- * order deadlocks. SynchronizedApplication does exactly that and is deprecated (#45).
+ * you must synchronize those resources; SynchronizedApplication does it for all of them.
+ * A Session calls none of these methods while it holds a lock of its own, so a lock the
+ * application takes in them may also be held while it sends (#73).
+ *
+ * toApp and toAdmin run before the Session sequences the message, so it carries no
+ * MsgSeqNum yet -- except a gap-fill SequenceReset, whose number is fixed in advance, and
+ * a resent message, which keeps its original number.
+ *
  * The various MessageCracker classes can be used to parse the generic message
  * structure into specific %FIX messages.
  */
@@ -65,18 +69,12 @@ public:
 };
 
 /**
- * Takes another Application and serialises all of its callbacks under one mutex, so only
- * one thread runs the application's code at a time.
- *
- * Deprecated: it deadlocks an application that sends from fromApp or fromAdmin, or from a
- * thread of its own. A Session holds its own lock while it calls toApp, toAdmin and onLogout,
- * which this class then locks; a send made while this class's lock is held takes the two in
- * the opposite order (#45). Synchronise the application's own state instead, without holding
- * that lock across calls into a Session.
+ * Takes another Application and serialises all of its callbacks under one recursive mutex, so
+ * only one thread runs the application's code at a time. A callback may send, and so may a
+ * thread holding m_mutex: the Session calls back without holding its own lock (#73), which 20.x
+ * did not, and this class was deprecated there for the deadlock that caused (#45).
  */
-class [[deprecated("SynchronizedApplication deadlocks an application that sends from a callback or its own "
-                   "thread; synchronise the application's own state instead (see Application.h)")]]
-SynchronizedApplication : public Application
+class SynchronizedApplication : public Application
 {
 public:
     SynchronizedApplication(Application &app) : m_app(app) {}

@@ -55,6 +55,14 @@
 
 #include "catch_amalgamated.hpp"
 
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <cstdio>
+#include <cstdlib>
+#include <mutex>
+#include <thread>
+
 using namespace FIX;
 
 namespace
@@ -3100,5 +3108,225 @@ TEST_CASE("SessionRegistryTests")
         NullApplication accepting;
         SocketAcceptor acceptor(accepting, factory, settings);
         CHECK(nullptr != Session::lookupSession(accepted));
+    }
+}
+
+namespace
+{
+struct RecordingResponder : public Responder
+{
+    bool send(const std::string &message)
+    {
+        std::lock_guard<std::mutex> l(mutex);
+        sent.push_back(message);
+        return true;
+    }
+    void disconnect() {}
+
+    std::vector<std::string> wire()
+    {
+        std::lock_guard<std::mutex> l(mutex);
+        return sent;
+    }
+
+    std::mutex mutex;
+    std::vector<std::string> sent;
+};
+
+// An application whose callbacks take a recursive lock of its own, as SynchronizedApplication
+// does, and count their entries first, so a test can tell when another thread has reached one.
+struct LockingApplication : public NullApplication
+{
+    void enter()
+    {
+        ++entered;
+        std::lock_guard<std::recursive_mutex> l(lock);
+    }
+    void toAdmin(Message &, const SessionID &) { enter(); }
+    void toApp(Message &message, const SessionID &) EXCEPT(DoNotSend)
+    {
+        toAppSawMsgSeqNum = message.getHeader().isSetField(FIELD::MsgSeqNum);
+        enter();
+    }
+    void onLogout(const SessionID &) { enter(); }
+
+    std::recursive_mutex lock;
+    std::atomic<int> entered{0};
+    std::atomic<bool> toAppSawMsgSeqNum{false};
+};
+
+// Ends the process if the scope it guards is still running after ten seconds: a deadlocked
+// thread can be neither joined nor safely abandoned, so a deadlock must fail the run rather than
+// hang it.
+struct DeadlockWatchdog
+{
+    explicit DeadlockWatchdog(const char *what)
+        : thread(
+              [this, what]
+              {
+                  std::unique_lock<std::mutex> l(mutex);
+                  if (!finished.wait_for(l, std::chrono::seconds(10), [this] { return done; }))
+                  {
+                      std::fprintf(stderr, "deadlock: %s\n", what);
+                      std::_Exit(1);
+                  }
+              })
+    {
+    }
+    ~DeadlockWatchdog()
+    {
+        {
+            std::lock_guard<std::mutex> l(mutex);
+            done = true;
+        }
+        finished.notify_one();
+        thread.join();
+    }
+
+    std::mutex mutex;
+    std::condition_variable finished;
+    bool done = false;
+    std::thread thread;
+};
+
+FIX42::NewOrderSingle newOrder()
+{
+    return FIX42::NewOrderSingle(ClOrdID("ID"), HandlInst('1'), Symbol("SYMBOL"), Side(Side_BUY), TransactTime::now(),
+                                 OrdType(OrdType_MARKET));
+}
+
+std::string seqNumOf(const std::string &message)
+{
+    const std::string::size_type begin = message.find("\00134=") + 4;
+    return message.substr(begin, message.find('\001', begin) - begin);
+}
+} // namespace
+
+TEST_CASE("ApplicationLockOrderTests")
+{
+    // A thread runs an action that reaches a callback; once it has, this thread -- holding the
+    // application's lock, which that callback is waiting for -- sends. Until #73 the Session held
+    // its own lock across toApp, toAdmin, onLogout and the resend loop, so each thread waited for
+    // the other.
+    MemoryStoreFactory factory;
+    DataDictionaryProvider provider;
+    provider.addTransportDataDictionary(BeginString("FIX.4.2"), FIX::TestSettings::pathForSpec("FIX42"));
+    // Midnight to midnight: a range starting at the current time would end with that second.
+    const TimeRange always{UtcTimeOnly(0, 0, 0), UtcTimeOnly(0, 0, 0)};
+    const SessionID id(BeginString("FIX.4.2"), SenderCompID("TW"), TargetCompID("LOCKORDER"));
+    LockingApplication application;
+    RecordingResponder responder;
+
+    Session session([] { return UtcTimeStamp::now(); }, application, factory, id, provider, always, 0, 0);
+    session.setIsNonStopSession(true);
+    session.setResponder(&responder);
+    session.next(createLogon("LOCKORDER", "TW", 1), UtcTimeStamp::now());
+    REQUIRE(session.isLoggedOn());
+
+    auto sendWhileACallbackWaits = [&](const char *what, auto action)
+    {
+        DeadlockWatchdog watchdog(what);
+        std::unique_lock<std::recursive_mutex> held(application.lock);
+        application.entered = 0;
+        std::thread other(action);
+        while (application.entered == 0)
+        {
+            std::this_thread::yield();
+        }
+        FIX42::NewOrderSingle order = newOrder();
+        CHECK(session.send(order));
+        held.unlock();
+        other.join();
+    };
+
+    SECTION("toAppSeesNoSequenceNumberForANewMessage")
+    {
+        FIX42::NewOrderSingle order = newOrder();
+        order.getHeader().setField(MsgSeqNum(99));
+        CHECK(session.send(order));
+        CHECK_FALSE(application.toAppSawMsgSeqNum);
+        CHECK("2" == seqNumOf(responder.wire().back()));
+    }
+
+    SECTION("sendWhileToAppWaits")
+    {
+        sendWhileACallbackWaits("toApp",
+                                [&]
+                                {
+                                    FIX42::NewOrderSingle order = newOrder();
+                                    session.send(order);
+                                });
+        const std::vector<std::string> wire = responder.wire();
+        REQUIRE(3 == wire.size());
+        CHECK("2" == seqNumOf(wire[1]));
+        CHECK("3" == seqNumOf(wire[2]));
+    }
+
+    SECTION("sendWhileToAdminWaits")
+    {
+        sendWhileACallbackWaits("toAdmin",
+                                [&]
+                                {
+                                    FIX42::Heartbeat heartbeat;
+                                    session.send(heartbeat);
+                                });
+        CHECK(3 == responder.wire().size());
+    }
+
+    SECTION("sendWhileOnLogoutWaits")
+    {
+        sendWhileACallbackWaits("onLogout", [&] { session.disconnect(); });
+        CHECK_FALSE(session.isLoggedOn());
+    }
+
+    SECTION("sendWhileAResentMessageWaits")
+    {
+        for (int i = 0; i < 2; ++i)
+        {
+            FIX42::NewOrderSingle order = newOrder();
+            CHECK(session.send(order));
+        }
+        sendWhileACallbackWaits(
+            "resend", [&] { session.next(createResendRequest("LOCKORDER", "TW", 2, 2, 3), UtcTimeStamp::now()); });
+
+        // The message sent during the retransmission precedes it rather than splitting it.
+        const std::vector<std::string> wire = responder.wire();
+        REQUIRE(6 == wire.size());
+        CHECK("4" == seqNumOf(wire[3]));
+        CHECK("2" == seqNumOf(wire[4]));
+        CHECK("3" == seqNumOf(wire[5]));
+        CHECK(std::string::npos != wire[4].find("\00143=Y\001"));
+    }
+
+    SECTION("synchronizedApplicationSendsFromItsOwnLock")
+    {
+        // The deadlock #45 reported, with the class it deprecated. Whether the other thread has
+        // reached the lock yet cannot be observed through SynchronizedApplication, so the pause
+        // only makes the old deadlock likely; the sections above are the deterministic ones.
+        session.disconnect();
+        NullApplication inner;
+        SynchronizedApplication synchronized(inner);
+        const SessionID syncId(BeginString("FIX.4.2"), SenderCompID("TW"), TargetCompID("SYNCHRONIZED"));
+        Session syncSession([] { return UtcTimeStamp::now(); }, synchronized, factory, syncId, provider, always, 0, 0);
+        syncSession.setIsNonStopSession(true);
+        RecordingResponder syncResponder;
+        syncSession.setResponder(&syncResponder);
+        syncSession.next(createLogon("SYNCHRONIZED", "TW", 1), UtcTimeStamp::now());
+        REQUIRE(syncSession.isLoggedOn());
+
+        DeadlockWatchdog watchdog("SynchronizedApplication");
+        synchronized.m_mutex.lock();
+        std::thread other(
+            [&]
+            {
+                FIX42::NewOrderSingle order = newOrder();
+                syncSession.send(order);
+            });
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        FIX42::NewOrderSingle order = newOrder();
+        CHECK(syncSession.send(order));
+        synchronized.m_mutex.unlock();
+        other.join();
+        CHECK(3 == syncResponder.wire().size());
     }
 }

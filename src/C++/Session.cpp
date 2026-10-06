@@ -337,8 +337,6 @@ void Session::nextLogon(const Message &logon, const UtcTimeStamp &now)
 
     if (sendRetransmitsAfterLogon)
     {
-        Locker l(m_mutex);
-
         auto beginSeqNo = nextExpectedMsgSeqNum.getValue();
         auto endSeqNo = getExpectedSenderNum() - 1;
         m_state.onEvent("Sending retransmits due to received NextExpectedMsgSeqNum is too low. FROM: " +
@@ -465,8 +463,6 @@ void Session::nextResendRequest(const Message &resendRequest, const UtcTimeStamp
         return;
     }
 
-    Locker l(m_mutex);
-
     const SEQNUM beginSeqNo = resendRequest.getField<BeginSeqNo>();
     SEQNUM endSeqNo = resendRequest.getField<EndSeqNo>();
 
@@ -505,8 +501,27 @@ void Session::nextResendRequest(const Message &resendRequest, const UtcTimeStamp
 
 void Session::generateRetransmits(SEQNUM beginSeqNo, SEQNUM endSeqNo)
 {
+    // The application is consulted about each message -- toApp for a resent one, toAdmin for a gap
+    // fill -- without this session's lock (#73). The retransmission then goes out under the lock in
+    // one piece, so a message sent meanwhile goes before it instead of into the middle of it.
     std::vector<std::string> messages;
-    m_state.get(beginSeqNo, endSeqNo, messages);
+    SEQNUM nextSenderMsgSeqNum = 0;
+    {
+        Locker l(m_mutex);
+        m_state.get(beginSeqNo, endSeqNo, messages);
+        nextSenderMsgSeqNum = m_state.getNextSenderMsgSeqNum();
+    }
+
+    std::vector<Retransmit> retransmits;
+    auto addSequenceReset = [&](SEQNUM gapBegin, SEQNUM gapEnd)
+    {
+        Message sequenceReset = newSequenceReset(gapBegin, gapEnd);
+        if (prepareToSend(sequenceReset, gapBegin, true))
+        {
+            retransmits.push_back(
+                {std::move(sequenceReset), gapBegin, "Sent SequenceReset TO: " + SEQNUM_CONVERTOR::convert(gapEnd)});
+        }
+    };
 
     std::vector<std::string>::iterator i;
     MsgSeqNum msgSeqNum(0);
@@ -594,10 +609,10 @@ void Session::generateRetransmits(SEQNUM beginSeqNo, SEQNUM endSeqNo)
             {
                 if (begin)
                 {
-                    generateSequenceReset(begin, msgSeqNum);
+                    addSequenceReset(begin, msgSeqNum);
                 }
-                send(msg.toString(messageString));
-                m_state.onEvent("Resending Message: " + SEQNUM_CONVERTOR::convert(msgSeqNum));
+                retransmits.push_back(
+                    {std::move(msg), 0, "Resending Message: " + SEQNUM_CONVERTOR::convert(msgSeqNum)});
                 begin = 0;
                 appMessageJustSent = true;
             }
@@ -613,22 +628,35 @@ void Session::generateRetransmits(SEQNUM beginSeqNo, SEQNUM endSeqNo)
     }
     if (begin)
     {
-        generateSequenceReset(begin, msgSeqNum + 1);
+        addSequenceReset(begin, msgSeqNum + 1);
     }
 
     if (endSeqNo > msgSeqNum)
     {
         endSeqNo = EndSeqNo(endSeqNo + 1);
-        auto next = m_state.getNextSenderMsgSeqNum();
-        if (endSeqNo > next)
+        if (endSeqNo > nextSenderMsgSeqNum)
         {
-            endSeqNo = EndSeqNo(next);
+            endSeqNo = EndSeqNo(nextSenderMsgSeqNum);
         }
         if (appMessageJustSent)
         {
             beginSeqNo = msgSeqNum + 1;
         }
-        generateSequenceReset(beginSeqNo, endSeqNo);
+        addSequenceReset(beginSeqNo, endSeqNo);
+    }
+
+    Locker l(m_mutex);
+    for (Retransmit &retransmit : retransmits)
+    {
+        if (retransmit.gapFillSeqNum)
+        {
+            sendSequenced(retransmit.message, retransmit.gapFillSeqNum, true);
+        }
+        else
+        {
+            send(retransmit.message.toString(messageString));
+        }
+        m_state.onEvent(retransmit.event);
     }
 }
 
@@ -674,27 +702,87 @@ bool Session::send(Message &message)
 
 bool Session::sendRaw(Message &message, SEQNUM num)
 {
+    MsgType msgType;
+    message.getHeader().getFieldIfSet(msgType);
+    const bool admin = Message::isAdminMsgType(msgType);
+
+    if (!prepareToSend(message, num, admin))
+    {
+        return false;
+    }
+
     Locker l(m_mutex);
+    return sendSequenced(message, num, admin);
+}
+
+bool Session::prepareToSend(Message &message, SEQNUM num, bool admin)
+{
+    // The application sees the message before it is sequenced, and without this session's lock.
+    // Called under the lock, a callback that takes a lock of the application's own would deadlock
+    // against a thread that holds that lock while it sends: each would wait for the other (#73).
+    // The price is that toApp and toAdmin see no MsgSeqNum, except the explicit one of a gap fill.
+    Header &header = message.getHeader();
+    header.setField(m_sessionID.getBeginString());
+    header.setField(m_sessionID.getSenderCompID());
+    header.setField(m_sessionID.getTargetCompID());
+    if (num)
+    {
+        header.setField(MsgSeqNum(num));
+    }
+    else
+    {
+        header.removeField(FIELD::MsgSeqNum);
+    }
+    insertSendingTime(header);
 
     try
     {
+        if (admin)
+        {
+            m_application.toAdmin(message, m_sessionID);
+        }
+        else
+        {
+            // do not send application messages if they will just be cleared
+            if (!isLoggedOn() && shouldSendReset())
+            {
+                return false;
+            }
+
+            try
+            {
+                m_application.toApp(message, m_sessionID);
+            }
+            catch (DoNotSend &)
+            {
+                return false;
+            }
+        }
+    }
+    catch (IOException &e)
+    {
+        m_state.onEvent(e.what());
+        return false;
+    }
+    return true;
+}
+
+bool Session::sendSequenced(Message &message, SEQNUM num, bool admin)
+{
+    try
+    {
+        // prepareToSend set everything else in the header before the callback, as fill() did
+        // before #73; what the callback changed stands.
         Header &header = message.getHeader();
+        m_state.lastSentTime(m_timestamper());
+        header.setField(MsgSeqNum(num ? num : getExpectedSenderNum()));
 
         MsgType msgType;
         header.getFieldIfSet(msgType);
-
-        fill(header);
         std::string messageString;
 
-        if (num)
+        if (admin)
         {
-            header.setField(MsgSeqNum(num));
-        }
-
-        if (Message::isAdminMsgType(msgType))
-        {
-            m_application.toAdmin(message, m_sessionID);
-
             if (msgType == MsgType_Logon && !m_state.receivedReset())
             {
                 ResetSeqNumFlag resetSeqNumFlag(false);
@@ -723,30 +811,22 @@ bool Session::sendRaw(Message &message, SEQNUM num)
         }
         else
         {
-            // do not send application messages if they will just be cleared
+            // The state may have changed while toApp ran.
             if (!isLoggedOn() && shouldSendReset())
             {
                 return false;
             }
 
-            try
+            message.toString(messageString);
+
+            if (!num)
             {
-                m_application.toApp(message, m_sessionID);
-                message.toString(messageString);
-
-                if (!num)
-                {
-                    persist(message, messageString);
-                }
-
-                if (isLoggedOn())
-                {
-                    send(messageString);
-                }
+                persist(message, messageString);
             }
-            catch (DoNotSend &)
+
+            if (isLoggedOn())
             {
-                return false;
+                send(messageString);
             }
         }
 
@@ -773,23 +853,34 @@ bool Session::send(const std::string &string)
 
 void Session::disconnect()
 {
-    Locker l(m_mutex);
-
-    if (m_pResponder)
+    bool loggedOut = false;
     {
-        m_state.onEvent("Disconnecting");
+        Locker l(m_mutex);
 
-        m_pResponder->disconnect();
-        m_pResponder = 0;
+        if (m_pResponder)
+        {
+            m_state.onEvent("Disconnecting");
+
+            m_pResponder->disconnect();
+            m_pResponder = 0;
+        }
+
+        if (m_state.receivedLogon() || m_state.sentLogon())
+        {
+            m_state.receivedLogon(false);
+            m_state.sentLogon(false);
+            loggedOut = true;
+        }
     }
 
-    if (m_state.receivedLogon() || m_state.sentLogon())
+    // Outside the lock, like every callback (#73); the flags were cleared under it, so of two
+    // threads disconnecting at once only one reports the logout.
+    if (loggedOut)
     {
-        m_state.receivedLogon(false);
-        m_state.sentLogon(false);
         m_application.onLogout(m_sessionID);
     }
 
+    Locker l(m_mutex);
     m_state.sentLogout(false);
     m_state.receivedReset(false);
     m_state.sentReset(false);
@@ -916,20 +1007,25 @@ void Session::generateResendRequest(const std::string &beginString, SEQNUM msgSe
     m_state.resendRange(beginSeqNo, msgSeqNum - 1);
 }
 
-void Session::generateSequenceReset(SEQNUM beginSeqNo, SEQNUM endSeqNo)
+Message Session::newSequenceReset(SEQNUM beginSeqNo, SEQNUM endSeqNo)
 {
     Message sequenceReset = newMessage(MsgType(MsgType_SequenceReset));
 
-    NewSeqNo newSeqNo(endSeqNo);
     sequenceReset.getHeader().setField(PossDupFlag(true));
-    sequenceReset.setField(newSeqNo);
+    sequenceReset.setField(NewSeqNo(endSeqNo));
     fill(sequenceReset.getHeader());
 
     insertOrigSendingTime(sequenceReset.getHeader(), sequenceReset.getHeader().getField<SendingTime>());
     sequenceReset.getHeader().setField(MsgSeqNum(beginSeqNo));
     sequenceReset.setField(GapFillFlag(true));
+    return sequenceReset;
+}
+
+void Session::generateSequenceReset(SEQNUM beginSeqNo, SEQNUM endSeqNo)
+{
+    Message sequenceReset = newSequenceReset(beginSeqNo, endSeqNo);
     sendRaw(sequenceReset, beginSeqNo);
-    m_state.onEvent("Sent SequenceReset TO: " + SEQNUM_CONVERTOR::convert(newSeqNo));
+    m_state.onEvent("Sent SequenceReset TO: " + SEQNUM_CONVERTOR::convert(endSeqNo));
 }
 
 void Session::generateHeartbeat()

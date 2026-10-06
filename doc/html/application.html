@@ -70,7 +70,9 @@ namespace FIX
       an application however it is provided for any logging you may
       wish to do. Notice that the FIX::Message is not const. This
       allows you to add fields to an adminstrative message before
-      it is sent out.<br>
+      it is sent out. The message has no MsgSeqNum yet, except a
+      gap-fill SequenceReset: the session numbers it after this
+      callback returns.<br>
       <br>
       <u><b>toApp</b></u> is a callback for application messages
       that are being sent to a counterparty. If you throw a
@@ -85,7 +87,14 @@ namespace FIX
       If it is set to false, the message will simply not be sent.
       Notice that the FIX::Message is not const. This allows you to
       add fields to an application message before it is sent
-      out.<br>
+      out. A new message has no MsgSeqNum yet: the session numbers
+      it after this callback returns, so a message refused with
+      <i>DoNotSend</i> uses no number. A resent message keeps the
+      number it was first sent with.<br>
+      <br>
+      None of these callbacks is made while the session holds a lock
+      of its own, so a lock your application takes in them may also
+      be held while it sends.<br>
       <br>
       <u><b>fromAdmin</b></u> notifies you when an administrative
       message is sent from a counterparty to your FIX engine. This

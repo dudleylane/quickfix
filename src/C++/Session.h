@@ -219,8 +219,7 @@ public:
 
     void setResponder(Responder *pR)
     {
-        Locker l(m_mutex);
-
+        // reset() calls toAdmin and onLogout, which never run under the lock (#73).
         if (m_refreshOnLogon)
         {
             refresh();
@@ -229,6 +228,8 @@ public:
         {
             reset();
         }
+
+        Locker l(m_mutex);
         m_pResponder = pR;
     }
 
@@ -248,11 +249,22 @@ private:
     typedef std::map<SessionID, Session *> Sessions;
     typedef std::set<SessionID> SessionIDs;
 
+    /// One message of a retransmission: a gap fill still to be sequenced with its explicit
+    /// number, or (gapFillSeqNum 0) a resent application message ready to go.
+    struct Retransmit
+    {
+        Message message;
+        SEQNUM gapFillSeqNum;
+        std::string event;
+    };
+
     static bool addSession(Session &);
     static void removeSession(Session &);
 
     bool send(const std::string &);
     bool sendRaw(Message &, SEQNUM msgSeqNum = 0);
+    bool prepareToSend(Message &, SEQNUM msgSeqNum, bool admin);
+    bool sendSequenced(Message &, SEQNUM msgSeqNum, bool admin);
     bool resend(Message &message);
     void persist(const Message &, const std::string &) EXCEPT(IOException);
 
@@ -313,6 +325,7 @@ private:
     void generateLogon();
     void generateLogon(const Message &);
     void generateResendRequest(const std::string &, SEQNUM);
+    Message newSequenceReset(SEQNUM, SEQNUM);
     void generateSequenceReset(SEQNUM, SEQNUM);
     void generateRetransmits(SEQNUM beginSeqNo, SEQNUM endSeqNo);
     void generateHeartbeat();

@@ -5328,8 +5328,6 @@ SWIGINTERN IntArray *IntArray_frompointer(int *t){
     return static_cast< IntArray * >(t);
   }
 
-// The bindings keep wrapping the deprecated SynchronizedApplication (#45) for existing scripts.
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <config.h>
 #include <Except.h>
 #include <Exceptions.h>
