@@ -1,3 +1,54 @@
+20.1.0
+------
+
+The soname stays libquickfix.so.20: no exported class changed layout (checked by sizeof against
+20.0.0's headers), so a program built against 20.0.0 loads this library unchanged. Rebuilding is
+still advisable, since some fixes below are in inline header code.
+
+INCOMPATIBLE: a second Session with the SessionID of one that already exists now throws ConfigError
+instead of being left silently unregistered. A Session whose onCreate throws no longer stays in the
+registry after it is freed, destroying one of two same-ID sessions no longer unregisters the other,
+and an Acceptor or Initiator whose initialisation throws destroys the sessions it had created, so a
+retry starts clean (#46).
+
+INCOMPATIBLE: an SSLProtocol value with a token the engine does not recognise is refused at start,
+naming the token, instead of disabling no protocol. TLSv1_3 is documented (#55).
+
+INCOMPATIBLE: the seven untested allocator switches Utility.h accepted (ENABLE_DEBUG_ALLOCATOR,
+ENABLE_NEW_ALLOCATOR, ENABLE_MT_ALLOCATOR, ENABLE_POOL_ALLOCATOR, ENABLE_BITMAP_ALLOCATOR and the
+two Boost pool ones) are an #error. The default, std::allocator, measured best or equal on pt;
+ENABLE_TBB_ALLOCATOR remains (#69).
+
+Deprecated: SynchronizedApplication. Session holds its own lock while it calls toApp, toAdmin and
+onLogout, so an application that sends from a callback or its own thread under the wrapper
+deadlocks. Synchronise the application's own state with locks never held while calling into a
+Session; Application.h says so (#45).
+
+Fixes:
+- After a short send, the threaded transport sent the whole message length again from the
+  advanced position, reading past the end of the message onto the wire. It now sends only the
+  remaining bytes, and retries an interrupted send (#50).
+- Move-assigning a FieldMap leaked the target's groups (#47).
+- The reactor acceptors deleted their server, and its socket monitor, while a session whose peer
+  had not answered stop()'s Logout still used the connection; such sessions are now disconnected
+  first (#49).
+- A failed bind or listen leaked the socket (#70). A failed SSLSocketAcceptor start leaked its
+  server and kept the ports bound before the failing one, so a retried start could not bind them
+  (#60).
+- Either CRL setting now works without the other (#56).
+- AllowedRemoteAddresses may be written with spaces after the commas (#59).
+- Copying a DataDictionary lost its name-to-value map (#61).
+- A DataDictionary's ordered-field caches are filled when it is loaded, not on first use, which was
+  a data race between sessions sharing it. Sessions whose dictionary path and validation settings
+  agree now share one parsed dictionary: ten FIX 5.0 SP2 sessions used 642 MB, now 138 MB (#68).
+- SessionID's default constructor left the FIXT flag uninitialised.
+
+Build: the installed QuickFIXBuildConfig.h records HAVE_SSL, so a consumer can include the SSL
+headers without defining it, and gets an #error on a mismatch (#63). The library target depends on
+its header copy (#48); configure no longer writes an empty config.h at the source root (#62); only
+the build tree writing to lib/ re-points test/{ut,at,pt} (#54).
+
+
 20.0.0
 ------
 
