@@ -35,6 +35,8 @@
 #include <iostream>
 
 #include "catch_amalgamated.hpp"
+#include <atomic>
+#include <thread>
 
 using namespace FIX;
 
@@ -1843,5 +1845,43 @@ TEST_CASE("DataDictionaryCopyTests")
             REQUIRE(dictionary->getValueName(54, "1", name));
             CHECK(name == "BUY");
         }
+    }
+}
+
+TEST_CASE("DataDictionaryConcurrentReadTests")
+{
+    SECTION("aLoadedDictionaryCanBeReadFromTwoThreadsAtOnce")
+    {
+        // The ordered-field caches were filled on first use from const getters, so two threads --
+        // a session thread parsing, an application thread building an admin message -- could fill
+        // the same one at once. A loaded dictionary must be read-only. Meaningful under ThreadSanitizer.
+        DataDictionary dictionary(FIX::TestSettings::pathForSpec("FIX44"), true);
+        std::atomic<int> ready{0};
+        auto reader = [&]
+        {
+            ++ready;
+            while (ready.load() < 2)
+            {
+            }
+            int fields = 0;
+            fields += dictionary.getHeaderOrderedFields() ? 1 : 0;
+            fields += dictionary.getTrailerOrderedFields() ? 1 : 0;
+            fields += dictionary.getMessageOrderedFields("D") ? 1 : 0;
+            fields += dictionary.getOrderedFields() ? 1 : 0;
+            int delim = 0;
+            const DataDictionary *group = nullptr;
+            if (dictionary.getGroup("V", 146, delim, group))
+            {
+                fields += group->getOrderedFields() ? 1 : 0;
+            }
+            return fields;
+        };
+        int first = 0;
+        int second = 0;
+        std::thread a([&] { first = reader(); });
+        std::thread b([&] { second = reader(); });
+        a.join();
+        b.join();
+        CHECK(first == second);
     }
 }

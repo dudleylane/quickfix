@@ -65,7 +65,9 @@ class DataDictionary
 
         const message_order &getMessageOrder() const
         {
-            if (m_msgOrder)
+            // An empty order converts to false, so without this check an empty list would be
+            // rebuilt -- written -- on every call, from every thread reading the dictionary.
+            if (m_msgOrder || m_orderedFlds.empty())
             {
                 return m_msgOrder;
             }
@@ -648,6 +650,11 @@ private:
             }
         }
     }
+
+    /// Fill the ordered-field caches -- this dictionary's and its group dictionaries' -- so that once
+    /// loaded the dictionary is only read. They used to be filled on first use from const getters, a
+    /// data race between threads sharing one dictionary.
+    void primeOrderCaches() const;
 
     int lookupXMLFieldNumber(DOMDocument *, DOMNode *) const;
     int lookupXMLFieldNumber(DOMDocument *, const std::string &name) const;

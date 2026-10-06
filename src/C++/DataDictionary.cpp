@@ -486,11 +486,40 @@ void DataDictionary::readFromDocument(const DOMDocumentPtr &pDoc) EXCEPT(ConfigE
         }
         RESET_AUTO_PTR(pMessageNode, pMessageNode->getNextSiblingNode());
     }
+
+    // A loaded dictionary is shared between threads -- a session's thread and the application's --
+    // so fill its lazily built caches now, while one thread owns it.
+    primeOrderCaches();
+}
+
+void DataDictionary::primeOrderCaches() const
+{
+    getOrderedFields();
+    if (!m_headerOrderedFields.empty())
+    {
+        getHeaderOrderedFields();
+    }
+    if (!m_trailerOrderedFields.empty())
+    {
+        getTrailerOrderedFields();
+    }
+    for (const MsgTypeToOrderedFields::value_type &entry : m_messageOrderedFields)
+    {
+        entry.second.getMessageOrder();
+    }
+    for (const FieldToGroup::value_type &groups : m_groups)
+    {
+        for (const FieldPresenceMap::value_type &group : groups.second)
+        {
+            group.second.second->primeOrderCaches();
+        }
+    }
 }
 
 message_order const &DataDictionary::getOrderedFields() const
 {
-    if (m_orderedFieldsArray)
+    // An empty order converts to false: without the empty check it would be rebuilt on every call.
+    if (m_orderedFieldsArray || m_orderedFields.empty())
     {
         return m_orderedFieldsArray;
     }
