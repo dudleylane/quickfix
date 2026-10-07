@@ -3298,6 +3298,35 @@ TEST_CASE("ApplicationLockOrderTests")
         CHECK(std::string::npos != wire[4].find("\00143=Y\001"));
     }
 
+    SECTION("sendWhileSetResponderResetsTheSession")
+    {
+        // A connection attaching once the session window has passed resets the session first,
+        // which sends a Logout through toAdmin. Until #73 setResponder did that under the
+        // session's lock.
+        const UtcTimeStamp created(10, 0, 0, 5, 10, 2026);
+        const UtcTimeStamp nextDay(10, 0, 0, 6, 10, 2026);
+        std::atomic<bool> windowPassed{false};
+        const TimeRange daily{UtcTimeOnly(0, 0, 0), UtcTimeOnly(23, 0, 0)};
+        const SessionID windowId(BeginString("FIX.4.2"), SenderCompID("TW"), TargetCompID("WINDOW"));
+        Session windowSession([&] { return windowPassed ? nextDay : created; }, application, factory, windowId,
+                              provider, daily, 0, 0);
+        RecordingResponder windowResponder;
+        windowPassed = true;
+
+        DeadlockWatchdog watchdog("setResponder");
+        std::unique_lock<std::recursive_mutex> held(application.lock);
+        application.entered = 0;
+        std::thread other([&] { windowSession.setResponder(&windowResponder); });
+        while (application.entered == 0)
+        {
+            std::this_thread::yield();
+        }
+        FIX42::NewOrderSingle order = newOrder();
+        CHECK(windowSession.send(order));
+        held.unlock();
+        other.join();
+    }
+
     SECTION("synchronizedApplicationSendsFromItsOwnLock")
     {
         // The deadlock #45 reported, with the class it deprecated. Whether the other thread has
