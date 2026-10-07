@@ -1,3 +1,21 @@
+21.0.1
+------
+
+No library code changed; the soname stays libquickfix.so.21, and a program built against 21.0.0
+needs nothing.
+
+Documented: SendingTime is stamped before toApp and toAdmin, like the rest of the header, and the
+message is numbered after them, so of two messages sent at once from different threads the one
+numbered later can carry the earlier SendingTime. FIX does not require SendingTime in sequence
+order; an application whose counterparty does can set it in toApp or toAdmin, which stands
+(Application.h, application.html; #75).
+
+Tests: a lock-order test covers a connection attaching after the session window has passed, whose
+reset calls toAdmin (#76); a lock-order test that deadlocks now flushes the output and says ut
+stopped there (#77). CONTRIBUTING explains how to fetch the git notes that correct pushed commit
+messages (#80).
+
+
 21.0.0
 ------
 
