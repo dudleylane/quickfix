@@ -90,7 +90,10 @@ namespace FIX
       out. A new message has no MsgSeqNum yet: the session numbers
       it after this callback returns, so a message refused with
       <i>DoNotSend</i> uses no number. A resent message keeps the
-      number it was first sent with.<br>
+      number it was first sent with. SendingTime is set before this
+      callback, so when several threads send at once, a message
+      numbered later can carry an earlier SendingTime; set it here if
+      your counterparty requires it in sequence order.<br>
       <br>
       None of these callbacks is made while the session holds a lock
       of its own, so a lock your application takes in them may also

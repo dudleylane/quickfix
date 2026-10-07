@@ -41,7 +41,9 @@ namespace FIX
  *
  * toApp and toAdmin run before the Session sequences the message, so it carries no
  * MsgSeqNum yet -- except a gap-fill SequenceReset, whose number is fixed in advance, and
- * a resent message, which keeps its original number.
+ * a resent message, which keeps its original number. SendingTime is stamped then too, so of
+ * two messages sent at once from different threads the one numbered later may carry the
+ * earlier SendingTime; set it in toApp or toAdmin if a counterparty needs it in order (#75).
  *
  * The various MessageCracker classes can be used to parse the generic message
  * structure into specific %FIX messages.
