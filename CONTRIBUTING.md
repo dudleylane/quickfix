@@ -377,6 +377,15 @@ cd doc
    whose message carries neither the five framing lines
    (`Issue:`, `Impact:`, `Found:`, `Fix:`, `Success:`) nor a `Deviation:` trailer.
 
+5. **Fetch commit-message corrections** once per clone:
+   ```bash
+   git config --add remote.origin.fetch '+refs/notes/commits:refs/notes/commits'
+   git fetch origin
+   ```
+   `master` cannot be force-pushed, so a pushed commit message that turns out to be wrong is corrected
+   with a git note, which `git log` shows beneath the message. Git does not fetch notes by default, and
+   GitHub does not display them, so the issue that found the error records the correction too.
+
 ### Debugging
 
 - Build with `-DCMAKE_BUILD_TYPE=Debug`
