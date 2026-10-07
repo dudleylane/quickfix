@@ -3157,7 +3157,8 @@ struct LockingApplication : public NullApplication
 
 // Ends the process if the scope it guards is still running after ten seconds: a deadlocked
 // thread can be neither joined nor safely abandoned, so a deadlock must fail the run rather than
-// hang it.
+// hang it. The run stops there, without Catch2's summary and without the test cases after this
+// one, so the message says so (#77).
 struct DeadlockWatchdog
 {
     explicit DeadlockWatchdog(const char *what)
@@ -3167,7 +3168,11 @@ struct DeadlockWatchdog
                   std::unique_lock<std::mutex> l(mutex);
                   if (!finished.wait_for(l, std::chrono::seconds(10), [this] { return done; }))
                   {
-                      std::fprintf(stderr, "deadlock: %s\n", what);
+                      std::fprintf(stderr,
+                                   "deadlock: %s\nut stops here: a deadlocked thread cannot be joined, so the test "
+                                   "cases after this one did not run and there is no summary\n",
+                                   what);
+                      std::fflush(nullptr);
                       std::_Exit(1);
                   }
               })
