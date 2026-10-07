@@ -1,0 +1,1 @@
+Correction: the acceptance note says the first threaded run failed because it collided with a CI job on the shared runner. The collision happened, but the failure fits #74 better: a runat.sh started straight after another had its first definition answered and reset by the previous, still-dying acceptor (fixed in 4256a1f8).
