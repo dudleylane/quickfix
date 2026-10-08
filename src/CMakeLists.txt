@@ -11,7 +11,7 @@ if (QUICKFIX_EXAMPLES)
   target_link_libraries(at ${PROJECT_NAME})
   
   if (NOT WIN32)
-  if (QUICKFIX_OWNS_TEST_LINKS)
+  if (QUICKFIX_OWNS_SOURCE_LINKS)
   ADD_CUSTOM_TARGET(at_target ALL
                     COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:at> ${PROJECT_SOURCE_DIR}/test/at)
   endif()
@@ -32,7 +32,7 @@ if (QUICKFIX_EXAMPLES)
   target_link_libraries(pt ${PROJECT_NAME})
   
   if (NOT WIN32)
-  if (QUICKFIX_OWNS_TEST_LINKS)
+  if (QUICKFIX_OWNS_SOURCE_LINKS)
   ADD_CUSTOM_TARGET(pt_target ALL
                     COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:pt> ${PROJECT_SOURCE_DIR}/test/pt)
   endif()

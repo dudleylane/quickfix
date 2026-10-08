@@ -14,8 +14,10 @@ target_include_directories(${executor_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/includ
 target_link_libraries(${executor_NAME} ${PROJECT_NAME})
 
 if (NOT WIN32)
+if (QUICKFIX_OWNS_SOURCE_LINKS)
 ADD_CUSTOM_TARGET(${executor_NAME}_target ALL
                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:executor> ${PROJECT_SOURCE_DIR}/bin/${executor_NAME})
+endif()
 else()
 set_target_properties(${executor_NAME} PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY_DEBUG ${PROJECT_SOURCE_DIR}/bin/debug/executor_cpp/

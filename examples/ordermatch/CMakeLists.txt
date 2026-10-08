@@ -10,8 +10,10 @@ target_include_directories(ordermatch PRIVATE ${PROJECT_SOURCE_DIR}/include ${PR
 target_link_libraries(ordermatch ${PROJECT_NAME})
 
 if (NOT WIN32)
+if (QUICKFIX_OWNS_SOURCE_LINKS)
 ADD_CUSTOM_TARGET(ordermatch_target ALL
                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:ordermatch> ${PROJECT_SOURCE_DIR}/bin/ordermatch)
+endif()
 else()
 set_target_properties(ordermatch PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY_DEBUG ${PROJECT_SOURCE_DIR}/bin/debug/ordermatch/
