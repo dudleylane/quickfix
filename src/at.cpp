@@ -33,6 +33,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <signal.h>
 
 typedef std::unique_ptr<FIX::Acceptor> AcceptorPtr;
 
@@ -69,6 +70,18 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    // runat.sh stops this process with SIGTERM. At its default action it
+    // skips every destructor and LeakSanitizer's at-exit check, so an
+    // ASan build could never report a leak (#84). Block it here, before any
+    // engine thread exists so that all of them inherit the mask, and take it
+    // with sigwait() below: no engine thread sees EINTR, and there is no
+    // handler to keep async-signal-safe.
+    sigset_t stopSignals;
+    sigemptyset(&stopSignals);
+    sigaddset(&stopSignals, SIGTERM);
+    sigaddset(&stopSignals, SIGINT);
+    pthread_sigmask(SIG_BLOCK, &stopSignals, nullptr);
+
     try
     {
         FIX::SessionSettings settings(file);
@@ -97,10 +110,8 @@ int main(int argc, char **argv)
         }
 
         pAcceptor->start();
-        while (true)
-        {
-            FIX::process_sleep(1);
-        }
+        int received = 0;
+        sigwait(&stopSignals, &received);
         pAcceptor->stop();
     }
     catch (std::exception &e)

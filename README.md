@@ -351,6 +351,14 @@ cmake --build build-asan -j$(nproc)
 build-asan/out/ut --quickfix-config-file test/cfg/ut.cfg --quickfix-spec-path spec
 ```
 
+The acceptance suite runs under the ASan build too: point `test/at` at `build-asan/out/at` and run
+`./runat.sh 54321` and `./runat.sh 54321 -t`. Until #84 that could not report a leak — `at` never
+returned from `main`, and SIGTERM's default action skips LeakSanitizer's at-exit check. `at` now
+stops its acceptor and returns on SIGTERM, and `runat.sh` fails when `at` exits non-zero, so a leak
+report, a crash in `Acceptor::stop()` or a shutdown that takes more than 30 seconds fails the run.
+As of #84 all 470 definitions pass under ASan + UBSan in both transports, and `at` exits 0 — no
+leak — after each; a leak injected into the same binary is reported and fails it.
+
 #### Exercising the concurrent paths
 
 `ut` under TSan barely drives what is concurrent in production — the reactor's
