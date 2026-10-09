@@ -23,7 +23,67 @@
 
 #include "catch_amalgamated.hpp"
 
+#include <algorithm>
+#include <fstream>
+#include <random>
+#include <string>
+#include <vector>
+
 using namespace FIX;
+
+namespace
+{
+// The group comparator as it was when message_order kept a dense array indexed by field number:
+// what its open-addressed table must reproduce (#86).
+struct DenseGroupOrder
+{
+    explicit DenseGroupOrder(const std::vector<int> &order)
+    {
+        largest = *std::max_element(order.begin(), order.end());
+        positions.assign(largest + 1, 0);
+        for (size_t i = 0; i < order.size(); ++i)
+        {
+            positions[order[i]] = static_cast<int>(i + 1);
+        }
+    }
+
+    bool operator()(int x, int y) const
+    {
+        const int positionX = x >= 0 && x <= largest ? positions[x] : 0;
+        const int positionY = y >= 0 && y <= largest ? positions[y] : 0;
+        if (positionX && positionY)
+        {
+            return positionX < positionY;
+        }
+        else if (positionX)
+        {
+            return true;
+        }
+        else if (positionY)
+        {
+            return false;
+        }
+        return x < y;
+    }
+
+    int largest;
+    std::vector<int> positions;
+};
+
+long residentKB()
+{
+    std::ifstream status("/proc/self/status");
+    std::string line;
+    while (std::getline(status, line))
+    {
+        if (line.rfind("VmRSS:", 0) == 0)
+        {
+            return std::stol(line.substr(6));
+        }
+    }
+    return -1;
+}
+} // namespace
 
 TEST_CASE("MessageSortersTestCase")
 {
@@ -168,5 +228,87 @@ TEST_CASE("MessageSortersTestCase")
 
         CHECK(sorter(49, 48));
         CHECK(sorter(49, 51));
+    }
+
+    SECTION("groupOrderMatchesDenseOrder")
+    {
+        std::mt19937 random(86);
+        for (int round = 0; round < 60; ++round)
+        {
+            // Small orders, and ones large enough that probe sequences collide; field numbers up to
+            // FIX 5.0 SP2's, with repeats.
+            const int size = round % 3 == 0 ? 600 + round : 1 + round % 40;
+            const int range = round % 2 ? 60000 : 1500;
+            std::uniform_int_distribution<int> fieldOf(1, range);
+            std::vector<int> order;
+            for (int i = 0; i < size; ++i)
+            {
+                order.push_back(i > 0 && i % 7 == 0 ? order[i / 2] : fieldOf(random));
+            }
+
+            const message_order sorter(order.data(), order.size());
+            const DenseGroupOrder dense(order);
+
+            std::vector<int> queries(order.begin(), order.begin() + std::min<size_t>(order.size(), 60));
+            for (int i = 0; i < 60; ++i)
+            {
+                queries.push_back(fieldOf(random));
+            }
+            queries.push_back(0);
+            queries.push_back(dense.largest + 1);
+            queries.push_back(range + 1000);
+
+            int mismatches = 0;
+            std::string first;
+            for (int x : queries)
+            {
+                for (int y : queries)
+                {
+                    if (sorter(x, y) != dense(x, y) && mismatches++ == 0)
+                    {
+                        first = std::to_string(x) + " vs " + std::to_string(y);
+                    }
+                }
+            }
+            INFO("round " << round << ", first mismatch " << first);
+            CHECK(mismatches == 0);
+        }
+    }
+
+    SECTION("groupOrderRepeatedFieldTakesLastPosition")
+    {
+        int order[] = {10, 20, 10, 0};
+        message_order sorter(order);
+
+        CHECK(sorter(20, 10));
+        CHECK(!sorter(10, 20));
+    }
+
+    SECTION("groupOrderWithNoFieldsIsNumeric")
+    {
+        int none[] = {0};
+        message_order sorter(none);
+
+        CHECK(sorter(1, 2));
+        CHECK(!sorter(2, 1));
+        CHECK(!sorter(2, 2));
+    }
+
+    SECTION("groupOrderMemoryFollowsFieldCount")
+    {
+        // A dense array indexed by field number cost 200 KB for an order naming field 50000, so these
+        // 10,000 orders held 2 GB; the table costs a few dozen bytes each (#86).
+        const long before = residentKB();
+        std::vector<message_order> orders;
+        orders.reserve(10000);
+        for (int i = 0; i < 10000; ++i)
+        {
+            orders.push_back(message_order(453, 448, 447, 50000 + i % 3, 0));
+        }
+        const long after = residentKB();
+
+        REQUIRE(before > 0);
+        CHECK(after - before < 100 * 1024);
+        CHECK(orders.back()(448, 50002));
     }
 }

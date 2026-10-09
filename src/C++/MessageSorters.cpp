@@ -21,49 +21,37 @@
 
 #include "MessageSorters.h"
 
-#include <string.h>
+#include <algorithm>
+#include <cstdint>
 
 namespace FIX
 {
-message_order::message_order(int first, ...) : m_mode(group), m_delim(0), m_largest(0)
+namespace
 {
-    int field = first;
-    int size = 0;
-    m_largest = m_delim = first;
+// Fibonacci hashing, in unsigned arithmetic: field numbers are often consecutive.
+unsigned slotOf(const int field)
+{
+    const std::uint64_t product = static_cast<std::uint32_t>(field) * UINT64_C(0x9E3779B97F4A7C15);
+    return static_cast<unsigned>(product >> 32);
+}
+} // namespace
+
+message_order::message_order(int first, ...) : m_mode(group), m_delim(0), m_mask(0)
+{
+    std::vector<int> order;
 
     va_list arguments;
     va_start(arguments, first);
-    while (field != 0)
+    for (int field = first; field != 0; field = va_arg(arguments, int))
     {
-        m_largest = m_largest > field ? m_largest : field;
-
-        size++;
-        field = va_arg(arguments, int);
+        order.push_back(field);
     }
-
-    if (size)
-    {
-        m_groupOrder = shared_array<int>::create(m_largest + 1);
-
-        va_start(arguments, first);
-        field = first;
-        int i = 0;
-        while (field != 0)
-        {
-            m_groupOrder[field] = ++i;
-            field = va_arg(arguments, int);
-        }
-    }
-    else
-    {
-        m_largest = 0;
-        m_delim = 0;
-    }
-
     va_end(arguments);
+
+    setOrder(order.data(), order.size());
 }
 
-message_order::message_order(const int order[]) : m_mode(group), m_delim(0), m_largest(0)
+message_order::message_order(const int order[]) : m_mode(group), m_delim(0), m_mask(0)
 {
     int size = 0;
     while (order[size] != 0)
@@ -73,7 +61,7 @@ message_order::message_order(const int order[]) : m_mode(group), m_delim(0), m_l
     setOrder(order, size);
 }
 
-message_order::message_order(const int order[], size_t size) : m_mode(group), m_delim(0), m_largest(0)
+message_order::message_order(const int order[], size_t size) : m_mode(group), m_delim(0), m_mask(0)
 {
     setOrder(order, size);
 }
@@ -82,21 +70,80 @@ void message_order::setOrder(const int order[], size_t size)
 {
     if (size < 1)
     {
+        // Nothing to look up: compare as the normal order does.
+        m_mode = normal;
         return;
     }
-    m_largest = m_delim = order[0];
+    m_delim = order[0];
 
-    // collect all fields and find the largest field number
-    for (size_t i = 1; i < size; ++i)
-    {
-        int field = order[i];
-        m_largest = m_largest > field ? m_largest : field;
-    }
-
-    m_groupOrder = shared_array<int>::create(m_largest + 1);
+    // Half full at most, so every probe sequence reaches an empty slot.
+    size_t slots = 4;
+    int largest = 0;
     for (size_t i = 0; i < size; ++i)
     {
-        m_groupOrder[order[i]] = i + 1;
+        largest = std::max(largest, order[i]);
+    }
+    while (slots < 2 * size)
+    {
+        slots *= 2;
+    }
+
+    // An array indexed by field number is the faster lookup, so keep it while it costs no more than
+    // eight times the table; with FIX 5.0 SP2's field numbers it would cost far more.
+    if (static_cast<size_t>(largest) + 1 <= 16 * slots)
+    {
+        // create() zeroes the array: a field the order does not name has position 0.
+        m_groupOrder = shared_array<int>::create(largest + 1);
+        m_mask = ~largest;
+        int *positions = m_groupOrder;
+        for (size_t i = 0; i < size; ++i)
+        {
+            if (order[i] > 0)
+            {
+                positions[order[i]] = static_cast<int>(i + 1);
+            }
+        }
+        return;
+    }
+
+    // create() zeroes the table: every slot starts empty.
+    m_groupOrder = shared_array<int>::create(2 * slots);
+    m_mask = static_cast<int>(slots - 1);
+
+    int *table = m_groupOrder;
+    for (size_t i = 0; i < size; ++i)
+    {
+        const int field = order[i];
+        if (field <= 0)
+        {
+            // Zero marks an empty slot, and no field number is negative.
+            continue;
+        }
+        unsigned slot = slotOf(field) & static_cast<unsigned>(m_mask);
+        while (table[2 * slot] != 0 && table[2 * slot] != field)
+        {
+            slot = (slot + 1) & static_cast<unsigned>(m_mask);
+        }
+        // A field named twice takes its last position, as in the array.
+        table[2 * slot] = field;
+        table[2 * slot + 1] = static_cast<int>(i + 1);
+    }
+}
+int message_order::probe(int field) const
+{
+    const int *table = m_groupOrder;
+    const unsigned mask = static_cast<unsigned>(m_mask);
+    for (unsigned slot = slotOf(field) & mask;; slot = (slot + 1) & mask)
+    {
+        const int key = table[2 * slot];
+        if (key == field)
+        {
+            return table[2 * slot + 1];
+        }
+        if (key == 0)
+        {
+            return 0;
+        }
     }
 }
 } // namespace FIX

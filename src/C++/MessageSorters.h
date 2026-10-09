@@ -187,7 +187,8 @@ public:
         group
     };
 
-    message_order(cmp_mode mode = normal) : m_mode(mode), m_delim(0), m_largest(0) {}
+    // A group order with no fields is the normal one, so the group comparator can assume a table.
+    message_order(cmp_mode mode = normal) : m_mode(mode == group ? normal : mode), m_delim(0), m_mask(0) {}
     message_order(int first, ...);
     message_order(const int order[]);
     message_order(const int order[], size_t size);
@@ -203,7 +204,7 @@ public:
         case trailer:
             return trailer_order::compare(x, y);
         case group:
-            return group_order::compare(x, y, m_groupOrder, m_largest);
+            return groupCompare(x, y);
         case normal:
         default:
             return x < y;
@@ -218,10 +219,50 @@ public:
 private:
     void setOrder(const int order[], size_t size);
 
+    // Fields the order names come first, by position; the rest follow by number.
+    bool groupCompare(const int x, const int y) const
+    {
+        const int positionX = position(x);
+        const int positionY = position(y);
+        if (positionX && positionY)
+        {
+            return positionX < positionY;
+        }
+        else if (positionX)
+        {
+            return true;
+        }
+        else if (positionY)
+        {
+            return false;
+        }
+        return x < y;
+    }
+
+    // Returns field's position, or 0 if the order does not name it. The array lookup is inline; the
+    // table's probe is not, so that the comparator stays small enough to inline everywhere it did.
+    int position(const int field) const
+    {
+        if (m_mask < 0)
+        {
+            return static_cast<unsigned>(field) <= static_cast<unsigned>(~m_mask) ? m_groupOrder[field] : 0;
+        }
+        return probe(field);
+    }
+
+    int probe(int field) const;
+
+    // m_groupOrder holds each field's position, counting from 1, in one of two forms. When the
+    // field numbers are compact it is upstream's array indexed by field number, and m_mask is the
+    // bitwise complement of the largest field number, so negative. Otherwise it is an open-addressed
+    // table of (field, position) pairs, a zero field marking an empty slot, with m_mask + 1 slots, a
+    // power of two at least twice the number of fields. The array alone cost largest field number + 1
+    // ints per order: 200 KB for a FIX 5.0 SP2 group naming field 50000, and 3.8 GB for an SP2
+    // DataDictionary, which primes every group's order when it loads (#86).
     cmp_mode m_mode;
     int m_delim;
     shared_array<int> m_groupOrder;
-    int m_largest;
+    int m_mask;
 };
 } // namespace FIX
 
