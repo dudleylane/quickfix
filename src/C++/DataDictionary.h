@@ -33,6 +33,7 @@
 #include <map>
 #include <set>
 #include <string.h>
+#include <unordered_map>
 
 namespace FIX
 {
@@ -658,8 +659,12 @@ private:
 
     int lookupXMLFieldNumber(DOMDocument *, DOMNode *) const;
     int lookupXMLFieldNumber(DOMDocument *, const std::string &name) const;
-    int addXMLComponentFields(DOMDocument *, DOMNode *, const std::string &msgtype, DataDictionary &, bool);
-    void addXMLGroup(DOMDocument *, DOMNode *, const std::string &msgtype, DataDictionary &, bool);
+    // The <component> elements of a document by name, built once per load (#87).
+    typedef std::unordered_map<std::string, DOMNodePtr> Components;
+    static Components indexComponents(DOMNode *pFixNode);
+    int addXMLComponentFields(DOMDocument *, const Components &, DOMNode *, const std::string &msgtype,
+                              DataDictionary &, bool);
+    void addXMLGroup(DOMDocument *, const Components &, DOMNode *, const std::string &msgtype, DataDictionary &, bool);
     TYPE::Type XMLTypeToType(const std::string &xmlType) const;
 
     bool m_hasVersion;

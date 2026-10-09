@@ -59,6 +59,7 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Sorted-check guard**: `sortFields()` skips redundant `std::sort` for well-ordered messages
 - **Group slicing fix**: Virtual `cloneInto()` preserves `Group::m_field`/`m_delim` during copy — `addGroup` and copy constructor previously sliced to `FieldMap`
 - **Groups in a `std::flat_map`**: `FieldMap::Groups` is a `std::flat_map` rather than a `std::map` (`02f84c2d`)
+- **Component index per dictionary load** (`DataDictionary.cpp`): each component reference is looked up in a name index built once per load, not by an XPath query from the document root. A FIX 5.0 SP2 load made 36,605 of those queries over 725 components; it now takes 0.32 s in a Release build rather than 1.42 s, and the result is identical (#87)
 
 #### Benchmark baseline
 

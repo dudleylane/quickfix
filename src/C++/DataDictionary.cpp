@@ -328,6 +328,11 @@ void DataDictionary::readFromDocument(const DOMDocumentPtr &pDoc) EXCEPT(ConfigE
         RESET_AUTO_PTR(pFieldNode, pFieldNode->getNextSiblingNode());
     }
 
+    // COMPONENTS
+    // Each reference to a component used to be an XPath query from the root, scanning the
+    // component list; a FIX 5.0 SP2 load made 36,605 of them over 725 components (#87).
+    const Components components = indexComponents(pFixNode.get());
+
     // HEADER
     if (type == "FIXT" || (type == "FIX" && major < "5"))
     {
@@ -364,7 +369,7 @@ void DataDictionary::readFromDocument(const DOMDocumentPtr &pDoc) EXCEPT(ConfigE
                 std::string required;
                 attrs->get("required", required);
                 bool isRequired = (required == "Y" || required == "y");
-                addXMLGroup(pDoc.get(), pHeaderFieldNode.get(), "_header_", *this, isRequired);
+                addXMLGroup(pDoc.get(), components, pHeaderFieldNode.get(), "_header_", *this, isRequired);
             }
 
             RESET_AUTO_PTR(pHeaderFieldNode, pHeaderFieldNode->getNextSiblingNode());
@@ -407,7 +412,7 @@ void DataDictionary::readFromDocument(const DOMDocumentPtr &pDoc) EXCEPT(ConfigE
                 std::string required;
                 attrs->get("required", required);
                 bool isRequired = (required == "Y" || required == "y");
-                addXMLGroup(pDoc.get(), pTrailerFieldNode.get(), "_trailer_", *this, isRequired);
+                addXMLGroup(pDoc.get(), components, pTrailerFieldNode.get(), "_trailer_", *this, isRequired);
             }
 
             RESET_AUTO_PTR(pTrailerFieldNode, pTrailerFieldNode->getNextSiblingNode());
@@ -471,7 +476,7 @@ void DataDictionary::readFromDocument(const DOMDocumentPtr &pDoc) EXCEPT(ConfigE
                     std::string required;
                     attrs->get("required", required);
                     bool isRequired = (required == "Y" || required == "y");
-                    addXMLComponentFields(pDoc.get(), pMessageFieldNode.get(), msgtype, *this, isRequired);
+                    addXMLComponentFields(pDoc.get(), components, pMessageFieldNode.get(), msgtype, *this, isRequired);
                 }
                 if (pMessageFieldNode->getName() == "group")
                 {
@@ -479,7 +484,7 @@ void DataDictionary::readFromDocument(const DOMDocumentPtr &pDoc) EXCEPT(ConfigE
                     std::string required;
                     attrs->get("required", required);
                     bool isRequired = (required == "Y" || required == "y");
-                    addXMLGroup(pDoc.get(), pMessageFieldNode.get(), msgtype, *this, isRequired);
+                    addXMLGroup(pDoc.get(), components, pMessageFieldNode.get(), msgtype, *this, isRequired);
                 }
                 RESET_AUTO_PTR(pMessageFieldNode, pMessageFieldNode->getNextSiblingNode());
             }
@@ -589,8 +594,35 @@ int DataDictionary::lookupXMLFieldNumber(DOMDocument *pDoc, const std::string &n
     return i->second;
 }
 
-int DataDictionary::addXMLComponentFields(DOMDocument *pDoc, DOMNode *pNode, const std::string &msgtype,
-                                          DataDictionary &DD, bool componentRequired)
+DataDictionary::Components DataDictionary::indexComponents(DOMNode *pFixNode)
+{
+    // Every <component> of every <components> section, as /fix/components/component[@name='...']
+    // selected them; for a name used twice, the first in document order, as that query returned.
+    Components components;
+    for (DOMNodePtr pSection = pFixNode->getFirstChildNode(); pSection.get(); pSection = pSection->getNextSiblingNode())
+    {
+        if (pSection->getName() != "components")
+        {
+            continue;
+        }
+
+        DOMNodePtr pComponent = pSection->getFirstChildNode();
+        while (pComponent.get())
+        {
+            DOMNodePtr pNext = pComponent->getNextSiblingNode();
+            std::string name;
+            if (pComponent->getName() == "component" && pComponent->getAttributes()->get("name", name))
+            {
+                components.try_emplace(name, std::move(pComponent));
+            }
+            pComponent = std::move(pNext);
+        }
+    }
+    return components;
+}
+
+int DataDictionary::addXMLComponentFields(DOMDocument *pDoc, const Components &components, DOMNode *pNode,
+                                          const std::string &msgtype, DataDictionary &DD, bool componentRequired)
 {
     int firstField = 0;
 
@@ -601,11 +633,12 @@ int DataDictionary::addXMLComponentFields(DOMDocument *pDoc, DOMNode *pNode, con
         throw ConfigError("No name given to component");
     }
 
-    DOMNodePtr pComponentNode = pDoc->getNode("/fix/components/component[@name='" + name + "']");
-    if (pComponentNode.get() == 0)
+    Components::const_iterator component = components.find(name);
+    if (component == components.end())
     {
         throw ConfigError("Component not found: " + name);
     }
+    DOMNode *pComponentNode = component->second.get();
 
     DOMNodePtr pComponentFieldNode = pComponentNode->getFirstChildNode();
     while (pComponentFieldNode.get())
@@ -639,7 +672,7 @@ int DataDictionary::addXMLComponentFields(DOMDocument *pDoc, DOMNode *pNode, con
             std::string required;
             attrs->get("required", required);
             bool isRequired = (required == "Y" || required == "y");
-            addXMLComponentFields(pDoc, pComponentFieldNode.get(), msgtype, DD, isRequired);
+            addXMLComponentFields(pDoc, components, pComponentFieldNode.get(), msgtype, DD, isRequired);
         }
         if (pComponentFieldNode->getName() == "group")
         {
@@ -647,15 +680,15 @@ int DataDictionary::addXMLComponentFields(DOMDocument *pDoc, DOMNode *pNode, con
             std::string required;
             attrs->get("required", required);
             bool isRequired = (required == "Y" || required == "y");
-            addXMLGroup(pDoc, pComponentFieldNode.get(), msgtype, DD, isRequired);
+            addXMLGroup(pDoc, components, pComponentFieldNode.get(), msgtype, DD, isRequired);
         }
         RESET_AUTO_PTR(pComponentFieldNode, pComponentFieldNode->getNextSiblingNode());
     }
     return firstField;
 }
 
-void DataDictionary::addXMLGroup(DOMDocument *pDoc, DOMNode *pNode, const std::string &msgtype, DataDictionary &DD,
-                                 bool groupRequired)
+void DataDictionary::addXMLGroup(DOMDocument *pDoc, const Components &components, DOMNode *pNode,
+                                 const std::string &msgtype, DataDictionary &DD, bool groupRequired)
 {
     DOMAttributesPtr attrs = pNode->getAttributes();
     std::string name;
@@ -684,7 +717,7 @@ void DataDictionary::addXMLGroup(DOMDocument *pDoc, DOMNode *pNode, const std::s
         }
         else if (node->getName() == "component")
         {
-            field = addXMLComponentFields(pDoc, node.get(), msgtype, groupDD, false);
+            field = addXMLComponentFields(pDoc, components, node.get(), msgtype, groupDD, false);
         }
         else if (node->getName() == "group")
         {
@@ -701,7 +734,7 @@ void DataDictionary::addXMLGroup(DOMDocument *pDoc, DOMNode *pNode, const std::s
             {
                 isRequired = (required == "Y" || required == "y");
             }
-            addXMLGroup(pDoc, node.get(), msgtype, groupDD, isRequired);
+            addXMLGroup(pDoc, components, node.get(), msgtype, groupDD, isRequired);
         }
         if (delim == 0)
         {

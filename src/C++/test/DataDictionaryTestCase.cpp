@@ -33,6 +33,8 @@
 #include <fix44/NewOrderList.h>
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <sstream>
 
 #include "catch_amalgamated.hpp"
 #include <atomic>
@@ -1883,5 +1885,93 @@ TEST_CASE("DataDictionaryConcurrentReadTests")
         a.join();
         b.join();
         CHECK(first == second);
+    }
+}
+
+// Components are looked up in an index built once per load, not by an XPath query per reference
+// (#87). These are the cases where an index could part from what that query selected.
+TEST_CASE("DataDictionaryComponentLookupTests")
+{
+    auto load = [](const std::string &message, const std::string &components)
+    {
+        std::string xml = "<fix type='FIX' major='4' minor='4' servicepack='0'>"
+                          "<header><field name='BeginString' required='Y' /></header>"
+                          "<trailer><field name='CheckSum' required='Y' /></trailer>"
+                          "<messages><message name='Advertisement' msgtype='7' msgcat='app'>" +
+                          message + "</message></messages>" + components +
+                          "<fields>"
+                          "<field number='8' name='BeginString' type='STRING' />"
+                          "<field number='10' name='CheckSum' type='STRING' />"
+                          "<field number='22' name='SecurityIDSource' type='STRING' />"
+                          "<field number='48' name='SecurityID' type='STRING' />"
+                          "<field number='55' name='Symbol' type='STRING' />"
+                          "</fields>"
+                          "</fix>";
+        std::istringstream stream(xml);
+        return std::make_unique<DataDictionary>(stream);
+    };
+
+    SECTION("aRepeatedNameResolvesToTheFirstInDocumentOrder")
+    {
+        auto dd = load("<component name='Instrument' required='Y' />",
+                       "<components>"
+                       "<component name='Instrument'><field name='Symbol' required='Y' /></component>"
+                       "<component name='Instrument'><field name='SecurityID' required='Y' /></component>"
+                       "</components>");
+
+        CHECK(dd->isMsgField("7", 55));
+        CHECK(dd->isRequiredField("7", 55));
+        CHECK(!dd->isMsgField("7", 48));
+    }
+
+    SECTION("componentsInEverySectionResolve")
+    {
+        auto dd = load("<component name='Instrument' required='Y' />"
+                       "<component name='SecurityAltID' required='N' />",
+                       "<components>"
+                       "<component name='SecurityAltID'><field name='SecurityIDSource' required='N' /></component>"
+                       "</components>"
+                       "<components>"
+                       "<component name='Instrument'><field name='Symbol' required='Y' /></component>"
+                       "</components>");
+
+        CHECK(dd->isMsgField("7", 55));
+        CHECK(dd->isMsgField("7", 22));
+    }
+
+    SECTION("aNameWithAnApostropheResolves")
+    {
+        // The XPath query quoted the name in apostrophes, so this one broke it.
+        auto dd = load("<component name=\"Trader's Instrument\" required='Y' />",
+                       "<components>"
+                       "<component name=\"Trader's Instrument\"><field name='Symbol' required='Y' /></component>"
+                       "</components>");
+
+        CHECK(dd->isMsgField("7", 55));
+    }
+
+    SECTION("anUndefinedComponentIsAConfigError")
+    {
+        CHECK_THROWS_AS(load("<component name='Instrument' required='Y' />",
+                             "<components>"
+                             "<component name='Parties'><field name='Symbol' required='Y' /></component>"
+                             "</components>"),
+                        ConfigError);
+    }
+
+    SECTION("aNestedComponentResolves")
+    {
+        auto dd = load("<component name='Instrument' required='Y' />",
+                       "<components>"
+                       "<component name='Instrument'>"
+                       "<field name='Symbol' required='Y' />"
+                       "<component name='SecurityAltID' required='N' />"
+                       "</component>"
+                       "<component name='SecurityAltID'><field name='SecurityID' required='N' /></component>"
+                       "</components>");
+
+        CHECK(dd->isMsgField("7", 55));
+        CHECK(dd->isMsgField("7", 48));
+        CHECK(!dd->isRequiredField("7", 48));
     }
 }
