@@ -46,6 +46,27 @@ shift
 
 ./at -f cfg/at.cfg "$@" &
 PROCID=$!
+
+# Wait for at to listen before the first definition connects. Runner.rb only
+# retries each connect for 29 s, and a sanitizer build of at takes longer than
+# that to start, which failed the first definitions with "Connection refused"
+# (#85). The socket must belong to this at: one still held by an earlier
+# acceptor (#74) is not readiness.
+START_TIMEOUT=300
+waited=0
+until ss -ltnp "sport = :$PORT" 2>/dev/null | grep -q "pid=$PROCID,"; do
+    if ! kill -0 "$PROCID" 2>/dev/null; then
+        echo "FAILED: at exited before listening on port $PORT"
+        exit 1
+    fi
+    if [ "$waited" -ge "$START_TIMEOUT" ]; then
+        echo "FAILED: at did not listen on port $PORT within ${START_TIMEOUT}s"
+        exit 1
+    fi
+    sleep 1
+    waited=$((waited + 1))
+done
+
 cd $DIR
 $RUBY Runner.rb 127.0.0.1 $PORT definitions/server/fix4*/*.def definitions/server/fix50/*.def definitions/server/fix50sp1/*.def definitions/server/fix50sp2/*.def definitions/server/validate/*.def definitions/server/future/*.def
 

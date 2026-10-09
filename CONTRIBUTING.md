@@ -214,8 +214,10 @@ cd test
 ```
 
 `runat.sh` and `runut.sh` start with `killall ut at`, so don't run them alongside another `ut`.
-`runut.sh` can be invoked from any directory. Both exit with their suite's real status, and
-`runat.sh` prints its verdict: `470 tests passed`, or `FAILED n out of 470 tests`. It then stops
+`runut.sh` can be invoked from any directory. Both exit with their suite's real status.
+`runat.sh` waits up to 300 seconds for `at` to listen before running any definition, and fails
+with a message if it exits or misses that deadline; a sanitizer build of `at` can take two minutes
+to start. It prints its verdict: `470 tests passed`, or `FAILED n out of 470 tests`. It then stops
 `at` with SIGTERM and also fails if `at` exits non-zero or takes more than 30 seconds to stop,
 printing `FAILED: at exited with status n at shutdown` last; under AddressSanitizer that is how a
 leak report surfaces. Arguments after the port go to `at`: `./runat.sh 54321 -l` logs session

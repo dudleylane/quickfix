@@ -359,6 +359,13 @@ report, a crash in `Acceptor::stop()` or a shutdown that takes more than 30 seco
 As of #84 all 470 definitions pass under ASan + UBSan in both transports, and `at` exits 0 — no
 leak — after each; a leak injected into the same binary is reported and fails it.
 
+A sanitizer build of `at` is slow to start — about 30 seconds under ASan or TSan for the reactor,
+two minutes for the threaded transport under TSan — so `runat.sh` waits up to 300 seconds for `at`
+to listen before running any definition. Before #85 it did not wait, and `Runner.rb` gives each
+definition only 29 seconds to connect, so the first one or two definitions of a TSan run failed with
+`Connection refused`. As of #85 all 470 pass under TSan (default allocator) in both transports,
+with no report and `at` exiting 0.
+
 #### Exercising the concurrent paths
 
 `ut` under TSan barely drives what is concurrent in production — the reactor's
