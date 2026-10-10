@@ -1,7 +1,7 @@
 # Run by TransportTestCase in a process of its own: an acceptor and an initiator
 # started with #start in one process, talking to each other. It prints what it
-# saw as key=value lines and leaves with exit!, which skips the finalizers that
-# crash at exit (#105).
+# saw as key=value lines and ends normally, so the test sees its exit status:
+# a DoNotSend raised in toApp once stayed in $! and failed it (#106).
 require 'quickfix_ruby'
 $stdout.sync = true
 
@@ -92,4 +92,3 @@ initiatorThread.kill
 puts "killed=#{!initiatorThread.join(15).nil?}"
 acceptor.stop
 puts "stopped=#{acceptor.isStopped && !acceptorThread.join(15).nil?}"
-exit!(0)

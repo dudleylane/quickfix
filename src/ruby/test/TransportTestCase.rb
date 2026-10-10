@@ -6,8 +6,7 @@ require 'tmpdir'
 # Initiator#start and Acceptor#start run the transport on a Ruby thread. Before
 # #102 that thread held the GVL for as long as the transport ran, so the rest of
 # the program never ran again. The transports run in a child process, which a
-# hang there cannot take the suite down with and which can skip the finalizers
-# that crash at exit (#105).
+# hang there cannot take the suite down with.
 class TransportTestCase < Test::Unit::TestCase
 
 	def test_start_leaves_ruby_running
@@ -18,16 +17,14 @@ class TransportTestCase < Test::Unit::TestCase
 			pid = Process.spawn(RbConfig.ruby, '-I', File.expand_path('..', __dir__), child, dir, port.to_s,
 				out: writer, err: writer)
 			writer.close
-			output = ''
-			waited = 0
-			until Process.wait(pid, Process::WNOHANG)
-				if waited > 600
-					Process.kill('KILL', pid)
-					Process.wait(pid)
-					break
-				end
+			status = nil
+			600.times do
+				break if (status = Process.wait2(pid, Process::WNOHANG))
 				sleep 0.1
-				waited += 1
+			end
+			unless status
+				Process.kill('KILL', pid)
+				status = Process.wait2(pid)
 			end
 			output = reader.read
 			reader.close
@@ -46,6 +43,8 @@ class TransportTestCase < Test::Unit::TestCase
 			# Thread#kill ends a transport's thread, and stop returns.
 			assert_equal('true', lines['killed'], output)
 			assert_equal('true', lines['stopped'], output)
+			# Nothing a callback raised for the engine is left in $! (#106).
+			assert(status[1].success?, "exit status #{status[1].inspect}\n#{output}")
 		end
 	end
 end

@@ -564,6 +564,7 @@ private:
     Application_toApp_call_depth--;
 
     if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__DoNotSend, 0 ) != -1 ) {
+      rb_set_errinfo(Qnil);
       throw *((FIX::DoNotSend*)result);
     } else {
       VALUE message = rb_obj_as_string( $error );
@@ -580,12 +581,16 @@ private:
     Application_fromAdmin_call_depth--;
 
     if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__FieldNotFound, 0 ) != -1 ) {
+      rb_set_errinfo(Qnil);
       throw *((FIX::FieldNotFound*)result);
     } else if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__IncorrectDataFormat, 0 ) != -1 ) {
+      rb_set_errinfo(Qnil);
       throw *((FIX::IncorrectDataFormat*)result);
     } else if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__IncorrectTagValue, 0 ) != -1 ) {
+      rb_set_errinfo(Qnil);
       throw *((FIX::IncorrectTagValue*)result);
     } else if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__RejectLogon, 0 ) != -1 ) {
+      rb_set_errinfo(Qnil);
       throw *((FIX::RejectLogon*)result);
     } else {
       VALUE message = rb_obj_as_string( $error );
@@ -602,12 +607,16 @@ private:
     Application_fromApp_call_depth--;
 
     if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__FieldNotFound, 0 ) != -1 ) {
+      rb_set_errinfo(Qnil);
       throw *((FIX::FieldNotFound*)result);
     } else if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__IncorrectDataFormat, 0 ) != -1 ) {
+      rb_set_errinfo(Qnil);
       throw *((FIX::IncorrectDataFormat*)result);
     } else if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__IncorrectTagValue, 0 ) != -1 ) {
+      rb_set_errinfo(Qnil);
       throw *((FIX::IncorrectTagValue*)result);
     } else if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__UnsupportedMessageType, 0 ) != -1 ) {
+      rb_set_errinfo(Qnil);
       throw *((FIX::UnsupportedMessageType*)result);
     } else {
       VALUE message = rb_obj_as_string( $error );
