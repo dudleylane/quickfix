@@ -380,12 +380,28 @@ session registry under `s_mutex`. Two runs cover those (this is issue #15):
 - A concurrent-churn driver — many workers repeatedly connect, log on to the
   configured sessions and close (cleanly, with a reset, or mid-message) — which is
   what actually races connections against each other, the accept path and the
-  registry.
+  registry. `test/churn.rb` is the driver and `test/runchurn.sh` runs `at` under it:
+  `./runchurn.sh 54321 16 120` (16 workers for 120 seconds) or with `-t` after the
+  seconds for the threaded transport, again with `test/at` pointing at the TSan
+  binary. Like `runat.sh` it waits for `at` to listen and fails if `at` exits
+  non-zero, which is how a sanitizer report surfaces; the driver itself fails only
+  if `at` stops accepting connections. The driver behind the results below was never
+  checked in; this one was written to the description above (#94).
 
 As of this writing both are clean in both transports: the engine reported no data
 race under either. The one race the churn driver found was in the acceptance
 driver's own `MessageCracker` (a set shared across sessions), now guarded; the
 engine was clean.
+
+Re-run with the checked-in driver on 2026-10-10 (16 workers, 120 seconds, the 7
+sessions of `cfg/at.cfg`): clean under TSan with the default allocator and under
+ASan + UBSan, in both transports, with `at` exiting 0 every time — 143,000 to 167,000
+connections per reactor run and 30,000 to 32,000 per threaded run. The threaded transport
+completes fewer because `ThreadedSocketConnection::setSession` holds a connection
+whose session is already logged on for up to 5 seconds, waiting for it to free up,
+where the reactor refuses it at once; that is upstream's design, and the driver
+gives up on a logon after one second so that it closes connections inside that
+wait as well.
 
 **Build the concurrent-path TSan run with the default allocator, not
 `ENABLE_TBB_ALLOCATOR`.** `tbb::scalable_allocator` keeps its own per-thread
