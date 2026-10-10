@@ -56,23 +56,37 @@ DataDictionary::DataDictionary(const std::string &url, bool preserveMsgFldsOrder
 
 DataDictionary::DataDictionary(const DataDictionary &copy) { *this = copy; }
 
-DataDictionary::~DataDictionary()
-{
-    FieldToGroup::iterator i;
-    for (i = m_groups.begin(); i != m_groups.end(); ++i)
-    {
-        const FieldPresenceMap &presenceMap = i->second;
+DataDictionary::~DataDictionary() { deleteGroups(); }
 
-        FieldPresenceMap::const_iterator iter = presenceMap.begin();
-        for (; iter != presenceMap.end(); ++iter)
+void DataDictionary::deleteGroups()
+{
+    for (const FieldToGroup::value_type &groups : m_groups)
+    {
+        for (const FieldPresenceMap::value_type &group : groups.second)
         {
-            delete iter->second.second;
+            delete group.second.second;
         }
     }
+    m_groups.clear();
+}
+
+void DataDictionary::adoptGroup(const std::string &msg, int field, int delim, std::unique_ptr<DataDictionary> pDD)
+{
+    pDD->setVersion(getVersion());
+
+    // A value-initialised entry holds a null dictionary; an existing one is replaced, and used to leak.
+    std::pair<int, DataDictionary *> &entry = m_groups[field][msg];
+    delete entry.second;
+    entry = std::make_pair(delim, pDD.release());
 }
 
 DataDictionary &DataDictionary::operator=(const DataDictionary &rhs)
 {
+    if (this == &rhs)
+    {
+        return *this;
+    }
+
     m_hasVersion = rhs.m_hasVersion;
     m_checkFieldsOutOfOrder = rhs.m_checkFieldsOutOfOrder;
     m_checkFieldsHaveValues = rhs.m_checkFieldsHaveValues;
@@ -101,6 +115,8 @@ DataDictionary &DataDictionary::operator=(const DataDictionary &rhs)
     m_trailerOrder = rhs.m_trailerOrder;
     m_messageOrderedFields = rhs.m_messageOrderedFields;
 
+    // Groups the target held that rhs lacks would otherwise survive the assignment.
+    deleteGroups();
     FieldToGroup::const_iterator i = rhs.m_groups.begin();
     for (; i != rhs.m_groups.end(); ++i)
     {
@@ -699,7 +715,10 @@ void DataDictionary::addXMLGroup(DOMDocument *pDoc, const Components &components
     int group = lookupXMLFieldNumber(pDoc, name);
     int delim = 0;
     int field = 0;
-    DataDictionary groupDD;
+    // Built where it will live: handing it to DD costs nothing, where copying it into DD copied every
+    // group nested in it as well, at each level (#95).
+    std::unique_ptr<DataDictionary> pGroupDD = std::make_unique<DataDictionary>();
+    DataDictionary &groupDD = *pGroupDD;
     DOMNodePtr node = pNode->getFirstChildNode();
     while (node.get())
     {
@@ -745,7 +764,7 @@ void DataDictionary::addXMLGroup(DOMDocument *pDoc, const Components &components
 
     if (delim)
     {
-        DD.addGroup(msgtype, group, delim, groupDD);
+        DD.adoptGroup(msgtype, group, delim, std::move(pGroupDD));
     }
 }
 

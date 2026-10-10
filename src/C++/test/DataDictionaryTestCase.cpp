@@ -2008,3 +2008,55 @@ TEST_CASE("DataDictionaryMemoryTests")
         CHECK(dictionary.isMsgType("AE"));
     }
 }
+
+// A DataDictionary owns its groups' dictionaries (#95).
+TEST_CASE("DataDictionaryGroupOwnershipTests")
+{
+    DataDictionary first;
+    first.addField(55);
+    DataDictionary second;
+    second.addField(48);
+
+    SECTION("addingAGroupAgainReplacesIt")
+    {
+        // The replaced dictionary used to leak; AddressSanitizer reports it if it does.
+        DataDictionary dictionary;
+        dictionary.addGroup("D", 453, 448, first);
+        dictionary.addGroup("D", 453, 447, second);
+
+        int delim = 0;
+        const DataDictionary *pGroup = nullptr;
+        REQUIRE(dictionary.getGroup("D", 453, delim, pGroup));
+        CHECK(delim == 447);
+        CHECK(pGroup->isField(48));
+        CHECK(!pGroup->isField(55));
+    }
+
+    SECTION("assigningReplacesTheGroupsTheTargetHeld")
+    {
+        DataDictionary source;
+        source.addGroup("D", 453, 448, first);
+        DataDictionary target;
+        target.addGroup("8", 382, 375, second);
+
+        target = source;
+
+        CHECK(target.isGroup("D", 453));
+        CHECK(!target.isGroup("8", 382));
+    }
+
+    SECTION("selfAssignmentKeepsTheGroups")
+    {
+        DataDictionary dictionary;
+        dictionary.addGroup("D", 453, 448, first);
+        DataDictionary &alias = dictionary;
+
+        dictionary = alias;
+
+        int delim = 0;
+        const DataDictionary *pGroup = nullptr;
+        REQUIRE(dictionary.getGroup("D", 453, delim, pGroup));
+        CHECK(delim == 448);
+        CHECK(pGroup->isField(55));
+    }
+}

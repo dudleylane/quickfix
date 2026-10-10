@@ -31,6 +31,7 @@
 #include "FieldMap.h"
 #include "Fields.h"
 #include <map>
+#include <memory>
 #include <set>
 #include <string.h>
 #include <unordered_map>
@@ -320,11 +321,7 @@ public:
 
     void addGroup(const std::string &msg, int field, int delim, const DataDictionary &dataDictionary)
     {
-        DataDictionary *pDD = new DataDictionary(dataDictionary);
-        pDD->setVersion(getVersion());
-
-        FieldPresenceMap &presenceMap = m_groups[field];
-        presenceMap[msg] = std::make_pair(delim, pDD);
+        adoptGroup(msg, field, delim, std::make_unique<DataDictionary>(dataDictionary));
     }
 
     bool isGroup(const std::string &msg, int field) const
@@ -659,6 +656,9 @@ private:
 
     int lookupXMLFieldNumber(DOMDocument *, DOMNode *) const;
     int lookupXMLFieldNumber(DOMDocument *, const std::string &name) const;
+    // Takes ownership of a group's dictionary, deleting any it replaces (#95).
+    void adoptGroup(const std::string &msg, int field, int delim, std::unique_ptr<DataDictionary> pDD);
+    void deleteGroups();
     // The <component> elements of a document by name, built once per load (#87).
     typedef std::unordered_map<std::string, DOMNodePtr> Components;
     static Components indexComponents(DOMNode *pFixNode);
