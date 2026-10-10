@@ -74,7 +74,11 @@ class Application < Quickfix::Application
 		end
 
 		if( beginString.getValue() >= Quickfix.BeginString_FIX41 )
-			executionReport.setField( Quickfix::ExecType.new(Quickfix.ExecType_FILL) )
+			if( beginString.getValue() >= Quickfix.BeginString_FIX44 )
+				executionReport.setField( Quickfix::ExecType.new(Quickfix.ExecType_TRADE) )
+			else
+				executionReport.setField( Quickfix::ExecType.new(Quickfix.ExecType_FILL) )
+			end
 			executionReport.setField( Quickfix::LeavesQty.new(0) )
 		end
 

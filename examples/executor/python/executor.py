@@ -56,7 +56,10 @@ class Application(fix.Application):
 			executionReport.setField( fix.ExecTransType(fix.ExecTransType_NEW) )
 
 		if beginString.getValue() >= fix.BeginString_FIX41:
-			executionReport.setField( fix.ExecType(fix.ExecType_FILL) )
+			if beginString.getValue() >= fix.BeginString_FIX44:
+				executionReport.setField( fix.ExecType(fix.ExecType_TRADE) )
+			else:
+				executionReport.setField( fix.ExecType(fix.ExecType_FILL) )
 			executionReport.setField( fix.LeavesQty(0) )
 
 		try:
