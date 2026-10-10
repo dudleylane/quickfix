@@ -117,6 +117,7 @@
 #if (HAVE_SSL > 0)
 
 #include "Exceptions.h"
+#include "PortSetting.h"
 #include "SSLSocketAcceptor.h"
 #include "Session.h"
 #include "Settings.h"
@@ -173,7 +174,7 @@ void SSLSocketAcceptor::onConfigure(const SessionSettings &sessionSettings) EXCE
     for (const SessionID &sessionID : sessions)
     {
         const Dictionary &settings = sessionSettings.get(sessionID);
-        settings.getInt(SOCKET_ACCEPT_PORT);
+        getPortSetting(settings, SOCKET_ACCEPT_PORT, true);
         if (settings.has(SOCKET_REUSE_ADDRESS))
         {
             settings.getBool(SOCKET_REUSE_ADDRESS);
@@ -222,7 +223,7 @@ void SSLSocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXC
         m_sslInit = true;
     }
 
-    short port = 0;
+    uint16_t port = 0;
 
     try
     {
@@ -232,7 +233,7 @@ void SSLSocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXC
         for (const SessionID &sessionID : sessions)
         {
             const Dictionary &settings = sessionSettings.get(sessionID);
-            port = (short)settings.getInt(SOCKET_ACCEPT_PORT);
+            port = getPortSetting(settings, SOCKET_ACCEPT_PORT, true);
 
             const bool reuseAddress =
                 settings.has(SOCKET_REUSE_ADDRESS) ? settings.getBool(SOCKET_REUSE_ADDRESS) : true;
@@ -255,8 +256,8 @@ void SSLSocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXC
         // would leak with the server and make a retried start() fail to bind them again (#60).
         delete m_pServer;
         m_pServer = 0;
-        throw RuntimeError("Unable to create, bind, or listen to port " + IntConvertor::convert((unsigned short)port) +
-                           " (" + e.what() + ")");
+        throw RuntimeError("Unable to create, bind, or listen to port " + IntConvertor::convert(port) + " (" +
+                           e.what() + ")");
     }
 }
 

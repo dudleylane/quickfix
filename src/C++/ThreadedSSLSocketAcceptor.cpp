@@ -116,6 +116,7 @@
 
 #if (HAVE_SSL > 0)
 
+#include "PortSetting.h"
 #include "Session.h"
 #include "Settings.h"
 #include "ThreadedSSLSocketAcceptor.h"
@@ -165,7 +166,7 @@ void ThreadedSSLSocketAcceptor::onConfigure(const SessionSettings &s) EXCEPT(Con
     for (i = sessions.begin(); i != sessions.end(); ++i)
     {
         const Dictionary &settings = s.get(*i);
-        settings.getInt(SOCKET_ACCEPT_PORT);
+        getPortSetting(settings, SOCKET_ACCEPT_PORT, true);
         if (settings.has(SOCKET_REUSE_ADDRESS))
         {
             settings.getBool(SOCKET_REUSE_ADDRESS);
@@ -216,7 +217,7 @@ void ThreadedSSLSocketAcceptor::onInitialize(const SessionSettings &s) EXCEPT(Ru
         m_sslInit = true;
     }
 
-    short port = 0;
+    uint16_t port = 0;
     std::set<int> ports;
 
     std::set<SessionID> sessions = s.getSessions();
@@ -224,7 +225,7 @@ void ThreadedSSLSocketAcceptor::onInitialize(const SessionSettings &s) EXCEPT(Ru
     for (; i != sessions.end(); ++i)
     {
         const Dictionary &settings = s.get(*i);
-        port = (short)settings.getInt(SOCKET_ACCEPT_PORT);
+        port = getPortSetting(settings, SOCKET_ACCEPT_PORT, true);
 
         m_portToSessions[port].insert(*i);
 
@@ -248,8 +249,8 @@ void ThreadedSSLSocketAcceptor::onInitialize(const SessionSettings &s) EXCEPT(Ru
         {
             SocketException e;
             socket_close(socket);
-            throw RuntimeError("Unable to create, bind, or listen to port " +
-                               IntConvertor::convert((unsigned short)port) + " (" + e.what() + ")");
+            throw RuntimeError("Unable to create, bind, or listen to port " + IntConvertor::convert(port) + " (" +
+                               e.what() + ")");
         }
         if (noDelay)
         {

@@ -1,6 +1,7 @@
 #ifndef FIX_HOSTDETAILSPROVIDER_H
 #define FIX_HOSTDETAILSPROVIDER_H
 
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <optional>
@@ -15,9 +16,9 @@ class SessionID;
 struct HostDetails
 {
     std::string address;
-    short port{0};
+    uint16_t port{0};
     std::string sourceAddress;
-    short sourcePort{0};
+    uint16_t sourcePort{0};
 };
 
 class HostDetailsProvider

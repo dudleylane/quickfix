@@ -847,3 +847,40 @@ TEST_CASE("ReactorTeardownTests")
         ::close(peer);
     }
 }
+
+// SocketAcceptPort was truncated to short, so 70000 listened on 4464 without a word (#99); 0 still means any. The SSL
+// acceptors share the check but also validate certificates in onConfigure, so a ConfigError from
+// them here would not show which check fired.
+TEST_CASE("AcceptPortRangeTests")
+{
+    auto settingsFor = [](const std::string &port)
+    {
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=acceptor\nSocketAcceptPort=" << port
+               << "\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n"
+               << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=PORTRANGE\nTargetCompID=TW\n";
+        return SessionSettings(config);
+    };
+    NullApplication application;
+    MemoryStoreFactory factory;
+
+    for (const std::string port : {"70000", "65536", "-1"})
+    {
+        INFO("SocketAcceptPort=" << port);
+        SessionSettings settings = settingsFor(port);
+        {
+            SocketAcceptor acceptor(application, factory, settings);
+            CHECK_THROWS_AS(acceptor.start(), ConfigError);
+        }
+        {
+            ThreadedSocketAcceptor acceptor(application, factory, settings);
+            CHECK_THROWS_AS(acceptor.start(), ConfigError);
+        }
+    }
+
+    // 0 lets the kernel choose a port, which the tests rely on.
+    SessionSettings any = settingsFor("0");
+    ThreadedSocketAcceptor acceptor(application, factory, any);
+    CHECK_NOTHROW(acceptor.start());
+    acceptor.stop();
+}

@@ -325,7 +325,7 @@ void ThreadedSSLSocketInitiator::doConnect(const SessionID &s, const Dictionary 
         }
 
         setPending(s);
-        log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert((unsigned short)host.port) +
+        log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert(host.port) +
                      " ReconnectInterval=" + IntConvertor::convert((int)m_reconnectInterval));
 
         SSL *ssl = SSL_new(m_ctx);

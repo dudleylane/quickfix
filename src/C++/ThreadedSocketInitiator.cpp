@@ -162,8 +162,8 @@ void ThreadedSocketInitiator::doConnect(const SessionID &s, const Dictionary &d)
         }
 
         setPending(s);
-        log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert((unsigned short)host.port) +
-                     " (Source " + host.sourceAddress + ":" + IntConvertor::convert((unsigned short)host.sourcePort) +
+        log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert(host.port) + " (Source " +
+                     host.sourceAddress + ":" + IntConvertor::convert(host.sourcePort) +
                      ") ReconnectInterval=" + IntConvertor::convert((int)m_reconnectInterval));
 
         ThreadedSocketConnection *pConnection = new ThreadedSocketConnection(

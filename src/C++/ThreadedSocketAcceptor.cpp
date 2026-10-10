@@ -19,6 +19,7 @@
 
 #include "config.h"
 
+#include "PortSetting.h"
 #include "Session.h"
 #include "Settings.h"
 #include "ThreadedSocketAcceptor.h"
@@ -48,7 +49,7 @@ void ThreadedSocketAcceptor::onConfigure(const SessionSettings &sessionSettings)
     for (const SessionID &sessionID : sessionSettings.getSessions())
     {
         const Dictionary &settings = sessionSettings.get(sessionID);
-        settings.getInt(SOCKET_ACCEPT_PORT);
+        getPortSetting(settings, SOCKET_ACCEPT_PORT, true);
         if (settings.has(SOCKET_REUSE_ADDRESS))
         {
             settings.getBool(SOCKET_REUSE_ADDRESS);
@@ -62,13 +63,13 @@ void ThreadedSocketAcceptor::onConfigure(const SessionSettings &sessionSettings)
 
 void ThreadedSocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXCEPT(RuntimeError)
 {
-    short port = 0;
+    uint16_t port = 0;
     std::set<int> ports;
 
     for (const SessionID &sessionID : sessionSettings.getSessions())
     {
         const Dictionary &settings = sessionSettings.get(sessionID);
-        port = (short)settings.getInt(SOCKET_ACCEPT_PORT);
+        port = getPortSetting(settings, SOCKET_ACCEPT_PORT, true);
 
         m_portToSessions[port].insert(sessionID);
 
@@ -92,8 +93,8 @@ void ThreadedSocketAcceptor::onInitialize(const SessionSettings &sessionSettings
         {
             SocketException e;
             socket_close(socket);
-            throw RuntimeError("Unable to create, bind, or listen to port " +
-                               IntConvertor::convert((unsigned short)port) + " (" + e.what() + ")");
+            throw RuntimeError("Unable to create, bind, or listen to port " + IntConvertor::convert(port) + " (" +
+                               e.what() + ")");
         }
         if (noDelay)
         {

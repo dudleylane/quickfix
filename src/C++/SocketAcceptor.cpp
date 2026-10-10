@@ -20,6 +20,7 @@
 #include "config.h"
 
 #include "Exceptions.h"
+#include "PortSetting.h"
 #include "Session.h"
 #include "Settings.h"
 #include "SocketAcceptor.h"
@@ -57,7 +58,7 @@ void SocketAcceptor::onConfigure(const SessionSettings &sessionSettings) EXCEPT(
     for (const SessionID &sessionID : sessionSettings.getSessions())
     {
         const Dictionary &settings = sessionSettings.get(sessionID);
-        settings.getInt(SOCKET_ACCEPT_PORT);
+        getPortSetting(settings, SOCKET_ACCEPT_PORT, true);
         if (settings.has(SOCKET_REUSE_ADDRESS))
         {
             settings.getBool(SOCKET_REUSE_ADDRESS);
@@ -80,7 +81,7 @@ void SocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXCEPT
         for (const SessionID &sessionID : sessionSettings.getSessions())
         {
             const Dictionary &settings = sessionSettings.get(sessionID);
-            port = (short)settings.getInt(SOCKET_ACCEPT_PORT);
+            port = getPortSetting(settings, SOCKET_ACCEPT_PORT, true);
 
             const bool reuseAddress =
                 settings.has(SOCKET_REUSE_ADDRESS) ? settings.getBool(SOCKET_REUSE_ADDRESS) : true;
@@ -102,8 +103,8 @@ void SocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXCEPT
     {
         delete m_pServer;
         m_pServer = 0;
-        throw RuntimeError("Unable to create, bind, or listen to port " + IntConvertor::convert((unsigned short)port) +
-                           " (" + e.what() + ")");
+        throw RuntimeError("Unable to create, bind, or listen to port " + IntConvertor::convert(port) + " (" +
+                           e.what() + ")");
     }
 }
 

@@ -147,8 +147,8 @@ void SocketInitiator::doConnect(const SessionID &s, const Dictionary &d)
             m_reconnectInterval = d.getInt(RECONNECT_INTERVAL);
         }
 
-        log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert((unsigned short)host.port) +
-                     " (Source " + host.sourceAddress + ":" + IntConvertor::convert((unsigned short)host.sourcePort) +
+        log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert(host.port) + " (Source " +
+                     host.sourceAddress + ":" + IntConvertor::convert(host.sourcePort) +
                      ") ReconnectInterval=" + IntConvertor::convert((int)m_reconnectInterval));
         socket_handle result = m_connector.connect(host.address, host.port, m_noDelay, m_sendBufSize, m_rcvBufSize,
                                                    host.sourceAddress, host.sourcePort);

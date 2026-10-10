@@ -155,4 +155,26 @@ TEST_CASE("HostDetailsProviderTests")
         CHECK(host.sourceAddress == "192.0.0.0");
         CHECK(std::to_string(host.sourcePort) == "7000");
     }
+
+    SECTION("getHost_PortsAreRangeChecked")
+    {
+        // Ports used to be truncated to short: 70000 connected to 4464, and 54321 read as -11215 (#99).
+        HostDetailsProvider detailsProvider;
+        Dictionary settings;
+        settings.setString("SocketConnectHost", "127.0.0.1");
+
+        settings.setString("SocketConnectPort", "54321");
+        settings.setString("SocketConnectSourcePort", "0");
+        HostDetails host = detailsProvider.getHost(SessionID(), settings);
+        CHECK(host.port == 54321);
+        CHECK(host.sourcePort == 0);
+
+        settings.setString("SocketConnectPort", "70000");
+        CHECK_THROWS_AS(detailsProvider.getHost(SessionID(), settings), ConfigError);
+        settings.setString("SocketConnectPort", "0");
+        CHECK_THROWS_AS(detailsProvider.getHost(SessionID(), settings), ConfigError);
+        settings.setString("SocketConnectPort", "8000");
+        settings.setString("SocketConnectSourcePort", "-1");
+        CHECK_THROWS_AS(detailsProvider.getHost(SessionID(), settings), ConfigError);
+    }
 }

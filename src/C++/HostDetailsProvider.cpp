@@ -1,4 +1,5 @@
 #include "HostDetailsProvider.h"
+#include "PortSetting.h"
 #include "SessionSettings.h"
 
 const std::string FIX::HostDetailsProvider::HOST_SELECTION_POLICY_PRIORITY = "PRIORITY";
@@ -79,7 +80,7 @@ bool FIX::HostDetailsProvider::populateHostDetails(int n, const Dictionary &d, H
     if (d.has(host) && d.has(port))
     {
         out.address = d.getString(host);
-        out.port = (short)d.getInt(port);
+        out.port = getPortSetting(d, port);
 
         if (d.has(sourceHost))
         {
@@ -88,7 +89,7 @@ bool FIX::HostDetailsProvider::populateHostDetails(int n, const Dictionary &d, H
 
         if (d.has(sourcePort))
         {
-            out.sourcePort = (short)d.getInt(sourcePort);
+            out.sourcePort = getPortSetting(d, sourcePort, true);
         }
 
         return true;
