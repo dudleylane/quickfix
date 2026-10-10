@@ -38,6 +38,7 @@
 #include "fix42/Heartbeat.h"
 #include "fix42/NewOrderSingle.h"
 #include "fix42/QuoteRequest.h"
+#include "fix50sp2/NewOrderSingle.h"
 #include "getopt-repl.h"
 #include <algorithm>
 #include <cmath>
@@ -75,6 +76,10 @@ long testValidateDictQuoteRequest(int);
 long testNoPoolHeartbeat(int);
 long testNoPoolNewOrderSingle(int);
 long testNoPoolQuoteRequest(int);
+long testCreateNewOrderSingleWithParties50SP2(int);
+long testSerializeNewOrderSingleWithParties50SP2(int);
+long testDeserializeNewOrderSingleWithParties50SP2(int);
+long testDeserializeAndValidateNewOrderSingleWithParties50SP2(int);
 long testSendOnSocket(int, short);
 long testSendOnThreadedSocket(int, short);
 
@@ -282,6 +287,11 @@ template <typename Fn> void run(const char *name, Fn fn, int count)
 }
 
 std::unique_ptr<FIX::DataDictionary> s_dataDictionary;
+// FIX 5.0 SP2 is where message_order's table form shows: every small group whose field numbers run
+// into the hundreds or above, NoPartyIDs among them, uses it since #86, and FIX 4.2's compact
+// numbers never do.
+std::unique_ptr<FIX::DataDictionary> s_fixtDictionary;
+std::unique_ptr<FIX::DataDictionary> s_fix50sp2Dictionary;
 const bool VALIDATE = true;
 const bool DONT_VALIDATE = false;
 
@@ -319,6 +329,8 @@ int main(int argc, char **argv)
         calibrateTsc();
 
         s_dataDictionary.reset(new FIX::DataDictionary("../spec/FIX42.xml"));
+        s_fixtDictionary.reset(new FIX::DataDictionary("../spec/FIXT11.xml"));
+        s_fix50sp2Dictionary.reset(new FIX::DataDictionary("../spec/FIX50SP2.xml"));
 
         run("Converting integers to strings", [&](int n) { return testIntegerToString(n); }, count);
 
@@ -387,6 +399,22 @@ int main(int argc, char **argv)
             count);
 
         run("Unpooled QuoteRequest (new Message each time)", [&](int n) { return testNoPoolQuoteRequest(n); }, count);
+
+        run(
+            "Creating FIX 5.0 SP2 NewOrderSingle messages with 3 parties",
+            [&](int n) { return testCreateNewOrderSingleWithParties50SP2(n); }, count);
+
+        run(
+            "Serializing FIX 5.0 SP2 NewOrderSingle messages with 3 parties",
+            [&](int n) { return testSerializeNewOrderSingleWithParties50SP2(n); }, count);
+
+        run(
+            "Deserializing FIX 5.0 SP2 NewOrderSingle messages with 3 parties",
+            [&](int n) { return testDeserializeNewOrderSingleWithParties50SP2(n); }, count);
+
+        run(
+            "Deserializing and validating FIX 5.0 SP2 NewOrderSingle messages with 3 parties",
+            [&](int n) { return testDeserializeAndValidateNewOrderSingleWithParties50SP2(n); }, count);
 
         run(
             "Sending/Receiving NewOrderSingle/ExecutionReports on Socket",
@@ -915,6 +943,71 @@ public:
 private:
     int m_count;
 };
+
+// A FIX 5.0 SP2 NewOrderSingle with three parties, complete enough to validate.
+FIX50SP2::NewOrderSingle newOrderSingleWithParties50SP2()
+{
+    FIX50SP2::NewOrderSingle message(FIX::ClOrdID("ORDERID"), FIX::Side(FIX::Side_BUY), FIX::TransactTime::now(),
+                                     FIX::OrdType(FIX::OrdType_MARKET));
+    message.set(FIX::Symbol("LNUX"));
+    message.set(FIX::OrderQty(100));
+
+    FIX50SP2::NewOrderSingle::NoPartyIDs party;
+    const char *ids[] = {"BROKER", "CLIENT", "DESK"};
+    const int roles[] = {FIX::PartyRole_EXECUTING_FIRM, FIX::PartyRole_CLIENT_ID, FIX::PartyRole_DESK_ID};
+    for (int i = 0; i < 3; ++i)
+    {
+        party.set(FIX::PartyID(ids[i]));
+        party.set(FIX::PartyIDSource(FIX::PartyIDSource_PROPRIETARY));
+        party.set(FIX::PartyRole(roles[i]));
+        message.addGroup(party);
+    }
+
+    message.getHeader().set(FIX::SenderCompID("SENDER"));
+    message.getHeader().set(FIX::TargetCompID("TARGET"));
+    message.getHeader().set(FIX::MsgSeqNum(1));
+    message.getHeader().set(FIX::SendingTime::now());
+    return message;
+}
+
+long testCreateNewOrderSingleWithParties50SP2(int count)
+{
+    count = count - 1;
+
+    // Building the group objects is part of the cost: each constructs its message_order.
+    return sampleLoop(count, [&] { newOrderSingleWithParties50SP2(); });
+}
+
+long testSerializeNewOrderSingleWithParties50SP2(int count)
+{
+    FIX50SP2::NewOrderSingle message = newOrderSingleWithParties50SP2();
+
+    count = count - 1;
+
+    return sampleLoop(count, [&] { message.toString(); });
+}
+
+long testDeserializeNewOrderSingleWithParties50SP2(int count)
+{
+    FIX50SP2::NewOrderSingle message = newOrderSingleWithParties50SP2();
+    std::string string = message.toString();
+
+    count = count - 1;
+
+    return sampleLoop(
+        count, [&] { message.setString(string, DONT_VALIDATE, s_fixtDictionary.get(), s_fix50sp2Dictionary.get()); });
+}
+
+long testDeserializeAndValidateNewOrderSingleWithParties50SP2(int count)
+{
+    FIX50SP2::NewOrderSingle message = newOrderSingleWithParties50SP2();
+    std::string string = message.toString();
+
+    count = count - 1;
+
+    return sampleLoop(count,
+                      [&] { message.setString(string, VALIDATE, s_fixtDictionary.get(), s_fix50sp2Dictionary.get()); });
+}
 
 long testSendOnSocket(int count, short port)
 {
