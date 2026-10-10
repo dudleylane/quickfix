@@ -10,11 +10,19 @@ require 'tmpdir'
 class TransportTestCase < Test::Unit::TestCase
 
 	def test_start_leaves_ruby_running
+		checkTransports('socket')
+	end
+
+	def test_start_leaves_ruby_running_threaded
+		checkTransports('threaded')
+	end
+
+	def checkTransports(kind)
 		port = TCPServer.open('127.0.0.1', 0) { |server| server.addr[1] }
 		Dir.mktmpdir do |dir|
 			child = File.join(__dir__, 'TransportChild.rb')
 			reader, writer = IO.pipe
-			pid = Process.spawn(RbConfig.ruby, '-I', File.expand_path('..', __dir__), child, dir, port.to_s,
+			pid = Process.spawn(RbConfig.ruby, '-I', File.expand_path('..', __dir__), child, dir, port.to_s, kind,
 				out: writer, err: writer)
 			writer.close
 			status = nil

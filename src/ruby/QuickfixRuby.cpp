@@ -2554,6 +2554,8 @@ template <typename T> T SwigValueInit() {
 #include <ruby/thread.h>
 
 #include <atomic>
+#include <condition_variable>
+#include <deque>
 #include <exception>
 #include <functional>
 #include <map>
@@ -2722,11 +2724,147 @@ VALUE isAcceptorBlocking(VALUE, VALUE object)
              : Qfalse;
 }
 
+// A thread Ruby did not create -- a connection thread of a threaded transport --
+// cannot enter Ruby at all, so its callbacks run on a Ruby thread made for them,
+// the dispatcher, while it waits (#104). The dispatcher starts with the first
+// adapter and waits for callbacks without the GVL; once it has ended, which
+// happens when Ruby ends its threads at exit, callbacks from such threads are
+// skipped, as a stopped transport thread's are.
+namespace
+{
+struct Dispatch
+{
+  const std::function<void()> *callback;
+  std::exception_ptr error;
+  bool done = false;
+};
+
+std::mutex g_dispatchMutex;
+std::condition_variable g_dispatchQueued;
+std::condition_variable g_dispatchDone;
+std::deque<Dispatch *> g_dispatchQueue;
+Dispatch *g_dispatching = nullptr;
+bool g_dispatcherRunning = false;
+bool g_dispatcherWoken = false;
+
+// Without the GVL: takes the next callback, or returns none when Ruby wakes the
+// dispatcher to deliver an interrupt.
+void *waitForDispatch(void *)
+{
+  std::unique_lock<std::mutex> lock(g_dispatchMutex);
+  g_dispatchQueued.wait(lock, []() { return !g_dispatchQueue.empty() || g_dispatcherWoken; });
+  g_dispatcherWoken = false;
+  if (g_dispatchQueue.empty())
+  {
+    return nullptr;
+  }
+  g_dispatching = g_dispatchQueue.front();
+  g_dispatchQueue.pop_front();
+  return g_dispatching;
+}
+
+void wakeDispatcher(void *)
+{
+  std::lock_guard<std::mutex> lock(g_dispatchMutex);
+  g_dispatcherWoken = true;
+  g_dispatchQueued.notify_all();
+}
+
+void finishDispatch(Dispatch *dispatch)
+{
+  std::lock_guard<std::mutex> lock(g_dispatchMutex);
+  dispatch->done = true;
+  g_dispatching = nullptr;
+  g_dispatchDone.notify_all();
+}
+
+// No C++ object with a destructor lives in this frame: rb_thread_check_ints
+// leaves it by longjmp when the thread is killed, and dispatcherEnded then
+// releases whatever was waiting.
+VALUE dispatcherLoop(VALUE)
+{
+  for (;;)
+  {
+    Dispatch *dispatch = static_cast<Dispatch *>(rb_thread_call_without_gvl2(waitForDispatch, 0, wakeDispatcher, 0));
+    rb_thread_check_ints();
+    if (dispatch)
+    {
+      try
+      {
+        (*dispatch->callback)();
+      }
+      catch (...)
+      {
+        dispatch->error = std::current_exception();
+      }
+      finishDispatch(dispatch);
+    }
+  }
+  return Qnil;
+}
+
+VALUE dispatcherEnded(VALUE)
+{
+  std::lock_guard<std::mutex> lock(g_dispatchMutex);
+  g_dispatcherRunning = false;
+  if (g_dispatching)
+  {
+    g_dispatching->done = true;
+    g_dispatching = nullptr;
+  }
+  for (Dispatch *dispatch : g_dispatchQueue)
+  {
+    dispatch->done = true;
+  }
+  g_dispatchQueue.clear();
+  g_dispatchDone.notify_all();
+  return Qnil;
+}
+
+VALUE dispatcherMain(void *) { return rb_ensure(dispatcherLoop, Qnil, dispatcherEnded, Qnil); }
+
+// Called with the GVL, which serialises it.
+void startDispatcher()
+{
+  static VALUE thread = Qnil;
+  if (thread != Qnil)
+  {
+    return;
+  }
+  {
+    std::lock_guard<std::mutex> lock(g_dispatchMutex);
+    g_dispatcherRunning = true;
+  }
+  thread = rb_thread_create(dispatcherMain, 0);
+  rb_gc_register_address(&thread);
+  rb_funcall(thread, rb_intern("name="), 1, rb_str_new_cstr("quickfix callbacks"));
+}
+
+void dispatch(const std::function<void()> &callback)
+{
+  Dispatch dispatch{&callback};
+  {
+    std::unique_lock<std::mutex> lock(g_dispatchMutex);
+    if (!g_dispatcherRunning)
+    {
+      return;
+    }
+    g_dispatchQueue.push_back(&dispatch);
+    g_dispatchQueued.notify_all();
+    g_dispatchDone.wait(lock, [&]() { return dispatch.done; });
+  }
+  if (dispatch.error)
+  {
+    std::rethrow_exception(dispatch.error);
+  }
+}
+}
+
 // Runs a callback into Ruby. A thread that holds the GVL calls straight through;
 // one that released it in withoutGvl takes it back for the call, and skips the
 // call once Ruby has asked that thread to stop, since the Ruby code would raise
-// into director:except, which exits the process. A thread Ruby did not create --
-// a connection thread of a threaded transport -- cannot enter Ruby at all.
+// into director:except, which exits the process. A thread Ruby did not create
+// hands the call to the dispatcher.
 void withGvl(const std::function<void()> &callback)
 {
   if (ruby_thread_has_gvl_p())
@@ -2736,9 +2874,8 @@ void withGvl(const std::function<void()> &callback)
   }
   if (!ruby_native_thread_p())
   {
-    fprintf(stderr, "quickfix: a callback into Ruby arrived on a thread Ruby did not create; "
-                    "the threaded transports cannot be used from Ruby\n");
-    abort();
+    dispatch(callback);
+    return;
   }
   if (t_withoutGvl && t_withoutGvl->unblocked)
   {
@@ -2783,6 +2920,7 @@ public:
     {
       return application;
     }
+    startDispatcher();
     static std::map<FIX::Application *, std::unique_ptr<RubyApplication>> adapters;
     std::unique_ptr<RubyApplication> &adapter = adapters[&application];
     if (!adapter)
@@ -2878,6 +3016,7 @@ public:
     {
       return factory;
     }
+    startDispatcher();
     static std::map<FIX::LogFactory *, std::unique_ptr<RubyLogFactory>> adapters;
     std::unique_ptr<RubyLogFactory> &adapter = adapters[&factory];
     if (!adapter)

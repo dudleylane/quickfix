@@ -5,7 +5,11 @@
 require 'quickfix_ruby'
 $stdout.sync = true
 
-dir, port = ARGV
+dir, port, kind = ARGV
+# The threaded transports call back on threads Ruby did not create (#104).
+acceptorClass, initiatorClass = kind == 'threaded' ?
+	[Quickfix::ThreadedSocketAcceptorBase, Quickfix::ThreadedSocketInitiatorBase] :
+	[Quickfix::SocketAcceptor, Quickfix::SocketInitiator]
 
 class App < Quickfix::Application
 	attr_reader :received
@@ -62,10 +66,10 @@ def order(id)
 end
 
 acceptorApp, initiatorApp, logFactory = App.new, App.new, CountingLogFactory.new
-acceptor = Quickfix::SocketAcceptor.new(acceptorApp, Quickfix::MemoryStoreFactory.new,
+acceptor = acceptorClass.new(acceptorApp, Quickfix::MemoryStoreFactory.new,
 	settings(dir, 'acceptor', "ConnectionType=acceptor\nSocketAcceptPort=#{port}\n" \
 		"[SESSION]\nBeginString=FIX.4.2\nSenderCompID=ACC\nTargetCompID=INI\n"), logFactory)
-initiator = Quickfix::SocketInitiator.new(initiatorApp, Quickfix::MemoryStoreFactory.new,
+initiator = initiatorClass.new(initiatorApp, Quickfix::MemoryStoreFactory.new,
 	settings(dir, 'initiator', "ConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=#{port}\n" \
 		"ReconnectInterval=1\nHeartBtInt=30\n[SESSION]\nBeginString=FIX.4.2\nSenderCompID=INI\nTargetCompID=ACC\n"))
 

@@ -5,7 +5,11 @@
 require 'quickfix_ruby'
 $stdout.sync = true
 
-dir, port = ARGV
+dir, port, kind = ARGV
+# The threaded transports call back on threads Ruby did not create (#104).
+acceptorClass, initiatorClass = kind == 'threaded' ?
+	[Quickfix::ThreadedSocketAcceptorBase, Quickfix::ThreadedSocketInitiatorBase] :
+	[Quickfix::SocketAcceptor, Quickfix::SocketInitiator]
 
 class App < Quickfix::Application
 	def onCreate(sessionID); end
@@ -36,13 +40,13 @@ def settings(dir, name, body)
 	Quickfix::SessionSettings.new("#{dir}/#{name}.cfg")
 end
 
-acceptor = Quickfix::SocketAcceptor.new(App.new, Quickfix::MemoryStoreFactory.new,
+acceptor = acceptorClass.new(App.new, Quickfix::MemoryStoreFactory.new,
 	settings(dir, 'acceptor', "ConnectionType=acceptor\nSocketAcceptPort=#{port}\n" \
 		"[SESSION]\nBeginString=FIX.4.2\nSenderCompID=ACC\nTargetCompID=INI\n"), QuietLogFactory.new)
-initiator = Quickfix::SocketInitiator.new(App.new, Quickfix::MemoryStoreFactory.new,
+initiator = initiatorClass.new(App.new, Quickfix::MemoryStoreFactory.new,
 	settings(dir, 'initiator', "ConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=#{port}\n" \
 		"ReconnectInterval=1\nHeartBtInt=30\n[SESSION]\nBeginString=FIX.4.2\nSenderCompID=INI\nTargetCompID=ACC\n"))
-idle = Quickfix::SocketAcceptor.new(App.new, Quickfix::MemoryStoreFactory.new,
+idle = acceptorClass.new(App.new, Quickfix::MemoryStoreFactory.new,
 	settings(dir, 'idle', "ConnectionType=acceptor\nSocketAcceptPort=#{port}\n" \
 		"[SESSION]\nBeginString=FIX.4.4\nSenderCompID=IDLE\nTargetCompID=NONE\n"))
 
