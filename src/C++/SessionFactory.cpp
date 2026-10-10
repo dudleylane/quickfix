@@ -295,8 +295,9 @@ std::shared_ptr<DataDictionary> SessionFactory::createDataDictionary(const Sessi
     // Sessions share dictionaries. Each file is parsed once per PreserveMessageFieldsOrder value, and
     // sessions whose four validation flags agree share one dictionary with those flags applied; with
     // none set they use the parsed one as it is. A per-session copy used to cost each session the
-    // whole dictionary -- some 55 MB for FIX 5.0 SP2 -- for at most four flags (#68). Sharing is
-    // safe because a loaded dictionary is read-only and the flags are set here, before it is shared.
+    // whole dictionary -- about 75 MB for FIX 5.0 SP2, and 3.8 GB before #86 -- for at most four flags
+    // (#68). Sharing is safe because a loaded dictionary is read-only and the flags are set here,
+    // before it is shared.
     const std::string path = settings.getString(settingsKey);
     const bool preserveMsgFldsOrder =
         settings.has(PRESERVE_MESSAGE_FIELDS_ORDER) ? settings.getBool(PRESERVE_MESSAGE_FIELDS_ORDER) : false;
