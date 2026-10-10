@@ -73,6 +73,9 @@ initiator = initiatorClass.new(initiatorApp, Quickfix::MemoryStoreFactory.new,
 	settings(dir, 'initiator', "ConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=#{port}\n" \
 		"ReconnectInterval=1\nHeartBtInt=30\n[SESSION]\nBeginString=FIX.4.2\nSenderCompID=INI\nTargetCompID=ACC\n"))
 
+# What a transport was made with must outlive a collection (#107).
+5.times { GC.start(full_mark: true, immediate_sweep: true) }
+
 puts "application=#{acceptor.getApplication.equal?(acceptorApp) && initiator.getApplication.equal?(initiatorApp)}"
 acceptorThread = acceptor.start
 initiatorThread = initiator.start

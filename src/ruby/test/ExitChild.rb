@@ -50,6 +50,9 @@ idle = acceptorClass.new(App.new, Quickfix::MemoryStoreFactory.new,
 	settings(dir, 'idle', "ConnectionType=acceptor\nSocketAcceptPort=#{port}\n" \
 		"[SESSION]\nBeginString=FIX.4.4\nSenderCompID=IDLE\nTargetCompID=NONE\n"))
 
+# What a transport was made with must outlive a collection (#107).
+5.times { GC.start(full_mark: true, immediate_sweep: true) }
+
 acceptor.start
 initiator.start
 deadline = Time.now + 20

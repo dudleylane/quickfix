@@ -52,6 +52,22 @@ module Quickfix
 		end
 	end
 
+	# An initiator or acceptor holds C++ references to the application, store
+	# factory, settings and log factory it was made with, so they must live as
+	# long as it does: keep them on the Ruby object, whichever class made it
+	# (#107).
+	module KeepsArguments
+		def initialize(*args)
+			super
+			@quickfixArguments = args
+		end
+	end
+
+	constants.map { |name| const_get(name) }.each do |klass|
+		next unless klass.is_a?(Class) && (klass < Initiator || klass < Acceptor)
+		klass.prepend(KeepsArguments)
+	end
+
 	# At exit Ruby frees every object in no particular order, and an initiator or
 	# acceptor freed after its store factory, log factory or application used them
 	# from its destructor, which crashed the process (#105). at_exit runs before
