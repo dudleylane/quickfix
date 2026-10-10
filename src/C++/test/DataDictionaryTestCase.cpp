@@ -1975,3 +1975,36 @@ TEST_CASE("DataDictionaryComponentLookupTests")
         CHECK(!dd->isRequiredField("7", 48));
     }
 }
+
+// FIX 5.0 SP2 numbers fields up to 50002 and has 725 components, so it is where a per-field or
+// per-group cost in how a dictionary is stored shows first: until #86 a loaded SP2 dictionary held
+// 3.8 GB, and no test loaded one. It holds about 75 MB.
+TEST_CASE("DataDictionaryMemoryTests")
+{
+    auto residentKB = []
+    {
+        std::ifstream status("/proc/self/status");
+        std::string line;
+        while (std::getline(status, line))
+        {
+            if (line.rfind("VmRSS:", 0) == 0)
+            {
+                return std::stol(line.substr(6));
+            }
+        }
+        return -1L;
+    };
+
+    SECTION("aLoadedFix50Sp2DictionaryStaysUnderTheBound")
+    {
+        const long before = residentKB();
+        DataDictionary dictionary(FIX::TestSettings::pathForSpec("FIX50SP2"));
+        const long after = residentKB();
+
+        REQUIRE(before > 0);
+        INFO("resident set grew by " << (after - before) / 1024 << " MB");
+        // About 66 MB here, 250 MB under TSan and 325 MB under ASan; the regression was 3.8 GB.
+        CHECK(after - before < 1024 * 1024L);
+        CHECK(dictionary.isMsgType("AE"));
+    }
+}
