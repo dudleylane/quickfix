@@ -1,16 +1,414 @@
+%define QUICKFIX_RUBY_EXCEPTION
 %exception
 {
-  if(tryRubyException([&]() mutable 
-  { 
+  if(tryRubyException([&]() mutable
+  {
     $action
     return self;
   fail:
     return Qnil;
-  }) == Qnil) 
+  }) == Qnil)
   {
     SWIG_fail;
   }
 }
+%enddef
+
+// Ruby has no counterpart to the -threads option the Python binding is built
+// with, so the calls that can block on the engine or call back into Ruby release
+// the GVL by hand: every method of Session, Initiator and Acceptor (../quickfix.i
+// applies this around their headers), and the callbacks take it back through the
+// adapters below. Without it the thread Initiator#start and Acceptor#start create
+// held the GVL for as long as the transport ran, and no other Ruby thread ran
+// again (#102).
+%define QUICKFIX_RUBY_EXCEPTION_WITHOUT_GVL
+%exception
+{
+  if(tryRubyException([&]() mutable
+  {
+    return withoutGvl([&]() mutable -> VALUE
+    {
+      $action
+      return self;
+    });
+  }) == Qnil)
+  {
+    SWIG_fail;
+  }
+}
+%enddef
+
+QUICKFIX_RUBY_EXCEPTION
+
+// block() runs the transport until it is stopped, so Ruby gets a way to end it:
+// Thread#kill, or the threads being terminated at exit, stops the transport.
+%exception FIX::Initiator::block
+{
+  if(tryRubyException([&]() mutable
+  {
+    return blockWithoutGvl([&]() mutable -> VALUE
+    {
+      $action
+      return self;
+    }, *arg1);
+  }) == Qnil)
+  {
+    SWIG_fail;
+  }
+}
+
+%exception FIX::Acceptor::block
+{
+  if(tryRubyException([&]() mutable
+  {
+    return blockWithoutGvl([&]() mutable -> VALUE
+    {
+      $action
+      return self;
+    }, *arg1);
+  }) == Qnil)
+  {
+    SWIG_fail;
+  }
+}
+
+// An Application, LogFactory or Log implemented in Ruby is handed to the engine
+// behind an adapter that takes the GVL before calling it.
+%typemap(in) FIX::Application & (void *argp = 0, int res = 0) {
+  res = SWIG_ConvertPtr($input, &argp, $descriptor(FIX::Application *), 0);
+  if (!SWIG_IsOK(res)) {
+    SWIG_exception_fail(SWIG_ArgError(res), Ruby_Format_TypeError("", "FIX::Application &", "$symname", $argnum, $input));
+  }
+  if (!argp) {
+    SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "$symname", $argnum, $input));
+  }
+  $1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp));
+}
+
+%typemap(out) FIX::Application & {
+  $result = SWIG_NewPointerObj(SWIG_as_voidptr(&RubyApplication::unadapt(*$1)), $descriptor(FIX::Application *), 0);
+  if (Swig::Director *director = dynamic_cast<Swig::Director *>(&RubyApplication::unadapt(*$1))) {
+    $result = director->swig_get_self();
+  }
+}
+
+%typemap(in) FIX::LogFactory & (void *argp = 0, int res = 0) {
+  res = SWIG_ConvertPtr($input, &argp, $descriptor(FIX::LogFactory *), 0);
+  if (!SWIG_IsOK(res)) {
+    SWIG_exception_fail(SWIG_ArgError(res), Ruby_Format_TypeError("", "FIX::LogFactory &", "$symname", $argnum, $input));
+  }
+  if (!argp) {
+    SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &", "$symname", $argnum, $input));
+  }
+  $1 = &RubyLogFactory::adapt(*reinterpret_cast<FIX::LogFactory *>(argp));
+}
+
+%{
+#include <Acceptor.h>
+#include <Application.h>
+#include <Initiator.h>
+#include <Log.h>
+#include <ruby/thread.h>
+
+#include <atomic>
+#include <exception>
+#include <functional>
+#include <map>
+#include <memory>
+#include <thread>
+
+// Exported by libruby, but declared only in its internal headers.
+extern "C" int ruby_thread_has_gvl_p(void);
+
+namespace
+{
+struct WithoutGvl
+{
+  std::function<VALUE()> *call;
+  std::function<void()> *unblock;
+  VALUE result = Qnil;
+  std::exception_ptr error;
+  bool ran = false;
+  std::atomic<bool> unblocked{false};
+};
+
+// The call this thread made without the GVL, if any.
+thread_local WithoutGvl *t_withoutGvl = nullptr;
+
+void *runWithoutGvl(void *p)
+{
+  WithoutGvl *w = static_cast<WithoutGvl *>(p);
+  WithoutGvl *outer = t_withoutGvl;
+  t_withoutGvl = w;
+  w->ran = true;
+  try
+  {
+    w->result = (*w->call)();
+  }
+  catch (...)
+  {
+    w->error = std::current_exception();
+  }
+  t_withoutGvl = outer;
+  return nullptr;
+}
+
+// Ruby calls this from another thread, holding its own locks, so it must not
+// block.
+void unblockWithoutGvl(void *p)
+{
+  WithoutGvl *w = static_cast<WithoutGvl *>(p);
+  w->unblocked = true;
+  (*w->unblock)();
+}
+
+}
+
+// Makes call with the GVL released. rb_thread_call_without_gvl2 rather than
+// rb_thread_call_without_gvl: it never raises, so no Ruby exception unwinds
+// through the C++ frames here. It skips the call if an interrupt is already
+// pending; a call that cannot be unblocked then runs with the GVL held, and
+// block() returns at once, to be interrupted.
+VALUE withoutGvl(std::function<VALUE()> call, std::function<void()> unblock = {})
+{
+  WithoutGvl w{&call, &unblock};
+  rb_thread_call_without_gvl2(runWithoutGvl, &w, unblock ? unblockWithoutGvl : nullptr, &w);
+  if (!w.ran)
+  {
+    return unblock ? Qnil : call();
+  }
+  if (w.error)
+  {
+    std::rethrow_exception(w.error);
+  }
+  return w.result;
+}
+
+// block() without the GVL. When Ruby asks the thread to stop, a thread of its
+// own calls stop(true) -- the unblock function may not block, and stop() takes
+// engine locks -- and block() returns once the transport has stopped. That
+// thread never enters Ruby, and is joined before this returns.
+template <typename Transport>
+VALUE blockWithoutGvl(std::function<VALUE()> call, Transport &transport)
+{
+  std::thread stopper;
+  struct Join
+  {
+    std::thread &thread;
+    ~Join()
+    {
+      if (thread.joinable())
+      {
+        thread.join();
+      }
+    }
+  } join{stopper};
+  return withoutGvl(std::move(call),
+                    [&]()
+                    {
+                      if (!stopper.joinable())
+                      {
+                        stopper = std::thread([&transport]() { transport.stop(true); });
+                      }
+                    });
+}
+
+// Runs a callback into Ruby. A thread that holds the GVL calls straight through;
+// one that released it in withoutGvl takes it back for the call, and skips the
+// call once Ruby has asked that thread to stop, since the Ruby code would raise
+// into director:except, which exits the process. A thread Ruby did not create --
+// a connection thread of a threaded transport -- cannot enter Ruby at all.
+void withGvl(const std::function<void()> &callback)
+{
+  if (ruby_thread_has_gvl_p())
+  {
+    callback();
+    return;
+  }
+  if (!ruby_native_thread_p())
+  {
+    fprintf(stderr, "quickfix: a callback into Ruby arrived on a thread Ruby did not create; "
+                    "the threaded transports cannot be used from Ruby\n");
+    abort();
+  }
+  if (t_withoutGvl && t_withoutGvl->unblocked)
+  {
+    return;
+  }
+
+  struct Call
+  {
+    const std::function<void()> &callback;
+    std::exception_ptr error;
+  } call{callback};
+  rb_thread_call_with_gvl(
+      [](void *p) -> void *
+      {
+        Call *c = static_cast<Call *>(p);
+        try
+        {
+          c->callback();
+        }
+        catch (...)
+        {
+          c->error = std::current_exception();
+        }
+        return nullptr;
+      },
+      &call);
+  if (call.error)
+  {
+    std::rethrow_exception(call.error);
+  }
+}
+
+// One adapter per Ruby object, kept for the life of the process: an acceptor or
+// initiator holds a reference to it, and Ruby gives no hook for when that ends.
+// Created while the caller holds the GVL, which serialises the maps.
+class RubyApplication : public FIX::Application
+{
+public:
+  static FIX::Application &adapt(FIX::Application &application)
+  {
+    if (!dynamic_cast<Swig::Director *>(&application))
+    {
+      return application;
+    }
+    static std::map<FIX::Application *, std::unique_ptr<RubyApplication>> adapters;
+    std::unique_ptr<RubyApplication> &adapter = adapters[&application];
+    if (!adapter)
+    {
+      adapter.reset(new RubyApplication(application));
+    }
+    return *adapter;
+  }
+
+  static FIX::Application &unadapt(FIX::Application &application)
+  {
+    RubyApplication *adapter = dynamic_cast<RubyApplication *>(&application);
+    return adapter ? adapter->m_application : application;
+  }
+
+  void onCreate(const FIX::SessionID &sessionID) override
+  {
+    withGvl([&]() { m_application.onCreate(sessionID); });
+  }
+  void onLogon(const FIX::SessionID &sessionID) override
+  {
+    withGvl([&]() { m_application.onLogon(sessionID); });
+  }
+  void onLogout(const FIX::SessionID &sessionID) override
+  {
+    withGvl([&]() { m_application.onLogout(sessionID); });
+  }
+  void toAdmin(FIX::Message &message, const FIX::SessionID &sessionID) override
+  {
+    withGvl([&]() { m_application.toAdmin(message, sessionID); });
+  }
+  void toApp(FIX::Message &message, const FIX::SessionID &sessionID) EXCEPT(FIX::DoNotSend) override
+  {
+    withGvl([&]() { m_application.toApp(message, sessionID); });
+  }
+  void fromAdmin(const FIX::Message &message, const FIX::SessionID &sessionID)
+      EXCEPT(FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::RejectLogon) override
+  {
+    withGvl([&]() { m_application.fromAdmin(message, sessionID); });
+  }
+  void fromApp(const FIX::Message &message, const FIX::SessionID &sessionID)
+      EXCEPT(FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::UnsupportedMessageType) override
+  {
+    withGvl([&]() { m_application.fromApp(message, sessionID); });
+  }
+
+private:
+  explicit RubyApplication(FIX::Application &application) : m_application(application) {}
+
+  FIX::Application &m_application;
+};
+
+class RubyLog : public FIX::Log
+{
+public:
+  explicit RubyLog(FIX::Log &log) : m_log(log) {}
+
+  FIX::Log &log() { return m_log; }
+
+  void clear() override
+  {
+    withGvl([&]() { m_log.clear(); });
+  }
+  void backup() override
+  {
+    withGvl([&]() { m_log.backup(); });
+  }
+  void onIncoming(const std::string &value) override
+  {
+    withGvl([&]() { m_log.onIncoming(value); });
+  }
+  void onOutgoing(const std::string &value) override
+  {
+    withGvl([&]() { m_log.onOutgoing(value); });
+  }
+  void onEvent(const std::string &value) override
+  {
+    withGvl([&]() { m_log.onEvent(value); });
+  }
+
+private:
+  FIX::Log &m_log;
+};
+
+// The engine creates and destroys logs through the factory, so the factory
+// adapter wraps each log it creates and unwraps it on the way back.
+class RubyLogFactory : public FIX::LogFactory
+{
+public:
+  static FIX::LogFactory &adapt(FIX::LogFactory &factory)
+  {
+    if (!dynamic_cast<Swig::Director *>(&factory))
+    {
+      return factory;
+    }
+    static std::map<FIX::LogFactory *, std::unique_ptr<RubyLogFactory>> adapters;
+    std::unique_ptr<RubyLogFactory> &adapter = adapters[&factory];
+    if (!adapter)
+    {
+      adapter.reset(new RubyLogFactory(factory));
+    }
+    return *adapter;
+  }
+
+  FIX::Log *create() override
+  {
+    FIX::Log *log = nullptr;
+    withGvl([&]() { log = m_factory.create(); });
+    return wrap(log);
+  }
+  FIX::Log *create(const FIX::SessionID &sessionID) override
+  {
+    FIX::Log *log = nullptr;
+    withGvl([&]() { log = m_factory.create(sessionID); });
+    return wrap(log);
+  }
+  void destroy(FIX::Log *log) override
+  {
+    RubyLog *adapter = dynamic_cast<RubyLog *>(log);
+    FIX::Log *inner = adapter ? &adapter->log() : log;
+    withGvl([&]() { m_factory.destroy(inner); });
+    delete adapter;
+  }
+
+private:
+  explicit RubyLogFactory(FIX::LogFactory &factory) : m_factory(factory) {}
+
+  static FIX::Log *wrap(FIX::Log *log)
+  {
+    return log && dynamic_cast<Swig::Director *>(log) ? new RubyLog(*log) : log;
+  }
+
+  FIX::LogFactory &m_factory;
+};
+%}
 
 %rename(_getFieldName) FIX::DataDictionary::getFieldName;
 %rename(_getValueName) FIX::DataDictionary::getValueName;

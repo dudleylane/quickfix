@@ -2547,6 +2547,312 @@ template <typename T> T SwigValueInit() {
 #include <stdexcept>
 
 
+#include <Acceptor.h>
+#include <Application.h>
+#include <Initiator.h>
+#include <Log.h>
+#include <ruby/thread.h>
+
+#include <atomic>
+#include <exception>
+#include <functional>
+#include <map>
+#include <memory>
+#include <thread>
+
+// Exported by libruby, but declared only in its internal headers.
+extern "C" int ruby_thread_has_gvl_p(void);
+
+namespace
+{
+struct WithoutGvl
+{
+  std::function<VALUE()> *call;
+  std::function<void()> *unblock;
+  VALUE result = Qnil;
+  std::exception_ptr error;
+  bool ran = false;
+  std::atomic<bool> unblocked{false};
+};
+
+// The call this thread made without the GVL, if any.
+thread_local WithoutGvl *t_withoutGvl = nullptr;
+
+void *runWithoutGvl(void *p)
+{
+  WithoutGvl *w = static_cast<WithoutGvl *>(p);
+  WithoutGvl *outer = t_withoutGvl;
+  t_withoutGvl = w;
+  w->ran = true;
+  try
+  {
+    w->result = (*w->call)();
+  }
+  catch (...)
+  {
+    w->error = std::current_exception();
+  }
+  t_withoutGvl = outer;
+  return nullptr;
+}
+
+// Ruby calls this from another thread, holding its own locks, so it must not
+// block.
+void unblockWithoutGvl(void *p)
+{
+  WithoutGvl *w = static_cast<WithoutGvl *>(p);
+  w->unblocked = true;
+  (*w->unblock)();
+}
+
+}
+
+// Makes call with the GVL released. rb_thread_call_without_gvl2 rather than
+// rb_thread_call_without_gvl: it never raises, so no Ruby exception unwinds
+// through the C++ frames here. It skips the call if an interrupt is already
+// pending; a call that cannot be unblocked then runs with the GVL held, and
+// block() returns at once, to be interrupted.
+VALUE withoutGvl(std::function<VALUE()> call, std::function<void()> unblock = {})
+{
+  WithoutGvl w{&call, &unblock};
+  rb_thread_call_without_gvl2(runWithoutGvl, &w, unblock ? unblockWithoutGvl : nullptr, &w);
+  if (!w.ran)
+  {
+    return unblock ? Qnil : call();
+  }
+  if (w.error)
+  {
+    std::rethrow_exception(w.error);
+  }
+  return w.result;
+}
+
+// block() without the GVL. When Ruby asks the thread to stop, a thread of its
+// own calls stop(true) -- the unblock function may not block, and stop() takes
+// engine locks -- and block() returns once the transport has stopped. That
+// thread never enters Ruby, and is joined before this returns.
+template <typename Transport>
+VALUE blockWithoutGvl(std::function<VALUE()> call, Transport &transport)
+{
+  std::thread stopper;
+  struct Join
+  {
+    std::thread &thread;
+    ~Join()
+    {
+      if (thread.joinable())
+      {
+        thread.join();
+      }
+    }
+  } join{stopper};
+  return withoutGvl(std::move(call),
+                    [&]()
+                    {
+                      if (!stopper.joinable())
+                      {
+                        stopper = std::thread([&transport]() { transport.stop(true); });
+                      }
+                    });
+}
+
+// Runs a callback into Ruby. A thread that holds the GVL calls straight through;
+// one that released it in withoutGvl takes it back for the call, and skips the
+// call once Ruby has asked that thread to stop, since the Ruby code would raise
+// into director:except, which exits the process. A thread Ruby did not create --
+// a connection thread of a threaded transport -- cannot enter Ruby at all.
+void withGvl(const std::function<void()> &callback)
+{
+  if (ruby_thread_has_gvl_p())
+  {
+    callback();
+    return;
+  }
+  if (!ruby_native_thread_p())
+  {
+    fprintf(stderr, "quickfix: a callback into Ruby arrived on a thread Ruby did not create; "
+                    "the threaded transports cannot be used from Ruby\n");
+    abort();
+  }
+  if (t_withoutGvl && t_withoutGvl->unblocked)
+  {
+    return;
+  }
+
+  struct Call
+  {
+    const std::function<void()> &callback;
+    std::exception_ptr error;
+  } call{callback};
+  rb_thread_call_with_gvl(
+      [](void *p) -> void *
+      {
+        Call *c = static_cast<Call *>(p);
+        try
+        {
+          c->callback();
+        }
+        catch (...)
+        {
+          c->error = std::current_exception();
+        }
+        return nullptr;
+      },
+      &call);
+  if (call.error)
+  {
+    std::rethrow_exception(call.error);
+  }
+}
+
+// One adapter per Ruby object, kept for the life of the process: an acceptor or
+// initiator holds a reference to it, and Ruby gives no hook for when that ends.
+// Created while the caller holds the GVL, which serialises the maps.
+class RubyApplication : public FIX::Application
+{
+public:
+  static FIX::Application &adapt(FIX::Application &application)
+  {
+    if (!dynamic_cast<Swig::Director *>(&application))
+    {
+      return application;
+    }
+    static std::map<FIX::Application *, std::unique_ptr<RubyApplication>> adapters;
+    std::unique_ptr<RubyApplication> &adapter = adapters[&application];
+    if (!adapter)
+    {
+      adapter.reset(new RubyApplication(application));
+    }
+    return *adapter;
+  }
+
+  static FIX::Application &unadapt(FIX::Application &application)
+  {
+    RubyApplication *adapter = dynamic_cast<RubyApplication *>(&application);
+    return adapter ? adapter->m_application : application;
+  }
+
+  void onCreate(const FIX::SessionID &sessionID) override
+  {
+    withGvl([&]() { m_application.onCreate(sessionID); });
+  }
+  void onLogon(const FIX::SessionID &sessionID) override
+  {
+    withGvl([&]() { m_application.onLogon(sessionID); });
+  }
+  void onLogout(const FIX::SessionID &sessionID) override
+  {
+    withGvl([&]() { m_application.onLogout(sessionID); });
+  }
+  void toAdmin(FIX::Message &message, const FIX::SessionID &sessionID) override
+  {
+    withGvl([&]() { m_application.toAdmin(message, sessionID); });
+  }
+  void toApp(FIX::Message &message, const FIX::SessionID &sessionID) EXCEPT(FIX::DoNotSend) override
+  {
+    withGvl([&]() { m_application.toApp(message, sessionID); });
+  }
+  void fromAdmin(const FIX::Message &message, const FIX::SessionID &sessionID)
+      EXCEPT(FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::RejectLogon) override
+  {
+    withGvl([&]() { m_application.fromAdmin(message, sessionID); });
+  }
+  void fromApp(const FIX::Message &message, const FIX::SessionID &sessionID)
+      EXCEPT(FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::UnsupportedMessageType) override
+  {
+    withGvl([&]() { m_application.fromApp(message, sessionID); });
+  }
+
+private:
+  explicit RubyApplication(FIX::Application &application) : m_application(application) {}
+
+  FIX::Application &m_application;
+};
+
+class RubyLog : public FIX::Log
+{
+public:
+  explicit RubyLog(FIX::Log &log) : m_log(log) {}
+
+  FIX::Log &log() { return m_log; }
+
+  void clear() override
+  {
+    withGvl([&]() { m_log.clear(); });
+  }
+  void backup() override
+  {
+    withGvl([&]() { m_log.backup(); });
+  }
+  void onIncoming(const std::string &value) override
+  {
+    withGvl([&]() { m_log.onIncoming(value); });
+  }
+  void onOutgoing(const std::string &value) override
+  {
+    withGvl([&]() { m_log.onOutgoing(value); });
+  }
+  void onEvent(const std::string &value) override
+  {
+    withGvl([&]() { m_log.onEvent(value); });
+  }
+
+private:
+  FIX::Log &m_log;
+};
+
+// The engine creates and destroys logs through the factory, so the factory
+// adapter wraps each log it creates and unwraps it on the way back.
+class RubyLogFactory : public FIX::LogFactory
+{
+public:
+  static FIX::LogFactory &adapt(FIX::LogFactory &factory)
+  {
+    if (!dynamic_cast<Swig::Director *>(&factory))
+    {
+      return factory;
+    }
+    static std::map<FIX::LogFactory *, std::unique_ptr<RubyLogFactory>> adapters;
+    std::unique_ptr<RubyLogFactory> &adapter = adapters[&factory];
+    if (!adapter)
+    {
+      adapter.reset(new RubyLogFactory(factory));
+    }
+    return *adapter;
+  }
+
+  FIX::Log *create() override
+  {
+    FIX::Log *log = nullptr;
+    withGvl([&]() { log = m_factory.create(); });
+    return wrap(log);
+  }
+  FIX::Log *create(const FIX::SessionID &sessionID) override
+  {
+    FIX::Log *log = nullptr;
+    withGvl([&]() { log = m_factory.create(sessionID); });
+    return wrap(log);
+  }
+  void destroy(FIX::Log *log) override
+  {
+    RubyLog *adapter = dynamic_cast<RubyLog *>(log);
+    FIX::Log *inner = adapter ? &adapter->log() : log;
+    withGvl([&]() { m_factory.destroy(inner); });
+    delete adapter;
+  }
+
+private:
+  explicit RubyLogFactory(FIX::LogFactory &factory) : m_factory(factory) {}
+
+  static FIX::Log *wrap(FIX::Log *log)
+  {
+    return log && dynamic_cast<Swig::Director *>(log) ? new RubyLog(*log) : log;
+  }
+
+  FIX::LogFactory &m_factory;
+};
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -6696,13 +7002,13 @@ _wrap_GC_VALUE_inspect(int argc, VALUE *argv, VALUE self) {
   }
   r1 = self; arg1 = &r1;
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)((swig::GC_VALUE const *)arg1)->inspect();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -6734,13 +7040,13 @@ _wrap_GC_VALUE_to_s(int argc, VALUE *argv, VALUE self) {
   }
   r1 = self; arg1 = &r1;
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)((swig::GC_VALUE const *)arg1)->to_s();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -6777,7 +7083,7 @@ _wrap_ConstIterator_value(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::ConstIterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (VALUE)((swig::ConstIterator const *)arg1)->value();
@@ -6791,7 +7097,7 @@ _wrap_ConstIterator_value(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -6828,13 +7134,13 @@ _wrap_ConstIterator_dup(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::ConstIterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (swig::ConstIterator *)((swig::ConstIterator const *)arg1)->dup();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -6871,13 +7177,13 @@ _wrap_ConstIterator_inspect(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::ConstIterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)((swig::ConstIterator const *)arg1)->inspect();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -6914,13 +7220,13 @@ _wrap_ConstIterator_to_s(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::ConstIterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)((swig::ConstIterator const *)arg1)->to_s();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -6957,13 +7263,13 @@ _wrap_ConstIterator_next__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< size_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (swig::ConstIterator *)(arg1)->next(SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -6992,7 +7298,7 @@ _wrap_ConstIterator_next__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::ConstIterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (swig::ConstIterator *)(arg1)->next();
@@ -7006,7 +7312,7 @@ _wrap_ConstIterator_next__SWIG_1(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7088,13 +7394,13 @@ _wrap_ConstIterator_previous__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< size_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (swig::ConstIterator *)(arg1)->previous(SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7123,7 +7429,7 @@ _wrap_ConstIterator_previous__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::ConstIterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (swig::ConstIterator *)(arg1)->previous();
@@ -7137,7 +7443,7 @@ _wrap_ConstIterator_previous__SWIG_1(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7230,13 +7536,13 @@ _wrap_ConstIterator___eq__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< swig::ConstIterator * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((swig::ConstIterator const *)arg1)->operator ==((swig::ConstIterator const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7281,7 +7587,7 @@ _wrap_ConstIterator___add__(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< ptrdiff_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (swig::ConstIterator *)((swig::ConstIterator const *)arg1)->operator +(SWIG_STD_MOVE(arg2));
@@ -7295,7 +7601,7 @@ _wrap_ConstIterator___add__(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7341,7 +7647,7 @@ _wrap_ConstIterator___sub____SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< ptrdiff_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (swig::ConstIterator *)((swig::ConstIterator const *)arg1)->operator -(SWIG_STD_MOVE(arg2));
@@ -7355,7 +7661,7 @@ _wrap_ConstIterator___sub____SWIG_0(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7395,13 +7701,13 @@ _wrap_ConstIterator___sub____SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< swig::ConstIterator * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((swig::ConstIterator const *)arg1)->operator -((swig::ConstIterator const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7486,13 +7792,13 @@ _wrap_Iterator_valuee___(int argc, VALUE *argv, VALUE self) {
   temp2 = static_cast< VALUE >(argv[0]);
   arg2 = &temp2;
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)(arg1)->setValue((VALUE const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7529,13 +7835,13 @@ _wrap_Iterator_dup(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::Iterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (swig::Iterator *)((swig::Iterator const *)arg1)->dup();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7572,13 +7878,13 @@ _wrap_Iterator_next__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< size_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (swig::Iterator *)(arg1)->next(SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7607,7 +7913,7 @@ _wrap_Iterator_next__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::Iterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (swig::Iterator *)(arg1)->next();
@@ -7621,7 +7927,7 @@ _wrap_Iterator_next__SWIG_1(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7703,13 +8009,13 @@ _wrap_Iterator_previous__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< size_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (swig::Iterator *)(arg1)->previous(SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7738,7 +8044,7 @@ _wrap_Iterator_previous__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::Iterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (swig::Iterator *)(arg1)->previous();
@@ -7752,7 +8058,7 @@ _wrap_Iterator_previous__SWIG_1(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7834,13 +8140,13 @@ _wrap_Iterator_inspect(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::Iterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)((swig::Iterator const *)arg1)->inspect();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7877,13 +8183,13 @@ _wrap_Iterator_to_s(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< swig::Iterator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)((swig::Iterator const *)arg1)->to_s();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7931,13 +8237,13 @@ _wrap_Iterator___eq__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< swig::Iterator * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((swig::Iterator const *)arg1)->operator ==((swig::Iterator const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -7982,7 +8288,7 @@ _wrap_Iterator___add__(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< ptrdiff_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (swig::Iterator *)((swig::Iterator const *)arg1)->operator +(SWIG_STD_MOVE(arg2));
@@ -7996,7 +8302,7 @@ _wrap_Iterator___add__(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8042,7 +8348,7 @@ _wrap_Iterator___sub____SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< ptrdiff_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (swig::Iterator *)((swig::Iterator const *)arg1)->operator -(SWIG_STD_MOVE(arg2));
@@ -8056,7 +8362,7 @@ _wrap_Iterator___sub____SWIG_0(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8096,13 +8402,13 @@ _wrap_Iterator___sub____SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< swig::Iterator * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((swig::Iterator const *)arg1)->operator -((swig::Iterator const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8197,13 +8503,13 @@ _wrap_VectorString_dup(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string,std::allocator< std::string > > *)std_vector_Sl_std_string_Sg__dup(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8240,13 +8546,13 @@ _wrap_VectorString_inspect(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_vector_Sl_std_string_Sg__inspect(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8283,13 +8589,13 @@ _wrap_VectorString_to_a(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_vector_Sl_std_string_Sg__to_a(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8326,13 +8632,13 @@ _wrap_VectorString_to_s(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_vector_Sl_std_string_Sg__to_s(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8385,7 +8691,7 @@ _wrap_VectorString_slice(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< std::vector< std::string >::difference_type >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (VALUE)std_vector_Sl_std_string_Sg__slice(arg1,SWIG_STD_MOVE(arg2),SWIG_STD_MOVE(arg3));
@@ -8395,7 +8701,7 @@ _wrap_VectorString_slice(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8432,13 +8738,13 @@ _wrap_VectorString_each(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string,std::allocator< std::string > > *)std_vector_Sl_std_string_Sg__each(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8480,13 +8786,13 @@ _wrap_VectorString___delete2__(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_vector_Sl_std_string_Sg____delete2__(arg1,(std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8532,13 +8838,13 @@ _wrap_VectorString_select(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string,std::allocator< std::string > > *)std_vector_Sl_std_string_Sg__select(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8583,13 +8889,13 @@ _wrap_VectorString_delete_at(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< std::vector< std::string >::difference_type >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_vector_Sl_std_string_Sg__delete_at(arg1,SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8634,13 +8940,13 @@ _wrap_VectorString_at(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< std::vector< std::string >::difference_type >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_vector_Sl_std_string_Sg__at((std::vector< std::string > const *)arg1,SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8695,7 +9001,7 @@ _wrap_VectorString___getitem____SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< std::vector< std::string >::difference_type >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (VALUE)std_vector_Sl_std_string_Sg____getitem____SWIG_0((std::vector< std::string > const *)arg1,SWIG_STD_MOVE(arg2),SWIG_STD_MOVE(arg3));
@@ -8705,7 +9011,7 @@ _wrap_VectorString___getitem____SWIG_0(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8742,13 +9048,13 @@ _wrap_VectorString___getitem____SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< std::vector< std::string >::difference_type >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_vector_Sl_std_string_Sg____getitem____SWIG_1((std::vector< std::string > const *)arg1,SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8779,7 +9085,7 @@ _wrap_VectorString___getitem____SWIG_2(int argc, VALUE *argv, VALUE self) {
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   arg2 = argv[0];
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (VALUE)std_vector_Sl_std_string_Sg____getitem____SWIG_2((std::vector< std::string > const *)arg1,arg2);
@@ -8789,7 +9095,7 @@ _wrap_VectorString___getitem____SWIG_2(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8915,7 +9221,7 @@ _wrap_VectorString___setitem____SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (VALUE)std_vector_Sl_std_string_Sg____setitem____SWIG_0(arg1,SWIG_STD_MOVE(arg2),(std::string const &)*arg3);
@@ -8927,7 +9233,7 @@ _wrap_VectorString___setitem____SWIG_0(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -8994,7 +9300,7 @@ _wrap_VectorString___setitem____SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg4 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (VALUE)std_vector_Sl_std_string_Sg____setitem____SWIG_1(arg1,SWIG_STD_MOVE(arg2),SWIG_STD_MOVE(arg3),(std::vector< std::string,std::allocator< std::string > > const &)*arg4);
@@ -9004,7 +9310,7 @@ _wrap_VectorString___setitem____SWIG_1(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9106,13 +9412,13 @@ _wrap_VectorString_rejectN___(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string,std::allocator< std::string > > *)std_vector_Sl_std_string_Sg__reject_bang(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9149,13 +9455,13 @@ _wrap_VectorString_pop(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_vector_Sl_std_string_Sg__pop(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9205,13 +9511,13 @@ _wrap_VectorString_push(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = std_vector_Sl_std_string_Sg__push(arg1,(std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9257,13 +9563,13 @@ _wrap_VectorString_reject(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string,std::allocator< std::string > > *)std_vector_Sl_std_string_Sg__reject(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9300,13 +9606,13 @@ _wrap_VectorString_shift(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_vector_Sl_std_string_Sg__shift(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9360,13 +9666,13 @@ _wrap_VectorString_insert__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg4 = argv + 1;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string,std::allocator< std::string > > *)std_vector_Sl_std_string_Sg__insert__SWIG_0(arg1,SWIG_STD_MOVE(arg2),arg3,arg4,arg5);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9410,13 +9716,13 @@ _wrap_VectorString_unshift(int argc, VALUE *argv, VALUE self) {
     arg3 = argv;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string,std::allocator< std::string > > *)std_vector_Sl_std_string_Sg__unshift(arg1,arg2,arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9437,14 +9743,14 @@ _wrap_new_VectorString__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string > *)new std::vector< std::string >();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9477,14 +9783,14 @@ _wrap_new_VectorString__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string > *)new std::vector< std::string >((std::vector< std::string > const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9522,13 +9828,13 @@ _wrap_VectorString_emptyq___(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((std::vector< std::string > const *)arg1)->empty();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9565,13 +9871,13 @@ _wrap_VectorString_size(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((std::vector< std::string > const *)arg1)->size();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9609,13 +9915,13 @@ _wrap_VectorString_swap(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::vector< std::string > * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->swap(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9651,13 +9957,13 @@ _wrap_VectorString_begin(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->begin();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9696,13 +10002,13 @@ _wrap_VectorString_end(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->end();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9741,13 +10047,13 @@ _wrap_VectorString_rbegin(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->rbegin();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9786,13 +10092,13 @@ _wrap_VectorString_rend(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->rend();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9829,13 +10135,13 @@ _wrap_VectorString_clear(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clear();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9863,13 +10169,13 @@ _wrap_VectorString_get_allocator(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((std::vector< std::string > const *)arg1)->get_allocator();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9898,14 +10204,14 @@ _wrap_new_VectorString__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< std::vector< std::string >::size_type >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string > *)new std::vector< std::string >(SWIG_STD_MOVE(arg1));
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -9948,13 +10254,13 @@ _wrap_VectorString_resize__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< std::vector< std::string >::size_type >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->resize(SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10005,13 +10311,13 @@ _wrap_VectorString_erase__SWIG_0(int argc, VALUE *argv, VALUE self) {
     }
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = std_vector_Sl_std_string_Sg__erase__SWIG_0(arg1,SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10070,13 +10376,13 @@ _wrap_VectorString_erase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     }
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = std_vector_Sl_std_string_Sg__erase__SWIG_1(arg1,SWIG_STD_MOVE(arg2),SWIG_STD_MOVE(arg3));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10187,14 +10493,14 @@ _wrap_new_VectorString__SWIG_3(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string > *)new std::vector< std::string >(SWIG_STD_MOVE(arg1),(std::vector< std::string >::value_type const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10296,13 +10602,13 @@ _wrap_VectorString_front(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string >::value_type *) &((std::vector< std::string > const *)arg1)->front();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10339,13 +10645,13 @@ _wrap_VectorString_back(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string >::value_type *) &((std::vector< std::string > const *)arg1)->back();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10402,13 +10708,13 @@ _wrap_VectorString_assign(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->assign(SWIG_STD_MOVE(arg2),(std::vector< std::string >::value_type const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10474,13 +10780,13 @@ _wrap_VectorString_resize__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->resize(SWIG_STD_MOVE(arg2),(std::vector< std::string >::value_type const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10607,13 +10913,13 @@ _wrap_VectorString_insert__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = std_vector_Sl_std_string_Sg__insert__SWIG_1(arg1,SWIG_STD_MOVE(arg2),(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10687,13 +10993,13 @@ _wrap_VectorString_insert__SWIG_2(int argc, VALUE *argv, VALUE self) {
     arg4 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       std_vector_Sl_std_string_Sg__insert__SWIG_2(arg1,SWIG_STD_MOVE(arg2),SWIG_STD_MOVE(arg3),(std::string const &)*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10829,13 +11135,13 @@ _wrap_VectorString_reserve(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< std::vector< std::string >::size_type >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->reserve(SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10871,13 +11177,13 @@ _wrap_VectorString_capacity(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((std::vector< std::string > const *)arg1)->capacity();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10906,13 +11212,13 @@ _wrap_VectorString_map_bang(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::vector< std::string,std::allocator< std::string > > *)std_vector_Sl_std_string_Sg__map_bang(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -10962,13 +11268,13 @@ _wrap_VectorString___delete__(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_vector_Sl_std_string_Sg____delete__(arg1,(std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11029,14 +11335,14 @@ _wrap_new_IntArray(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< size_t >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (IntArray *)new_IntArray(SWIG_STD_MOVE(arg1));
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11089,13 +11395,13 @@ _wrap_IntArray___getitem__(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< size_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)IntArray___getitem__(arg1,SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11146,13 +11452,13 @@ _wrap_IntArray___setitem__(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       IntArray___setitem__(arg1,SWIG_STD_MOVE(arg2),arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11180,13 +11486,13 @@ _wrap_IntArray_cast(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< IntArray * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int *)IntArray_cast(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11215,13 +11521,13 @@ _wrap_IntArray_frompointer(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< int * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (IntArray *)IntArray_frompointer(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11255,14 +11561,14 @@ _wrap_new_SessionIDSet__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::less< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::set< FIX::SessionID > *)new std::set< FIX::SessionID >((std::less< FIX::SessionID > const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11298,13 +11604,13 @@ _wrap_SessionIDSet_dup(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > *)std_set_Sl_FIX_SessionID_Sg__dup(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11341,13 +11647,13 @@ _wrap_SessionIDSet_inspect(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_set_Sl_FIX_SessionID_Sg__inspect(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11384,13 +11690,13 @@ _wrap_SessionIDSet_to_a(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_set_Sl_FIX_SessionID_Sg__to_a(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11427,13 +11733,13 @@ _wrap_SessionIDSet_to_s(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_set_Sl_FIX_SessionID_Sg__to_s(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11486,7 +11792,7 @@ _wrap_SessionIDSet_slice(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< std::set< FIX::SessionID >::difference_type >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = (VALUE)std_set_Sl_FIX_SessionID_Sg__slice(arg1,SWIG_STD_MOVE(arg2),SWIG_STD_MOVE(arg3));
@@ -11496,7 +11802,7 @@ _wrap_SessionIDSet_slice(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11533,13 +11839,13 @@ _wrap_SessionIDSet_each(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > *)std_set_Sl_FIX_SessionID_Sg__each(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11579,13 +11885,13 @@ _wrap_SessionIDSet___delete2__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID >::value_type * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_set_Sl_FIX_SessionID_Sg____delete2__(arg1,(FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11622,13 +11928,13 @@ _wrap_SessionIDSet_select(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > *)std_set_Sl_FIX_SessionID_Sg__select(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11673,13 +11979,13 @@ _wrap_SessionIDSet_delete_at(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< std::set< FIX::SessionID >::difference_type >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (VALUE)std_set_Sl_FIX_SessionID_Sg__delete_at(arg1,SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11716,13 +12022,13 @@ _wrap_SessionIDSet_rejectN___(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > *)std_set_Sl_FIX_SessionID_Sg__reject_bang(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11770,13 +12076,13 @@ _wrap_SessionIDSet_push(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID >::value_type * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = std_set_Sl_FIX_SessionID_Sg__push(arg1,(FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11816,13 +12122,13 @@ _wrap_SessionIDSet_includeq___(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID >::value_type * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)std_set_Sl_FIX_SessionID_Sg____contains__(arg1,(FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11867,7 +12173,7 @@ _wrap_SessionIDSet___getitem__(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< std::set< FIX::SessionID >::difference_type >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       try {
         result = std_set_Sl_FIX_SessionID_Sg____getitem__((std::set< FIX::SessionID > const *)arg1,SWIG_STD_MOVE(arg2));
@@ -11877,7 +12183,7 @@ _wrap_SessionIDSet___getitem__(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11898,14 +12204,14 @@ _wrap_new_SessionIDSet__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::set< FIX::SessionID > *)new std::set< FIX::SessionID >();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -11953,14 +12259,14 @@ _wrap_new_SessionIDSet__SWIG_2(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::set< FIX::SessionID > *)new std::set< FIX::SessionID >((std::set< FIX::SessionID > const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12039,13 +12345,13 @@ _wrap_SessionIDSet_emptyq___(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((std::set< FIX::SessionID > const *)arg1)->empty();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12082,13 +12388,13 @@ _wrap_SessionIDSet_size(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((std::set< FIX::SessionID > const *)arg1)->size();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12123,13 +12429,13 @@ _wrap_SessionIDSet_clear(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clear();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12166,13 +12472,13 @@ _wrap_SessionIDSet_swap(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID > * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->swap(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12221,13 +12527,13 @@ _wrap_SessionIDSet_erase__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID >::key_type * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->erase((std::set< FIX::SessionID >::key_type const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12267,13 +12573,13 @@ _wrap_SessionIDSet_count(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID >::key_type * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((std::set< FIX::SessionID > const *)arg1)->count((std::set< FIX::SessionID >::key_type const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12310,13 +12616,13 @@ _wrap_SessionIDSet_begin(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->begin();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12353,13 +12659,13 @@ _wrap_SessionIDSet_end(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->end();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12396,13 +12702,13 @@ _wrap_SessionIDSet_rbegin(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->rbegin();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12439,13 +12745,13 @@ _wrap_SessionIDSet_rend(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->rend();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12496,13 +12802,13 @@ _wrap_SessionIDSet_erase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     }
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       std_set_Sl_FIX_SessionID_Sg__erase__SWIG_1(arg1,SWIG_STD_MOVE(arg2));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12556,13 +12862,13 @@ _wrap_SessionIDSet_erase__SWIG_2(int argc, VALUE *argv, VALUE self) {
     }
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       std_set_Sl_FIX_SessionID_Sg__erase__SWIG_2(arg1,SWIG_STD_MOVE(arg2),SWIG_STD_MOVE(arg3));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12675,13 +12981,13 @@ _wrap_SessionIDSet_find(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID >::key_type * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->find((std::set< FIX::SessionID >::key_type const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12721,13 +13027,13 @@ _wrap_SessionIDSet_lower_bound(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID >::key_type * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->lower_bound((std::set< FIX::SessionID >::key_type const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12767,13 +13073,13 @@ _wrap_SessionIDSet_upper_bound(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID >::key_type * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->upper_bound((std::set< FIX::SessionID >::key_type const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12813,13 +13119,13 @@ _wrap_SessionIDSet_equal_range(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID >::key_type * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->equal_range((std::set< FIX::SessionID >::key_type const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12871,13 +13177,13 @@ _wrap_SessionIDSet_insert(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< FIX::SessionID >::value_type * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->insert((std::set< FIX::SessionID >::value_type const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -12949,14 +13255,14 @@ _wrap_new_Exception(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Exception *)new FIX::Exception((std::string const &)*arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13144,13 +13450,13 @@ _wrap_Exception___str__(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Exception * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX_Exception___str__(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13199,14 +13505,14 @@ _wrap_new_DataDictionaryNotFound__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DataDictionaryNotFound *)new FIX::DataDictionaryNotFound((std::string const &)*arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13272,14 +13578,14 @@ _wrap_new_DataDictionaryNotFound__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DataDictionaryNotFound *)new FIX::DataDictionaryNotFound((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13445,14 +13751,14 @@ _wrap_new_FieldNotFound__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldNotFound *)new FIX::FieldNotFound(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13489,14 +13795,14 @@ _wrap_new_FieldNotFound__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldNotFound *)new FIX::FieldNotFound(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13531,14 +13837,14 @@ _wrap_new_FieldNotFound__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldNotFound *)new FIX::FieldNotFound();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13680,14 +13986,14 @@ _wrap_new_FieldConvertError__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldConvertError *)new FIX::FieldConvertError((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13731,14 +14037,14 @@ _wrap_new_FieldConvertError__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldConvertError *)new FIX::FieldConvertError();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13810,14 +14116,14 @@ _wrap_new_MessageParseError__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageParseError *)new FIX::MessageParseError((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13861,14 +14167,14 @@ _wrap_new_MessageParseError__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageParseError *)new FIX::MessageParseError();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13940,14 +14246,14 @@ _wrap_new_InvalidMessage__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::InvalidMessage *)new FIX::InvalidMessage((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -13991,14 +14297,14 @@ _wrap_new_InvalidMessage__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::InvalidMessage *)new FIX::InvalidMessage();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14070,14 +14376,14 @@ _wrap_new_ConfigError__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::ConfigError *)new FIX::ConfigError((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14121,14 +14427,14 @@ _wrap_new_ConfigError__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::ConfigError *)new FIX::ConfigError();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14200,14 +14506,14 @@ _wrap_new_RuntimeError__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RuntimeError *)new FIX::RuntimeError((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14251,14 +14557,14 @@ _wrap_new_RuntimeError__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RuntimeError *)new FIX::RuntimeError();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14338,14 +14644,14 @@ _wrap_new_InvalidTagNumber__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::InvalidTagNumber *)new FIX::InvalidTagNumber(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14382,14 +14688,14 @@ _wrap_new_InvalidTagNumber__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::InvalidTagNumber *)new FIX::InvalidTagNumber(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14424,14 +14730,14 @@ _wrap_new_InvalidTagNumber__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::InvalidTagNumber *)new FIX::InvalidTagNumber();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14581,14 +14887,14 @@ _wrap_new_RequiredTagMissing__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RequiredTagMissing *)new FIX::RequiredTagMissing(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14625,14 +14931,14 @@ _wrap_new_RequiredTagMissing__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RequiredTagMissing *)new FIX::RequiredTagMissing(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14667,14 +14973,14 @@ _wrap_new_RequiredTagMissing__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RequiredTagMissing *)new FIX::RequiredTagMissing();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14824,14 +15130,14 @@ _wrap_new_TagNotDefinedForMessage__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::TagNotDefinedForMessage *)new FIX::TagNotDefinedForMessage(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14868,14 +15174,14 @@ _wrap_new_TagNotDefinedForMessage__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::TagNotDefinedForMessage *)new FIX::TagNotDefinedForMessage(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -14910,14 +15216,14 @@ _wrap_new_TagNotDefinedForMessage__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::TagNotDefinedForMessage *)new FIX::TagNotDefinedForMessage();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15067,14 +15373,14 @@ _wrap_new_NoTagValue__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::NoTagValue *)new FIX::NoTagValue(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15111,14 +15417,14 @@ _wrap_new_NoTagValue__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::NoTagValue *)new FIX::NoTagValue(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15153,14 +15459,14 @@ _wrap_new_NoTagValue__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::NoTagValue *)new FIX::NoTagValue();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15310,14 +15616,14 @@ _wrap_new_IncorrectTagValue__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IncorrectTagValue *)new FIX::IncorrectTagValue(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15354,14 +15660,14 @@ _wrap_new_IncorrectTagValue__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IncorrectTagValue *)new FIX::IncorrectTagValue(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15396,14 +15702,14 @@ _wrap_new_IncorrectTagValue__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IncorrectTagValue *)new FIX::IncorrectTagValue();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15553,14 +15859,14 @@ _wrap_new_IncorrectDataFormat__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IncorrectDataFormat *)new FIX::IncorrectDataFormat(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15597,14 +15903,14 @@ _wrap_new_IncorrectDataFormat__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IncorrectDataFormat *)new FIX::IncorrectDataFormat(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15639,14 +15945,14 @@ _wrap_new_IncorrectDataFormat__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IncorrectDataFormat *)new FIX::IncorrectDataFormat();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15788,14 +16094,14 @@ _wrap_new_IncorrectMessageStructure__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IncorrectMessageStructure *)new FIX::IncorrectMessageStructure((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15839,14 +16145,14 @@ _wrap_new_IncorrectMessageStructure__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IncorrectMessageStructure *)new FIX::IncorrectMessageStructure();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15918,14 +16224,14 @@ _wrap_new_DuplicateFieldNumber__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DuplicateFieldNumber *)new FIX::DuplicateFieldNumber((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -15969,14 +16275,14 @@ _wrap_new_DuplicateFieldNumber__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DuplicateFieldNumber *)new FIX::DuplicateFieldNumber();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16048,14 +16354,14 @@ _wrap_new_InvalidMessageType__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::InvalidMessageType *)new FIX::InvalidMessageType((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16099,14 +16405,14 @@ _wrap_new_InvalidMessageType__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::InvalidMessageType *)new FIX::InvalidMessageType();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16178,14 +16484,14 @@ _wrap_new_UnsupportedMessageType__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UnsupportedMessageType *)new FIX::UnsupportedMessageType((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16229,14 +16535,14 @@ _wrap_new_UnsupportedMessageType__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UnsupportedMessageType *)new FIX::UnsupportedMessageType();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16308,14 +16614,14 @@ _wrap_new_UnsupportedVersion__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UnsupportedVersion *)new FIX::UnsupportedVersion((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16359,14 +16665,14 @@ _wrap_new_UnsupportedVersion__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UnsupportedVersion *)new FIX::UnsupportedVersion();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16446,14 +16752,14 @@ _wrap_new_TagOutOfOrder__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::TagOutOfOrder *)new FIX::TagOutOfOrder(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16490,14 +16796,14 @@ _wrap_new_TagOutOfOrder__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::TagOutOfOrder *)new FIX::TagOutOfOrder(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16532,14 +16838,14 @@ _wrap_new_TagOutOfOrder__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::TagOutOfOrder *)new FIX::TagOutOfOrder();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16689,14 +16995,14 @@ _wrap_new_EmbeddedSOH__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::EmbeddedSOH *)new FIX::EmbeddedSOH(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16733,14 +17039,14 @@ _wrap_new_EmbeddedSOH__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::EmbeddedSOH *)new FIX::EmbeddedSOH(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16775,14 +17081,14 @@ _wrap_new_EmbeddedSOH__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::EmbeddedSOH *)new FIX::EmbeddedSOH();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16932,14 +17238,14 @@ _wrap_new_OutOfOrderGroupMembers__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::OutOfOrderGroupMembers *)new FIX::OutOfOrderGroupMembers(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -16976,14 +17282,14 @@ _wrap_new_OutOfOrderGroupMembers__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::OutOfOrderGroupMembers *)new FIX::OutOfOrderGroupMembers(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17018,14 +17324,14 @@ _wrap_new_OutOfOrderGroupMembers__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::OutOfOrderGroupMembers *)new FIX::OutOfOrderGroupMembers();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17175,14 +17481,14 @@ _wrap_new_RepeatedTag__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RepeatedTag *)new FIX::RepeatedTag(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17219,14 +17525,14 @@ _wrap_new_RepeatedTag__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RepeatedTag *)new FIX::RepeatedTag(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17261,14 +17567,14 @@ _wrap_new_RepeatedTag__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RepeatedTag *)new FIX::RepeatedTag();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17418,14 +17724,14 @@ _wrap_new_RepeatingGroupCountMismatch__SWIG_0(int argc, VALUE *argv, VALUE self)
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RepeatingGroupCountMismatch *)new FIX::RepeatingGroupCountMismatch(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17462,14 +17768,14 @@ _wrap_new_RepeatingGroupCountMismatch__SWIG_1(int argc, VALUE *argv, VALUE self)
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RepeatingGroupCountMismatch *)new FIX::RepeatingGroupCountMismatch(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17504,14 +17810,14 @@ _wrap_new_RepeatingGroupCountMismatch__SWIG_2(int argc, VALUE *argv, VALUE self)
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RepeatingGroupCountMismatch *)new FIX::RepeatingGroupCountMismatch();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17653,14 +17959,14 @@ _wrap_new_DoNotSend__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DoNotSend *)new FIX::DoNotSend((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17704,14 +18010,14 @@ _wrap_new_DoNotSend__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DoNotSend *)new FIX::DoNotSend();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17783,14 +18089,14 @@ _wrap_new_RejectLogon__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RejectLogon *)new FIX::RejectLogon((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17834,14 +18140,14 @@ _wrap_new_RejectLogon__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::RejectLogon *)new FIX::RejectLogon();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17913,14 +18219,14 @@ _wrap_new_SessionNotFound__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SessionNotFound *)new FIX::SessionNotFound((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -17964,14 +18270,14 @@ _wrap_new_SessionNotFound__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SessionNotFound *)new FIX::SessionNotFound();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18043,14 +18349,14 @@ _wrap_new_IOException__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IOException *)new FIX::IOException((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18094,14 +18400,14 @@ _wrap_new_IOException__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IOException *)new FIX::IOException();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18160,14 +18466,14 @@ _wrap_new_SocketException__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketException *)new FIX::SocketException();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18215,14 +18521,14 @@ _wrap_new_SocketException__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketException *)new FIX::SocketException((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18282,13 +18588,13 @@ _wrap_SocketException_errorToWhat(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::SocketException::errorToWhat();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18317,14 +18623,14 @@ _wrap_new_SocketSendFailed__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketSendFailed *)new FIX::SocketSendFailed();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18372,14 +18678,14 @@ _wrap_new_SocketSendFailed__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketSendFailed *)new FIX::SocketSendFailed((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18461,14 +18767,14 @@ _wrap_new_SocketRecvFailed__SWIG_0(int argc, VALUE *argv, VALUE self) {
     }
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketRecvFailed *)new FIX::SocketRecvFailed(SWIG_STD_MOVE(arg1));
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18516,14 +18822,14 @@ _wrap_new_SocketRecvFailed__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketRecvFailed *)new FIX::SocketRecvFailed((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18597,14 +18903,14 @@ _wrap_new_SocketCloseFailed__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketCloseFailed *)new FIX::SocketCloseFailed();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18652,14 +18958,14 @@ _wrap_new_SocketCloseFailed__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketCloseFailed *)new FIX::SocketCloseFailed((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18842,14 +19148,14 @@ _wrap_new_DateTime__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DateTime *)new FIX::DateTime();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18885,14 +19191,14 @@ _wrap_new_DateTime__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int64_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DateTime *)new FIX::DateTime(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -18968,14 +19274,14 @@ _wrap_new_DateTime__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg7 = static_cast< int >(val7);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DateTime *)new FIX::DateTime(arg1,arg2,arg3,arg4,arg5,arg6,arg7);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19074,14 +19380,14 @@ _wrap_new_DateTime__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg8 = static_cast< int >(val8);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DateTime *)new FIX::DateTime(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19254,13 +19560,13 @@ _wrap_DateTime_getYear(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getYear();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19289,13 +19595,13 @@ _wrap_DateTime_getMonth(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getMonth();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19324,13 +19630,13 @@ _wrap_DateTime_getDay(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getDay();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19359,13 +19665,13 @@ _wrap_DateTime_getDate(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getDate();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19394,13 +19700,13 @@ _wrap_DateTime_getJulianDate(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getJulianDate();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19429,13 +19735,13 @@ _wrap_DateTime_getHour(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getHour();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19464,13 +19770,13 @@ _wrap_DateTime_getMinute(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getMinute();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19499,13 +19805,13 @@ _wrap_DateTime_getSecond(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getSecond();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19534,13 +19840,13 @@ _wrap_DateTime_getMillisecond(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getMillisecond();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19569,13 +19875,13 @@ _wrap_DateTime_getMicrosecond(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getMicrosecond();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19604,13 +19910,13 @@ _wrap_DateTime_getNanosecond(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (unsigned int)((FIX::DateTime const *)arg1)->getNanosecond();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19647,13 +19953,13 @@ _wrap_DateTime_getFraction(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getFraction(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19682,13 +19988,13 @@ _wrap_DateTime_getWeekDay(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::DateTime const *)arg1)->getWeekDay();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19717,13 +20023,13 @@ _wrap_DateTime_getTimeT(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::DateTime const *)arg1)->getTimeT();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19754,13 +20060,13 @@ _wrap_DateTime_getTmUtc(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::DateTime const *)arg1)->getTmUtc();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19811,13 +20117,13 @@ _wrap_DateTime_setYMD(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setYMD(arg2,arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19875,13 +20181,13 @@ _wrap_DateTime_setHMS__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< int >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setHMS(arg2,arg3,arg4,arg5);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -19947,13 +20253,13 @@ _wrap_DateTime_setHMS__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg6 = static_cast< int >(val6);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setHMS(arg2,arg3,arg4,arg5,arg6);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20080,13 +20386,13 @@ _wrap_DateTime_setHour(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setHour(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20120,13 +20426,13 @@ _wrap_DateTime_setMinute(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setMinute(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20160,13 +20466,13 @@ _wrap_DateTime_setSecond(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setSecond(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20200,13 +20506,13 @@ _wrap_DateTime_setMillisecond(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setMillisecond(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20240,13 +20546,13 @@ _wrap_DateTime_setMicrosecond(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setMicrosecond(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20280,13 +20586,13 @@ _wrap_DateTime_setNanosecond(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNanosecond(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20328,13 +20634,13 @@ _wrap_DateTime_setFraction(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setFraction(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20360,13 +20666,13 @@ _wrap_DateTime_clearDate(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clearDate();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20392,13 +20698,13 @@ _wrap_DateTime_clearTime(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clearTime();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20440,13 +20746,13 @@ _wrap_DateTime_set__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int64_t >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->set(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20483,13 +20789,13 @@ _wrap_DateTime_set__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::DateTime * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->set((FIX::DateTime const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20581,13 +20887,13 @@ _wrap_DateTime_convertToNanos(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)FIX::DateTime::convertToNanos(arg1,arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20640,13 +20946,13 @@ _wrap_DateTime_makeHMS(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int64_t)FIX::DateTime::makeHMS(arg1,arg2,arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20667,13 +20973,13 @@ _wrap_DateTime_nowUtc(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::nowUtc();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20694,13 +21000,13 @@ _wrap_DateTime_nowLocal(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::nowLocal();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20736,13 +21042,13 @@ _wrap_DateTime_fromUtcTimeT__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::fromUtcTimeT(SWIG_STD_MOVE(arg1),arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20770,13 +21076,13 @@ _wrap_DateTime_fromUtcTimeT__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = NUM2LONG(rb_funcall2(argv[0], rb_intern("tv_sec"), 0, 0));
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::fromUtcTimeT(SWIG_STD_MOVE(arg1));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20812,13 +21118,13 @@ _wrap_DateTime_fromLocalTimeT__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::fromLocalTimeT(SWIG_STD_MOVE(arg1),arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20846,13 +21152,13 @@ _wrap_DateTime_fromLocalTimeT__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = NUM2LONG(rb_funcall2(argv[0], rb_intern("tv_sec"), 0, 0));
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::fromLocalTimeT(SWIG_STD_MOVE(arg1));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -20896,13 +21202,13 @@ _wrap_DateTime_fromUtcTimeT__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::fromUtcTimeT(SWIG_STD_MOVE(arg1),arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21012,13 +21318,13 @@ _wrap_DateTime_fromLocalTimeT__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::fromLocalTimeT(SWIG_STD_MOVE(arg1),arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21124,13 +21430,13 @@ _wrap_DateTime_fromTm__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::fromTm((tm const &)*arg1,arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21162,13 +21468,13 @@ _wrap_DateTime_fromTm__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::fromTm((tm const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21216,13 +21522,13 @@ _wrap_DateTime_fromTm__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::DateTime::fromTm((tm const &)*arg1,arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21333,13 +21639,13 @@ _wrap_DateTime_julianDate(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)FIX::DateTime::julianDate(arg1,arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21396,13 +21702,13 @@ _wrap___eq____SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::DateTime * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::operator ==((FIX::DateTime const &)*arg1,(FIX::DateTime const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21459,13 +21765,13 @@ _wrap___lt____SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::DateTime * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::operator <((FIX::DateTime const &)*arg1,(FIX::DateTime const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21520,13 +21826,13 @@ _wrap___gt____SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::DateTime * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::operator >((FIX::DateTime const &)*arg1,(FIX::DateTime const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21581,13 +21887,13 @@ _wrap___le____SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::DateTime * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::operator <=((FIX::DateTime const &)*arg1,(FIX::DateTime const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21642,13 +21948,13 @@ _wrap___ge____SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::DateTime * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::operator >=((FIX::DateTime const &)*arg1,(FIX::DateTime const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21699,13 +22005,13 @@ _wrap___sub__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::DateTime * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)FIX::operator -((FIX::DateTime const &)*arg1,(FIX::DateTime const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21728,13 +22034,13 @@ _wrap_UtcTimeStamp_now(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::UtcTimeStamp::now();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21755,14 +22061,14 @@ _wrap_new_UtcTimeStamp__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21796,14 +22102,14 @@ _wrap_new_UtcTimeStamp__SWIG_1(int argc, VALUE *argv, VALUE self) {
     }
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp(SWIG_STD_MOVE(arg1));
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21855,14 +22161,14 @@ _wrap_new_UtcTimeStamp__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp(arg1,arg2,arg3,arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21906,14 +22212,14 @@ _wrap_new_UtcTimeStamp__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp(arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -21973,14 +22279,14 @@ _wrap_new_UtcTimeStamp__SWIG_4(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< int >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp(arg1,arg2,arg3,arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22048,14 +22354,14 @@ _wrap_new_UtcTimeStamp__SWIG_5(int argc, VALUE *argv, VALUE self) {
   } 
   arg6 = static_cast< int >(val6);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp(arg1,arg2,arg3,arg4,arg5,arg6);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22131,14 +22437,14 @@ _wrap_new_UtcTimeStamp__SWIG_6(int argc, VALUE *argv, VALUE self) {
   } 
   arg7 = static_cast< int >(val7);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp(arg1,arg2,arg3,arg4,arg5,arg6,arg7);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22222,14 +22528,14 @@ _wrap_new_UtcTimeStamp__SWIG_7(int argc, VALUE *argv, VALUE self) {
   } 
   arg8 = static_cast< int >(val8);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22264,14 +22570,14 @@ _wrap_new_UtcTimeStamp__SWIG_8(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp(SWIG_STD_MOVE(arg1),arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22298,14 +22604,14 @@ _wrap_new_UtcTimeStamp__SWIG_9(int argc, VALUE *argv, VALUE self) {
     arg1 = NUM2LONG(rb_funcall2(argv[0], rb_intern("tv_sec"), 0, 0));
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp(SWIG_STD_MOVE(arg1));
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22348,14 +22654,14 @@ _wrap_new_UtcTimeStamp__SWIG_10(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp(SWIG_STD_MOVE(arg1),arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22391,14 +22697,14 @@ _wrap_new_UtcTimeStamp__SWIG_11(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp((tm const *)arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22426,14 +22732,14 @@ _wrap_new_UtcTimeStamp__SWIG_12(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp((tm const *)arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22492,14 +22798,14 @@ _wrap_new_UtcTimeStamp__SWIG_13(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStamp *)new FIX::UtcTimeStamp((tm const *)arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22881,13 +23187,13 @@ _wrap_UtcTimeStamp_setCurrent(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStamp * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setCurrent();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22915,14 +23221,14 @@ _wrap_new_LocalTimeStamp__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -22974,14 +23280,14 @@ _wrap_new_LocalTimeStamp__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp(arg1,arg2,arg3,arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23025,14 +23331,14 @@ _wrap_new_LocalTimeStamp__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp(arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23092,14 +23398,14 @@ _wrap_new_LocalTimeStamp__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< int >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp(arg1,arg2,arg3,arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23167,14 +23473,14 @@ _wrap_new_LocalTimeStamp__SWIG_4(int argc, VALUE *argv, VALUE self) {
   } 
   arg6 = static_cast< int >(val6);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp(arg1,arg2,arg3,arg4,arg5,arg6);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23250,14 +23556,14 @@ _wrap_new_LocalTimeStamp__SWIG_5(int argc, VALUE *argv, VALUE self) {
   } 
   arg7 = static_cast< int >(val7);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp(arg1,arg2,arg3,arg4,arg5,arg6,arg7);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23341,14 +23647,14 @@ _wrap_new_LocalTimeStamp__SWIG_6(int argc, VALUE *argv, VALUE self) {
   } 
   arg8 = static_cast< int >(val8);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23383,14 +23689,14 @@ _wrap_new_LocalTimeStamp__SWIG_7(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp(SWIG_STD_MOVE(arg1),arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23417,14 +23723,14 @@ _wrap_new_LocalTimeStamp__SWIG_8(int argc, VALUE *argv, VALUE self) {
     arg1 = NUM2LONG(rb_funcall2(argv[0], rb_intern("tv_sec"), 0, 0));
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp(SWIG_STD_MOVE(arg1));
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23467,14 +23773,14 @@ _wrap_new_LocalTimeStamp__SWIG_9(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp(SWIG_STD_MOVE(arg1),arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23510,14 +23816,14 @@ _wrap_new_LocalTimeStamp__SWIG_10(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp((tm const *)arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23545,14 +23851,14 @@ _wrap_new_LocalTimeStamp__SWIG_11(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp((tm const *)arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23611,14 +23917,14 @@ _wrap_new_LocalTimeStamp__SWIG_12(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeStamp *)new FIX::LocalTimeStamp((tm const *)arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -23990,13 +24296,13 @@ _wrap_LocalTimeStamp_setCurrent(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::LocalTimeStamp * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setCurrent();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24024,14 +24330,14 @@ _wrap_new_UtcTimeOnly__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24062,14 +24368,14 @@ _wrap_new_UtcTimeOnly__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly((FIX::DateTime const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24121,14 +24427,14 @@ _wrap_new_UtcTimeOnly__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly(arg1,arg2,arg3,arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24172,14 +24478,14 @@ _wrap_new_UtcTimeOnly__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly(arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24239,14 +24545,14 @@ _wrap_new_UtcTimeOnly__SWIG_4(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< int >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly(arg1,arg2,arg3,arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24281,14 +24587,14 @@ _wrap_new_UtcTimeOnly__SWIG_5(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly(SWIG_STD_MOVE(arg1),arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24315,14 +24621,14 @@ _wrap_new_UtcTimeOnly__SWIG_6(int argc, VALUE *argv, VALUE self) {
     arg1 = NUM2LONG(rb_funcall2(argv[0], rb_intern("tv_sec"), 0, 0));
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly(SWIG_STD_MOVE(arg1));
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24365,14 +24671,14 @@ _wrap_new_UtcTimeOnly__SWIG_7(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly(SWIG_STD_MOVE(arg1),arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24408,14 +24714,14 @@ _wrap_new_UtcTimeOnly__SWIG_8(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly((tm const *)arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24443,14 +24749,14 @@ _wrap_new_UtcTimeOnly__SWIG_9(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly((tm const *)arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24509,14 +24815,14 @@ _wrap_new_UtcTimeOnly__SWIG_10(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnly *)new FIX::UtcTimeOnly((tm const *)arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24757,13 +25063,13 @@ _wrap_UtcTimeOnly_setCurrent(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::UtcTimeOnly * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setCurrent();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24791,14 +25097,14 @@ _wrap_new_LocalTimeOnly__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24829,14 +25135,14 @@ _wrap_new_LocalTimeOnly__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly((FIX::DateTime const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24888,14 +25194,14 @@ _wrap_new_LocalTimeOnly__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly(arg1,arg2,arg3,arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -24939,14 +25245,14 @@ _wrap_new_LocalTimeOnly__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly(arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25006,14 +25312,14 @@ _wrap_new_LocalTimeOnly__SWIG_4(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< int >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly(arg1,arg2,arg3,arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25048,14 +25354,14 @@ _wrap_new_LocalTimeOnly__SWIG_5(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly(SWIG_STD_MOVE(arg1),arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25082,14 +25388,14 @@ _wrap_new_LocalTimeOnly__SWIG_6(int argc, VALUE *argv, VALUE self) {
     arg1 = NUM2LONG(rb_funcall2(argv[0], rb_intern("tv_sec"), 0, 0));
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly(SWIG_STD_MOVE(arg1));
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25132,14 +25438,14 @@ _wrap_new_LocalTimeOnly__SWIG_7(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly(SWIG_STD_MOVE(arg1),arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25175,14 +25481,14 @@ _wrap_new_LocalTimeOnly__SWIG_8(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly((tm const *)arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25210,14 +25516,14 @@ _wrap_new_LocalTimeOnly__SWIG_9(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly((tm const *)arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25276,14 +25582,14 @@ _wrap_new_LocalTimeOnly__SWIG_10(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalTimeOnly *)new FIX::LocalTimeOnly((tm const *)arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25524,13 +25830,13 @@ _wrap_LocalTimeOnly_setCurrent(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::LocalTimeOnly * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setCurrent();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25558,14 +25864,14 @@ _wrap_new_UtcDate__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcDate *)new FIX::UtcDate();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25596,14 +25902,14 @@ _wrap_new_UtcDate__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcDate *)new FIX::UtcDate((FIX::DateTime const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25647,14 +25953,14 @@ _wrap_new_UtcDate__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcDate *)new FIX::UtcDate(arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25682,14 +25988,14 @@ _wrap_new_UtcDate__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcDate *)new FIX::UtcDate(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25732,14 +26038,14 @@ _wrap_new_UtcDate__SWIG_4(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcDate *)new FIX::UtcDate((tm const *)arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25841,13 +26147,13 @@ _wrap_UtcDate_setCurrent(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::UtcDate * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setCurrent();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25875,14 +26181,14 @@ _wrap_new_LocalDate__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalDate *)new FIX::LocalDate();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25913,14 +26219,14 @@ _wrap_new_LocalDate__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalDate *)new FIX::LocalDate((FIX::DateTime const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25964,14 +26270,14 @@ _wrap_new_LocalDate__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalDate *)new FIX::LocalDate(arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -25999,14 +26305,14 @@ _wrap_new_LocalDate__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalDate *)new FIX::LocalDate(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26049,14 +26355,14 @@ _wrap_new_LocalDate__SWIG_4(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::LocalDate *)new FIX::LocalDate((tm const *)arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26158,13 +26464,13 @@ _wrap_LocalDate_setCurrent(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::LocalDate * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setCurrent();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26213,14 +26519,14 @@ _wrap_new_FieldBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldBase *)new FIX::FieldBase(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26275,14 +26581,14 @@ _wrap_new_FieldBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldBase *)new FIX::FieldBase((FIX::FieldBase const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26362,13 +26668,13 @@ _wrap_FieldBase_swap(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::FieldBase * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->swap(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26402,13 +26708,13 @@ _wrap_FieldBase_setTag(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setTag(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26442,13 +26748,13 @@ _wrap_FieldBase_setField(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setField(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26488,13 +26794,13 @@ _wrap_FieldBase_setString(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setString((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26531,13 +26837,13 @@ _wrap_FieldBase_getTag(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::FieldBase const *)arg1)->getTag();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26566,13 +26872,13 @@ _wrap_FieldBase_getField(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::FieldBase const *)arg1)->getField();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26601,13 +26907,13 @@ _wrap_FieldBase_getString(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::FieldBase const *)arg1)->getString();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26641,13 +26947,13 @@ _wrap_FieldBase_appendTo(int argc, VALUE *argv, VALUE self) {
     arg2 = &temp2;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       ((FIX::FieldBase const *)arg1)->appendTo(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26682,13 +26988,13 @@ _wrap_FieldBase_getFixString(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::FieldBase const *)arg1)->getFixString();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26717,13 +27023,13 @@ _wrap_FieldBase_getLength(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::FieldBase const *)arg1)->getLength();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26752,13 +27058,13 @@ _wrap_FieldBase_getTotal(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::FieldBase const *)arg1)->getTotal();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26806,13 +27112,13 @@ _wrap_FieldBase___lt__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::FieldBase * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::FieldBase const *)arg1)->operator <((FIX::FieldBase const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26841,13 +27147,13 @@ _wrap_FieldBase___str__(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX_FieldBase___str__(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26907,13 +27213,13 @@ _wrap___lshift____SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::FieldBase * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::ostream *) &FIX::operator <<(*arg1,(FIX::FieldBase const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -26954,13 +27260,13 @@ _wrap_swap(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::FieldBase * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       FIX::swap(*arg1,*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27003,14 +27309,14 @@ _wrap_new_StringField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::StringField *)new FIX::StringField(arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27062,14 +27368,14 @@ _wrap_new_StringField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::StringField *)new FIX::StringField(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27153,13 +27459,13 @@ _wrap_StringField_setValue(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27199,13 +27505,13 @@ _wrap_StringField_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &FIX::StringField::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27234,13 +27540,13 @@ _wrap_StringField_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::StringField * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::StringField const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27288,13 +27594,13 @@ _wrap_StringField___lt__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::StringField const *)arg1)->operator <((FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27342,13 +27648,13 @@ _wrap_StringField___gt__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::StringField const *)arg1)->operator >((FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27396,13 +27702,13 @@ _wrap_StringField___eq__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::StringField const *)arg1)->operator ==((FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27450,13 +27756,13 @@ _wrap_StringField___le__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::StringField const *)arg1)->operator <=((FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27504,13 +27810,13 @@ _wrap_StringField___ge__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::StringField const *)arg1)->operator >=((FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27565,13 +27871,13 @@ _wrap___lt____SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< char * >(buf2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator <((FIX::StringField const &)*arg1,(char const *)arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27614,13 +27920,13 @@ _wrap___lt____SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator <((char const *)arg1,(FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27675,13 +27981,13 @@ _wrap___gt____SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< char * >(buf2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator >((FIX::StringField const &)*arg1,(char const *)arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27724,13 +28030,13 @@ _wrap___gt____SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator >((char const *)arg1,(FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27787,13 +28093,13 @@ _wrap___eq____SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< char * >(buf2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator ==((FIX::StringField const &)*arg1,(char const *)arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27836,13 +28142,13 @@ _wrap___eq____SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator ==((char const *)arg1,(FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27897,13 +28203,13 @@ _wrap___le____SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< char * >(buf2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator <=((FIX::StringField const &)*arg1,(char const *)arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -27946,13 +28252,13 @@ _wrap___le____SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator <=((char const *)arg1,(FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28007,13 +28313,13 @@ _wrap___ge____SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< char * >(buf2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator >=((FIX::StringField const &)*arg1,(char const *)arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28056,13 +28362,13 @@ _wrap___ge____SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator >=((char const *)arg1,(FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28123,13 +28429,13 @@ _wrap___lt____SWIG_3(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator <((FIX::StringField const &)*arg1,(std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28183,13 +28489,13 @@ _wrap___lt____SWIG_4(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator <((std::string const &)*arg1,(FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28255,13 +28561,13 @@ _wrap___gt____SWIG_3(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator >((FIX::StringField const &)*arg1,(std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28315,13 +28621,13 @@ _wrap___gt____SWIG_4(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator >((std::string const &)*arg1,(FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28478,13 +28784,13 @@ _wrap___eq____SWIG_3(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator ==((FIX::StringField const &)*arg1,(std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28538,13 +28844,13 @@ _wrap___eq____SWIG_4(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator ==((std::string const &)*arg1,(FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28610,13 +28916,13 @@ _wrap___le____SWIG_3(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator <=((FIX::StringField const &)*arg1,(std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28670,13 +28976,13 @@ _wrap___le____SWIG_4(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator <=((std::string const &)*arg1,(FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28831,13 +29137,13 @@ _wrap___ge____SWIG_3(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator >=((FIX::StringField const &)*arg1,(std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -28891,13 +29197,13 @@ _wrap___ge____SWIG_4(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::StringField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator >=((std::string const &)*arg1,(FIX::StringField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29040,14 +29346,14 @@ _wrap_new_CharField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< char >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::CharField *)new FIX::CharField(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29090,14 +29396,14 @@ _wrap_new_CharField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::CharField *)new FIX::CharField(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29177,13 +29483,13 @@ _wrap_CharField_setValue(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< char >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29214,13 +29520,13 @@ _wrap_CharField_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::CharField::value_type)FIX::CharField::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29249,13 +29555,13 @@ _wrap_CharField_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::CharField * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (char)((FIX::CharField const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29308,14 +29614,14 @@ _wrap_new_DoubleField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DoubleField *)new FIX::DoubleField(arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29351,14 +29657,14 @@ _wrap_new_DoubleField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< double >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DoubleField *)new FIX::DoubleField(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29401,14 +29707,14 @@ _wrap_new_DoubleField__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DoubleField *)new FIX::DoubleField(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29519,13 +29825,13 @@ _wrap_DoubleField_setValue__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29559,13 +29865,13 @@ _wrap_DoubleField_setValue__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< double >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29653,13 +29959,13 @@ _wrap_DoubleField_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DoubleField::value_type)FIX::DoubleField::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29688,13 +29994,13 @@ _wrap_DoubleField_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DoubleField * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (double)((FIX::DoubleField const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29739,14 +30045,14 @@ _wrap_new_IntField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IntField *)new FIX::IntField(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29789,14 +30095,14 @@ _wrap_new_IntField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IntField *)new FIX::IntField(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29876,13 +30182,13 @@ _wrap_IntField_setValue(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29913,13 +30219,13 @@ _wrap_IntField_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::IntField::value_type)FIX::IntField::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29948,13 +30254,13 @@ _wrap_IntField_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::IntField * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::IntField const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -29999,14 +30305,14 @@ _wrap_new_Int64Field__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int64_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Int64Field *)new FIX::Int64Field(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30049,14 +30355,14 @@ _wrap_new_Int64Field__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Int64Field *)new FIX::Int64Field(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30136,13 +30442,13 @@ _wrap_Int64Field_setValue(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int64_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30173,13 +30479,13 @@ _wrap_Int64Field_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Int64Field::value_type)FIX::Int64Field::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30208,13 +30514,13 @@ _wrap_Int64Field_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Int64Field * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int64_t)((FIX::Int64Field const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30259,14 +30565,14 @@ _wrap_new_UInt64Field__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< uint64_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UInt64Field *)new FIX::UInt64Field(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30309,14 +30615,14 @@ _wrap_new_UInt64Field__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UInt64Field *)new FIX::UInt64Field(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30396,13 +30702,13 @@ _wrap_UInt64Field_setValue(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< uint64_t >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30433,13 +30739,13 @@ _wrap_UInt64Field_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UInt64Field::value_type)FIX::UInt64Field::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30468,13 +30774,13 @@ _wrap_UInt64Field_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::UInt64Field * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (uint64_t)((FIX::UInt64Field const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30519,14 +30825,14 @@ _wrap_new_BoolField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::BoolField *)new FIX::BoolField(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30569,14 +30875,14 @@ _wrap_new_BoolField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::BoolField *)new FIX::BoolField(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30656,13 +30962,13 @@ _wrap_BoolField_setValue(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30693,13 +30999,13 @@ _wrap_BoolField_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::BoolField::value_type)FIX::BoolField::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30728,13 +31034,13 @@ _wrap_BoolField_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::BoolField * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::BoolField const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30790,14 +31096,14 @@ _wrap_new_UtcTimeStampField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStampField *)new FIX::UtcTimeStampField(arg1,(FIX::UtcTimeStamp const &)*arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30836,14 +31142,14 @@ _wrap_new_UtcTimeStampField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStampField *)new FIX::UtcTimeStampField(arg1,(FIX::UtcTimeStamp const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30879,14 +31185,14 @@ _wrap_new_UtcTimeStampField__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStampField *)new FIX::UtcTimeStampField(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -30929,14 +31235,14 @@ _wrap_new_UtcTimeStampField__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeStampField *)new FIX::UtcTimeStampField(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31057,13 +31363,13 @@ _wrap_UtcTimeStampField_setValue(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue((FIX::UtcTimeStamp const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31094,13 +31400,13 @@ _wrap_UtcTimeStampField_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::UtcTimeStampField::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31129,13 +31435,13 @@ _wrap_UtcTimeStampField_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStampField * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::UtcTimeStampField const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31183,13 +31489,13 @@ _wrap_UtcTimeStampField___lt__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStampField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::UtcTimeStampField const *)arg1)->operator <((FIX::UtcTimeStampField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31237,13 +31543,13 @@ _wrap_UtcTimeStampField___eq__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStampField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::UtcTimeStampField const *)arg1)->operator ==((FIX::UtcTimeStampField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31291,14 +31597,14 @@ _wrap_new_UtcDateField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcDate * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcDateField *)new FIX::UtcDateField(arg1,(FIX::UtcDate const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31341,14 +31647,14 @@ _wrap_new_UtcDateField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcDateField *)new FIX::UtcDateField(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31430,13 +31736,13 @@ _wrap_UtcDateField_setValue(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcDate * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue((FIX::UtcDate const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31467,13 +31773,13 @@ _wrap_UtcDateField_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::UtcDateField::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31502,13 +31808,13 @@ _wrap_UtcDateField_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::UtcDateField * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::UtcDateField const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31556,13 +31862,13 @@ _wrap_UtcDateField___lt__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcDateField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::UtcDateField const *)arg1)->operator <((FIX::UtcDateField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31610,13 +31916,13 @@ _wrap_UtcDateField___eq__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcDateField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::UtcDateField const *)arg1)->operator ==((FIX::UtcDateField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31672,14 +31978,14 @@ _wrap_new_UtcTimeOnlyField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnlyField *)new FIX::UtcTimeOnlyField(arg1,(FIX::UtcTimeOnly const &)*arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31718,14 +32024,14 @@ _wrap_new_UtcTimeOnlyField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeOnly * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnlyField *)new FIX::UtcTimeOnlyField(arg1,(FIX::UtcTimeOnly const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31761,14 +32067,14 @@ _wrap_new_UtcTimeOnlyField__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnlyField *)new FIX::UtcTimeOnlyField(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31811,14 +32117,14 @@ _wrap_new_UtcTimeOnlyField__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::UtcTimeOnlyField *)new FIX::UtcTimeOnlyField(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31939,13 +32245,13 @@ _wrap_UtcTimeOnlyField_setValue(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeOnly * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue((FIX::UtcTimeOnly const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -31976,13 +32282,13 @@ _wrap_UtcTimeOnlyField_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::UtcTimeOnlyField::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32011,13 +32317,13 @@ _wrap_UtcTimeOnlyField_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::UtcTimeOnlyField * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::UtcTimeOnlyField const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32065,13 +32371,13 @@ _wrap_UtcTimeOnlyField___lt__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeOnlyField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::UtcTimeOnlyField const *)arg1)->operator <((FIX::UtcTimeOnlyField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32119,13 +32425,13 @@ _wrap_UtcTimeOnlyField___eq__(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeOnlyField * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::UtcTimeOnlyField const *)arg1)->operator ==((FIX::UtcTimeOnlyField const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32170,14 +32476,14 @@ _wrap_new_CheckSumField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::CheckSumField *)new FIX::CheckSumField(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32220,14 +32526,14 @@ _wrap_new_CheckSumField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::CheckSumField *)new FIX::CheckSumField(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32307,13 +32613,13 @@ _wrap_CheckSumField_setValue(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setValue(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32344,13 +32650,13 @@ _wrap_CheckSumField_valueOf(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::CheckSumField::value_type)FIX::CheckSumField::valueOf((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32379,13 +32685,13 @@ _wrap_CheckSumField_getValue(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::CheckSumField * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::CheckSumField const *)arg1)->getValue();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32414,14 +32720,14 @@ _wrap_new_GroupArena__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::GroupArena *)new FIX::GroupArena();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32464,14 +32770,14 @@ _wrap_new_GroupArena__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< size_t >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::GroupArena *)new FIX::GroupArena(SWIG_STD_MOVE(arg1));
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32532,13 +32838,13 @@ _wrap_GroupArena_allocate(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::GroupArena * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (void *)(arg1)->allocate();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32571,13 +32877,13 @@ _wrap_GroupArena_deallocate(int argc, VALUE *argv, VALUE self) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "void *","deallocate", 2, argv[0] )); 
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->deallocate(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32611,13 +32917,13 @@ _wrap_GroupArena_owns(int argc, VALUE *argv, VALUE self) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "void const *","owns", 2, argv[0] )); 
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::GroupArena const *)arg1)->owns((void const *)arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32644,13 +32950,13 @@ _wrap_GroupArena_reset(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::GroupArena * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->reset();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32678,13 +32984,13 @@ _wrap_GroupArena_count(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::GroupArena * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::GroupArena const *)arg1)->count();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32724,14 +33030,14 @@ _wrap_new_FieldMap__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< message_order * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *)new FIX::FieldMap((message_order const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32751,14 +33057,14 @@ _wrap_new_FieldMap__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *)new FIX::FieldMap();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32786,14 +33092,14 @@ _wrap_new_FieldMap__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = reinterpret_cast< int * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *)new FIX::FieldMap((int const (*))arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32824,14 +33130,14 @@ _wrap_new_FieldMap__SWIG_4(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *)new FIX::FieldMap((FIX::FieldMap const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -32883,14 +33189,14 @@ _wrap_new_FieldMap__SWIG_5(int argc, VALUE *argv, VALUE self) {
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   rvrdeleter1.reset(arg1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *)new FIX::FieldMap((FIX::FieldMap &&)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33003,13 +33309,13 @@ _wrap_FieldMap_setField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setField((FIX::FieldBase const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33046,13 +33352,13 @@ _wrap_FieldMap_setField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::FieldBase * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setField((FIX::FieldBase const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33100,13 +33406,13 @@ _wrap_FieldMap_setField__SWIG_2(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setField(arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33229,13 +33535,13 @@ _wrap_FieldMap_getFieldIfSet(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::FieldBase * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::FieldMap const *)arg1)->getFieldIfSet(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33275,13 +33581,13 @@ _wrap_FieldMap_getField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::FieldBase * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldBase *) &((FIX::FieldMap const *)arg1)->getField(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33318,13 +33624,13 @@ _wrap_FieldMap_getField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::FieldMap const *)arg1)->getField(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33411,13 +33717,13 @@ _wrap_FieldMap_getFieldRef(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldBase *) &((FIX::FieldMap const *)arg1)->getFieldRef(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33454,13 +33760,13 @@ _wrap_FieldMap_getFieldPtr(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldBase *)((FIX::FieldMap const *)arg1)->getFieldPtr(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33500,13 +33806,13 @@ _wrap_FieldMap_isSetField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::FieldBase * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::FieldMap const *)arg1)->isSetField((FIX::FieldBase const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33543,13 +33849,13 @@ _wrap_FieldMap_isSetField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::FieldMap const *)arg1)->isSetField(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33634,13 +33940,13 @@ _wrap_FieldMap_removeField(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeField(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33693,13 +33999,13 @@ _wrap_FieldMap_addGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< bool >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addGroup(arg2,(FIX::FieldMap const &)*arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33744,13 +34050,13 @@ _wrap_FieldMap_addGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::FieldMap * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addGroup(arg2,(FIX::FieldMap const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33867,13 +34173,13 @@ _wrap_FieldMap_addGroupPtr__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< bool >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addGroupPtr(arg2,arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -33915,13 +34221,13 @@ _wrap_FieldMap_addGroupPtr__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::FieldMap * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addGroupPtr(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34041,13 +34347,13 @@ _wrap_FieldMap_replaceGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< FIX::FieldMap * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->replaceGroup(arg2,arg3,(FIX::FieldMap const &)*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34102,13 +34408,13 @@ _wrap_FieldMap_getGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< FIX::FieldMap * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *) &((FIX::FieldMap const *)arg1)->getGroup(arg2,arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34153,13 +34459,13 @@ _wrap_FieldMap_getGroupRef(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *) &((FIX::FieldMap const *)arg1)->getGroupRef(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34204,13 +34510,13 @@ _wrap_FieldMap_getGroupPtr(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *)((FIX::FieldMap const *)arg1)->getGroupPtr(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34239,13 +34545,13 @@ _wrap_FieldMap_groups(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap::Groups *) &((FIX::FieldMap const *)arg1)->groups();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34288,13 +34594,13 @@ _wrap_FieldMap_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeGroup(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34328,13 +34634,13 @@ _wrap_FieldMap_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeGroup(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34427,13 +34733,13 @@ _wrap_FieldMap_hasGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::FieldMap const *)arg1)->hasGroup(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34478,13 +34784,13 @@ _wrap_FieldMap_hasGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::FieldMap const *)arg1)->hasGroup(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34578,13 +34884,13 @@ _wrap_FieldMap_groupCount(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::FieldMap const *)arg1)->groupCount(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34619,13 +34925,13 @@ _wrap_FieldMap_clear(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clear();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34662,13 +34968,13 @@ _wrap_FieldMap_swap(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::FieldMap * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->swap(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34696,13 +35002,13 @@ _wrap_FieldMap_isEmpty(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->isEmpty();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34731,13 +35037,13 @@ _wrap_FieldMap_totalFields(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::FieldMap const *)arg1)->totalFields();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34772,13 +35078,13 @@ _wrap_FieldMap_calculateString(int argc, VALUE *argv, VALUE self) {
     arg2 = &temp2;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::FieldMap const *)arg1)->calculateString(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34838,13 +35144,13 @@ _wrap_FieldMap_calculateLength__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::FieldMap const *)arg1)->calculateLength(arg2,arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34889,13 +35195,13 @@ _wrap_FieldMap_calculateLength__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::FieldMap const *)arg1)->calculateLength(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34932,13 +35238,13 @@ _wrap_FieldMap_calculateLength__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::FieldMap const *)arg1)->calculateLength(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -34967,13 +35273,13 @@ _wrap_FieldMap_calculateLength__SWIG_3(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::FieldMap const *)arg1)->calculateLength();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35105,13 +35411,13 @@ _wrap_FieldMap_calculateTotal__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::FieldMap const *)arg1)->calculateTotal(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35140,13 +35446,13 @@ _wrap_FieldMap_calculateTotal__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::FieldMap const *)arg1)->calculateTotal();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35229,13 +35535,13 @@ _wrap_FieldMap_begin__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->begin();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35273,13 +35579,13 @@ _wrap_FieldMap_end__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->end();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35317,13 +35623,13 @@ _wrap_FieldMap_begin__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::FieldMap const *)arg1)->begin();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35400,13 +35706,13 @@ _wrap_FieldMap_end__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::FieldMap const *)arg1)->end();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35474,13 +35780,13 @@ _wrap_FieldMap_g_begin__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->g_begin();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35509,13 +35815,13 @@ _wrap_FieldMap_g_end__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->g_end();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35544,13 +35850,13 @@ _wrap_FieldMap_g_begin__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::FieldMap const *)arg1)->g_begin();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35618,13 +35924,13 @@ _wrap_FieldMap_g_end__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::FieldMap const *)arg1)->g_end();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35703,13 +36009,13 @@ _wrap_FieldMap_cloneInto(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::GroupArena * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *)((FIX::FieldMap const *)arg1)->cloneInto(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35732,14 +36038,14 @@ _wrap_new_Header__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Header *)new FIX::Header();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35785,14 +36091,14 @@ _wrap_new_Header__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< message_order * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Header *)new FIX::Header((message_order const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35861,13 +36167,13 @@ _wrap_Header_addGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35912,13 +36218,13 @@ _wrap_Header_replaceGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -35965,13 +36271,13 @@ _wrap_Header_getGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (Group *) &((FIX::Header const *)arg1)->getGroup(arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36017,13 +36323,13 @@ _wrap_Header_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36060,13 +36366,13 @@ _wrap_Header_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36160,13 +36466,13 @@ _wrap_Header_hasGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Header const *)arg1)->hasGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36214,13 +36520,13 @@ _wrap_Header_hasGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Header const *)arg1)->hasGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36304,14 +36610,14 @@ _wrap_new_Trailer__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Trailer *)new FIX::Trailer();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36357,14 +36663,14 @@ _wrap_new_Trailer__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< message_order * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Trailer *)new FIX::Trailer((message_order const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36433,13 +36739,13 @@ _wrap_Trailer_addGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36484,13 +36790,13 @@ _wrap_Trailer_replaceGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36537,13 +36843,13 @@ _wrap_Trailer_getGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (Group *) &((FIX::Trailer const *)arg1)->getGroup(arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36589,13 +36895,13 @@ _wrap_Trailer_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36632,13 +36938,13 @@ _wrap_Trailer_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36732,13 +37038,13 @@ _wrap_Trailer_hasGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Trailer const *)arg1)->hasGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36786,13 +37092,13 @@ _wrap_Trailer_hasGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Trailer const *)arg1)->hasGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36876,14 +37182,14 @@ _wrap_new_Message__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36936,14 +37242,14 @@ _wrap_new_Message__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< message_order * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((message_order const &)*arg1,(message_order const &)*arg2,(message_order const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -36984,14 +37290,14 @@ _wrap_new_Message__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((std::string const &)*arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37033,14 +37339,14 @@ _wrap_new_Message__SWIG_3(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37101,14 +37407,14 @@ _wrap_new_Message__SWIG_4(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((std::string const &)*arg1,(FIX::DataDictionary const &)*arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37161,14 +37467,14 @@ _wrap_new_Message__SWIG_5(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::DataDictionary * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((std::string const &)*arg1,(FIX::DataDictionary const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37240,14 +37546,14 @@ _wrap_new_Message__SWIG_6(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< bool >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((std::string const &)*arg1,(FIX::DataDictionary const &)*arg2,(FIX::DataDictionary const &)*arg3,arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37311,14 +37617,14 @@ _wrap_new_Message__SWIG_7(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::DataDictionary * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((std::string const &)*arg1,(FIX::DataDictionary const &)*arg2,(FIX::DataDictionary const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37412,14 +37718,14 @@ _wrap_new_Message__SWIG_8(int argc, VALUE *argv, VALUE self) {
   } 
   arg6 = static_cast< bool >(val6);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((message_order const &)*arg1,(message_order const &)*arg2,(message_order const &)*arg3,(std::string const &)*arg4,(FIX::DataDictionary const &)*arg5,arg6);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37505,14 +37811,14 @@ _wrap_new_Message__SWIG_9(int argc, VALUE *argv, VALUE self) {
   }
   arg5 = reinterpret_cast< FIX::DataDictionary * >(argp5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((message_order const &)*arg1,(message_order const &)*arg2,(message_order const &)*arg3,(std::string const &)*arg4,(FIX::DataDictionary const &)*arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37617,14 +37923,14 @@ _wrap_new_Message__SWIG_10(int argc, VALUE *argv, VALUE self) {
   } 
   arg7 = static_cast< bool >(val7);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((message_order const &)*arg1,(message_order const &)*arg2,(message_order const &)*arg3,(std::string const &)*arg4,(FIX::DataDictionary const &)*arg5,(FIX::DataDictionary const &)*arg6,arg7);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37721,14 +38027,14 @@ _wrap_new_Message__SWIG_11(int argc, VALUE *argv, VALUE self) {
   }
   arg6 = reinterpret_cast< FIX::DataDictionary * >(argp6);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((message_order const &)*arg1,(message_order const &)*arg2,(message_order const &)*arg3,(std::string const &)*arg4,(FIX::DataDictionary const &)*arg5,(FIX::DataDictionary const &)*arg6);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37768,14 +38074,14 @@ _wrap_new_Message__SWIG_12(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((FIX::Message const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -37827,14 +38133,14 @@ _wrap_new_Message__SWIG_13(int argc, VALUE *argv, VALUE self) {
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   rvrdeleter1.reset(arg1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Message *)new FIX::Message((FIX::Message &&)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38175,13 +38481,13 @@ _wrap_Message_InitializeXML(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::Message::InitializeXML((std::string const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38228,13 +38534,13 @@ _wrap_Message_addGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38279,13 +38585,13 @@ _wrap_Message_replaceGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38332,13 +38638,13 @@ _wrap_Message_getGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (Group *) &((FIX::Message const *)arg1)->getGroup(arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38384,13 +38690,13 @@ _wrap_Message_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38427,13 +38733,13 @@ _wrap_Message_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38527,13 +38833,13 @@ _wrap_Message_hasGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Message const *)arg1)->hasGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38581,13 +38887,13 @@ _wrap_Message_hasGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Message const *)arg1)->hasGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38695,13 +39001,13 @@ _wrap_Message_toString__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Message const *)arg1)->toString(arg2,arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38746,13 +39052,13 @@ _wrap_Message_toString__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Message const *)arg1)->toString(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38789,13 +39095,13 @@ _wrap_Message_toString__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Message const *)arg1)->toString(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38824,13 +39130,13 @@ _wrap_Message_toString__SWIG_3(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Message const *)arg1)->toString();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38889,13 +39195,13 @@ _wrap_Message_toString__SWIG_4(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< int >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::Message const *)arg1)->toString(*arg2,arg3,arg4,arg5);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -38953,13 +39259,13 @@ _wrap_Message_toString__SWIG_5(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::Message const *)arg1)->toString(*arg2,arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39009,13 +39315,13 @@ _wrap_Message_toString__SWIG_6(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::Message const *)arg1)->toString(*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39057,13 +39363,13 @@ _wrap_Message_toString__SWIG_7(int argc, VALUE *argv, VALUE self) {
     arg2 = &temp2;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::Message const *)arg1)->toString(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39290,13 +39596,13 @@ _wrap_Message_toXML__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Message const *)arg1)->toXML();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39331,13 +39637,13 @@ _wrap_Message_toXML__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg2 = &temp2;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::Message const *)arg1)->toXML(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39426,13 +39732,13 @@ _wrap_Message_reverseRoute(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Header * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->reverseRoute((FIX::Header const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39472,13 +39778,13 @@ _wrap_Message_setString__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setString((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39535,13 +39841,13 @@ _wrap_Message_setString__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setString((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39606,13 +39912,13 @@ _wrap_Message_setString__SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< FIX::DataDictionary * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setString((std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39685,13 +39991,13 @@ _wrap_Message_setString__SWIG_3(int argc, VALUE *argv, VALUE self) {
   }
   arg5 = reinterpret_cast< FIX::DataDictionary * >(argp5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setString((std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4,(FIX::DataDictionary const *)arg5);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39905,13 +40211,13 @@ _wrap_Message_setGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg7 = reinterpret_cast< DataDictionary * >(argp7);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setGroup((std::string const &)*arg2,(FIX::FieldBase const &)*arg3,(std::string const &)*arg4,*arg5,*arg6,(DataDictionary const &)*arg7);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -39971,13 +40277,13 @@ _wrap_Message_setStringHeader(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->setStringHeader((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40015,13 +40321,13 @@ _wrap_Message_getHeader__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Header *) &((FIX::Message const *)arg1)->getHeader();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40050,13 +40356,13 @@ _wrap_Message_getHeader__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Header *) &(arg1)->getHeader();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40124,13 +40430,13 @@ _wrap_Message_getTrailer__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Trailer *) &((FIX::Message const *)arg1)->getTrailer();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40159,13 +40465,13 @@ _wrap_Message_getTrailer__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Trailer *) &(arg1)->getTrailer();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40239,13 +40545,13 @@ _wrap_Message_hasValidStructure(int argc, VALUE *argv, VALUE self) {
     arg2 = &temp2;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Message const *)arg1)->hasValidStructure(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40286,13 +40592,13 @@ _wrap_Message_hasEmbeddedSOH(int argc, VALUE *argv, VALUE self) {
     arg2 = &temp2;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Message const *)arg1)->hasEmbeddedSOH(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40333,13 +40639,13 @@ _wrap_Message_hasOutOfOrderGroupMembers(int argc, VALUE *argv, VALUE self) {
     arg2 = &temp2;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Message const *)arg1)->hasOutOfOrderGroupMembers(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40398,13 +40704,13 @@ _wrap_Message_bodyLength__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::Message const *)arg1)->bodyLength(arg2,arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40449,13 +40755,13 @@ _wrap_Message_bodyLength__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::Message const *)arg1)->bodyLength(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40492,13 +40798,13 @@ _wrap_Message_bodyLength__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::Message const *)arg1)->bodyLength(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40527,13 +40833,13 @@ _wrap_Message_bodyLength__SWIG_3(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::Message const *)arg1)->bodyLength();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40665,13 +40971,13 @@ _wrap_Message_checkSum__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::Message const *)arg1)->checkSum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40700,13 +41006,13 @@ _wrap_Message_checkSum__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::Message const *)arg1)->checkSum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40780,13 +41086,13 @@ _wrap_Message_isAdmin(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Message const *)arg1)->isAdmin();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40815,13 +41121,13 @@ _wrap_Message_isApp(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Message const *)arg1)->isApp();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40850,13 +41156,13 @@ _wrap_Message_isEmpty(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->isEmpty();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40891,13 +41197,13 @@ _wrap_Message_clear(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clear();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40930,13 +41236,13 @@ _wrap_Message_isAdminMsgType(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::Message::isAdminMsgType((std::string const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -40979,13 +41285,13 @@ _wrap_Message_toApplVerID(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::Message::toApplVerID((std::string const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41026,13 +41332,13 @@ _wrap_Message_toBeginString(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< ApplVerID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::Message::toBeginString((ApplVerID const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41061,13 +41367,13 @@ _wrap_Message_isHeaderField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::Message::isHeaderField(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41107,13 +41413,13 @@ _wrap_Message_isHeaderField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< DataDictionary * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::Message::isHeaderField((FIX::FieldBase const &)*arg1,(DataDictionary const *)arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41145,13 +41451,13 @@ _wrap_Message_isHeaderField__SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::Message::isHeaderField((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41188,13 +41494,13 @@ _wrap_Message_isHeaderField__SWIG_3(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< DataDictionary * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::Message::isHeaderField(arg1,(DataDictionary const *)arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41293,13 +41599,13 @@ _wrap_Message_isTrailerField__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg1 = static_cast< int >(val1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::Message::isTrailerField(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41339,13 +41645,13 @@ _wrap_Message_isTrailerField__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< DataDictionary * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::Message::isTrailerField((FIX::FieldBase const &)*arg1,(DataDictionary const *)arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41377,13 +41683,13 @@ _wrap_Message_isTrailerField__SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::Message::isTrailerField((FIX::FieldBase const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41420,13 +41726,13 @@ _wrap_Message_isTrailerField__SWIG_3(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< DataDictionary * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)FIX::Message::isTrailerField(arg1,(DataDictionary const *)arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41538,13 +41844,13 @@ _wrap_Message_getSessionID__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Message const *)arg1)->getSessionID((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41582,13 +41888,13 @@ _wrap_Message_getSessionID__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Message const *)arg1)->getSessionID();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41669,13 +41975,13 @@ _wrap_Message_setSessionID(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setSessionID((SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41703,13 +42009,13 @@ _wrap_Message___str__(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX_Message___str__(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41763,13 +42069,13 @@ _wrap___lshift____SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Message * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::ostream *) &FIX::operator <<(*arg1,(FIX::Message const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41803,13 +42109,13 @@ _wrap_identifyType(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX::identifyType((std::string const &)*arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41857,14 +42163,14 @@ _wrap_new_Group__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Group *)new FIX::Group(arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41908,14 +42214,14 @@ _wrap_new_Group__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = reinterpret_cast< int * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Group *)new FIX::Group(arg1,arg2,(int const (*))arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -41962,14 +42268,14 @@ _wrap_new_Group__SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< message_order * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Group *)new FIX::Group(arg1,arg2,(message_order const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42015,14 +42321,14 @@ _wrap_new_Group__SWIG_3(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Group *)new FIX::Group((FIX::Group const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42139,13 +42445,13 @@ _wrap_Group_field(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::Group const *)arg1)->field();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42174,13 +42480,13 @@ _wrap_Group_delim(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::Group const *)arg1)->delim();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42218,13 +42524,13 @@ _wrap_Group_addGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42269,13 +42575,13 @@ _wrap_Group_replaceGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42322,13 +42628,13 @@ _wrap_Group_getGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Group *) &((FIX::Group const *)arg1)->getGroup(arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42374,13 +42680,13 @@ _wrap_Group_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42417,13 +42723,13 @@ _wrap_Group_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->removeGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42517,13 +42823,13 @@ _wrap_Group_hasGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->hasGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42571,13 +42877,13 @@ _wrap_Group_hasGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->hasGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42672,13 +42978,13 @@ _wrap_Group_cloneInto(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::GroupArena * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *)((FIX::Group const *)arg1)->cloneInto(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42707,14 +43013,14 @@ _wrap_new_BeginString__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::BeginString *)new FIX::BeginString();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42762,14 +43068,14 @@ _wrap_new_BeginString__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::BeginString *)new FIX::BeginString((FIX::STRING const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42837,14 +43143,14 @@ _wrap_new_SenderCompID__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SenderCompID *)new FIX::SenderCompID();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42892,14 +43198,14 @@ _wrap_new_SenderCompID__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SenderCompID *)new FIX::SenderCompID((FIX::STRING const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -42967,14 +43273,14 @@ _wrap_new_TargetCompID__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::TargetCompID *)new FIX::TargetCompID();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -43022,14 +43328,14 @@ _wrap_new_TargetCompID__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::TargetCompID *)new FIX::TargetCompID((FIX::STRING const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95369,14 +95675,14 @@ _wrap_new_SessionID__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SessionID *)new FIX::SessionID();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95448,14 +95754,14 @@ _wrap_new_SessionID__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg4 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SessionID *)new FIX::SessionID((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95565,14 +95871,14 @@ _wrap_new_SessionID__SWIG_2(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SessionID *)new FIX::SessionID((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95687,13 +95993,13 @@ _wrap_SessionID_getBeginString(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::BeginString *) &((FIX::SessionID const *)arg1)->getBeginString();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95722,13 +96028,13 @@ _wrap_SessionID_getSenderCompID(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SenderCompID *) &((FIX::SessionID const *)arg1)->getSenderCompID();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95757,13 +96063,13 @@ _wrap_SessionID_getTargetCompID(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::TargetCompID *) &((FIX::SessionID const *)arg1)->getTargetCompID();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95792,13 +96098,13 @@ _wrap_SessionID_getSessionQualifier(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::SessionID const *)arg1)->getSessionQualifier();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95827,13 +96133,13 @@ _wrap_SessionID_isFIXT(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::SessionID const *)arg1)->isFIXT();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95862,13 +96168,13 @@ _wrap_SessionID_toString__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::SessionID const *)arg1)->toString();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95897,13 +96203,13 @@ _wrap_SessionID_toStringFrozen(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::SessionID const *)arg1)->toStringFrozen();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95944,13 +96250,13 @@ _wrap_SessionID_fromString(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->fromString((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -95993,13 +96299,13 @@ _wrap_SessionID_toString__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg2 = &temp2;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::SessionID const *)arg1)->toString(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96107,13 +96413,13 @@ _wrap___lt____SWIG_5(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator <((FIX::SessionID const &)*arg1,(FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96170,13 +96476,13 @@ _wrap___eq____SWIG_5(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator ==((FIX::SessionID const &)*arg1,(FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96230,13 +96536,13 @@ _wrap___lshift____SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::ostream *) &operator <<(*arg1,(FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96288,13 +96594,13 @@ _wrap___rshift____SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::istream *) &operator >>(*arg1,*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96331,13 +96637,13 @@ _wrap_SessionID___invert__(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::SessionID const *)arg1)->operator ~();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96366,13 +96672,13 @@ _wrap_SessionID___str__(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = FIX_SessionID___str__(arg1);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96414,14 +96720,14 @@ _wrap_new_Dictionary__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Dictionary *)new FIX::Dictionary((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96465,14 +96771,14 @@ _wrap_new_Dictionary__SWIG_1(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Dictionary *)new FIX::Dictionary();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96537,13 +96843,13 @@ _wrap_Dictionary_getName(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Dictionary const *)arg1)->getName();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96580,13 +96886,13 @@ _wrap_Dictionary_size(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Dictionary const *)arg1)->size();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96636,13 +96942,13 @@ _wrap_Dictionary_getString__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Dictionary const *)arg1)->getString((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96693,13 +96999,13 @@ _wrap_Dictionary_getString__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Dictionary const *)arg1)->getString((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96803,13 +97109,13 @@ _wrap_Dictionary_getInt(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::Dictionary const *)arg1)->getInt((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96860,13 +97166,13 @@ _wrap_Dictionary_getDouble(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (double)((FIX::Dictionary const *)arg1)->getDouble((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96917,13 +97223,13 @@ _wrap_Dictionary_getBool(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Dictionary const *)arg1)->getBool((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -96974,13 +97280,13 @@ _wrap_Dictionary_getDay(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)((FIX::Dictionary const *)arg1)->getDay((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -97043,13 +97349,13 @@ _wrap_Dictionary_setString(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setString((std::string const &)*arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -97116,13 +97422,13 @@ _wrap_Dictionary_setInt(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setInt((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -97179,13 +97485,13 @@ _wrap_Dictionary_setDouble(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< double >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setDouble((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -97242,13 +97548,13 @@ _wrap_Dictionary_setBool(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setBool((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -97305,13 +97611,13 @@ _wrap_Dictionary_setDay(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setDay((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -97361,13 +97667,13 @@ _wrap_Dictionary_has(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::Dictionary const *)arg1)->has((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -97414,13 +97720,13 @@ _wrap_Dictionary_merge(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Dictionary * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->merge((FIX::Dictionary const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -97456,13 +97762,13 @@ _wrap_Dictionary_begin(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Dictionary const *)arg1)->begin();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -97499,13 +97805,13 @@ _wrap_Dictionary_end(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::Dictionary const *)arg1)->end();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -98563,14 +98869,14 @@ _wrap_new_SessionSettings__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SessionSettings *)new FIX::SessionSettings();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -98609,14 +98915,14 @@ _wrap_new_SessionSettings__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SessionSettings *)new FIX::SessionSettings(*arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -98647,14 +98953,14 @@ _wrap_new_SessionSettings__SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::istream * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SessionSettings *)new FIX::SessionSettings(*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -98695,14 +99001,14 @@ _wrap_new_SessionSettings__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SessionSettings *)new FIX::SessionSettings((std::string const &)*arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -98759,14 +99065,14 @@ _wrap_new_SessionSettings__SWIG_4(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SessionSettings *)new FIX::SessionSettings((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -98886,13 +99192,13 @@ _wrap_SessionSettings_has(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::SessionSettings const *)arg1)->has((FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -98932,13 +99238,13 @@ _wrap_SessionSettings_get__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Dictionary *) &((FIX::SessionSettings const *)arg1)->get((FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -98990,13 +99296,13 @@ _wrap_SessionSettings_set__SWIG_0(int argc, VALUE *argv, VALUE self) {
     }
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->set((FIX::SessionID const &)*arg2,SWIG_STD_MOVE(arg3));
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99024,13 +99330,13 @@ _wrap_SessionSettings_get__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Dictionary *) &((FIX::SessionSettings const *)arg1)->get();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99112,13 +99418,13 @@ _wrap_SessionSettings_set__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Dictionary * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->set((FIX::Dictionary const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99208,13 +99514,13 @@ _wrap_SessionSettings_size(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::SessionSettings const *)arg1)->size();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99243,13 +99549,13 @@ _wrap_SessionSettings_getSessions(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::SessionSettings const *)arg1)->getSessions();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99301,13 +99607,13 @@ _wrap___rshift____SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionSettings * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::istream *) &operator >>(*arg1,*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99409,13 +99715,13 @@ _wrap___lshift____SWIG_3(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionSettings * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::ostream *) &operator <<(*arg1,(FIX::SessionSettings const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99534,13 +99840,13 @@ _wrap_SessionSettings_setFromString(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       FIX_SessionSettings_setFromString(arg1,(std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99589,13 +99895,14 @@ _wrap_Session_logon(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->logon();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->logon();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99635,13 +99942,14 @@ _wrap_Session_logout__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->logout((std::string const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->logout((std::string const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99676,13 +99984,14 @@ _wrap_Session_logout__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->logout();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->logout();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99753,13 +100062,14 @@ _wrap_Session_isEnabled(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->isEnabled();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->isEnabled();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99788,13 +100098,14 @@ _wrap_Session_sentLogon(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->sentLogon();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->sentLogon();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99823,13 +100134,14 @@ _wrap_Session_sentLogout(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->sentLogout();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->sentLogout();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99858,13 +100170,14 @@ _wrap_Session_receivedLogon(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->receivedLogon();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->receivedLogon();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99893,13 +100206,14 @@ _wrap_Session_isLoggedOn(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->isLoggedOn();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->isLoggedOn();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99926,13 +100240,14 @@ _wrap_Session_reset(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->reset();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->reset();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99958,13 +100273,14 @@ _wrap_Session_refresh(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->refresh();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->refresh();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -99998,13 +100314,14 @@ _wrap_Session_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setNextSenderMsgSeqNum(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setNextSenderMsgSeqNum(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100038,13 +100355,14 @@ _wrap_Session_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setNextTargetMsgSeqNum(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setNextTargetMsgSeqNum(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100072,13 +100390,14 @@ _wrap_Session_getSessionID(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::SessionID *) &((FIX::Session const *)arg1)->getSessionID();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::SessionID *) &((FIX::Session const *)arg1)->getSessionID();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100116,13 +100435,14 @@ _wrap_Session_setDataDictionaryProvider(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< DataDictionaryProvider * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setDataDictionaryProvider((DataDictionaryProvider const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setDataDictionaryProvider((DataDictionaryProvider const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100150,13 +100470,14 @@ _wrap_Session_getDataDictionaryProvider(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (DataDictionaryProvider *) &((FIX::Session const *)arg1)->getDataDictionaryProvider();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (DataDictionaryProvider *) &((FIX::Session const *)arg1)->getDataDictionaryProvider();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100201,13 +100522,14 @@ _wrap_Session_sendToTarget__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100248,13 +100570,14 @@ _wrap_Session_sendToTarget__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)FIX::Session::sendToTarget(*arg1);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)FIX::Session::sendToTarget(*arg1);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100297,13 +100620,14 @@ _wrap_Session_sendToTarget__SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SessionID const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SessionID const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100370,13 +100694,14 @@ _wrap_Session_sendToTarget__SWIG_3(int argc, VALUE *argv, VALUE self) {
     arg4 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SenderCompID const &)*arg2,(FIX::TargetCompID const &)*arg3,(std::string const &)*arg4);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SenderCompID const &)*arg2,(FIX::TargetCompID const &)*arg3,(std::string const &)*arg4);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100439,13 +100764,14 @@ _wrap_Session_sendToTarget__SWIG_4(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::TargetCompID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SenderCompID const &)*arg2,(FIX::TargetCompID const &)*arg3);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SenderCompID const &)*arg2,(FIX::TargetCompID const &)*arg3);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100516,13 +100842,14 @@ _wrap_Session_sendToTarget__SWIG_5(int argc, VALUE *argv, VALUE self) {
     arg4 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100607,13 +100934,14 @@ _wrap_Session_sendToTarget__SWIG_6(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2,(std::string const &)*arg3);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2,(std::string const &)*arg3);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100793,13 +101121,14 @@ _wrap_Session_getSessions(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = FIX::Session::getSessions();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = FIX::Session::getSessions();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100831,13 +101160,14 @@ _wrap_Session_doesSessionExist(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)FIX::Session::doesSessionExist((FIX::SessionID const &)*arg1);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)FIX::Session::doesSessionExist((FIX::SessionID const &)*arg1);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100869,13 +101199,14 @@ _wrap_Session_lookupSession__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Session *)FIX::Session::lookupSession((FIX::SessionID const &)*arg1);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Session *)FIX::Session::lookupSession((FIX::SessionID const &)*arg1);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100917,13 +101248,14 @@ _wrap_Session_lookupSession__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Session *)FIX::Session::lookupSession((std::string const &)*arg1,arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Session *)FIX::Session::lookupSession((std::string const &)*arg1,arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -100966,13 +101298,14 @@ _wrap_Session_lookupSession__SWIG_2(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Session *)FIX::Session::lookupSession((std::string const &)*arg1);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Session *)FIX::Session::lookupSession((std::string const &)*arg1);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101065,13 +101398,14 @@ _wrap_Session_isSessionRegistered(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)FIX::Session::isSessionRegistered((FIX::SessionID const &)*arg1);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)FIX::Session::isSessionRegistered((FIX::SessionID const &)*arg1);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101103,13 +101437,14 @@ _wrap_Session_registerSession(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Session *)FIX::Session::registerSession((FIX::SessionID const &)*arg1);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Session *)FIX::Session::registerSession((FIX::SessionID const &)*arg1);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101139,13 +101474,14 @@ _wrap_Session_unregisterSession(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      FIX::Session::unregisterSession((FIX::SessionID const &)*arg1);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        FIX::Session::unregisterSession((FIX::SessionID const &)*arg1);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101165,13 +101501,14 @@ _wrap_Session_numSessions(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = FIX::Session::numSessions();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = FIX::Session::numSessions();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101211,13 +101548,14 @@ _wrap_Session_isSessionTime(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->isSessionTime((FIX::UtcTimeStamp const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->isSessionTime((FIX::UtcTimeStamp const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101257,13 +101595,14 @@ _wrap_Session_isLogonTime(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->isLogonTime((FIX::UtcTimeStamp const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->isLogonTime((FIX::UtcTimeStamp const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101292,13 +101631,14 @@ _wrap_Session_isInitiator(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->isInitiator();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->isInitiator();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101327,13 +101667,14 @@ _wrap_Session_isAcceptor(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->isAcceptor();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->isAcceptor();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101362,13 +101703,14 @@ _wrap_Session_getLogonTime(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (TimeRange *) &(arg1)->getLogonTime();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (TimeRange *) &(arg1)->getLogonTime();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101406,13 +101748,14 @@ _wrap_Session_setLogonTime(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< TimeRange * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setLogonTime((TimeRange const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setLogonTime((TimeRange const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101440,13 +101783,14 @@ _wrap_Session_getSenderDefaultApplVerID(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (std::string *) &(arg1)->getSenderDefaultApplVerID();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (std::string *) &(arg1)->getSenderDefaultApplVerID();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101487,13 +101831,14 @@ _wrap_Session_setSenderDefaultApplVerID(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setSenderDefaultApplVerID((std::string const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setSenderDefaultApplVerID((std::string const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101530,13 +101875,14 @@ _wrap_Session_getTargetDefaultApplVerID(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (std::string *) &(arg1)->getTargetDefaultApplVerID();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (std::string *) &(arg1)->getTargetDefaultApplVerID();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101577,13 +101923,14 @@ _wrap_Session_setTargetDefaultApplVerID(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setTargetDefaultApplVerID((std::string const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setTargetDefaultApplVerID((std::string const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101620,13 +101967,14 @@ _wrap_Session_getSendRedundantResendRequests(int argc, VALUE *argv, VALUE self) 
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getSendRedundantResendRequests();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getSendRedundantResendRequests();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101661,13 +102009,14 @@ _wrap_Session_setSendRedundantResendRequests(int argc, VALUE *argv, VALUE self) 
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setSendRedundantResendRequests(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setSendRedundantResendRequests(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101695,13 +102044,14 @@ _wrap_Session_getCheckCompId(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getCheckCompId();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getCheckCompId();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101736,13 +102086,14 @@ _wrap_Session_setCheckCompId(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setCheckCompId(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setCheckCompId(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101770,13 +102121,14 @@ _wrap_Session_getCheckLatency(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getCheckLatency();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getCheckLatency();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101811,13 +102163,14 @@ _wrap_Session_setCheckLatency(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setCheckLatency(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setCheckLatency(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101845,13 +102198,14 @@ _wrap_Session_getMaxLatency(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (int)(arg1)->getMaxLatency();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (int)(arg1)->getMaxLatency();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101886,13 +102240,14 @@ _wrap_Session_setMaxLatency(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setMaxLatency(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setMaxLatency(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101920,13 +102275,14 @@ _wrap_Session_getLogonTimeout(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (int)(arg1)->getLogonTimeout();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (int)(arg1)->getLogonTimeout();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101961,13 +102317,14 @@ _wrap_Session_setLogonTimeout(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setLogonTimeout(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setLogonTimeout(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -101995,13 +102352,14 @@ _wrap_Session_getLogoutTimeout(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (int)(arg1)->getLogoutTimeout();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (int)(arg1)->getLogoutTimeout();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102036,13 +102394,14 @@ _wrap_Session_setLogoutTimeout(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setLogoutTimeout(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setLogoutTimeout(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102070,13 +102429,14 @@ _wrap_Session_getResetOnLogon(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getResetOnLogon();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getResetOnLogon();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102111,13 +102471,14 @@ _wrap_Session_setResetOnLogon(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setResetOnLogon(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setResetOnLogon(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102145,13 +102506,14 @@ _wrap_Session_getResetOnLogout(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getResetOnLogout();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getResetOnLogout();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102186,13 +102548,14 @@ _wrap_Session_setResetOnLogout(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setResetOnLogout(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setResetOnLogout(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102220,13 +102583,14 @@ _wrap_Session_getResetOnDisconnect(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getResetOnDisconnect();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getResetOnDisconnect();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102261,13 +102625,14 @@ _wrap_Session_setResetOnDisconnect(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setResetOnDisconnect(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setResetOnDisconnect(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102295,13 +102660,14 @@ _wrap_Session_getRefreshOnLogon(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getRefreshOnLogon();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getRefreshOnLogon();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102336,13 +102702,14 @@ _wrap_Session_setRefreshOnLogon(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setRefreshOnLogon(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setRefreshOnLogon(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102370,13 +102737,14 @@ _wrap_Session_getMillisecondsInTimeStamp(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getMillisecondsInTimeStamp();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getMillisecondsInTimeStamp();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102411,13 +102779,14 @@ _wrap_Session_setMillisecondsInTimeStamp(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setMillisecondsInTimeStamp(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setMillisecondsInTimeStamp(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102445,13 +102814,14 @@ _wrap_Session_getTimestampPrecision(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (int)(arg1)->getTimestampPrecision();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (int)(arg1)->getTimestampPrecision();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102486,13 +102856,14 @@ _wrap_Session_setTimestampPrecision(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setTimestampPrecision(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setTimestampPrecision(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102520,13 +102891,14 @@ _wrap_Session_getSupportedTimestampPrecision(int argc, VALUE *argv, VALUE self) 
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (int)(arg1)->getSupportedTimestampPrecision();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (int)(arg1)->getSupportedTimestampPrecision();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102560,13 +102932,14 @@ _wrap_Session_supportsSubSecondTimestamps(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)FIX::Session::supportsSubSecondTimestamps((std::string const &)*arg1);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)FIX::Session::supportsSubSecondTimestamps((std::string const &)*arg1);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102604,13 +102977,14 @@ _wrap_Session_getPersistMessages(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getPersistMessages();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getPersistMessages();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102645,13 +103019,14 @@ _wrap_Session_setPersistMessages(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setPersistMessages(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setPersistMessages(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102679,13 +103054,14 @@ _wrap_Session_getValidateLengthAndChecksum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getValidateLengthAndChecksum();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getValidateLengthAndChecksum();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102720,13 +103096,14 @@ _wrap_Session_setValidateLengthAndChecksum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setValidateLengthAndChecksum(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setValidateLengthAndChecksum(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102754,13 +103131,14 @@ _wrap_Session_getSendNextExpectedMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->getSendNextExpectedMsgSeqNum();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->getSendNextExpectedMsgSeqNum();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102795,13 +103173,14 @@ _wrap_Session_setSendNextExpectedMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setSendNextExpectedMsgSeqNum(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setSendNextExpectedMsgSeqNum(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102829,13 +103208,14 @@ _wrap_Session_getIsNonStopSession(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)((FIX::Session const *)arg1)->getIsNonStopSession();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)((FIX::Session const *)arg1)->getIsNonStopSession();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102870,13 +103250,14 @@ _wrap_Session_setIsNonStopSession(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setIsNonStopSession(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setIsNonStopSession(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102904,13 +103285,14 @@ _wrap_Session_getAllowedRemoteAddresses(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (std::set< std::string,std::less< std::string >,std::allocator< std::string > > *) &((FIX::Session const *)arg1)->getAllowedRemoteAddresses();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (std::set< std::string,std::less< std::string >,std::allocator< std::string > > *) &((FIX::Session const *)arg1)->getAllowedRemoteAddresses();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102948,13 +103330,14 @@ _wrap_Session_setAllowedRemoteAddresses(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::set< std::string,std::less< std::string >,std::allocator< std::string > > * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setAllowedRemoteAddresses((std::set< std::string,std::less< std::string >,std::allocator< std::string > > const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setAllowedRemoteAddresses((std::set< std::string,std::less< std::string >,std::allocator< std::string > > const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -102995,13 +103378,14 @@ _wrap_Session_inAllowedRemoteAddresses(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)((FIX::Session const *)arg1)->inAllowedRemoteAddresses((std::string const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)((FIX::Session const *)arg1)->inAllowedRemoteAddresses((std::string const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103045,13 +103429,14 @@ _wrap_Session_setResponder(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< Responder * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->setResponder(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->setResponder(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103090,13 +103475,14 @@ _wrap_Session_send(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Message * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->send(*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->send(*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103134,13 +103520,14 @@ _wrap_Session_next__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->next((FIX::UtcTimeStamp const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->next((FIX::UtcTimeStamp const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103199,13 +103586,14 @@ _wrap_Session_next__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< bool >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->next((std::string const &)*arg2,(FIX::UtcTimeStamp const &)*arg3,arg4);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->next((std::string const &)*arg2,(FIX::UtcTimeStamp const &)*arg3,arg4);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103265,13 +103653,14 @@ _wrap_Session_next__SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::UtcTimeStamp * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->next((std::string const &)*arg2,(FIX::UtcTimeStamp const &)*arg3);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->next((std::string const &)*arg2,(FIX::UtcTimeStamp const &)*arg3);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103336,13 +103725,14 @@ _wrap_Session_next__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< bool >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->next((FIX::Message const &)*arg2,(FIX::UtcTimeStamp const &)*arg3,arg4);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->next((FIX::Message const &)*arg2,(FIX::UtcTimeStamp const &)*arg3,arg4);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103390,13 +103780,14 @@ _wrap_Session_next__SWIG_4(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::UtcTimeStamp * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->next((FIX::Message const &)*arg2,(FIX::UtcTimeStamp const &)*arg3);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->next((FIX::Message const &)*arg2,(FIX::UtcTimeStamp const &)*arg3);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103546,13 +103937,14 @@ _wrap_Session_disconnect(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->disconnect();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->disconnect();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103580,13 +103972,14 @@ _wrap_Session_getExpectedSenderNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::SEQNUM)(arg1)->getExpectedSenderNum();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::SEQNUM)(arg1)->getExpectedSenderNum();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103615,13 +104008,14 @@ _wrap_Session_getExpectedTargetNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::SEQNUM)(arg1)->getExpectedTargetNum();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::SEQNUM)(arg1)->getExpectedTargetNum();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103650,13 +104044,14 @@ _wrap_Session_getLog(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (Log *)(arg1)->getLog();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (Log *)(arg1)->getLog();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103685,13 +104080,14 @@ _wrap_Session_getStore(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (MessageStore *)(arg1)->getStore();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (MessageStore *)(arg1)->getStore();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -103733,7 +104129,7 @@ _wrap_LogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::LogFactory::create");
@@ -103743,7 +104139,7 @@ _wrap_LogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -103795,7 +104191,7 @@ _wrap_LogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::LogFactory::create");
@@ -103805,7 +104201,7 @@ _wrap_LogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -103896,7 +104292,7 @@ _wrap_LogFactory_destroy(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::LogFactory::destroy");
@@ -103906,7 +104302,7 @@ _wrap_LogFactory_destroy(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -103947,7 +104343,7 @@ _wrap_new_LogFactory(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = self;
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       if ( strcmp(rb_obj_classname(self), classname) != 0 ) {
         /* subclassed */
@@ -103961,7 +104357,7 @@ _wrap_new_LogFactory(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104022,14 +104418,14 @@ _wrap_new_ScreenLogFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
     }
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::ScreenLogFactory *)new FIX::ScreenLogFactory(SWIG_STD_MOVE(arg1));
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104088,14 +104484,14 @@ _wrap_new_ScreenLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::ScreenLogFactory *)new FIX::ScreenLogFactory(arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104174,13 +104570,13 @@ _wrap_ScreenLogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::ScreenLogFactory * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Log *)(arg1)->create();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104220,13 +104616,13 @@ _wrap_ScreenLogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Log *)(arg1)->create((FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104305,13 +104701,13 @@ _wrap_ScreenLogFactory_destroy(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Log * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104364,7 +104760,7 @@ _wrap_Log_clear(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Log::clear");
@@ -104374,7 +104770,7 @@ _wrap_Log_clear(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -104409,7 +104805,7 @@ _wrap_Log_backup(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Log::backup");
@@ -104419,7 +104815,7 @@ _wrap_Log_backup(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -104468,7 +104864,7 @@ _wrap_Log_onIncoming(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Log::onIncoming");
@@ -104478,7 +104874,7 @@ _wrap_Log_onIncoming(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -104536,7 +104932,7 @@ _wrap_Log_onOutgoing(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Log::onOutgoing");
@@ -104546,7 +104942,7 @@ _wrap_Log_onOutgoing(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -104604,7 +105000,7 @@ _wrap_Log_onEvent(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Log::onEvent");
@@ -104614,7 +105010,7 @@ _wrap_Log_onEvent(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -104664,7 +105060,7 @@ _wrap_new_Log(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = self;
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       if ( strcmp(rb_obj_classname(self), classname) != 0 ) {
         /* subclassed */
@@ -104678,7 +105074,7 @@ _wrap_new_Log(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104739,13 +105135,13 @@ _wrap_NullLog_clear(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::NullLog * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clear();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104771,13 +105167,13 @@ _wrap_NullLog_backup(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::NullLog * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->backup();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104817,13 +105213,13 @@ _wrap_NullLog_onIncoming(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onIncoming((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104872,13 +105268,13 @@ _wrap_NullLog_onOutgoing(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onOutgoing((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104927,13 +105323,13 @@ _wrap_NullLog_onEvent(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onEvent((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -104977,14 +105373,14 @@ _wrap_new_NullLog(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::NullLog *)new FIX::NullLog();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105036,14 +105432,14 @@ _wrap_new_ScreenLog__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::ScreenLog *)new FIX::ScreenLog(arg1,arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105113,14 +105509,14 @@ _wrap_new_ScreenLog__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg4 = static_cast< bool >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::ScreenLog *)new FIX::ScreenLog((FIX::SessionID const &)*arg1,arg2,arg3,arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105223,13 +105619,13 @@ _wrap_ScreenLog_clear(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::ScreenLog * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clear();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105255,13 +105651,13 @@ _wrap_ScreenLog_backup(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::ScreenLog * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->backup();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105301,13 +105697,13 @@ _wrap_ScreenLog_onIncoming(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onIncoming((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105356,13 +105752,13 @@ _wrap_ScreenLog_onOutgoing(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onOutgoing((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105411,13 +105807,13 @@ _wrap_ScreenLog_onEvent(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onEvent((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105465,14 +105861,14 @@ _wrap_new_FileLogFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FileLogFactory *)new FIX::FileLogFactory((FIX::SessionSettings const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105505,14 +105901,14 @@ _wrap_new_FileLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FileLogFactory *)new FIX::FileLogFactory((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105582,14 +105978,14 @@ _wrap_new_FileLogFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FileLogFactory *)new FIX::FileLogFactory((std::string const &)*arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105686,13 +106082,13 @@ _wrap_FileLogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FileLogFactory * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Log *)(arg1)->create();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105738,13 +106134,13 @@ _wrap_FileLogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Log *)(arg1)->create((FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105828,13 +106224,13 @@ _wrap_FileLogFactory_destroy(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Log * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105875,14 +106271,14 @@ _wrap_new_FileLog__SWIG_0(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FileLog *)new FIX::FileLog((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -105937,14 +106333,14 @@ _wrap_new_FileLog__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FileLog *)new FIX::FileLog((std::string const &)*arg1,(std::string const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106006,14 +106402,14 @@ _wrap_new_FileLog__SWIG_2(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FileLog *)new FIX::FileLog((std::string const &)*arg1,(FIX::SessionID const &)*arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106094,14 +106490,14 @@ _wrap_new_FileLog__SWIG_3(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FileLog *)new FIX::FileLog((std::string const &)*arg1,(std::string const &)*arg2,(FIX::SessionID const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106231,13 +106627,13 @@ _wrap_FileLog_clear(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FileLog * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clear();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106263,13 +106659,13 @@ _wrap_FileLog_backup(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FileLog * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->backup();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106309,13 +106705,13 @@ _wrap_FileLog_onIncoming(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onIncoming((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106364,13 +106760,13 @@ _wrap_FileLog_onOutgoing(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onOutgoing((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106419,13 +106815,13 @@ _wrap_FileLog_onEvent(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onEvent((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106492,13 +106888,13 @@ _wrap_MessageStoreFactory_create(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageStore *)(arg1)->create((FIX::UtcTimeStamp const &)*arg2,(FIX::SessionID const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106533,13 +106929,13 @@ _wrap_MessageStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106591,13 +106987,13 @@ _wrap_MemoryStoreFactory_create(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageStore *)(arg1)->create((FIX::UtcTimeStamp const &)*arg2,(FIX::SessionID const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106632,13 +107028,13 @@ _wrap_MemoryStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106673,14 +107069,14 @@ _wrap_new_MemoryStoreFactory(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MemoryStoreFactory *)new FIX::MemoryStoreFactory();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106743,13 +107139,13 @@ _wrap_MessageStore_set(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->set(arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106812,13 +107208,13 @@ _wrap_MessageStore_get(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< std::vector< std::string,std::allocator< std::string > > * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       ((FIX::MessageStore const *)arg1)->get(arg2,arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106846,13 +107242,13 @@ _wrap_MessageStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::MessageStore const *)arg1)->getNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106881,13 +107277,13 @@ _wrap_MessageStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::MessageStore const *)arg1)->getNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106922,13 +107318,13 @@ _wrap_MessageStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextSenderMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106962,13 +107358,13 @@ _wrap_MessageStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextTargetMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -106994,13 +107390,13 @@ _wrap_MessageStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107026,13 +107422,13 @@ _wrap_MessageStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107060,13 +107456,13 @@ _wrap_MessageStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::MessageStore const *)arg1)->getCreationTime();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107104,13 +107500,13 @@ _wrap_MessageStore_reset(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->reset((FIX::UtcTimeStamp const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107136,13 +107532,13 @@ _wrap_MessageStore_refresh(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->refresh();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107190,14 +107586,14 @@ _wrap_new_MemoryStore(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStamp * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MemoryStore *)new FIX::MemoryStore((FIX::UtcTimeStamp const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107246,13 +107642,13 @@ _wrap_MemoryStore_set(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->set(arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107315,13 +107711,13 @@ _wrap_MemoryStore_get(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< std::vector< std::string,std::allocator< std::string > > * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       ((FIX::MemoryStore const *)arg1)->get(arg2,arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107349,13 +107745,13 @@ _wrap_MemoryStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::MemoryStore const *)arg1)->getNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107384,13 +107780,13 @@ _wrap_MemoryStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::MemoryStore const *)arg1)->getNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107425,13 +107821,13 @@ _wrap_MemoryStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextSenderMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107465,13 +107861,13 @@ _wrap_MemoryStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextTargetMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107497,13 +107893,13 @@ _wrap_MemoryStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107529,13 +107925,13 @@ _wrap_MemoryStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107572,13 +107968,13 @@ _wrap_MemoryStore_setCreationTime(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setCreationTime((FIX::UtcTimeStamp const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107606,13 +108002,13 @@ _wrap_MemoryStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::MemoryStore const *)arg1)->getCreationTime();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107650,13 +108046,13 @@ _wrap_MemoryStore_reset(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->reset((FIX::UtcTimeStamp const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107682,13 +108078,13 @@ _wrap_MemoryStore_refresh(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->refresh();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107739,14 +108135,14 @@ _wrap_new_MessageStoreFactoryExceptionWrapper(int argc, VALUE *argv, VALUE self)
   }
   arg1 = reinterpret_cast< FIX::MessageStoreFactory * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageStoreFactoryExceptionWrapper *)new FIX::MessageStoreFactoryExceptionWrapper(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107818,13 +108214,13 @@ _wrap_MessageStoreFactoryExceptionWrapper_create(int argc, VALUE *argv, VALUE se
   }
   arg5 = reinterpret_cast< FIX::ConfigError * >(argp5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageStore *)(arg1)->create((FIX::UtcTimeStamp const &)*arg2,(FIX::SessionID const &)*arg3,*arg4,*arg5);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107859,13 +108255,13 @@ _wrap_MessageStoreFactoryExceptionWrapper_destroy(int argc, VALUE *argv, VALUE s
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -107916,14 +108312,14 @@ _wrap_new_MessageStoreExceptionWrapper(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageStoreExceptionWrapper *)new FIX::MessageStoreExceptionWrapper(arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108000,13 +108396,13 @@ _wrap_MessageStoreExceptionWrapper_set(int argc, VALUE *argv, VALUE self) {
   }
   arg5 = reinterpret_cast< FIX::IOException * >(argp5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->set(arg2,(std::string const &)*arg3,*arg4,*arg5);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108091,13 +108487,13 @@ _wrap_MessageStoreExceptionWrapper_get(int argc, VALUE *argv, VALUE self) {
   }
   arg6 = reinterpret_cast< FIX::IOException * >(argp6);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       ((FIX::MessageStoreExceptionWrapper const *)arg1)->get(arg2,arg3,*arg4,*arg5,*arg6);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108147,13 +108543,13 @@ _wrap_MessageStoreExceptionWrapper_getNextSenderMsgSeqNum(int argc, VALUE *argv,
   }
   arg3 = reinterpret_cast< FIX::IOException * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::MessageStoreExceptionWrapper const *)arg1)->getNextSenderMsgSeqNum(*arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108204,13 +108600,13 @@ _wrap_MessageStoreExceptionWrapper_getNextTargetMsgSeqNum(int argc, VALUE *argv,
   }
   arg3 = reinterpret_cast< FIX::IOException * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::MessageStoreExceptionWrapper const *)arg1)->getNextTargetMsgSeqNum(*arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108267,13 +108663,13 @@ _wrap_MessageStoreExceptionWrapper_setNextSenderMsgSeqNum(int argc, VALUE *argv,
   }
   arg4 = reinterpret_cast< FIX::IOException * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextSenderMsgSeqNum(arg2,*arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108329,13 +108725,13 @@ _wrap_MessageStoreExceptionWrapper_setNextTargetMsgSeqNum(int argc, VALUE *argv,
   }
   arg4 = reinterpret_cast< FIX::IOException * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextTargetMsgSeqNum(arg2,*arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108383,13 +108779,13 @@ _wrap_MessageStoreExceptionWrapper_incrNextSenderMsgSeqNum(int argc, VALUE *argv
   }
   arg3 = reinterpret_cast< FIX::IOException * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextSenderMsgSeqNum(*arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108437,13 +108833,13 @@ _wrap_MessageStoreExceptionWrapper_incrNextTargetMsgSeqNum(int argc, VALUE *argv
   }
   arg3 = reinterpret_cast< FIX::IOException * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextTargetMsgSeqNum(*arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108493,13 +108889,13 @@ _wrap_MessageStoreExceptionWrapper_getCreationTime(int argc, VALUE *argv, VALUE 
   }
   arg3 = reinterpret_cast< FIX::IOException * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (arg1)->getCreationTime(*arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108559,13 +108955,13 @@ _wrap_MessageStoreExceptionWrapper_reset(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< FIX::IOException * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->reset((FIX::UtcTimeStamp const &)*arg2,*arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108613,13 +109009,13 @@ _wrap_MessageStoreExceptionWrapper_refresh(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::IOException * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->refresh(*arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108652,14 +109048,14 @@ _wrap_new_FileStoreFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FileStoreFactory *)new FIX::FileStoreFactory((FIX::SessionSettings const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108707,14 +109103,14 @@ _wrap_new_FileStoreFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FileStoreFactory *)new FIX::FileStoreFactory((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108810,13 +109206,13 @@ _wrap_FileStoreFactory_create(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageStore *)(arg1)->create((FIX::UtcTimeStamp const &)*arg2,(FIX::SessionID const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108851,13 +109247,13 @@ _wrap_FileStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108932,14 +109328,14 @@ _wrap_new_FileStore(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::FileStore *)new FIX::FileStore((FIX::UtcTimeStamp const &)*arg1,SWIG_STD_MOVE(arg2),(FIX::SessionID const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -108994,13 +109390,13 @@ _wrap_FileStore_set(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->set(arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109063,13 +109459,13 @@ _wrap_FileStore_get(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< std::vector< std::string,std::allocator< std::string > > * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       ((FIX::FileStore const *)arg1)->get(arg2,arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109097,13 +109493,13 @@ _wrap_FileStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::FileStore const *)arg1)->getNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109132,13 +109528,13 @@ _wrap_FileStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::FileStore const *)arg1)->getNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109173,13 +109569,13 @@ _wrap_FileStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextSenderMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109213,13 +109609,13 @@ _wrap_FileStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextTargetMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109245,13 +109641,13 @@ _wrap_FileStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109277,13 +109673,13 @@ _wrap_FileStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109311,13 +109707,13 @@ _wrap_FileStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::FileStore const *)arg1)->getCreationTime();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109355,13 +109751,13 @@ _wrap_FileStore_reset(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->reset((FIX::UtcTimeStamp const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109387,13 +109783,13 @@ _wrap_FileStore_refresh(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->refresh();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109443,7 +109839,7 @@ _wrap_Application_onCreate(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Application::onCreate");
@@ -109453,7 +109849,7 @@ _wrap_Application_onCreate(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -109499,7 +109895,7 @@ _wrap_Application_onLogon(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Application::onLogon");
@@ -109509,7 +109905,7 @@ _wrap_Application_onLogon(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -109555,7 +109951,7 @@ _wrap_Application_onLogout(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Application::onLogout");
@@ -109565,7 +109961,7 @@ _wrap_Application_onLogout(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -109622,7 +110018,7 @@ _wrap_Application_toAdmin(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Application::toAdmin");
@@ -109632,7 +110028,7 @@ _wrap_Application_toAdmin(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -109689,7 +110085,7 @@ _wrap_Application_toApp(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Application::toApp");
@@ -109699,7 +110095,7 @@ _wrap_Application_toApp(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -109756,7 +110152,7 @@ _wrap_Application_fromAdmin(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Application::fromAdmin");
@@ -109766,7 +110162,7 @@ _wrap_Application_fromAdmin(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -109823,7 +110219,7 @@ _wrap_Application_fromApp(int argc, VALUE *argv, VALUE self) {
   upcall = (director && (director->swig_get_self() == self));
   try {
     {
-      if(tryRubyException([&]() mutable 
+      if(tryRubyException([&]() mutable
           {
         if (upcall) {
           Swig::DirectorPureVirtualException::raise("FIX::Application::fromApp");
@@ -109833,7 +110229,7 @@ _wrap_Application_fromApp(int argc, VALUE *argv, VALUE self) {
             return self;
           fail:
             return Qnil;
-          }) == Qnil) 
+          }) == Qnil)
       {
         SWIG_fail;
       }
@@ -109874,7 +110270,7 @@ _wrap_new_Application(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = self;
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       if ( strcmp(rb_obj_classname(self), classname) != 0 ) {
         /* subclassed */
@@ -109888,7 +110284,7 @@ _wrap_new_Application(int argc, VALUE *argv, VALUE self) {
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -109952,23 +110348,25 @@ _wrap_new_SynchronizedApplication(int argc, VALUE *argv, VALUE self) {
   if ((argc < 1) || (argc > 1)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 1)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","SynchronizedApplication", 1, argv[0] )); 
-  }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","SynchronizedApplication", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "SynchronizedApplication", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "SynchronizedApplication", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
+  }
+  {
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SynchronizedApplication *)new FIX::SynchronizedApplication(*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110005,13 +110403,13 @@ _wrap_SynchronizedApplication_onCreate(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onCreate((FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110048,13 +110446,13 @@ _wrap_SynchronizedApplication_onLogon(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onLogon((FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110091,13 +110489,13 @@ _wrap_SynchronizedApplication_onLogout(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onLogout((FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110145,13 +110543,13 @@ _wrap_SynchronizedApplication_toAdmin(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->toAdmin(*arg2,(FIX::SessionID const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110199,13 +110597,13 @@ _wrap_SynchronizedApplication_toApp(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->toApp(*arg2,(FIX::SessionID const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110253,13 +110651,13 @@ _wrap_SynchronizedApplication_fromAdmin(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->fromAdmin((FIX::Message const &)*arg2,(FIX::SessionID const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110307,13 +110705,13 @@ _wrap_SynchronizedApplication_fromApp(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->fromApp((FIX::Message const &)*arg2,(FIX::SessionID const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110401,13 +110799,13 @@ _wrap_SynchronizedApplication_app(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Application *) &(arg1)->app();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110416,7 +110814,12 @@ _wrap_SynchronizedApplication_app(int argc, VALUE *argv, VALUE self) {
   if (director) {
     vresult = director->swig_get_self();
   } else {
-    vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Application, 0 |  0 );
+    {
+      vresult = SWIG_NewPointerObj(SWIG_as_voidptr(&RubyApplication::unadapt(*result)), SWIGTYPE_p_FIX__Application, 0);
+      if (Swig::Director *director = dynamic_cast<Swig::Director *>(&RubyApplication::unadapt(*result))) {
+        vresult = director->swig_get_self();
+      }
+    }
   }
   return vresult;
 fail:
@@ -110441,14 +110844,16 @@ _wrap_SynchronizedApplication_m_app_set(int argc, VALUE *argv, VALUE self) {
     SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::SynchronizedApplication *","m_app", 1, self )); 
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
-  res2 = SWIG_ConvertPtr(argv[0], &argp2, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::Application &","m_app", 2, argv[0] )); 
+  {
+    res2 = SWIG_ConvertPtr(argv[0], &argp2, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError("", "FIX::Application &", "m_app", 2, argv[0]));
+    }
+    if (!argp2) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "m_app", 2, argv[0]));
+    }
+    arg2 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp2));
   }
-  if (!argp2) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","m_app", 2, argv[0])); 
-  }
-  arg2 = reinterpret_cast< FIX::Application * >(argp2);
   if (arg1) (arg1)->m_app = *arg2;
   return Qnil;
 fail:
@@ -110478,7 +110883,12 @@ _wrap_SynchronizedApplication_m_app_get(int argc, VALUE *argv, VALUE self) {
   if (director) {
     vresult = director->swig_get_self();
   } else {
-    vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Application, 0 |  0 );
+    {
+      vresult = SWIG_NewPointerObj(SWIG_as_voidptr(&RubyApplication::unadapt(*result)), SWIGTYPE_p_FIX__Application, 0);
+      if (Swig::Director *director = dynamic_cast<Swig::Director *>(&RubyApplication::unadapt(*result))) {
+        vresult = director->swig_get_self();
+      }
+    }
   }
   return vresult;
 fail:
@@ -110518,14 +110928,14 @@ _wrap_new_NullApplication(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::NullApplication *)new FIX::NullApplication();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110565,13 +110975,14 @@ _wrap_Initiator_start(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->start();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->start();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110597,13 +111008,14 @@ _wrap_Initiator_block(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->block();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return blockWithoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->block();
+              return self;
+            }, *arg1);
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110631,13 +111043,14 @@ _wrap_Initiator_poll(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->poll();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->poll();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110672,13 +111085,14 @@ _wrap_Initiator_stop__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->stop(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->stop(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110704,13 +111118,14 @@ _wrap_Initiator_stop__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->stop();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->stop();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110783,13 +111198,14 @@ _wrap_Initiator_isLoggedOn(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)((FIX::Initiator const *)arg1)->isLoggedOn();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)((FIX::Initiator const *)arg1)->isLoggedOn();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110840,13 +111256,14 @@ _wrap_Initiator_getSession__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< Responder * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Session *)(arg1)->getSession((FIX::SessionID const &)*arg2,*arg3);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Session *)(arg1)->getSession((FIX::SessionID const &)*arg2,*arg3);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110875,13 +111292,14 @@ _wrap_Initiator_getSessions(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > *) &((FIX::Initiator const *)arg1)->getSessions();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > *) &((FIX::Initiator const *)arg1)->getSessions();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -110921,13 +111339,14 @@ _wrap_Initiator_getSession__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Session *)((FIX::Initiator const *)arg1)->getSession((FIX::SessionID const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Session *)((FIX::Initiator const *)arg1)->getSession((FIX::SessionID const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111021,13 +111440,14 @@ _wrap_Initiator_getSessionSettings(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Dictionary *)((FIX::Initiator const *)arg1)->getSessionSettings((FIX::SessionID const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Dictionary *)((FIX::Initiator const *)arg1)->getSessionSettings((FIX::SessionID const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111067,13 +111487,14 @@ _wrap_Initiator_has(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)((FIX::Initiator const *)arg1)->has((FIX::SessionID const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)((FIX::Initiator const *)arg1)->has((FIX::SessionID const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111102,13 +111523,14 @@ _wrap_Initiator_isStopped(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)((FIX::Initiator const *)arg1)->isStopped();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)((FIX::Initiator const *)arg1)->isStopped();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111138,13 +111560,14 @@ _wrap_Initiator_getApplication(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Application *) &((FIX::Initiator const *)arg1)->getApplication();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Application *) &((FIX::Initiator const *)arg1)->getApplication();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111153,7 +111576,12 @@ _wrap_Initiator_getApplication(int argc, VALUE *argv, VALUE self) {
   if (director) {
     vresult = director->swig_get_self();
   } else {
-    vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Application, 0 |  0 );
+    {
+      vresult = SWIG_NewPointerObj(SWIG_as_voidptr(&RubyApplication::unadapt(*result)), SWIGTYPE_p_FIX__Application, 0);
+      if (Swig::Director *director = dynamic_cast<Swig::Director *>(&RubyApplication::unadapt(*result))) {
+        vresult = director->swig_get_self();
+      }
+    }
   }
   return vresult;
 fail:
@@ -111178,13 +111606,14 @@ _wrap_Initiator_getMessageStoreFactory(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::MessageStoreFactory *) &((FIX::Initiator const *)arg1)->getMessageStoreFactory();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::MessageStoreFactory *) &((FIX::Initiator const *)arg1)->getMessageStoreFactory();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111214,13 +111643,14 @@ _wrap_Initiator_getLog(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Log *)(arg1)->getLog();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Log *)(arg1)->getLog();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111256,14 +111686,16 @@ _wrap_new_SocketInitiatorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
   if ((argc < 3) || (argc > 3)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 3)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","SocketInitiator", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "SocketInitiator", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "SocketInitiator", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","SocketInitiator", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","SocketInitiator", 2, argv[1] )); 
@@ -111281,14 +111713,14 @@ _wrap_new_SocketInitiatorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketInitiator *)new FIX::SocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111334,14 +111766,16 @@ _wrap_new_SocketInitiatorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
   if ((argc < 4) || (argc > 4)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 4)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","SocketInitiator", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "SocketInitiator", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "SocketInitiator", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","SocketInitiator", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","SocketInitiator", 2, argv[1] )); 
@@ -111358,23 +111792,25 @@ _wrap_new_SocketInitiatorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::SessionSettings const &","SocketInitiator", 3, argv[2])); 
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
-  res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory,  0 );
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError( "", "FIX::LogFactory &","SocketInitiator", 4, argv[3] )); 
-  }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &","SocketInitiator", 4, argv[3])); 
-  }
-  arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory, 0);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError("", "FIX::LogFactory &", "SocketInitiator", 4, argv[3]));
+    }
+    if (!argp4) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &", "SocketInitiator", 4, argv[3]));
+    }
+    arg4 = &RubyLogFactory::adapt(*reinterpret_cast<FIX::LogFactory *>(argp4));
+  }
+  {
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketInitiator *)new FIX::SocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111480,13 +111916,14 @@ _wrap_Acceptor_getLog(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Log *)(arg1)->getLog();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Log *)(arg1)->getLog();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111518,13 +111955,14 @@ _wrap_Acceptor_start(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->start();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->start();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111550,13 +111988,14 @@ _wrap_Acceptor_block(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->block();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return blockWithoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->block();
+              return self;
+            }, *arg1);
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111584,13 +112023,14 @@ _wrap_Acceptor_poll(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->poll();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)(arg1)->poll();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111625,13 +112065,14 @@ _wrap_Acceptor_stop__SWIG_0(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->stop(arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->stop(arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111657,13 +112098,14 @@ _wrap_Acceptor_stop__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      (arg1)->stop();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        (arg1)->stop();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111736,13 +112178,14 @@ _wrap_Acceptor_isLoggedOn(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)((FIX::Acceptor const *)arg1)->isLoggedOn();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)((FIX::Acceptor const *)arg1)->isLoggedOn();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111795,13 +112238,14 @@ _wrap_Acceptor_getSession__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< Responder * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Session *)(arg1)->getSession((std::string const &)*arg2,*arg3);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Session *)(arg1)->getSession((std::string const &)*arg2,*arg3);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111839,13 +112283,14 @@ _wrap_Acceptor_getSessions(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > *) &((FIX::Acceptor const *)arg1)->getSessions();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > *) &((FIX::Acceptor const *)arg1)->getSessions();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111885,13 +112330,14 @@ _wrap_Acceptor_getSession__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Session *)((FIX::Acceptor const *)arg1)->getSession((FIX::SessionID const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Session *)((FIX::Acceptor const *)arg1)->getSession((FIX::SessionID const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -111984,13 +112430,14 @@ _wrap_Acceptor_getSessionSettings(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Dictionary *)((FIX::Acceptor const *)arg1)->getSessionSettings((FIX::SessionID const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Dictionary *)((FIX::Acceptor const *)arg1)->getSessionSettings((FIX::SessionID const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112030,13 +112477,14 @@ _wrap_Acceptor_has(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)((FIX::Acceptor const *)arg1)->has((FIX::SessionID const &)*arg2);
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)((FIX::Acceptor const *)arg1)->has((FIX::SessionID const &)*arg2);
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112065,13 +112513,14 @@ _wrap_Acceptor_isStopped(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (bool)((FIX::Acceptor const *)arg1)->isStopped();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (bool)((FIX::Acceptor const *)arg1)->isStopped();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112100,13 +112549,14 @@ _wrap_Acceptor_getMaxPendingConnections(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (int)((FIX::Acceptor const *)arg1)->getMaxPendingConnections();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (int)((FIX::Acceptor const *)arg1)->getMaxPendingConnections();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112136,13 +112586,14 @@ _wrap_Acceptor_getApplication(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::Application *) &((FIX::Acceptor const *)arg1)->getApplication();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::Application *) &((FIX::Acceptor const *)arg1)->getApplication();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112151,7 +112602,12 @@ _wrap_Acceptor_getApplication(int argc, VALUE *argv, VALUE self) {
   if (director) {
     vresult = director->swig_get_self();
   } else {
-    vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Application, 0 |  0 );
+    {
+      vresult = SWIG_NewPointerObj(SWIG_as_voidptr(&RubyApplication::unadapt(*result)), SWIGTYPE_p_FIX__Application, 0);
+      if (Swig::Director *director = dynamic_cast<Swig::Director *>(&RubyApplication::unadapt(*result))) {
+        vresult = director->swig_get_self();
+      }
+    }
   }
   return vresult;
 fail:
@@ -112176,13 +112632,14 @@ _wrap_Acceptor_getMessageStoreFactory(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
-      result = (FIX::MessageStoreFactory *) &((FIX::Acceptor const *)arg1)->getMessageStoreFactory();
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil) 
+      return withoutGvl([&]() mutable -> VALUE
+            {
+        result = (FIX::MessageStoreFactory *) &((FIX::Acceptor const *)arg1)->getMessageStoreFactory();
+              return self;
+            });
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112213,14 +112670,16 @@ _wrap_new_SocketAcceptorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
   if ((argc < 3) || (argc > 3)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 3)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","SocketAcceptor", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "SocketAcceptor", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "SocketAcceptor", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","SocketAcceptor", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","SocketAcceptor", 2, argv[1] )); 
@@ -112238,14 +112697,14 @@ _wrap_new_SocketAcceptorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketAcceptor *)new FIX::SocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112291,14 +112750,16 @@ _wrap_new_SocketAcceptorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
   if ((argc < 4) || (argc > 4)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 4)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","SocketAcceptor", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "SocketAcceptor", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "SocketAcceptor", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","SocketAcceptor", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","SocketAcceptor", 2, argv[1] )); 
@@ -112315,23 +112776,25 @@ _wrap_new_SocketAcceptorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::SessionSettings const &","SocketAcceptor", 3, argv[2])); 
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
-  res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory,  0 );
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError( "", "FIX::LogFactory &","SocketAcceptor", 4, argv[3] )); 
-  }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &","SocketAcceptor", 4, argv[3])); 
-  }
-  arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory, 0);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError("", "FIX::LogFactory &", "SocketAcceptor", 4, argv[3]));
+    }
+    if (!argp4) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &", "SocketAcceptor", 4, argv[3]));
+    }
+    arg4 = &RubyLogFactory::adapt(*reinterpret_cast<FIX::LogFactory *>(argp4));
+  }
+  {
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketAcceptor *)new FIX::SocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112428,13 +112891,13 @@ _wrap_SocketAcceptorBase_sessionToPort(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SocketAcceptor * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SocketAcceptor::SessionToPort *) &(arg1)->sessionToPort();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112457,14 +112920,14 @@ _wrap_new_DataDictionary__SWIG_0(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DataDictionary *)new FIX::DataDictionary();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112495,14 +112958,14 @@ _wrap_new_DataDictionary__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DataDictionary *)new FIX::DataDictionary((FIX::DataDictionary const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112541,14 +113004,14 @@ _wrap_new_DataDictionary__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DataDictionary *)new FIX::DataDictionary(*arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112579,14 +113042,14 @@ _wrap_new_DataDictionary__SWIG_3(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< std::istream * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DataDictionary *)new FIX::DataDictionary(*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112627,14 +113090,14 @@ _wrap_new_DataDictionary__SWIG_4(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DataDictionary *)new FIX::DataDictionary((std::string const &)*arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112691,14 +113154,14 @@ _wrap_new_DataDictionary__SWIG_5(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DataDictionary *)new FIX::DataDictionary((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112835,13 +113298,13 @@ _wrap_DataDictionary_readFromURL(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->readFromURL((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112887,13 +113350,13 @@ _wrap_DataDictionary_readFromDocument(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< DOMDocumentPtr * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->readFromDocument((DOMDocumentPtr const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112930,13 +113393,13 @@ _wrap_DataDictionary_readFromStream(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< std::istream * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->readFromStream(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112964,13 +113427,13 @@ _wrap_DataDictionary_getOrderedFields(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (message_order *) &((FIX::DataDictionary const *)arg1)->getOrderedFields();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -112999,13 +113462,13 @@ _wrap_DataDictionary_getHeaderOrderedFields(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (message_order *) &((FIX::DataDictionary const *)arg1)->getHeaderOrderedFields();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113034,13 +113497,13 @@ _wrap_DataDictionary_getTrailerOrderedFields(int argc, VALUE *argv, VALUE self) 
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (message_order *) &((FIX::DataDictionary const *)arg1)->getTrailerOrderedFields();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113082,13 +113545,13 @@ _wrap_DataDictionary_getMessageOrderedFields(int argc, VALUE *argv, VALUE self) 
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (message_order *) &((FIX::DataDictionary const *)arg1)->getMessageOrderedFields((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113138,13 +113601,13 @@ _wrap_DataDictionary_setVersion(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setVersion((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113181,13 +113644,13 @@ _wrap_DataDictionary_getVersion(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::DataDictionary const *)arg1)->getVersion();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113222,13 +113685,13 @@ _wrap_DataDictionary_addField(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addField(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113276,13 +113739,13 @@ _wrap_DataDictionary_addFieldName(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addFieldName(arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113333,13 +113796,13 @@ _wrap_DataDictionary__getFieldName(int argc, VALUE *argv, VALUE self) {
     arg3 = &temp3;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->getFieldName(arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113394,13 +113857,13 @@ _wrap_DataDictionary__getFieldTag(int argc, VALUE *argv, VALUE self) {
     arg3 = &temp3;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->getFieldTag((std::string const &)*arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113477,13 +113940,13 @@ _wrap_DataDictionary_addValueName(int argc, VALUE *argv, VALUE self) {
     arg4 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addValueName(arg2,(std::string const &)*arg3,(std::string const &)*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113557,13 +114020,13 @@ _wrap_DataDictionary__getValueName(int argc, VALUE *argv, VALUE self) {
     arg4 = &temp4;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->getValueName(arg2,(std::string const &)*arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113635,13 +114098,13 @@ _wrap_DataDictionary_getNameValue(int argc, VALUE *argv, VALUE self) {
     arg4 = &temp4;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->getNameValue(arg2,(std::string const &)*arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113694,13 +114157,13 @@ _wrap_DataDictionary_isField(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isField(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113741,13 +114204,13 @@ _wrap_DataDictionary_addMsgType(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addMsgType((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113797,13 +114260,13 @@ _wrap_DataDictionary_isMsgType(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isMsgType((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113861,13 +114324,13 @@ _wrap_DataDictionary_addMsgField(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addMsgField((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113925,13 +114388,13 @@ _wrap_DataDictionary_isMsgField(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isMsgField((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -113983,13 +114446,13 @@ _wrap_DataDictionary_addHeaderField(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addHeaderField(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114025,13 +114488,13 @@ _wrap_DataDictionary_isHeaderField(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isHeaderField(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114074,13 +114537,13 @@ _wrap_DataDictionary_addTrailerField(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addTrailerField(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114116,13 +114579,13 @@ _wrap_DataDictionary_isTrailerField(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isTrailerField(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114165,13 +114628,13 @@ _wrap_DataDictionary_addFieldType(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< FIX::TYPE::Type >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addFieldType(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114218,13 +114681,13 @@ _wrap_DataDictionary_getFieldType(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::TYPE::Type * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->getFieldType(arg2,*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114273,13 +114736,13 @@ _wrap_DataDictionary_addRequiredField(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addRequiredField((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114337,13 +114800,13 @@ _wrap_DataDictionary_isRequiredField(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isRequiredField((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114401,13 +114864,13 @@ _wrap_DataDictionary_addFieldValue(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addFieldValue(arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114452,13 +114915,13 @@ _wrap_DataDictionary_hasFieldValue(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->hasFieldValue(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114508,13 +114971,13 @@ _wrap_DataDictionary_isFieldValue(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isFieldValue(arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114591,13 +115054,13 @@ _wrap_DataDictionary_addGroup(int argc, VALUE *argv, VALUE self) {
   }
   arg5 = reinterpret_cast< FIX::DataDictionary * >(argp5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->addGroup((std::string const &)*arg2,arg3,arg4,(FIX::DataDictionary const &)*arg5);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114655,13 +115118,13 @@ _wrap_DataDictionary_isGroup(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isGroup((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114732,13 +115195,13 @@ _wrap_DataDictionary__getGroup(int argc, VALUE *argv, VALUE self) {
     *arg5 = temp5;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->getGroup((std::string const &)*arg2,arg3,*arg4,(FIX::DataDictionary const *&)*arg5);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114797,13 +115260,13 @@ _wrap_DataDictionary_isDataField(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isDataField(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114840,13 +115303,13 @@ _wrap_DataDictionary_isMultipleValueField(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isMultipleValueField(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114881,13 +115344,13 @@ _wrap_DataDictionary_checkFieldsOutOfOrder(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->checkFieldsOutOfOrder(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114921,13 +115384,13 @@ _wrap_DataDictionary_checkFieldsHaveValues(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->checkFieldsHaveValues(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -114961,13 +115424,13 @@ _wrap_DataDictionary_checkUserDefinedFields(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->checkUserDefinedFields(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115001,13 +115464,13 @@ _wrap_DataDictionary_allowUnknownMsgFields(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->allowUnknownMsgFields(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115041,13 +115504,13 @@ _wrap_DataDictionary_preserveMessageFieldsOrder(int argc, VALUE *argv, VALUE sel
   } 
   arg2 = static_cast< bool >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->preserveMessageFieldsOrder(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115075,13 +115538,13 @@ _wrap_DataDictionary_isMessageFieldsOrderPreserved(int argc, VALUE *argv, VALUE 
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)((FIX::DataDictionary const *)arg1)->isMessageFieldsOrderPreserved();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115127,13 +115590,13 @@ _wrap_DataDictionary_validate__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::DataDictionary * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       FIX::DataDictionary::validate((FIX::Message const &)*arg1,(FIX::DataDictionary const *)arg2,(FIX::DataDictionary const *)arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115170,13 +115633,13 @@ _wrap_DataDictionary_validate__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Message * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       ((FIX::DataDictionary const *)arg1)->validate((FIX::Message const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115221,13 +115684,13 @@ _wrap_DataDictionary_validate__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       ((FIX::DataDictionary const *)arg1)->validate((FIX::Message const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115332,14 +115795,16 @@ _wrap_new_SSLSocketAcceptorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
   if ((argc < 3) || (argc > 3)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 3)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","SSLSocketAcceptor", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "SSLSocketAcceptor", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "SSLSocketAcceptor", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","SSLSocketAcceptor", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","SSLSocketAcceptor", 2, argv[1] )); 
@@ -115357,14 +115822,14 @@ _wrap_new_SSLSocketAcceptorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SSLSocketAcceptor *)new FIX::SSLSocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115410,14 +115875,16 @@ _wrap_new_SSLSocketAcceptorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
   if ((argc < 4) || (argc > 4)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 4)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","SSLSocketAcceptor", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "SSLSocketAcceptor", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "SSLSocketAcceptor", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","SSLSocketAcceptor", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","SSLSocketAcceptor", 2, argv[1] )); 
@@ -115434,23 +115901,25 @@ _wrap_new_SSLSocketAcceptorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::SessionSettings const &","SSLSocketAcceptor", 3, argv[2])); 
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
-  res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory,  0 );
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError( "", "FIX::LogFactory &","SSLSocketAcceptor", 4, argv[3] )); 
-  }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &","SSLSocketAcceptor", 4, argv[3])); 
-  }
-  arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory, 0);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError("", "FIX::LogFactory &", "SSLSocketAcceptor", 4, argv[3]));
+    }
+    if (!argp4) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &", "SSLSocketAcceptor", 4, argv[3]));
+    }
+    arg4 = &RubyLogFactory::adapt(*reinterpret_cast<FIX::LogFactory *>(argp4));
+  }
+  {
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SSLSocketAcceptor *)new FIX::SSLSocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115559,13 +116028,13 @@ _wrap_SSLSocketAcceptorBase_setPassword(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setPassword((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115627,13 +116096,13 @@ _wrap_SSLSocketAcceptorBase_passwordHandleCallback(int argc, VALUE *argv, VALUE 
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)(arg1)->passwordHandleCallback(arg2,SWIG_STD_MOVE(arg3),arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115687,13 +116156,13 @@ _wrap_SSLSocketAcceptorBase_passPhraseHandleCB(int argc, VALUE *argv, VALUE self
     SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError( "", "void *","FIX::SSLSocketAcceptor::passPhraseHandleCB", 4, argv[3] )); 
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)FIX::SSLSocketAcceptor::passPhraseHandleCB(arg1,arg2,arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115726,14 +116195,16 @@ _wrap_new_SSLSocketInitiatorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
   if ((argc < 3) || (argc > 3)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 3)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","SSLSocketInitiator", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "SSLSocketInitiator", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "SSLSocketInitiator", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","SSLSocketInitiator", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","SSLSocketInitiator", 2, argv[1] )); 
@@ -115751,14 +116222,14 @@ _wrap_new_SSLSocketInitiatorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SSLSocketInitiator *)new FIX::SSLSocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115804,14 +116275,16 @@ _wrap_new_SSLSocketInitiatorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
   if ((argc < 4) || (argc > 4)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 4)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","SSLSocketInitiator", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "SSLSocketInitiator", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "SSLSocketInitiator", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","SSLSocketInitiator", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","SSLSocketInitiator", 2, argv[1] )); 
@@ -115828,23 +116301,25 @@ _wrap_new_SSLSocketInitiatorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::SessionSettings const &","SSLSocketInitiator", 3, argv[2])); 
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
-  res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory,  0 );
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError( "", "FIX::LogFactory &","SSLSocketInitiator", 4, argv[3] )); 
-  }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &","SSLSocketInitiator", 4, argv[3])); 
-  }
-  arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory, 0);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError("", "FIX::LogFactory &", "SSLSocketInitiator", 4, argv[3]));
+    }
+    if (!argp4) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &", "SSLSocketInitiator", 4, argv[3]));
+    }
+    arg4 = &RubyLogFactory::adapt(*reinterpret_cast<FIX::LogFactory *>(argp4));
+  }
+  {
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SSLSocketInitiator *)new FIX::SSLSocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -115953,13 +116428,13 @@ _wrap_SSLSocketInitiatorBase_setPassword(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setPassword((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116010,13 +116485,13 @@ _wrap_SSLSocketInitiatorBase_setCertAndKey(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< RSA * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setCertAndKey(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116069,13 +116544,13 @@ _wrap_SSLSocketInitiatorBase_passwordHandleCallback(int argc, VALUE *argv, VALUE
   } 
   arg4 = static_cast< int >(val4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)(arg1)->passwordHandleCallback(arg2,SWIG_STD_MOVE(arg3),arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116129,13 +116604,13 @@ _wrap_SSLSocketInitiatorBase_passwordHandleCB(int argc, VALUE *argv, VALUE self)
     SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError( "", "void *","FIX::SSLSocketInitiator::passwordHandleCB", 4, argv[3] )); 
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)FIX::SSLSocketInitiator::passwordHandleCB(arg1,arg2,arg3,arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116235,14 +116710,14 @@ _wrap_new_DatabaseConnectionID(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< short >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DatabaseConnectionID *)new FIX::DatabaseConnectionID((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116334,13 +116809,13 @@ _wrap___lt____SWIG_6(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator <((FIX::DatabaseConnectionID const &)*arg1,(FIX::DatabaseConnectionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116516,13 +116991,13 @@ _wrap___eq____SWIG_6(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)operator ==((FIX::DatabaseConnectionID const &)*arg1,(FIX::DatabaseConnectionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116670,13 +117145,13 @@ _wrap_DatabaseConnectionID_getDatabase(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::DatabaseConnectionID const *)arg1)->getDatabase();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116705,13 +117180,13 @@ _wrap_DatabaseConnectionID_getUser(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::DatabaseConnectionID const *)arg1)->getUser();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116740,13 +117215,13 @@ _wrap_DatabaseConnectionID_getPassword(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::DatabaseConnectionID const *)arg1)->getPassword();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116775,13 +117250,13 @@ _wrap_DatabaseConnectionID_getHost(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &((FIX::DatabaseConnectionID const *)arg1)->getHost();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116810,13 +117285,13 @@ _wrap_DatabaseConnectionID_getPort(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (short)((FIX::DatabaseConnectionID const *)arg1)->getPort();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116873,14 +117348,14 @@ _wrap_new_MySQLQuery(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLQuery *)new FIX::MySQLQuery((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116931,13 +117406,13 @@ _wrap_MySQLQuery_execute(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< MYSQL * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->execute(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -116966,13 +117441,13 @@ _wrap_MySQLQuery_success(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->success();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117001,13 +117476,13 @@ _wrap_MySQLQuery_rows(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)(arg1)->rows();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117036,13 +117511,13 @@ _wrap_MySQLQuery_reason(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (std::string *) &(arg1)->reason();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117087,13 +117562,13 @@ _wrap_MySQLQuery_getValue(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (char *)(arg1)->getValue(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117120,13 +117595,13 @@ _wrap_MySQLQuery_throwException(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->throwException();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117159,14 +117634,14 @@ _wrap_new_MySQLConnection__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLConnection *)new FIX::MySQLConnection((FIX::DatabaseConnectionID const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117261,14 +117736,14 @@ _wrap_new_MySQLConnection__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< short >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLConnection *)new FIX::MySQLConnection((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117393,13 +117868,13 @@ _wrap_MySQLConnection_connectionID(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLConnection * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DatabaseConnectionID *) &(arg1)->connectionID();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117428,13 +117903,13 @@ _wrap_MySQLConnection_connected(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLConnection * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->connected();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117463,13 +117938,13 @@ _wrap_MySQLConnection_reconnect(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLConnection * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->reconnect();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117509,13 +117984,13 @@ _wrap_MySQLConnection_execute(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::MySQLQuery * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->execute(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117594,14 +118069,14 @@ _wrap_new_MySQLStoreFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLStoreFactory *)new FIX::MySQLStoreFactory((FIX::SessionSettings const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117632,14 +118107,14 @@ _wrap_new_MySQLStoreFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLStoreFactory *)new FIX::MySQLStoreFactory((FIX::Dictionary const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117719,14 +118194,14 @@ _wrap_new_MySQLStoreFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< short >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLStoreFactory *)new FIX::MySQLStoreFactory((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117797,14 +118272,14 @@ _wrap_new_MySQLStoreFactory__SWIG_3(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLStoreFactory *)new FIX::MySQLStoreFactory();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117923,13 +118398,13 @@ _wrap_MySQLStoreFactory_create(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageStore *)(arg1)->create((FIX::UtcTimeStamp const &)*arg2,(FIX::SessionID const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -117964,13 +118439,13 @@ _wrap_MySQLStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118039,14 +118514,14 @@ _wrap_new_MySQLStore__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< FIX::MySQLConnectionPool * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLStore *)new FIX::MySQLStore((FIX::UtcTimeStamp const &)*arg1,(FIX::SessionID const &)*arg2,(FIX::DatabaseConnectionID const &)*arg3,arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118163,14 +118638,14 @@ _wrap_new_MySQLStore__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg7 = static_cast< short >(val7);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLStore *)new FIX::MySQLStore((FIX::UtcTimeStamp const &)*arg1,(FIX::SessionID const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,(std::string const &)*arg5,(std::string const &)*arg6,arg7);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118341,13 +118816,13 @@ _wrap_MySQLStore_set(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->set(arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118410,13 +118885,13 @@ _wrap_MySQLStore_get(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< std::vector< std::string,std::allocator< std::string > > * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       ((FIX::MySQLStore const *)arg1)->get(arg2,arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118444,13 +118919,13 @@ _wrap_MySQLStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::MySQLStore const *)arg1)->getNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118479,13 +118954,13 @@ _wrap_MySQLStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::MySQLStore const *)arg1)->getNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118520,13 +118995,13 @@ _wrap_MySQLStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextSenderMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118560,13 +119035,13 @@ _wrap_MySQLStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextTargetMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118592,13 +119067,13 @@ _wrap_MySQLStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118624,13 +119099,13 @@ _wrap_MySQLStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118658,13 +119133,13 @@ _wrap_MySQLStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::MySQLStore const *)arg1)->getCreationTime();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118702,13 +119177,13 @@ _wrap_MySQLStore_reset(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->reset((FIX::UtcTimeStamp const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118734,13 +119209,13 @@ _wrap_MySQLStore_refresh(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->refresh();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118792,14 +119267,14 @@ _wrap_new_MySQLLog__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::MySQLConnectionPool * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLLog *)new FIX::MySQLLog((FIX::SessionID const &)*arg1,(FIX::DatabaseConnectionID const &)*arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118838,14 +119313,14 @@ _wrap_new_MySQLLog__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::MySQLConnectionPool * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLLog *)new FIX::MySQLLog((FIX::DatabaseConnectionID const &)*arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -118936,14 +119411,14 @@ _wrap_new_MySQLLog__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg6 = static_cast< short >(val6);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLLog *)new FIX::MySQLLog((FIX::SessionID const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,(std::string const &)*arg5,arg6);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119074,14 +119549,14 @@ _wrap_new_MySQLLog__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< short >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLLog *)new FIX::MySQLLog((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119269,13 +119744,13 @@ _wrap_MySQLLog_clear(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clear();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119301,13 +119776,13 @@ _wrap_MySQLLog_backup(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->backup();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119347,13 +119822,13 @@ _wrap_MySQLLog_setIncomingTable(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setIncomingTable((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119402,13 +119877,13 @@ _wrap_MySQLLog_setOutgoingTable(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setOutgoingTable((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119457,13 +119932,13 @@ _wrap_MySQLLog_setEventTable(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setEventTable((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119512,13 +119987,13 @@ _wrap_MySQLLog_onIncoming(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onIncoming((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119567,13 +120042,13 @@ _wrap_MySQLLog_onOutgoing(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onOutgoing((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119622,13 +120097,13 @@ _wrap_MySQLLog_onEvent(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onEvent((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119715,14 +120190,14 @@ _wrap_new_MySQLLogFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLLogFactory *)new FIX::MySQLLogFactory((FIX::SessionSettings const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119802,14 +120277,14 @@ _wrap_new_MySQLLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< short >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLLogFactory *)new FIX::MySQLLogFactory((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119880,14 +120355,14 @@ _wrap_new_MySQLLogFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MySQLLogFactory *)new FIX::MySQLLogFactory();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -119975,13 +120450,13 @@ _wrap_MySQLLogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::MySQLLogFactory * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Log *)(arg1)->create();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120027,13 +120502,13 @@ _wrap_MySQLLogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Log *)(arg1)->create((FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120117,13 +120592,13 @@ _wrap_MySQLLogFactory_destroy(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Log * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120179,14 +120654,14 @@ _wrap_new_PostgreSQLQuery(int argc, VALUE *argv, VALUE self) {
     arg1 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLQuery *)new FIX::PostgreSQLQuery((std::string const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120237,13 +120712,13 @@ _wrap_PostgreSQLQuery_execute(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< PGconn * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->execute(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120272,13 +120747,13 @@ _wrap_PostgreSQLQuery_success(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->success();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120307,13 +120782,13 @@ _wrap_PostgreSQLQuery_rows(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (int)(arg1)->rows();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120342,13 +120817,13 @@ _wrap_PostgreSQLQuery_reason(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (char *)(arg1)->reason();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120393,13 +120868,13 @@ _wrap_PostgreSQLQuery_getValue(int argc, VALUE *argv, VALUE self) {
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (char *)(arg1)->getValue(arg2,arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120426,13 +120901,13 @@ _wrap_PostgreSQLQuery_throwException(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->throwException();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120465,14 +120940,14 @@ _wrap_new_PostgreSQLConnection__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLConnection *)new FIX::PostgreSQLConnection((FIX::DatabaseConnectionID const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120567,14 +121042,14 @@ _wrap_new_PostgreSQLConnection__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< short >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLConnection *)new FIX::PostgreSQLConnection((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120699,13 +121174,13 @@ _wrap_PostgreSQLConnection_connectionID(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLConnection * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::DatabaseConnectionID *) &(arg1)->connectionID();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120734,13 +121209,13 @@ _wrap_PostgreSQLConnection_connected(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLConnection * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->connected();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120769,13 +121244,13 @@ _wrap_PostgreSQLConnection_reconnect(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLConnection * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->reconnect();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120815,13 +121290,13 @@ _wrap_PostgreSQLConnection_execute(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->execute(*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120900,14 +121375,14 @@ _wrap_new_PostgreSQLStoreFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLStoreFactory *)new FIX::PostgreSQLStoreFactory((FIX::SessionSettings const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -120938,14 +121413,14 @@ _wrap_new_PostgreSQLStoreFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLStoreFactory *)new FIX::PostgreSQLStoreFactory((FIX::Dictionary const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121025,14 +121500,14 @@ _wrap_new_PostgreSQLStoreFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< short >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLStoreFactory *)new FIX::PostgreSQLStoreFactory((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121103,14 +121578,14 @@ _wrap_new_PostgreSQLStoreFactory__SWIG_3(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLStoreFactory *)new FIX::PostgreSQLStoreFactory();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121229,13 +121704,13 @@ _wrap_PostgreSQLStoreFactory_create(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageStore *)(arg1)->create((FIX::UtcTimeStamp const &)*arg2,(FIX::SessionID const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121270,13 +121745,13 @@ _wrap_PostgreSQLStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121345,14 +121820,14 @@ _wrap_new_PostgreSQLStore__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< FIX::PostgreSQLConnectionPool * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLStore *)new FIX::PostgreSQLStore((FIX::UtcTimeStamp const &)*arg1,(FIX::SessionID const &)*arg2,(FIX::DatabaseConnectionID const &)*arg3,arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121469,14 +121944,14 @@ _wrap_new_PostgreSQLStore__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg7 = static_cast< short >(val7);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLStore *)new FIX::PostgreSQLStore((FIX::UtcTimeStamp const &)*arg1,(FIX::SessionID const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,(std::string const &)*arg5,(std::string const &)*arg6,arg7);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121647,13 +122122,13 @@ _wrap_PostgreSQLStore_set(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->set(arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121716,13 +122191,13 @@ _wrap_PostgreSQLStore_get(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< std::vector< std::string,std::allocator< std::string > > * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       ((FIX::PostgreSQLStore const *)arg1)->get(arg2,arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121750,13 +122225,13 @@ _wrap_PostgreSQLStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) 
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::PostgreSQLStore const *)arg1)->getNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121785,13 +122260,13 @@ _wrap_PostgreSQLStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) 
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::PostgreSQLStore const *)arg1)->getNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121826,13 +122301,13 @@ _wrap_PostgreSQLStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) 
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextSenderMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121866,13 +122341,13 @@ _wrap_PostgreSQLStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) 
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextTargetMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121898,13 +122373,13 @@ _wrap_PostgreSQLStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self)
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121930,13 +122405,13 @@ _wrap_PostgreSQLStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self)
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -121964,13 +122439,13 @@ _wrap_PostgreSQLStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::PostgreSQLStore const *)arg1)->getCreationTime();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122008,13 +122483,13 @@ _wrap_PostgreSQLStore_reset(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->reset((FIX::UtcTimeStamp const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122040,13 +122515,13 @@ _wrap_PostgreSQLStore_refresh(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->refresh();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122098,14 +122573,14 @@ _wrap_new_PostgreSQLLog__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::PostgreSQLConnectionPool * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLLog *)new FIX::PostgreSQLLog((FIX::SessionID const &)*arg1,(FIX::DatabaseConnectionID const &)*arg2,arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122144,14 +122619,14 @@ _wrap_new_PostgreSQLLog__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::PostgreSQLConnectionPool * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLLog *)new FIX::PostgreSQLLog((FIX::DatabaseConnectionID const &)*arg1,arg2);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122242,14 +122717,14 @@ _wrap_new_PostgreSQLLog__SWIG_2(int argc, VALUE *argv, VALUE self) {
   } 
   arg6 = static_cast< short >(val6);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLLog *)new FIX::PostgreSQLLog((FIX::SessionID const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,(std::string const &)*arg5,arg6);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122380,14 +122855,14 @@ _wrap_new_PostgreSQLLog__SWIG_3(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< short >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLLog *)new FIX::PostgreSQLLog((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122575,13 +123050,13 @@ _wrap_PostgreSQLLog_clear(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->clear();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122607,13 +123082,13 @@ _wrap_PostgreSQLLog_backup(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->backup();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122653,13 +123128,13 @@ _wrap_PostgreSQLLog_setIncomingTable(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setIncomingTable((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122708,13 +123183,13 @@ _wrap_PostgreSQLLog_setOutgoingTable(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setOutgoingTable((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122763,13 +123238,13 @@ _wrap_PostgreSQLLog_setEventTable(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setEventTable((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122818,13 +123293,13 @@ _wrap_PostgreSQLLog_onIncoming(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onIncoming((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122873,13 +123348,13 @@ _wrap_PostgreSQLLog_onOutgoing(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onOutgoing((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -122928,13 +123403,13 @@ _wrap_PostgreSQLLog_onEvent(int argc, VALUE *argv, VALUE self) {
     arg2 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->onEvent((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123021,14 +123496,14 @@ _wrap_new_PostgreSQLLogFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLLogFactory *)new FIX::PostgreSQLLogFactory((FIX::SessionSettings const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123108,14 +123583,14 @@ _wrap_new_PostgreSQLLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
   } 
   arg5 = static_cast< short >(val5);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLLogFactory *)new FIX::PostgreSQLLogFactory((std::string const &)*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4,arg5);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123186,14 +123661,14 @@ _wrap_new_PostgreSQLLogFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::PostgreSQLLogFactory *)new FIX::PostgreSQLLogFactory();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123281,13 +123756,13 @@ _wrap_PostgreSQLLogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLogFactory * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Log *)(arg1)->create();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123333,13 +123808,13 @@ _wrap_PostgreSQLLogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::Log *)(arg1)->create((FIX::SessionID const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123423,13 +123898,13 @@ _wrap_PostgreSQLLogFactory_destroy(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::Log * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123465,14 +123940,16 @@ _wrap_new_ThreadedSocketAcceptorBase__SWIG_0(int argc, VALUE *argv, VALUE self) 
   if ((argc < 3) || (argc > 3)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 3)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","ThreadedSocketAcceptor", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "ThreadedSocketAcceptor", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "ThreadedSocketAcceptor", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","ThreadedSocketAcceptor", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","ThreadedSocketAcceptor", 2, argv[1] )); 
@@ -123490,14 +123967,14 @@ _wrap_new_ThreadedSocketAcceptorBase__SWIG_0(int argc, VALUE *argv, VALUE self) 
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::ThreadedSocketAcceptor *)new FIX::ThreadedSocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123543,14 +124020,16 @@ _wrap_new_ThreadedSocketAcceptorBase__SWIG_1(int argc, VALUE *argv, VALUE self) 
   if ((argc < 4) || (argc > 4)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 4)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","ThreadedSocketAcceptor", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "ThreadedSocketAcceptor", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "ThreadedSocketAcceptor", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","ThreadedSocketAcceptor", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","ThreadedSocketAcceptor", 2, argv[1] )); 
@@ -123567,23 +124046,25 @@ _wrap_new_ThreadedSocketAcceptorBase__SWIG_1(int argc, VALUE *argv, VALUE self) 
     SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::SessionSettings const &","ThreadedSocketAcceptor", 3, argv[2])); 
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
-  res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory,  0 );
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError( "", "FIX::LogFactory &","ThreadedSocketAcceptor", 4, argv[3] )); 
-  }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &","ThreadedSocketAcceptor", 4, argv[3])); 
-  }
-  arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory, 0);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError("", "FIX::LogFactory &", "ThreadedSocketAcceptor", 4, argv[3]));
+    }
+    if (!argp4) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &", "ThreadedSocketAcceptor", 4, argv[3]));
+    }
+    arg4 = &RubyLogFactory::adapt(*reinterpret_cast<FIX::LogFactory *>(argp4));
+  }
+  {
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::ThreadedSocketAcceptor *)new FIX::ThreadedSocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123682,14 +124163,16 @@ _wrap_new_ThreadedSocketInitiatorBase__SWIG_0(int argc, VALUE *argv, VALUE self)
   if ((argc < 3) || (argc > 3)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 3)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","ThreadedSocketInitiator", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "ThreadedSocketInitiator", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "ThreadedSocketInitiator", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","ThreadedSocketInitiator", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","ThreadedSocketInitiator", 2, argv[1] )); 
@@ -123707,14 +124190,14 @@ _wrap_new_ThreadedSocketInitiatorBase__SWIG_0(int argc, VALUE *argv, VALUE self)
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::ThreadedSocketInitiator *)new FIX::ThreadedSocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123760,14 +124243,16 @@ _wrap_new_ThreadedSocketInitiatorBase__SWIG_1(int argc, VALUE *argv, VALUE self)
   if ((argc < 4) || (argc > 4)) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 4)",argc); SWIG_fail;
   }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application,  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Application &","ThreadedSocketInitiator", 1, argv[0] )); 
+  {
+    res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Application, 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError("", "FIX::Application &", "ThreadedSocketInitiator", 1, argv[0]));
+    }
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &", "ThreadedSocketInitiator", 1, argv[0]));
+    }
+    arg1 = &RubyApplication::adapt(*reinterpret_cast<FIX::Application *>(argp1));
   }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Application &","ThreadedSocketInitiator", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(argv[1], &argp2, SWIGTYPE_p_FIX__MessageStoreFactory,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), Ruby_Format_TypeError( "", "FIX::MessageStoreFactory &","ThreadedSocketInitiator", 2, argv[1] )); 
@@ -123784,23 +124269,25 @@ _wrap_new_ThreadedSocketInitiatorBase__SWIG_1(int argc, VALUE *argv, VALUE self)
     SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::SessionSettings const &","ThreadedSocketInitiator", 3, argv[2])); 
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
-  res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory,  0 );
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError( "", "FIX::LogFactory &","ThreadedSocketInitiator", 4, argv[3] )); 
-  }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &","ThreadedSocketInitiator", 4, argv[3])); 
-  }
-  arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    res4 = SWIG_ConvertPtr(argv[3], &argp4, SWIGTYPE_p_FIX__LogFactory, 0);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), Ruby_Format_TypeError("", "FIX::LogFactory &", "ThreadedSocketInitiator", 4, argv[3]));
+    }
+    if (!argp4) {
+      SWIG_exception_fail(SWIG_ValueError, Ruby_Format_TypeError("invalid null reference ", "FIX::LogFactory &", "ThreadedSocketInitiator", 4, argv[3]));
+    }
+    arg4 = &RubyLogFactory::adapt(*reinterpret_cast<FIX::LogFactory *>(argp4));
+  }
+  {
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::ThreadedSocketInitiator *)new FIX::ThreadedSocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123921,13 +124408,13 @@ _wrap_NullStoreFactory_create(int argc, VALUE *argv, VALUE self) {
   }
   arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::MessageStore *)(arg1)->create((FIX::UtcTimeStamp const &)*arg2,(FIX::SessionID const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -123962,13 +124449,13 @@ _wrap_NullStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->destroy(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124003,14 +124490,14 @@ _wrap_new_NullStoreFactory(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::NullStoreFactory *)new FIX::NullStoreFactory();
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124064,14 +124551,14 @@ _wrap_new_NullStore(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStamp * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::NullStore *)new FIX::NullStore((FIX::UtcTimeStamp const &)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124120,13 +124607,13 @@ _wrap_NullStore_set(int argc, VALUE *argv, VALUE self) {
     arg3 = ptr;
   }
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (bool)(arg1)->set(arg2,(std::string const &)*arg3);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124189,13 +124676,13 @@ _wrap_NullStore_get(int argc, VALUE *argv, VALUE self) {
   }
   arg4 = reinterpret_cast< std::vector< std::string,std::allocator< std::string > > * >(argp4);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       ((FIX::NullStore const *)arg1)->get(arg2,arg3,*arg4);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124223,13 +124710,13 @@ _wrap_NullStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::NullStore const *)arg1)->getNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124258,13 +124745,13 @@ _wrap_NullStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = (FIX::SEQNUM)((FIX::NullStore const *)arg1)->getNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124299,13 +124786,13 @@ _wrap_NullStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextSenderMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124339,13 +124826,13 @@ _wrap_NullStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   } 
   arg2 = static_cast< FIX::SEQNUM >(val2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setNextTargetMsgSeqNum(arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124371,13 +124858,13 @@ _wrap_NullStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextSenderMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124403,13 +124890,13 @@ _wrap_NullStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->incrNextTargetMsgSeqNum();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124446,13 +124933,13 @@ _wrap_NullStore_setCreationTime(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->setCreationTime((FIX::UtcTimeStamp const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124480,13 +124967,13 @@ _wrap_NullStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       result = ((FIX::NullStore const *)arg1)->getCreationTime();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124524,13 +125011,13 @@ _wrap_NullStore_reset(int argc, VALUE *argv, VALUE self) {
   }
   arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->reset((FIX::UtcTimeStamp const &)*arg2);
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }
@@ -124556,13 +125043,13 @@ _wrap_NullStore_refresh(int argc, VALUE *argv, VALUE self) {
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
-    if(tryRubyException([&]() mutable 
+    if(tryRubyException([&]() mutable
         {
       (arg1)->refresh();
           return self;
         fail:
           return Qnil;
-        }) == Qnil) 
+        }) == Qnil)
     {
       SWIG_fail;
     }

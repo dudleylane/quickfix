@@ -551,15 +551,33 @@ typedef FIX::SessionSettings SessionSettings;
 // sessions are created by SessionFactory through the initiator or acceptor
 // rather than directly. Everything else on Session stays exposed.
 %ignore FIX::Session::Session;
+#ifdef SWIGRUBY
+QUICKFIX_RUBY_EXCEPTION_WITHOUT_GVL
+#endif
 %include "../C++/Session.h"
+#ifdef SWIGRUBY
+QUICKFIX_RUBY_EXCEPTION
+#endif
 %include "../C++/Log.h"
 %include "../C++/FileLog.h"
 %include "../C++/MessageStore.h"
 %include "../C++/FileStore.h"
 %include "../C++/Application.h"
+#ifdef SWIGRUBY
+QUICKFIX_RUBY_EXCEPTION_WITHOUT_GVL
+#endif
 %include "../C++/Initiator.h"
+#ifdef SWIGRUBY
+QUICKFIX_RUBY_EXCEPTION
+#endif
 %include "../C++/SocketInitiator.h"
+#ifdef SWIGRUBY
+QUICKFIX_RUBY_EXCEPTION_WITHOUT_GVL
+#endif
 %include "../C++/Acceptor.h"
+#ifdef SWIGRUBY
+QUICKFIX_RUBY_EXCEPTION
+#endif
 %include "../C++/SocketAcceptor.h"
 %include "../C++/DataDictionary.h"
 %include "../C++/SocketMonitor.h"
