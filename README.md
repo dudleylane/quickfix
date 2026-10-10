@@ -63,6 +63,11 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 
 #### Benchmark baseline
 
+To compare a change against its base, run `./ptgate.sh <base commit>` from `test/` after a Release
+build: it builds the base's `pt` in a temporary worktree, runs the two alternately twice, pinned,
+and `ptcompare.py` fails if a benchmark of 0.2 µs or more is over 10% slower in both pairs. CI runs
+it on pull requests and manual runs (#93).
+
 Captured at `2c9ed23a` with `./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c 1,2,3` on an
 Intel i7-6820HQ (4C/8T, `performance` governor), Release build, GCC 15. Median of nine runs after a
 discarded warm-up; **cv** is the coefficient of variation across those runs. The run waits for the
@@ -261,6 +266,11 @@ while (auto raw = receiveFromSocket()) {
 
 These recipes are how changes are checked under ThreadSanitizer and AddressSanitizer + UBSan. Run
 them for anything touching locking, object lifetime, or the repeating-group arena.
+
+CI runs them too (#92): the `sanitizers` job builds with the ASan + UBSan recipe below and with
+TSan on the default allocator, runs `ut` on every push, and on pull requests and manual runs also
+the acceptance suite in both transports, which fails on a leak or a TSan report because `runat.sh`
+fails when `at` exits non-zero. The concurrent-churn run below stays a local check.
 
 **The ASan build must not enable the TBB allocator.** ASan detects heap errors through the allocator
 it interposes. `tbb::scalable_allocator` suballocates from `libtbbmalloc`'s own slabs, which ASan

@@ -5,10 +5,16 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
-  # Runs the steps gated on "not a push" -- the acceptance suite and the
-  # database link step -- on demand:
-  #   gh workflow run build_test_cmake.yml --ref master
+  # Runs the steps gated on "not a push" -- the acceptance suite, the
+  # sanitizer acceptance runs, the pt comparison and the database link step
+  # -- on demand:
+  #   gh workflow run build_test_cmake.yml --ref master [-f pt_base=<commit>]
   workflow_dispatch:
+    inputs:
+      pt_base:
+        description: Commit to compare pt against (default the previous commit)
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -243,9 +249,93 @@ jobs:
 
       - name: Run performance tests
         # Release-only: pt benchmarks against the Debug build are noise.
-        if: matrix.configuration == 'Release'
+        # On a push, a smoke test for crashes and hangs; elsewhere the
+        # comparison below runs this pt in full.
+        if: matrix.configuration == 'Release' && github.event_name == 'push'
         working-directory: ./test
-        # -r 1: this step is a smoke test for crashes and hangs, not a
-        # regression gate, so it does not need the repetition harness's
-        # default of 5 runs per benchmark.
+        # -r 1: a smoke test does not need the repetition harness's default of
+        # 5 runs per benchmark.
         run: ./pt -p 54323 -c 500000 -r 1
+
+      - name: Compare pt with the base commit
+        # The regression gate (#93): the base's pt and this one, run
+        # alternately and pinned, judged by ptcompare.py -- a benchmark of
+        # 0.2 us or more that is 10% slower in both pairs fails the job. About
+        # 15 minutes, so not on push. The base is the pull request's target,
+        # or the pt_base input, or the previous commit.
+        if: matrix.configuration == 'Release' && github.event_name != 'push'
+        working-directory: ./test
+        shell: bash
+        # Through the environment, not interpolated into the script: an input
+        # is text, and must not become shell.
+        env:
+          PT_BASE: ${{ github.event.pull_request.base.sha || inputs.pt_base }}
+        run: |
+          base="$PT_BASE"
+          if [ -z "$base" ]; then
+            git fetch --no-tags --deepen=1 origin
+            base=$(git rev-parse HEAD~1)
+          else
+            git fetch --no-tags origin "$base"
+          fi
+          ./ptgate.sh "$base"
+
+  sanitizers:
+    # The README's sanitizer baselines, kept by CI rather than by whoever ran
+    # the recipes last (#92): ut on every event, and on pull requests and
+    # manual runs the acceptance suite in both transports, where runat.sh
+    # fails if at exits non-zero -- a LeakSanitizer or ThreadSanitizer report
+    # (#84). TSan uses the default allocator: tbb::scalable_allocator's
+    # per-thread freelists hide their synchronisation from it, which the
+    # threaded transport turns into false reports (#15). Neither enables the
+    # TBB allocator, which would hide FieldMap::Fields and the send queues
+    # from ASan. The build goes to the default lib/, so the test links are
+    # this job's own.
+    name: ${{ matrix.sanitizer }}
+    runs-on: [self-hosted, Linux, X64, quickfix-dev]
+    env:
+      PATH: /opt/rh/gcc-toolset-15/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      LD_LIBRARY_PATH: /opt/rh/gcc-toolset-15/root/usr/lib64
+      CC: /opt/rh/gcc-toolset-15/root/usr/bin/gcc
+      CXX: /opt/rh/gcc-toolset-15/root/usr/bin/g++
+      ASAN_OPTIONS: detect_leaks=1
+      UBSAN_OPTIONS: print_stacktrace=1
+      TSAN_OPTIONS: second_deadlock_stack=1
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sanitizer: ASan + UBSan
+            compile: -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
+            link: -fsanitize=address,undefined
+          - sanitizer: TSan
+            compile: -fsanitize=thread -fno-omit-frame-pointer
+            link: -fsanitize=thread
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=ON \
+            -DCMAKE_CXX_FLAGS="${{ matrix.compile }}" \
+            -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.link }}" \
+            -DCMAKE_SHARED_LINKER_FLAGS="${{ matrix.link }}"
+
+      - name: Build
+        shell: bash
+        run: cmake --build build -j"$(nproc)"
+
+      - name: Run unit tests
+        working-directory: ./test
+        run: ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
+
+      - name: Run acceptance tests (reactor)
+        if: github.event_name != 'push'
+        working-directory: ./test
+        run: ./runat.sh 54321
+
+      - name: Run acceptance tests (threaded)
+        if: github.event_name != 'push'
+        working-directory: ./test
+        run: ./runat.sh 54321 -t
