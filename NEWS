@@ -32,6 +32,16 @@ Fixed: DataDictionary::addGroup leaked the dictionary it replaced when a group w
 message twice, and assigning one dictionary to another kept groups the target held that the
 source lacked (#95).
 
+Examples: the SSL example works -- its certificates had expired in 2016 and named
+127.0.0.1 without an IP subjectAltName; bin/cfg/certs/gen_certs.sh regenerates them, and
+tradeclient.cfg names the example CA (#100). The Python and Ruby executors send ExecType Trade on
+FIX 4.4 and later, where Fill no longer exists (#101), and their run scripts find the CMake build
+(#103).
+
+Known issue: in the Ruby binding, Acceptor#start and Initiator#start hold the GVL for as long as
+the acceptor or initiator runs, so no other Ruby thread runs after start, and SIGTERM does not stop
+the program (#102). The Python binding is not affected.
+
 Tests and tooling: the acceptance acceptor shuts down cleanly on SIGTERM, and runat.sh fails when it
 exits non-zero, so an AddressSanitizer build reports leaks and a crash at shutdown fails the run
 (#84); runat.sh waits for at to listen before the first definition, which sanitizer builds needed
