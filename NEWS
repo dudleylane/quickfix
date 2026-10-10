@@ -1,3 +1,48 @@
+22.0.0
+------
+
+The soname is libquickfix.so.22. No exported class changed layout (checked by sizeof and alignof
+of 33 classes against 21.0.1's headers), but the meaning of what message_order stores did, and
+message_order's comparison is inline, so a program built against 21.x would misorder fields with
+this library: it does not load it and must be rebuilt. find_package(quickfix 22) and pkg-config
+pick it up.
+
+Memory: a loaded FIX 5.0 SP2 DataDictionary held about 3.8 GB in 20.1.0, 21.0.0 and 21.0.1, and
+any build of master from 4c75cd41 until 4fadd8eb -- every group's field order was primed at load
+as an array indexed by field number, and SP2 numbers fields up to 50002. It holds 75 MB. A group,
+header, trailer or message order keeps that array only while it costs at most eight times a small
+hash table of its fields, and is the table otherwise; the ordering is unchanged. The same change
+removes an allocation of up to 200 KB from the construction of every generated FIX 5.0 SP2 group
+object. pt measured the table's lookup at about 1-2% of an SP2 parse, and nothing else moved
+(#86, #90).
+
+Load time: a FIX 5.0 SP2 dictionary loads in about 0.25 s in a Release build, from 3.5 s in 21.0.1 --
+components are looked up in an index built once per load rather than by an XPath query per
+reference (#87), and group dictionaries are handed to their parents rather than deep-copied at
+every level of nesting (#95). The loaded dictionary is identical, checked by dumping all nine
+specs before and after.
+
+INCOMPATIBLE: SocketAcceptPort, SocketConnectPort and SocketConnectSourcePort are read as 16-bit
+unsigned and checked: a value outside 1 to 65535 is a ConfigError, where 0 still means any for a
+listening or source port. They used to be truncated to short, so 70000 silently listened on or
+connected to 4464, and a configuration that relied on that now fails to start. Ports above 32767
+are no longer logged negative. HostDetails holds them as uint16_t (#99).
+
+Fixed: DataDictionary::addGroup leaked the dictionary it replaced when a group was added to a
+message twice, and assigning one dictionary to another kept groups the target held that the
+source lacked (#95).
+
+Tests and tooling: the acceptance acceptor shuts down cleanly on SIGTERM, and runat.sh fails when it
+exits non-zero, so an AddressSanitizer build reports leaks and a crash at shutdown fails the run
+(#84); runat.sh waits for at to listen before the first definition, which sanitizer builds needed
+(#85). test/churn.rb and runchurn.sh are the concurrent-churn driver README describes, now in the
+repository (#94). ut loads FIX 5.0 SP2 and bounds what the dictionary holds (#91). pt benchmarks
+a FIX 5.0 SP2 NewOrderSingle with parties (#90). CI runs ut under AddressSanitizer + UBSan and
+ThreadSanitizer on every push, and on pull requests and manual runs the acceptance suite under
+both and a pt comparison against the base commit that fails on a regression (#92, #93). A second
+build tree no longer repoints the bin/ example links (#83).
+
+
 21.0.1
 ------
 

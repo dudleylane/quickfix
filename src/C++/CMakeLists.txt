@@ -124,7 +124,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR} ${PROJE
 # (FieldBase, Message) from upstream's 17. Since v18.0.0, a layout change to an exported class
 # bumps the major in project(); 19.0.0 was the first such bump, 20.0.0 the second. 21.0.0 changed no
 # layout but the Application callback contract (#73), and bumped so that a binary built for 20 fails
-# to load rather than run under it. release_tag_check.yml compares the built
+# to load rather than run under it; 22.0.0 likewise for what message_order stores, which its
+# inline comparison reads (#86). release_tag_check.yml compares the built
 # library's soname with the release tag.
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} )
 
