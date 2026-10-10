@@ -42,13 +42,35 @@ module Quickfix
 
 	class Initiator
 		def start
-			Thread.new { block() }
+			@quickfixThread = Thread.new { block() }
 		end
 	end
 
 	class Acceptor
 		def start
-			Thread.new { block() }
+			@quickfixThread = Thread.new { block() }
+		end
+	end
+
+	# At exit Ruby frees every object in no particular order, and an initiator or
+	# acceptor freed after its store factory, log factory or application used them
+	# from its destructor, which crashed the process (#105). at_exit runs before
+	# that, while they are all alive: stop each one, wait for the thread #start
+	# made and for any block() still running, and delete it.
+	at_exit do
+		[[Initiator, :_initiatorBlocking, :_destroyInitiator],
+		 [Acceptor, :_acceptorBlocking, :_destroyAcceptor]].each do |kind, blocking, destroy|
+			ObjectSpace.each_object(kind).to_a.each do |transport|
+				begin
+					transport.stop
+					thread = transport.instance_variable_get(:@quickfixThread)
+					thread.join(15) if thread
+					deadline = Time.now + 15
+					sleep 0.05 while Quickfix.send(blocking, transport) && Time.now < deadline
+					Quickfix.send(destroy, transport)
+				rescue StandardError
+				end
+			end
 		end
 	end
 

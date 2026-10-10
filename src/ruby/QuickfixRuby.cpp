@@ -2558,6 +2558,8 @@ template <typename T> T SwigValueInit() {
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <set>
 #include <thread>
 
 // Exported by libruby, but declared only in its internal headers.
@@ -2631,9 +2633,32 @@ VALUE withoutGvl(std::function<VALUE()> call, std::function<void()> unblock = {}
 // own calls stop(true) -- the unblock function may not block, and stop() takes
 // engine locks -- and block() returns once the transport has stopped. That
 // thread never enters Ruby, and is joined before this returns.
+// The transports whose block() is running, which may not be deleted yet.
+std::mutex g_blockingMutex;
+std::set<const void *> g_blocking;
+
+bool isBlocking(const void *transport)
+{
+  std::lock_guard<std::mutex> lock(g_blockingMutex);
+  return g_blocking.count(transport) != 0;
+}
+
 template <typename Transport>
 VALUE blockWithoutGvl(std::function<VALUE()> call, Transport &transport)
 {
+  {
+    std::lock_guard<std::mutex> lock(g_blockingMutex);
+    g_blocking.insert(&transport);
+  }
+  struct Unregister
+  {
+    const void *transport;
+    ~Unregister()
+    {
+      std::lock_guard<std::mutex> lock(g_blockingMutex);
+      g_blocking.erase(transport);
+    }
+  } unregister{&transport};
   std::thread stopper;
   struct Join
   {
@@ -2654,6 +2679,47 @@ VALUE blockWithoutGvl(std::function<VALUE()> call, Transport &transport)
                         stopper = std::thread([&transport]() { transport.stop(true); });
                       }
                     });
+}
+
+// At exit Ruby frees every object in no particular order, so an initiator or
+// acceptor freed after its store factory, log factory or application used them
+// from its destructor (#105). quickfix_ruby.rb's at_exit hook, which runs while
+// they are all alive, deletes each one through these instead: the Ruby object
+// gives up the pointer, so its finalizer does nothing, and any later call on it
+// raises ObjectPreviouslyDeleted. One whose block() is still running is not
+// touched.
+template <typename Transport>
+VALUE destroyTransport(VALUE object, swig_type_info *type)
+{
+  void *pointer = 0;
+  if (!SWIG_IsOK(SWIG_ConvertPtr(object, &pointer, type, 0)) || !pointer || isBlocking(pointer))
+  {
+    return Qfalse;
+  }
+  if (!SWIG_IsOK(SWIG_ConvertPtr(object, &pointer, type, SWIG_POINTER_RELEASE)) || !pointer)
+  {
+    return Qfalse;
+  }
+  delete static_cast<Transport *>(pointer);
+  return Qtrue;
+}
+
+VALUE destroyInitiator(VALUE, VALUE object) { return destroyTransport<FIX::Initiator>(object, SWIGTYPE_p_FIX__Initiator); }
+VALUE destroyAcceptor(VALUE, VALUE object) { return destroyTransport<FIX::Acceptor>(object, SWIGTYPE_p_FIX__Acceptor); }
+
+VALUE isInitiatorBlocking(VALUE, VALUE object)
+{
+  void *pointer = 0;
+  return SWIG_IsOK(SWIG_ConvertPtr(object, &pointer, SWIGTYPE_p_FIX__Initiator, 0)) && pointer && isBlocking(pointer)
+             ? Qtrue
+             : Qfalse;
+}
+VALUE isAcceptorBlocking(VALUE, VALUE object)
+{
+  void *pointer = 0;
+  return SWIG_IsOK(SWIG_ConvertPtr(object, &pointer, SWIGTYPE_p_FIX__Acceptor, 0)) && pointer && isBlocking(pointer)
+             ? Qtrue
+             : Qfalse;
 }
 
 // Runs a callback into Ruby. A thread that holds the GVL calls straight through;
@@ -134026,6 +134092,12 @@ SWIGEXPORT void Init_quickfix(void) {
   new_action.sa_flags = 0;
   sigaction( SIGINT, &new_action, &old_action );
 #endif
+  
+  
+  rb_define_module_function(mQuickfix, "_destroyInitiator", RUBY_METHOD_FUNC(destroyInitiator), 1);
+  rb_define_module_function(mQuickfix, "_destroyAcceptor", RUBY_METHOD_FUNC(destroyAcceptor), 1);
+  rb_define_module_function(mQuickfix, "_initiatorBlocking", RUBY_METHOD_FUNC(isInitiatorBlocking), 1);
+  rb_define_module_function(mQuickfix, "_acceptorBlocking", RUBY_METHOD_FUNC(isAcceptorBlocking), 1);
   
 }
 
