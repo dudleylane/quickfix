@@ -145,10 +145,47 @@ TEST_CASE("FindCAListTests")
     }
 }
 
+// The SSL examples verify the server against the checked-in CA, by IP address (#100).
+TEST_CASE("ExampleCertificateTests")
+{
+    auto load = [](const std::string &leaf)
+    {
+        X509 *cert = nullptr;
+        if (FILE *f = std::fopen(certPath(leaf).c_str(), "r"))
+        {
+            cert = PEM_read_X509(f, nullptr, nullptr, nullptr);
+            std::fclose(f);
+        }
+        return cert;
+    };
+    X509 *ca = load("certs/cacert.pem");
+    REQUIRE(ca != nullptr);
+
+    for (const char *leaf : {"127_0_0_1_server.crt", "127_0_0_1_client.crt"})
+    {
+        INFO(leaf);
+        X509 *cert = load(leaf);
+        REQUIRE(cert != nullptr);
+        X509_STORE *store = X509_STORE_new();
+        X509_STORE_add_cert(store, ca);
+        X509_STORE_CTX *ctx = X509_STORE_CTX_new();
+        X509_STORE_CTX_init(ctx, store, cert, nullptr);
+        X509_VERIFY_PARAM_set1_ip_asc(X509_STORE_CTX_get0_param(ctx), "127.0.0.1");
+        CHECK(X509_verify_cert(ctx) == 1);
+        INFO(X509_verify_cert_error_string(X509_STORE_CTX_get_error(ctx)));
+        CHECK(X509_STORE_CTX_get_error(ctx) == X509_V_OK);
+        X509_STORE_CTX_free(ctx);
+        X509_STORE_free(store);
+        X509_free(cert);
+    }
+    X509_free(ca);
+}
+
 namespace
 {
-// A throwaway CA and a server certificate it signs, made per run: the checked-in
-// certificates under bin/cfg/certs expired years ago and carry no SAN.
+// A throwaway CA and a server certificate it signs, made per run, so the tests can
+// also make certificates the CA did not sign. Until #100 the checked-in certificates
+// under bin/cfg/certs had expired and carried no SAN.
 struct TestPki
 {
     EVP_PKEY *caKey = EVP_EC_gen("P-256");

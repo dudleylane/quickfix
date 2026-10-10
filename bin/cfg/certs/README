@@ -1,1 +1,5 @@
-The password for all entries is "standard"
+Example certificates for the executor and tradeclient SSL examples and for
+the unit tests: a CA (certs/cacert.pem, key in private/cakey.pem) and a
+server and a client certificate it signs, each naming 127.0.0.1 as an IP
+subjectAltName. The keys are unencrypted and public: never use these
+outside the examples. gen_certs.sh regenerates all of them.
