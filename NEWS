@@ -1,3 +1,38 @@
+22.2.0
+------
+
+The soname stays libquickfix.so.22: four threaded transport source files changed and no header,
+so a program built against 22.0.0 or 22.1.0 needs nothing. The Python and Ruby modules should be
+rebuilt from this release, since most of the fixes are in them.
+
+Fixed, in the threaded transports (ThreadedSocketAcceptor, ThreadedSocketInitiator and their SSL
+twins): stop() called soon after start() could miss a thread start() was still creating, which
+was never joined and used the transport after it was destroyed, and an acceptor's listening port
+could stay bound. A threaded acceptor that was stopped and started again started an accept thread
+for every listener it had ever had, and its next stop() closed descriptors by those old numbers,
+which by then could belong to a store's file, a log or another socket (#113).
+
+Fixed, in the Python binding: a LogFactory written in Python aborted the program with a double
+free while its transport created sessions -- SWIG 4.3.0 generates a mutex whose unlock frees the
+lock, which src/python/swig.sh now corrects in the generated wrapper (#109). Transports made from
+the SocketAcceptorBase, SocketInitiatorBase and the other *Base classes kept no reference to their
+constructor arguments, so an argument nothing else held, such as an inline MemoryStoreFactory(),
+was freed under the running transport (#110).
+
+Fixed, in the Ruby binding: stop() on a threaded transport called from one of its own callbacks
+waited for that callback forever, and SIGTERM could not end the program; it now raises
+ThreadError, and stopping from another thread works (#111). An exception escaping any callback --
+Application, Log or LogFactory -- crashed the program or left it hung; it now prints as Ruby prints
+an uncaught exception, on stderr where it used to be stdout, flushes $stdout and $stderr, and
+exits with status 1 without running at_exit handlers (#112).
+
+INCOMPATIBLE, packaging: cmake --install with HAVE_PYTHON3 puts the Python module in the
+interpreter's own site-packages under the install prefix (for example
+lib64/python3.12/site-packages), set by the new QUICKFIX_PYTHON3_INSTALL_DIR, where it used to put
+it in <prefix>/lib/python3, which Python does not search. A packaging script that expected the old
+path must change. The Ruby binding has an install for the first time: src/ruby/install.sh, run
+after make_ruby.sh, copies the module to Ruby's site directories and honours DESTDIR (#108).
+
 22.1.0
 ------
 
