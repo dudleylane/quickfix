@@ -2,7 +2,8 @@
 # started in one process, talking to each other, with a LogFactory and Log
 # written in Python. It prints what it saw as key=value lines. With "stop" it
 # stops both before it ends; with "exit" it leaves both running, for the
-# interpreter's exit to deal with.
+# interpreter's exit to deal with. Everything but the applications is passed as
+# a temporary: the transport must keep what it was made with (#110).
 import gc
 import sys
 import threading
@@ -15,6 +16,8 @@ dir, port, kind, ending = sys.argv[1:5]
 acceptorClass, initiatorClass = {
     'socket': (fix.SocketAcceptor, fix.SocketInitiator),
     'threaded': (fix.ThreadedSocketAcceptor, fix.ThreadedSocketInitiator),
+    'base': (fix.SocketAcceptorBase, fix.SocketInitiatorBase),
+    'threadedbase': (fix.ThreadedSocketAcceptorBase, fix.ThreadedSocketInitiatorBase),
 }[kind]
 
 
@@ -92,16 +95,16 @@ def order(id):
     return fix.Session.sendToTarget(message)
 
 
-acceptorApp, initiatorApp, logFactory = App(), App(), CountingLogFactory()
+acceptorApp, initiatorApp = App(), App()
 acceptor = acceptorClass(acceptorApp, fix.MemoryStoreFactory(),
                          settings('acceptor', f'ConnectionType=acceptor\nSocketAcceptPort={port}\n'
                                   '[SESSION]\nBeginString=FIX.4.2\nSenderCompID=ACC\nTargetCompID=INI\n'),
-                         logFactory)
+                         CountingLogFactory())
 initiator = initiatorClass(initiatorApp, fix.MemoryStoreFactory(),
                            settings('initiator', 'ConnectionType=initiator\nSocketConnectHost=127.0.0.1\n'
                                     f'SocketConnectPort={port}\nReconnectInterval=1\nHeartBtInt=30\n'
                                     '[SESSION]\nBeginString=FIX.4.2\nSenderCompID=INI\nTargetCompID=ACC\n'),
-                           logFactory)
+                           CountingLogFactory())
 gc.collect()
 print('constructed=true', flush=True)
 

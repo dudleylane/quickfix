@@ -23,6 +23,19 @@ class TransportTestCase(unittest.TestCase):
     def test_threaded_left_running(self):
         self.checkTransports('threaded', 'exit')
 
+    # The classes SWIG generates kept nothing they were made with (#110).
+    def test_base_stopped(self):
+        self.checkTransports('base', 'stop')
+
+    def test_base_left_running(self):
+        self.checkTransports('base', 'exit')
+
+    def test_threaded_base_stopped(self):
+        self.checkTransports('threadedbase', 'stop')
+
+    def test_threaded_base_left_running(self):
+        self.checkTransports('threadedbase', 'exit')
+
     def checkTransports(self, kind, ending):
         with socket.socket() as probe:
             probe.bind(('127.0.0.1', 0))

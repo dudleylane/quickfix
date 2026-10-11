@@ -9295,6 +9295,26 @@ class SSLSocketAcceptor(SSLSocketAcceptorBase):
     self.logFactory = logFactory
 #endif
 
+# An initiator or acceptor holds C++ references to what it was made with. The classes above keep
+# theirs, but the *Base classes SWIG generates kept nothing, so an argument written inline was freed
+# when the constructor returned and the transport used freed memory (#110). Every transport class
+# keeps its arguments, as quickfix_ruby.rb does for Ruby (#107).
+def _keepArguments(cls):
+  construct = cls.__init__
+  def __init__(self, *args, **kwargs):
+    construct(self, *args, **kwargs)
+    self._quickfixArguments = (args, kwargs)
+  cls.__init__ = __init__
+
+def _transportClasses(base):
+  for cls in base.__subclasses__():
+    yield cls
+    yield from _transportClasses(cls)
+
+for _cls in set(_transportClasses(Initiator)) | set(_transportClasses(Acceptor)):
+  _keepArguments(_cls)
+del _cls
+
 
 import quickfix
 
