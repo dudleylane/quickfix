@@ -120,6 +120,8 @@ QUICKFIX_RUBY_EXCEPTION
 #include <mutex>
 #include <set>
 #include <thread>
+#include <cstdio>
+#include <unistd.h>
 
 // Exported by libruby, but declared only in its internal headers.
 extern "C" int ruby_thread_has_gvl_p(void);
@@ -421,6 +423,37 @@ void dispatch(const std::function<void()> &callback)
 }
 }
 
+// An exception that escapes a Ruby callback, other than the FIX exceptions the
+// engine expects, ends the process with status 1, as upstream's binding meant to.
+// It called exit(1), which runs the process's static destructors -- the adapter
+// tables below among them -- while the engine's threads still run, and they then
+// called through freed adapters; Log and LogFactory let the exception unwind the
+// engine instead (#112). This prints it as Ruby prints an uncaught exception,
+// flushes Ruby's own buffers, and leaves with _exit, which runs no destructors.
+// Called from director:except, with the GVL held.
+[[noreturn]] void exitOnCallbackError(VALUE error)
+{
+  int state = 0;
+  VALUE text = rb_protect([](VALUE e) { return rb_funcall(e, rb_intern("full_message"), 0); }, error, &state);
+  if (state || !RB_TYPE_P(text, T_STRING))
+  {
+    rb_set_errinfo(Qnil);
+    text = rb_protect([](VALUE e) { return rb_obj_as_string(e); }, error, &state);
+  }
+  if (!state && RB_TYPE_P(text, T_STRING))
+  {
+    fwrite(RSTRING_PTR(text), 1, RSTRING_LEN(text), stderr);
+    if (RSTRING_LEN(text) == 0 || RSTRING_PTR(text)[RSTRING_LEN(text) - 1] != '\n')
+    {
+      fputc('\n', stderr);
+    }
+  }
+  rb_protect([](VALUE) { rb_io_flush(rb_stdout); return Qnil; }, Qnil, &state);
+  rb_protect([](VALUE) { rb_io_flush(rb_stderr); return Qnil; }, Qnil, &state);
+  fflush(nullptr);
+  _exit(1);
+}
+
 // Runs a callback into Ruby. A thread that holds the GVL calls straight through;
 // one that released it in withoutGvl takes it back for the call, and skips the
 // call once Ruby has asked that thread to stop, since the Ruby code would raise
@@ -668,35 +701,45 @@ private:
 
 %include ../quickfix.i
 	  	 
+// Without director:except a Log or LogFactory method calls Ruby with a bare
+// rb_funcall, and an exception longjmps out through the engine's C++ frames (#112).
+%define QUICKFIX_RUBY_EXIT_ON_ERROR(method)
+%feature("director:except") method {
+  if( $error != 0 ) {
+    exitOnCallbackError( $error );
+  }
+}
+%enddef
+
+QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::Log::clear)
+QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::Log::backup)
+QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::Log::onIncoming)
+QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::Log::onOutgoing)
+QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::Log::onEvent)
+QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::LogFactory::create)
+QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::LogFactory::destroy)
+
 %feature("director:except") FIX::Application::onCreate {
   if( $error != 0 ) {
-    VALUE message = rb_obj_as_string( $error );
-    printf( "%s\n", RSTRING_PTR(message) );
-    exit(1);
+    exitOnCallbackError( $error );
   }
 }
 
 %feature("director:except") FIX::Application::onLogon {
   if( $error != 0 ) {
-    VALUE message = rb_obj_as_string( $error );
-    printf( "%s\n", RSTRING_PTR(message) );
-    exit(1);
+    exitOnCallbackError( $error );
   }
 }
 
 %feature("director:except") FIX::Application::onLogout {
   if( $error != 0 ) {
-    VALUE message = rb_obj_as_string( $error );
-    printf( "%s\n", RSTRING_PTR(message) );
-    exit(1);
+    exitOnCallbackError( $error );
   }
 }
 
 %feature("director:except") FIX::Application::toAdmin {
   if( $error != 0 ) {
-    VALUE message = rb_obj_as_string( $error );
-    printf( "%s\n", RSTRING_PTR(message) );
-    exit(1);
+    exitOnCallbackError( $error );
   }
 }
 
@@ -710,9 +753,7 @@ private:
       rb_set_errinfo(Qnil);
       throw *((FIX::DoNotSend*)result);
     } else {
-      VALUE message = rb_obj_as_string( $error );
-      printf( "%s\n", RSTRING_PTR(message) );
-      exit(1);
+      exitOnCallbackError( $error );
     }
   }
 }
@@ -736,9 +777,7 @@ private:
       rb_set_errinfo(Qnil);
       throw *((FIX::RejectLogon*)result);
     } else {
-      VALUE message = rb_obj_as_string( $error );
-      printf( "%s\n", RSTRING_PTR(message) );
-      exit(1);
+      exitOnCallbackError( $error );
     }
   }
 }
@@ -762,9 +801,7 @@ private:
       rb_set_errinfo(Qnil);
       throw *((FIX::UnsupportedMessageType*)result);
     } else {
-      VALUE message = rb_obj_as_string( $error );
-      printf( "%s\n", RSTRING_PTR(message) );
-      exit(1);
+      exitOnCallbackError( $error );
     }
   }
 }

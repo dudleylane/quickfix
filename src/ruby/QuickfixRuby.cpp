@@ -2563,6 +2563,8 @@ template <typename T> T SwigValueInit() {
 #include <mutex>
 #include <set>
 #include <thread>
+#include <cstdio>
+#include <unistd.h>
 
 // Exported by libruby, but declared only in its internal headers.
 extern "C" int ruby_thread_has_gvl_p(void);
@@ -2862,6 +2864,37 @@ void dispatch(const std::function<void()> &callback)
     std::rethrow_exception(dispatch.error);
   }
 }
+}
+
+// An exception that escapes a Ruby callback, other than the FIX exceptions the
+// engine expects, ends the process with status 1, as upstream's binding meant to.
+// It called exit(1), which runs the process's static destructors -- the adapter
+// tables below among them -- while the engine's threads still run, and they then
+// called through freed adapters; Log and LogFactory let the exception unwind the
+// engine instead (#112). This prints it as Ruby prints an uncaught exception,
+// flushes Ruby's own buffers, and leaves with _exit, which runs no destructors.
+// Called from director:except, with the GVL held.
+[[noreturn]] void exitOnCallbackError(VALUE error)
+{
+  int state = 0;
+  VALUE text = rb_protect([](VALUE e) { return rb_funcall(e, rb_intern("full_message"), 0); }, error, &state);
+  if (state || !RB_TYPE_P(text, T_STRING))
+  {
+    rb_set_errinfo(Qnil);
+    text = rb_protect([](VALUE e) { return rb_obj_as_string(e); }, error, &state);
+  }
+  if (!state && RB_TYPE_P(text, T_STRING))
+  {
+    fwrite(RSTRING_PTR(text), 1, RSTRING_LEN(text), stderr);
+    if (RSTRING_LEN(text) == 0 || RSTRING_PTR(text)[RSTRING_LEN(text) - 1] != '\n')
+    {
+      fputc('\n', stderr);
+    }
+  }
+  rb_protect([](VALUE) { rb_io_flush(rb_stdout); return Qnil; }, Qnil, &state);
+  rb_protect([](VALUE) { rb_io_flush(rb_stderr); return Qnil; }, Qnil, &state);
+  fflush(nullptr);
+  _exit(1);
 }
 
 // Runs a callback into Ruby. A thread that holds the GVL calls straight through;
@@ -6703,6 +6736,168 @@ SWIG_From_short  (short value)
  * C++ director class helpers
  * --------------------------------------------------- */
 
+
+
+
+
+
+
+
+
+static int LogFactory_create_call_depth = 0;
+VALUE LogFactory_create_body(VALUE data) {
+  Swig::body_args * args = reinterpret_cast<Swig::body_args *>(data) ;
+  VALUE result = Qnil ;
+  
+  LogFactory_create_call_depth++;
+  result = rb_funcall2(args->recv, args->id, args->argc, args->argv);
+  LogFactory_create_call_depth--;
+  return result;
+}
+
+VALUE LogFactory_create_rescue(VALUE args, VALUE error) {
+  LogFactory_create_call_depth--;
+  if (LogFactory_create_call_depth == 0) {
+    if( error != 0 ) {
+      exitOnCallbackError( error );
+    }
+  }
+  rb_exc_raise(error);
+  return Qnil;
+}
+
+static int LogFactory_destroy_call_depth = 0;
+VALUE LogFactory_destroy_body(VALUE data) {
+  Swig::body_args * args = reinterpret_cast<Swig::body_args *>(data) ;
+  VALUE result = Qnil ;
+  
+  LogFactory_destroy_call_depth++;
+  result = rb_funcall2(args->recv, args->id, args->argc, args->argv);
+  LogFactory_destroy_call_depth--;
+  return result;
+}
+
+VALUE LogFactory_destroy_rescue(VALUE args, VALUE error) {
+  LogFactory_destroy_call_depth--;
+  if (LogFactory_destroy_call_depth == 0) {
+    if( error != 0 ) {
+      exitOnCallbackError( error );
+    }
+  }
+  rb_exc_raise(error);
+  return Qnil;
+}
+
+static int Log_clear_call_depth = 0;
+VALUE Log_clear_body(VALUE data) {
+  Swig::body_args * args = reinterpret_cast<Swig::body_args *>(data) ;
+  VALUE result = Qnil ;
+  
+  Log_clear_call_depth++;
+  result = rb_funcall2(args->recv, args->id, args->argc, args->argv);
+  Log_clear_call_depth--;
+  return result;
+}
+
+VALUE Log_clear_rescue(VALUE args, VALUE error) {
+  Log_clear_call_depth--;
+  if (Log_clear_call_depth == 0) {
+    if( error != 0 ) {
+      exitOnCallbackError( error );
+    }
+  }
+  rb_exc_raise(error);
+  return Qnil;
+}
+
+static int Log_backup_call_depth = 0;
+VALUE Log_backup_body(VALUE data) {
+  Swig::body_args * args = reinterpret_cast<Swig::body_args *>(data) ;
+  VALUE result = Qnil ;
+  
+  Log_backup_call_depth++;
+  result = rb_funcall2(args->recv, args->id, args->argc, args->argv);
+  Log_backup_call_depth--;
+  return result;
+}
+
+VALUE Log_backup_rescue(VALUE args, VALUE error) {
+  Log_backup_call_depth--;
+  if (Log_backup_call_depth == 0) {
+    if( error != 0 ) {
+      exitOnCallbackError( error );
+    }
+  }
+  rb_exc_raise(error);
+  return Qnil;
+}
+
+static int Log_onIncoming_call_depth = 0;
+VALUE Log_onIncoming_body(VALUE data) {
+  Swig::body_args * args = reinterpret_cast<Swig::body_args *>(data) ;
+  VALUE result = Qnil ;
+  
+  Log_onIncoming_call_depth++;
+  result = rb_funcall2(args->recv, args->id, args->argc, args->argv);
+  Log_onIncoming_call_depth--;
+  return result;
+}
+
+VALUE Log_onIncoming_rescue(VALUE args, VALUE error) {
+  Log_onIncoming_call_depth--;
+  if (Log_onIncoming_call_depth == 0) {
+    if( error != 0 ) {
+      exitOnCallbackError( error );
+    }
+  }
+  rb_exc_raise(error);
+  return Qnil;
+}
+
+static int Log_onOutgoing_call_depth = 0;
+VALUE Log_onOutgoing_body(VALUE data) {
+  Swig::body_args * args = reinterpret_cast<Swig::body_args *>(data) ;
+  VALUE result = Qnil ;
+  
+  Log_onOutgoing_call_depth++;
+  result = rb_funcall2(args->recv, args->id, args->argc, args->argv);
+  Log_onOutgoing_call_depth--;
+  return result;
+}
+
+VALUE Log_onOutgoing_rescue(VALUE args, VALUE error) {
+  Log_onOutgoing_call_depth--;
+  if (Log_onOutgoing_call_depth == 0) {
+    if( error != 0 ) {
+      exitOnCallbackError( error );
+    }
+  }
+  rb_exc_raise(error);
+  return Qnil;
+}
+
+static int Log_onEvent_call_depth = 0;
+VALUE Log_onEvent_body(VALUE data) {
+  Swig::body_args * args = reinterpret_cast<Swig::body_args *>(data) ;
+  VALUE result = Qnil ;
+  
+  Log_onEvent_call_depth++;
+  result = rb_funcall2(args->recv, args->id, args->argc, args->argv);
+  Log_onEvent_call_depth--;
+  return result;
+}
+
+VALUE Log_onEvent_rescue(VALUE args, VALUE error) {
+  Log_onEvent_call_depth--;
+  if (Log_onEvent_call_depth == 0) {
+    if( error != 0 ) {
+      exitOnCallbackError( error );
+    }
+  }
+  rb_exc_raise(error);
+  return Qnil;
+}
+
 static int Application_onCreate_call_depth = 0;
 VALUE Application_onCreate_body(VALUE data) {
   Swig::body_args * args = reinterpret_cast<Swig::body_args *>(data) ;
@@ -6718,9 +6913,7 @@ VALUE Application_onCreate_rescue(VALUE args, VALUE error) {
   Application_onCreate_call_depth--;
   if (Application_onCreate_call_depth == 0) {
     if( error != 0 ) {
-      VALUE message = rb_obj_as_string( error );
-      printf( "%s\n", RSTRING_PTR(message) );
-      exit(1);
+      exitOnCallbackError( error );
     }
   }
   rb_exc_raise(error);
@@ -6742,9 +6935,7 @@ VALUE Application_onLogon_rescue(VALUE args, VALUE error) {
   Application_onLogon_call_depth--;
   if (Application_onLogon_call_depth == 0) {
     if( error != 0 ) {
-      VALUE message = rb_obj_as_string( error );
-      printf( "%s\n", RSTRING_PTR(message) );
-      exit(1);
+      exitOnCallbackError( error );
     }
   }
   rb_exc_raise(error);
@@ -6766,9 +6957,7 @@ VALUE Application_onLogout_rescue(VALUE args, VALUE error) {
   Application_onLogout_call_depth--;
   if (Application_onLogout_call_depth == 0) {
     if( error != 0 ) {
-      VALUE message = rb_obj_as_string( error );
-      printf( "%s\n", RSTRING_PTR(message) );
-      exit(1);
+      exitOnCallbackError( error );
     }
   }
   rb_exc_raise(error);
@@ -6790,9 +6979,7 @@ VALUE Application_toAdmin_rescue(VALUE args, VALUE error) {
   Application_toAdmin_call_depth--;
   if (Application_toAdmin_call_depth == 0) {
     if( error != 0 ) {
-      VALUE message = rb_obj_as_string( error );
-      printf( "%s\n", RSTRING_PTR(message) );
-      exit(1);
+      exitOnCallbackError( error );
     }
   }
   rb_exc_raise(error);
@@ -6822,9 +7009,7 @@ VALUE Application_toApp_rescue(VALUE args, VALUE error) {
         rb_set_errinfo(Qnil);
         throw *((FIX::DoNotSend*)result);
       } else {
-        VALUE message = rb_obj_as_string( error );
-        printf( "%s\n", RSTRING_PTR(message) );
-        exit(1);
+        exitOnCallbackError( error );
       }
     }
   }
@@ -6864,9 +7049,7 @@ VALUE Application_fromAdmin_rescue(VALUE args, VALUE error) {
         rb_set_errinfo(Qnil);
         throw *((FIX::RejectLogon*)result);
       } else {
-        VALUE message = rb_obj_as_string( error );
-        printf( "%s\n", RSTRING_PTR(message) );
-        exit(1);
+        exitOnCallbackError( error );
       }
     }
   }
@@ -6906,9 +7089,7 @@ VALUE Application_fromApp_rescue(VALUE args, VALUE error) {
         rb_set_errinfo(Qnil);
         throw *((FIX::UnsupportedMessageType*)result);
       } else {
-        VALUE message = rb_obj_as_string( error );
-        printf( "%s\n", RSTRING_PTR(message) );
-        exit(1);
+        exitOnCallbackError( error );
       }
     }
   }
@@ -6936,11 +7117,21 @@ SwigDirector_LogFactory::~SwigDirector_LogFactory() {
 FIX::Log *SwigDirector_LogFactory::create() {
   FIX::Log *c_result = 0 ;
   VALUE SWIGUNUSED result;
+  Swig::body_args args ;
+  int status ;
   void *swig_argp ;
   int swig_res ;
   swig_owntype own ;
   
-  result = rb_funcall(swig_get_self(), rb_intern("create"), 0, Qnil);
+  args.recv = swig_get_self();
+  args.id = rb_intern("create");
+  args.argc = 0;
+  args.argv = 0;
+  result = rb_protect(PROTECTFUNC(LogFactory_create_body), reinterpret_cast<VALUE>(&args), &status);
+  if (status) {
+    VALUE lastErr = rb_gv_get("$!");
+    LogFactory_create_rescue(reinterpret_cast<VALUE>(&args), lastErr);
+  }
   swig_res = SWIG_ConvertPtrAndOwn(result, &swig_argp, SWIGTYPE_p_FIX__Log,  0  | SWIG_POINTER_DISOWN, &own);
   if (!SWIG_IsOK(swig_res)) {
     Swig::DirectorTypeMismatchException::raise(SWIG_ErrorType(SWIG_ArgError(swig_res)), "in output value of type '""FIX::Log *""'");
@@ -6955,12 +7146,24 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
   FIX::Log *c_result = 0 ;
   VALUE obj0 = Qnil ;
   VALUE SWIGUNUSED result;
+  Swig::body_args args ;
+  int status ;
   void *swig_argp ;
   int swig_res ;
   swig_owntype own ;
   
   obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__SessionID,  0 );
-  result = rb_funcall(swig_get_self(), rb_intern("create"), 1,obj0);
+  args.recv = swig_get_self();
+  args.id = rb_intern("create");
+  args.argc = 1;
+  args.argv = new VALUE[1];
+  args.argv[0] = obj0;
+  result = rb_protect(PROTECTFUNC(LogFactory_create_body), reinterpret_cast<VALUE>(&args), &status);
+  if (status) {
+    VALUE lastErr = rb_gv_get("$!");
+    LogFactory_create_rescue(reinterpret_cast<VALUE>(&args), lastErr);
+  }
+  delete [] args.argv;
   swig_res = SWIG_ConvertPtrAndOwn(result, &swig_argp, SWIGTYPE_p_FIX__Log,  0  | SWIG_POINTER_DISOWN, &own);
   if (!SWIG_IsOK(swig_res)) {
     Swig::DirectorTypeMismatchException::raise(SWIG_ErrorType(SWIG_ArgError(swig_res)), "in output value of type '""FIX::Log *""'");
@@ -6974,9 +7177,21 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
 void SwigDirector_LogFactory::destroy(FIX::Log *arg0) {
   VALUE obj0 = Qnil ;
   VALUE SWIGUNUSED result;
+  Swig::body_args args ;
+  int status ;
   
   obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(arg0), SWIGTYPE_p_FIX__Log,  0 );
-  result = rb_funcall(swig_get_self(), rb_intern("destroy"), 1,obj0);
+  args.recv = swig_get_self();
+  args.id = rb_intern("destroy");
+  args.argc = 1;
+  args.argv = new VALUE[1];
+  args.argv[0] = obj0;
+  result = rb_protect(PROTECTFUNC(LogFactory_destroy_body), reinterpret_cast<VALUE>(&args), &status);
+  if (status) {
+    VALUE lastErr = rb_gv_get("$!");
+    LogFactory_destroy_rescue(reinterpret_cast<VALUE>(&args), lastErr);
+  }
+  delete [] args.argv;
 }
 
 
@@ -6991,42 +7206,98 @@ SwigDirector_Log::~SwigDirector_Log() {
 
 void SwigDirector_Log::clear() {
   VALUE SWIGUNUSED result;
+  Swig::body_args args ;
+  int status ;
   
-  result = rb_funcall(swig_get_self(), rb_intern("clear"), 0, Qnil);
+  args.recv = swig_get_self();
+  args.id = rb_intern("clear");
+  args.argc = 0;
+  args.argv = 0;
+  result = rb_protect(PROTECTFUNC(Log_clear_body), reinterpret_cast<VALUE>(&args), &status);
+  if (status) {
+    VALUE lastErr = rb_gv_get("$!");
+    Log_clear_rescue(reinterpret_cast<VALUE>(&args), lastErr);
+  }
 }
 
 
 void SwigDirector_Log::backup() {
   VALUE SWIGUNUSED result;
+  Swig::body_args args ;
+  int status ;
   
-  result = rb_funcall(swig_get_self(), rb_intern("backup"), 0, Qnil);
+  args.recv = swig_get_self();
+  args.id = rb_intern("backup");
+  args.argc = 0;
+  args.argv = 0;
+  result = rb_protect(PROTECTFUNC(Log_backup_body), reinterpret_cast<VALUE>(&args), &status);
+  if (status) {
+    VALUE lastErr = rb_gv_get("$!");
+    Log_backup_rescue(reinterpret_cast<VALUE>(&args), lastErr);
+  }
 }
 
 
 void SwigDirector_Log::onIncoming(std::string const &arg0) {
   VALUE obj0 = Qnil ;
   VALUE SWIGUNUSED result;
+  Swig::body_args args ;
+  int status ;
   
   obj0 = SWIG_From_std_string(static_cast< std::string >(arg0));
-  result = rb_funcall(swig_get_self(), rb_intern("onIncoming"), 1,obj0);
+  args.recv = swig_get_self();
+  args.id = rb_intern("onIncoming");
+  args.argc = 1;
+  args.argv = new VALUE[1];
+  args.argv[0] = obj0;
+  result = rb_protect(PROTECTFUNC(Log_onIncoming_body), reinterpret_cast<VALUE>(&args), &status);
+  if (status) {
+    VALUE lastErr = rb_gv_get("$!");
+    Log_onIncoming_rescue(reinterpret_cast<VALUE>(&args), lastErr);
+  }
+  delete [] args.argv;
 }
 
 
 void SwigDirector_Log::onOutgoing(std::string const &arg0) {
   VALUE obj0 = Qnil ;
   VALUE SWIGUNUSED result;
+  Swig::body_args args ;
+  int status ;
   
   obj0 = SWIG_From_std_string(static_cast< std::string >(arg0));
-  result = rb_funcall(swig_get_self(), rb_intern("onOutgoing"), 1,obj0);
+  args.recv = swig_get_self();
+  args.id = rb_intern("onOutgoing");
+  args.argc = 1;
+  args.argv = new VALUE[1];
+  args.argv[0] = obj0;
+  result = rb_protect(PROTECTFUNC(Log_onOutgoing_body), reinterpret_cast<VALUE>(&args), &status);
+  if (status) {
+    VALUE lastErr = rb_gv_get("$!");
+    Log_onOutgoing_rescue(reinterpret_cast<VALUE>(&args), lastErr);
+  }
+  delete [] args.argv;
 }
 
 
 void SwigDirector_Log::onEvent(std::string const &arg0) {
   VALUE obj0 = Qnil ;
   VALUE SWIGUNUSED result;
+  Swig::body_args args ;
+  int status ;
   
   obj0 = SWIG_From_std_string(static_cast< std::string >(arg0));
-  result = rb_funcall(swig_get_self(), rb_intern("onEvent"), 1,obj0);
+  args.recv = swig_get_self();
+  args.id = rb_intern("onEvent");
+  args.argc = 1;
+  args.argv = new VALUE[1];
+  args.argv[0] = obj0;
+  result = rb_protect(PROTECTFUNC(Log_onEvent_body), reinterpret_cast<VALUE>(&args), &status);
+  if (status) {
+    VALUE lastErr = rb_gv_get("$!");
+    Log_onEvent_rescue(reinterpret_cast<VALUE>(&args), lastErr);
+  }
+  delete [] args.argv;
 }
 
 

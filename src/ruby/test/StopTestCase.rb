@@ -25,6 +25,15 @@ class StopTestCase < Test::Unit::TestCase
 		assert(status.success?, "exit status #{status.inspect}\n#{output}")
 	end
 
+	# Left out of the callback, the ThreadError ends the process with status 1, as
+	# any exception a callback lets out does (#112).
+	def test_stop_from_callback_unrescued
+		lines, status, output = runChild('unrescued')
+		assert_equal(1, status.exitstatus, "exit status #{status.inspect}\n#{output}")
+		assert_match(/cannot be called from a callback.*\(ThreadError\)/, output)
+		assert_nil(lines['callback'], output)
+	end
+
 	def runChild(mode)
 		port = TCPServer.open('127.0.0.1', 0) { |server| server.addr[1] }
 		Dir.mktmpdir do |dir|

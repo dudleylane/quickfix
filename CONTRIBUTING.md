@@ -278,7 +278,7 @@ sudo dnf install postgresql-odbc   # /etc/odbcinst.ini already names the driver 
 `DRIVER={PostgreSQL};SERVER=localhost;DATABASE=quickfix;`.
 
 The Debug leg then **runs** both binding suites: the Python bindings' 40 tests
-(`src/python/test/`) and the Ruby bindings' 37 (`src/ruby/test/`, via `TestSuite.rb`). Ruby has no
+(`src/python/test/`) and the Ruby bindings' 44 (`src/ruby/test/`, via `TestSuite.rb`). Ruby has no
 CMake path, so CI builds it with the project's own `make_ruby.sh` rather than a direct compiler
 invocation — if that script breaks, the step goes red instead of something else quietly covering for
 it. Running the Ruby suite needs `rubygem-test-unit` on the runner, since Ruby 3.3 no longer bundles

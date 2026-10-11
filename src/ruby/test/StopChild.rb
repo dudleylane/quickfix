@@ -1,7 +1,9 @@
 # Run by StopTestCase in a process of its own: a threaded acceptor whose onLogon
 # stops it. Called there, stop would join the connection thread waiting for that
 # onLogon and never return (#111), so it raises ThreadError. "rescued" rescues
-# it, and "thread" stops the acceptor from a thread of its own, which works.
+# it, "thread" stops the acceptor from a thread of its own, which works, and
+# "unrescued" lets the error out of the callback, which ends the process with
+# status 1 (#112).
 require 'quickfix_ruby'
 $stdout.sync = true
 
@@ -43,6 +45,8 @@ acceptorApp.onLogonHook = lambda do
 		end
 	when 'thread'
 		Thread.new { acceptor.stop; result << 'stopped' }
+	when 'unrescued'
+		acceptor.stop
 	end
 end
 
