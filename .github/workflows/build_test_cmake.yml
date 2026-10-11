@@ -239,6 +239,35 @@ jobs:
         shell: bash
         run: ./test-python3.sh
 
+      - name: Install the bindings and load them from the install
+        # The tests above load both bindings from the tree. Until #108 neither
+        # installed anywhere its interpreter looks -- CMake put the Python
+        # module in <prefix>/lib/python3, and Ruby had no install -- and no
+        # step noticed. This installs into a staging prefix and fails unless
+        # each binding lands in the directory its interpreter itself names for
+        # that prefix, then loads it from there.
+        if: matrix.configuration == 'Debug'
+        shell: bash
+        run: |
+          set -eu
+          stage="$RUNNER_TEMP/stage"
+          rm -rf "$stage"
+          cmake --install build --prefix "$stage" > /dev/null
+          site=$(python3 -c 'import sys, sysconfig; print(sysconfig.get_path("platlib", vars={"base": sys.argv[1], "platbase": sys.argv[1]}))' "$stage")
+          [ -e "$site/_quickfix.so" ] && [ -f "$site/quickfix.py" ] \
+            || { echo "::error::the Python module is not installed in $site, where python3 looks for prefix $stage"; exit 1; }
+          LD_LIBRARY_PATH="$stage/lib:$LD_LIBRARY_PATH" PYTHONPATH="$site" \
+            python3 -c 'import sys, quickfix, quickfix44; f = quickfix._quickfix.__file__; print("python:", f); sys.exit(not f.startswith(sys.argv[1]))' "$site" \
+            || { echo "::error::python3 did not load the staged module"; exit 1; }
+
+          DESTDIR="$stage" src/ruby/install.sh
+          arch=$(ruby -rrbconfig -e 'print RbConfig::CONFIG["sitearchdir"]')
+          lib=$(ruby -rrbconfig -e 'print RbConfig::CONFIG["sitelibdir"]')
+          LD_LIBRARY_PATH="$stage/lib:$LD_LIBRARY_PATH" \
+            ruby -I "$stage$lib" -I "$stage$arch" \
+              -e 'require "quickfix_ruby"; f = $LOADED_FEATURES.grep(/quickfix\.so$/).first; puts "ruby: #{f}"; exit f.start_with?(ARGV[0])' "$stage" \
+            || { echo "::error::ruby did not load the staged module"; exit 1; }
+
       - name: Run acceptance tests
         # Not on push: the at-driven Ruby runner takes about 7.5 minutes for the
         # 470 definitions (454 s on this runner) and isn't informative on every

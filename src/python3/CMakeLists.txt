@@ -21,7 +21,26 @@ endif()
 # was built against.
 set_target_properties(${quickfix_python_lib_name} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} PREFIX "")
 
-install(TARGETS ${quickfix_python_lib_name} DESTINATION lib/python3)
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/python/ DESTINATION lib/python3
+# Installed where the interpreter looks for a given prefix: its own platlib, asked of sysconfig with
+# the prefix left out, so the cache value stays relative and --prefix and DESTDIR still apply. Here
+# that is lib64/python3.12/site-packages. This used to be lib/python3, which no interpreter searches,
+# so `import quickfix` failed after an install (#108). FindPython's Python3_SITEARCH is no substitute:
+# it is absolute and ignores CMAKE_INSTALL_PREFIX. STRING rather than PATH, which some frontends make
+# absolute. The module keeps its versioned file name; Python imports it through the _quickfix.so
+# namelink, as test-python3.sh does from lib/.
+execute_process(
+  COMMAND ${Python3_EXECUTABLE} -c
+          "import sysconfig; print(sysconfig.get_path('platlib', vars={'base': '.', 'platbase': '.'}).removeprefix('./'))"
+  OUTPUT_VARIABLE quickfix_python_platlib OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE quickfix_python_result)
+if (NOT quickfix_python_result EQUAL 0 OR quickfix_python_platlib STREQUAL "" OR IS_ABSOLUTE "${quickfix_python_platlib}")
+  message(FATAL_ERROR "could not ask ${Python3_EXECUTABLE} for its platlib relative to a prefix "
+                      "(got '${quickfix_python_platlib}'); set QUICKFIX_PYTHON3_INSTALL_DIR")
+endif()
+set(QUICKFIX_PYTHON3_INSTALL_DIR "${quickfix_python_platlib}" CACHE STRING
+    "Where the Python module is installed, relative to CMAKE_INSTALL_PREFIX")
+
+install(TARGETS ${quickfix_python_lib_name} DESTINATION ${QUICKFIX_PYTHON3_INSTALL_DIR})
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/python/ DESTINATION ${QUICKFIX_PYTHON3_INSTALL_DIR}
         FILES_MATCHING PATTERN "quickfix*.py"
-        PATTERN test EXCLUDE)
+        PATTERN test EXCLUDE
+        PATTERN __pycache__ EXCLUDE)

@@ -197,6 +197,7 @@ choice (#63).
 | `HAVE_POSTGRESQL` | OFF | Enable PostgreSQL message store/log |
 | `HAVE_ODBC` | OFF | Enable ODBC message store/log |
 | `HAVE_PYTHON3` | OFF | Build Python 3 bindings |
+| `QUICKFIX_PYTHON3_INSTALL_DIR` | the interpreter's `site-packages` for the prefix | Where `cmake --install` puts the Python module, relative to the prefix; the Ruby module installs with `src/ruby/install.sh` (#108) |
 | `ENABLE_TBB_ALLOCATOR` | OFF | Use TBB scalable allocator for internal containers |
 | `QUICKFIX_SHARED_LIBS` | ON | Build shared libraries |
 | `QUICKFIX_EXAMPLES` | ON | Build example applications |

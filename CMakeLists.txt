@@ -121,7 +121,10 @@ if (HAVE_PYTHON3)
   # above makes CMP0148 NEW, which removes that module -- find_package then fell
   # through to config mode and failed, so -DHAVE_PYTHON3=ON could not configure
   # at all.
-  find_package(Python3 COMPONENTS Development.Module REQUIRED)
+  #
+  # Interpreter is there only for src/python3/CMakeLists.txt to ask where modules are installed
+  # (#108); FindPython keeps it and the headers to one Python.
+  find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
   include_directories(${Python3_INCLUDE_DIRS})
 endif ()
 
