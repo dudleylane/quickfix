@@ -1,3 +1,28 @@
+22.1.0
+------
+
+No library code changed; the soname stays libquickfix.so.22, and a program built against 22.0.0
+needs nothing. A Ruby module built against 22.0.0 should be rebuilt from this release's
+src/ruby, which is where every change is.
+
+Ruby binding: Acceptor#start and Initiator#start no longer hold the GVL while the transport
+runs, so other Ruby threads run and SIGTERM stops the program. Calls into Session, Initiator and
+Acceptor release the GVL, and Ruby callbacks take it back; Thread#kill on a transport's thread
+stops the transport (#102). The threaded transports -- ThreadedSocketAcceptor,
+ThreadedSocketInitiator and their SSL twins -- work from Ruby: their callbacks run on a Ruby
+thread the binding starts, "quickfix callbacks", one at a time, so a callback that waits for
+another, such as one calling stop(), deadlocks (#104).
+
+Fixed, in the Ruby binding: a program that had created an acceptor or initiator crashed at exit;
+an at_exit hook now stops and deletes each transport before Ruby frees what it uses (#105). A
+callback that refused a message with DoNotSend, or rejected one with an exception the engine
+expects, left it in $!, and the program reported it and exited 1 at the end (#106). Transports
+made from the Base, SSL or threaded classes kept no reference to their constructor arguments, so
+garbage collection could free the application, settings or factories under them (#107).
+
+Tests: the late case of the 2o_SendingTimeValueOutOfRange acceptance definitions stamps 125 s
+ahead rather than 121, since a check landing in the next whole second saw 120 and accepted it.
+
 22.0.0
 ------
 
