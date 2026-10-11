@@ -68,6 +68,24 @@ module Quickfix
 		klass.prepend(KeepsArguments)
 	end
 
+	# The threaded transports' callbacks run on the "quickfix callbacks" thread
+	# while the connection thread that made them waits (#104), and stop joins the
+	# connection threads. Called from a callback, stop would join the thread
+	# waiting for that very callback and never return (#111). C++ and Python
+	# callbacks run on the connection thread itself, where the join fails at once;
+	# here it cannot be made to, so refuse it.
+	module StopsOutsideCallbacks
+		def stop(*args)
+			if Thread.current.equal?(Quickfix._callbackThread)
+				raise ThreadError, "#{self.class}#stop cannot be called from a callback: it would wait for the " \
+					"callback to return. Stop it from another thread, e.g. Thread.new { transport.stop }"
+			end
+			super
+		end
+	end
+
+	[ThreadedSocketInitiatorBase, ThreadedSocketAcceptorBase].each { |klass| klass.prepend(StopsOutsideCallbacks) }
+
 	# At exit Ruby frees every object in no particular order, and an initiator or
 	# acceptor freed after its store factory, log factory or application used them
 	# from its destructor, which crashed the process (#105). at_exit runs before

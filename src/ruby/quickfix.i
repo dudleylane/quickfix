@@ -380,11 +380,12 @@ VALUE dispatcherEnded(VALUE)
 
 VALUE dispatcherMain(void *) { return rb_ensure(dispatcherLoop, Qnil, dispatcherEnded, Qnil); }
 
+VALUE g_dispatcherThread = Qnil;
+
 // Called with the GVL, which serialises it.
 void startDispatcher()
 {
-  static VALUE thread = Qnil;
-  if (thread != Qnil)
+  if (g_dispatcherThread != Qnil)
   {
     return;
   }
@@ -392,10 +393,13 @@ void startDispatcher()
     std::lock_guard<std::mutex> lock(g_dispatchMutex);
     g_dispatcherRunning = true;
   }
-  thread = rb_thread_create(dispatcherMain, 0);
-  rb_gc_register_address(&thread);
-  rb_funcall(thread, rb_intern("name="), 1, rb_str_new_cstr("quickfix callbacks"));
+  g_dispatcherThread = rb_thread_create(dispatcherMain, 0);
+  rb_gc_register_address(&g_dispatcherThread);
+  rb_funcall(g_dispatcherThread, rb_intern("name="), 1, rb_str_new_cstr("quickfix callbacks"));
 }
+
+// quickfix_ruby.rb refuses to stop a threaded transport on this thread (#111).
+VALUE callbackThread(VALUE) { return g_dispatcherThread; }
 
 void dispatch(const std::function<void()> &callback)
 {
@@ -780,4 +784,5 @@ private:
   rb_define_module_function(mQuickfix, "_destroyAcceptor", RUBY_METHOD_FUNC(destroyAcceptor), 1);
   rb_define_module_function(mQuickfix, "_initiatorBlocking", RUBY_METHOD_FUNC(isInitiatorBlocking), 1);
   rb_define_module_function(mQuickfix, "_acceptorBlocking", RUBY_METHOD_FUNC(isAcceptorBlocking), 1);
+  rb_define_module_function(mQuickfix, "_callbackThread", RUBY_METHOD_FUNC(callbackThread), 0);
 %}
