@@ -78,6 +78,13 @@ void ThreadedSocketInitiator::onStart()
         if ((now - m_lastConnect) >= m_reconnectInterval)
         {
             Locker l(m_mutex);
+            // stop() can come between the loop's check and this lock. It sets m_stop
+            // before onStop() takes m_threads under this lock, and a connection thread
+            // made after that would never be joined (#113).
+            if (isStopped())
+            {
+                break;
+            }
             connect();
             m_lastConnect = now;
         }

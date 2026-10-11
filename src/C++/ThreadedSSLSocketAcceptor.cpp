@@ -272,10 +272,22 @@ void ThreadedSSLSocketAcceptor::onInitialize(const SessionSettings &s) EXCEPT(Ru
 
 void ThreadedSSLSocketAcceptor::onStart()
 {
-    Sockets::iterator i;
-    for (i = m_sockets.begin(); i != m_sockets.end(); ++i)
+    Sockets sockets;
     {
         Locker l(m_mutex);
+        sockets = m_sockets;
+    }
+    Sockets::iterator i;
+    for (i = sockets.begin(); i != sockets.end(); ++i)
+    {
+        Locker l(m_mutex);
+        // This runs on start()'s own thread, so stop() can come first. It sets m_stop
+        // before onStop() takes m_threads under this lock, and a thread made after that
+        // would never be joined and would outlive the acceptor (#113).
+        if (isStopped())
+        {
+            return;
+        }
         int port = m_socketToPort[*i];
         AcceptorThreadInfo *info = new AcceptorThreadInfo(this, *i, port);
         thread_id thread;
@@ -290,6 +302,7 @@ void ThreadedSSLSocketAcceptor::onStop()
 {
     SocketToThread threads;
     SocketToThread::iterator i;
+    Sockets listeners;
 
     {
         Locker l(m_mutex);
@@ -308,6 +321,11 @@ void ThreadedSSLSocketAcceptor::onStop()
 
         threads = m_threads;
         m_threads.clear();
+        // The listeners go with this run: onInitialize makes new ones for the next start(),
+        // and a closed number left here would get an accept thread on whatever reused it,
+        // and be closed again by the next stop() (#113).
+        listeners.swap(m_sockets);
+        m_socketToPort.clear();
     }
 
     // Nothing is closed, and no SSL object touched, until its thread has been
@@ -326,6 +344,14 @@ void ThreadedSSLSocketAcceptor::onStop()
         if (i->first.second != 0)
         {
             SSL_free(i->first.second);
+        }
+    }
+    // A listener stop() reached before its accept thread was made has no thread to close it.
+    for (const Sockets::value_type &listener : listeners)
+    {
+        if (threads.find(SocketKey(listener, 0)) == threads.end())
+        {
+            ssl_socket_close(listener, 0);
         }
     }
 }

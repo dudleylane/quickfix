@@ -116,9 +116,21 @@ void ThreadedSocketAcceptor::onInitialize(const SessionSettings &sessionSettings
 
 void ThreadedSocketAcceptor::onStart()
 {
-    for (const Sockets::value_type &socket : m_sockets)
+    Sockets sockets;
     {
         Locker l(m_mutex);
+        sockets = m_sockets;
+    }
+    for (const Sockets::value_type &socket : sockets)
+    {
+        Locker l(m_mutex);
+        // This runs on start()'s own thread, so stop() can come first. It sets m_stop
+        // before onStop() takes m_threads under this lock, and a thread made after that
+        // would never be joined and would outlive the acceptor (#113).
+        if (isStopped())
+        {
+            return;
+        }
         int port = m_socketToPort[socket];
         AcceptorThreadInfo *info = new AcceptorThreadInfo(this, socket, port);
         thread_id thread;
@@ -133,6 +145,7 @@ void ThreadedSocketAcceptor::onStop()
 {
     SocketToThread threads;
     SocketToThread::iterator i;
+    Sockets listeners;
 
     {
         Locker l(m_mutex);
@@ -151,6 +164,11 @@ void ThreadedSocketAcceptor::onStop()
 
         threads = m_threads;
         m_threads.clear();
+        // The listeners go with this run: onInitialize makes new ones for the next start(),
+        // and a closed number left here would get an accept thread on whatever reused it,
+        // and be closed again by the next stop() (#113).
+        listeners.swap(m_sockets);
+        m_socketToPort.clear();
     }
 
     // Each thread's socket is closed here only after the thread has been joined.
@@ -165,6 +183,14 @@ void ThreadedSocketAcceptor::onStop()
     {
         thread_join(i->second);
         socket_close(i->first);
+    }
+    // A listener stop() reached before its accept thread was made has no thread to close it.
+    for (const Sockets::value_type &listener : listeners)
+    {
+        if (threads.find(listener) == threads.end())
+        {
+            socket_close(listener);
+        }
     }
 }
 

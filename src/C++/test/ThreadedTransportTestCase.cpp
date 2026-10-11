@@ -10,6 +10,7 @@
 #include <SocketAcceptor.h>
 #include <ThreadedSocketAcceptor.h>
 #include <ThreadedSocketConnection.h>
+#include <ThreadedSocketInitiator.h>
 #include <TimeRange.h>
 #if (HAVE_SSL > 0)
 #include <ThreadedSSLSocketAcceptor.h>
@@ -26,6 +27,7 @@
 #include <csignal>
 #include <dirent.h>
 #include <fcntl.h>
+#include <memory>
 #include <netinet/in.h>
 #include <poll.h>
 #include <pthread.h>
@@ -319,6 +321,147 @@ TEST_CASE("ThreadedTransportStopTests")
             acceptor.stop();
             CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(3));
             ::close(client);
+        }
+        CHECK(openDescriptors() == before);
+    }
+
+    // start() makes the accept threads on a thread of its own, so a stop() right after
+    // it can reach onStop before they exist. One made after onStop took the threads to
+    // join was never joined -- it outlived the acceptor, a use after free under ASan --
+    // and its listener was never closed, so the port stayed bound (#113).
+    SECTION("stopRightAfterStartJoinsEveryThreadAndClosesEveryListener")
+    {
+        NullApplication application;
+        MemoryStoreFactory factory;
+        auto run = [&](bool ssl)
+        {
+            const std::size_t before = openDescriptors();
+            for (int round = 0; round < 20; ++round)
+            {
+                std::vector<int> ports;
+                std::stringstream config;
+                config << "[DEFAULT]\nConnectionType=acceptor\nStartTime=00:00:00\nEndTime=00:00:00\n"
+                       << "UseDataDictionary=N\n";
+#if (HAVE_SSL > 0)
+                config << "ServerCertificateFile=" << certPath("127_0_0_1_server.crt") << "\n"
+                       << "ServerCertificateKeyFile=" << certPath("127_0_0_1_server.key") << "\n";
+#endif
+                for (int session = 0; session < 4; ++session)
+                {
+                    ports.push_back(freePort());
+                    config << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=RESTOP" << session
+                           << "\nTargetCompID=TW\nSocketAcceptPort=" << ports.back() << "\n";
+                }
+                SessionSettings settings(config);
+                {
+                    std::unique_ptr<Acceptor> acceptor;
+#if (HAVE_SSL > 0)
+                    if (ssl)
+                    {
+                        acceptor = std::make_unique<ThreadedSSLSocketAcceptor>(application, factory, settings);
+                    }
+#endif
+                    if (!acceptor)
+                    {
+                        acceptor = std::make_unique<ThreadedSocketAcceptor>(application, factory, settings);
+                    }
+                    acceptor->start();
+                    acceptor->stop(true);
+                }
+                for (int port : ports)
+                {
+                    int probe = ::socket(AF_INET, SOCK_STREAM, 0);
+                    sockaddr_in address{};
+                    address.sin_family = AF_INET;
+                    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+                    address.sin_port = htons(port);
+                    INFO("round " << round << ", port " << port);
+                    CHECK(::bind(probe, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0);
+                    ::close(probe);
+                }
+            }
+            CHECK(openDescriptors() == before);
+        };
+        run(false);
+#if (HAVE_SSL > 0)
+        run(true);
+#endif
+    }
+
+    // onStop left every listener in m_sockets, so a restarted acceptor made an accept
+    // thread on each old number too -- whatever had reused it -- and its next stop()
+    // closed that descriptor (#113).
+    SECTION("restartLeavesDescriptorsOpenedSinceTheLastStopAlone")
+    {
+        const int port = freePort();
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=acceptor\nSocketAcceptPort=" << port
+               << "\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n"
+               << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=RESTART\nTargetCompID=TW\n";
+        SessionSettings settings(config);
+        NullApplication application;
+        MemoryStoreFactory factory;
+        ThreadedSocketAcceptor acceptor(application, factory, settings);
+        auto listening = [port]
+        {
+            const int client = connectTo(port);
+            if (client < 0)
+            {
+                return false;
+            }
+            ::close(client);
+            return true;
+        };
+
+        acceptor.start();
+        REQUIRE(listening());
+        // The kernel queues a connection before the accept thread exists; give it time to
+        // start, so this stop() is not the early one the section above covers.
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        acceptor.stop(true);
+
+        // Take the lowest free numbers, the stopped listener's among them.
+        std::vector<int> held;
+        for (int i = 0; i < 16; ++i)
+        {
+            held.push_back(::open("/dev/null", O_RDONLY));
+        }
+        acceptor.start();
+        REQUIRE(listening());
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        acceptor.stop(true);
+
+        for (int fd : held)
+        {
+            INFO("descriptor " << fd);
+            CHECK(isOpen(fd));
+            ::close(fd);
+        }
+    }
+
+    // ThreadedSocketInitiator::onStart checked for a stop before taking m_mutex to
+    // connect, so a stop() in between let it make a connection thread onStop never
+    // joined, which outlived the initiator (#113). That window is too narrow for this
+    // loop to hit -- pausing the start thread in it under gdb showed the use after free
+    // -- so this only checks start and stop leave nothing behind. Nothing listens here,
+    // so no session logs on and no message memory is recycled across threads, which
+    // TSan with the TBB allocator would misreport.
+    SECTION("initiatorStopRightAfterStartLeavesNoDescriptorOpen")
+    {
+        const int port = freePort();
+        NullApplication application;
+        MemoryStoreFactory factory;
+        const std::size_t before = openDescriptors();
+        for (int round = 0; round < 20; ++round)
+        {
+            std::stringstream config;
+            config << "[DEFAULT]\nConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
+                   << "\nReconnectInterval=1\nHeartBtInt=30\nStartTime=00:00:00\nEndTime=00:00:00\n"
+                   << "UseDataDictionary=N\n[SESSION]\nBeginString=FIX.4.2\nSenderCompID=TW\nTargetCompID=ISTOP\n";
+            SessionSettings settings(config);
+            ThreadedSocketInitiator initiator(application, factory, settings);
+            initiator.start();
+            initiator.stop(true);
         }
         CHECK(openDescriptors() == before);
     }
