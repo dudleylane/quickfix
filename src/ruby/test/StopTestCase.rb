@@ -2,6 +2,7 @@ require 'rbconfig'
 require 'socket'
 require 'test/unit'
 require 'tmpdir'
+require_relative 'ChildLoadPath'
 
 # A threaded transport's callbacks run on the "quickfix callbacks" thread while
 # the connection thread waits for them, so stop called from one would wait for
@@ -39,7 +40,7 @@ class StopTestCase < Test::Unit::TestCase
 		Dir.mktmpdir do |dir|
 			child = File.join(__dir__, 'StopChild.rb')
 			reader, writer = IO.pipe
-			pid = Process.spawn(RbConfig.ruby, '-I', File.expand_path('..', __dir__), child, dir, port.to_s, mode,
+			pid = Process.spawn(ChildLoadPath.environment, RbConfig.ruby, child, dir, port.to_s, mode,
 				out: writer, err: writer)
 			writer.close
 			status = nil

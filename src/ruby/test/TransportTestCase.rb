@@ -2,6 +2,7 @@ require 'rbconfig'
 require 'socket'
 require 'test/unit'
 require 'tmpdir'
+require_relative 'ChildLoadPath'
 
 # Initiator#start and Acceptor#start run the transport on a Ruby thread. Before
 # #102 that thread held the GVL for as long as the transport ran, so the rest of
@@ -31,7 +32,7 @@ class TransportTestCase < Test::Unit::TestCase
 		Dir.mktmpdir do |dir|
 			child = File.join(__dir__, 'TransportChild.rb')
 			reader, writer = IO.pipe
-			pid = Process.spawn(RbConfig.ruby, '-I', File.expand_path('..', __dir__), child, dir, port.to_s, kind,
+			pid = Process.spawn(ChildLoadPath.environment, RbConfig.ruby, child, dir, port.to_s, kind,
 				out: writer, err: writer)
 			writer.close
 			status = nil

@@ -2,6 +2,7 @@ require 'rbconfig'
 require 'socket'
 require 'test/unit'
 require 'tmpdir'
+require_relative 'ChildLoadPath'
 
 # An exception a Ruby callback lets out, other than the FIX exceptions the engine
 # expects, ends the process with status 1 and the exception printed as Ruby
@@ -30,7 +31,7 @@ class CallbackErrorTestCase < Test::Unit::TestCase
 		Dir.mktmpdir do |dir|
 			child = File.join(__dir__, 'CallbackErrorChild.rb')
 			out, err = IO.pipe, IO.pipe
-			pid = Process.spawn(RbConfig.ruby, '-I', File.expand_path('..', __dir__), child, dir, port.to_s, kind, where,
+			pid = Process.spawn(ChildLoadPath.environment, RbConfig.ruby, child, dir, port.to_s, kind, where,
 				out: out[1], err: err[1])
 			out[1].close
 			err[1].close

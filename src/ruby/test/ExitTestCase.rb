@@ -2,6 +2,7 @@ require 'rbconfig'
 require 'socket'
 require 'test/unit'
 require 'tmpdir'
+require_relative 'ChildLoadPath'
 
 # A Ruby program that ends with an initiator or acceptor alive used to crash at
 # exit: Ruby frees every object in no particular order, and one freed after its
@@ -33,7 +34,7 @@ class ExitTestCase < Test::Unit::TestCase
 		Dir.mktmpdir do |dir|
 			child = File.join(__dir__, script)
 			reader, writer = IO.pipe
-			pid = Process.spawn(RbConfig.ruby, '-I', File.expand_path('..', __dir__), child, dir, port.to_s, kind,
+			pid = Process.spawn(ChildLoadPath.environment, RbConfig.ruby, child, dir, port.to_s, kind,
 				out: writer, err: writer)
 			writer.close
 			status = nil
