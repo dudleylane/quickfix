@@ -321,6 +321,28 @@ jobs:
           # HAVE_SSL; put it back, as the database link step does.
           git checkout -- src/C++/config.h
 
+      - name: Build and test with the TBB allocator
+        # ENABLE_TBB_ALLOCATOR changes what FieldMap::Fields and the send queues
+        # allocate with, inline in consumers' code (#33), and no other build here
+        # turns it on (#132). Release, on pull requests and manual runs, like the
+        # no-SSL step: its own tree and output dir, then config.h restored.
+        if: github.event_name != 'push' && matrix.configuration == 'Release'
+        shell: bash
+        run: |
+          cmake -B build-tbb -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DHAVE_SSL=ON -DENABLE_TBB_ALLOCATOR=ON \
+            -DQUICKFIX_EXAMPLES=OFF -DQUICKFIX_LIB_OUTPUT_DIR="${{ github.workspace }}/build-tbb/out"
+          cmake --build build-tbb -j"$(nproc)"
+
+          # Exiting 0 is not the check: the option must reach what consumers
+          # compile and link against.
+          grep -q '^#define QUICKFIX_TBB_ALLOCATOR 1' build-tbb/generated/QuickFIXBuildConfig.h \
+            || { echo "::error::QuickFIXBuildConfig.h does not record the TBB allocator"; exit 1; }
+          grep -q -- '-ltbbmalloc' build-tbb/quickfix.pc \
+            || { echo "::error::quickfix.pc does not link tbbmalloc"; exit 1; }
+          (cd test && ../build-tbb/out/ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
+
+          git checkout -- src/C++/config.h
+
       - name: Run performance tests
         # Release-only: pt benchmarks against the Debug build are noise.
         # On a push, a smoke test for crashes and hangs; elsewhere the
