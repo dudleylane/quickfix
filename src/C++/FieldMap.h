@@ -352,7 +352,16 @@ public:
     virtual FieldMap *cloneInto(GroupArena &arena) const
     {
         void *p = arena.allocate();
-        return new (p) FieldMap(*this);
+        // The slot is the heap's once the arena is full: give it back if the copy throws.
+        try
+        {
+            return new (p) FieldMap(*this);
+        }
+        catch (...)
+        {
+            arena.deallocate(p);
+            throw;
+        }
     }
 
 protected:

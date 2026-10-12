@@ -23,6 +23,7 @@
 #include <Group.h>
 #include <Message.h>
 #include <malloc.h>
+#include <stdexcept>
 #include <vector>
 
 #include "catch_amalgamated.hpp"
@@ -286,6 +287,22 @@ TEST_CASE("FieldMapTests")
         }
     }
 
+    SECTION("clearResetsTheArena")
+    {
+        // clear() resets the arena, so a group added afterwards takes the first slot
+        // again; without the reset each clear() cycle would walk further through the
+        // arena and spill onto the heap (#131).
+        FieldMap parent;
+        Group group(268, 269, message_order(269, 0));
+        group.setField(269, "0");
+        parent.addGroup(268, group);
+        const FieldMap *first = parent.getGroupPtr(1, 268);
+        parent.addGroup(268, group);
+        parent.clear();
+        parent.addGroup(268, group);
+        CHECK(parent.getGroupPtr(1, 268) == first);
+    }
+
     SECTION("arenaOverflowFallsBackToHeap")
     {
         FieldMap parent;
@@ -345,4 +362,62 @@ TEST_CASE("FieldMapTests")
         target = std::move(self); // self-move leaves a valid map
         CHECK(target.groupCount(78) == 4);
     }
+}
+namespace
+{
+// A group that counts its live copies and can be made to fail when cloned.
+struct TrackedGroup : public FieldMap
+{
+    TrackedGroup() { ++live; }
+    TrackedGroup(const TrackedGroup &copy) : FieldMap(copy), failsToClone(copy.failsToClone) { ++live; }
+    ~TrackedGroup() override { --live; }
+
+    FieldMap *cloneInto(GroupArena &arena) const override
+    {
+        if (failsToClone && cloningFails)
+        {
+            throw std::runtime_error("clone failed");
+        }
+        void *p = arena.allocate();
+        return new (p) TrackedGroup(*this);
+    }
+
+    bool failsToClone = false;
+    static int live;
+    static bool cloningFails;
+};
+int TrackedGroup::live = 0;
+bool TrackedGroup::cloningFails = false;
+} // namespace
+
+// A copy that fails part way must leave the target as it was and destroy the
+// groups it had already cloned. The copy constructor had no cleanup, and a
+// constructor that throws never runs its destructor (#131).
+TEST_CASE("FieldMapCopyFailureTests")
+{
+    FieldMap original;
+    original.setField(1, "original");
+    TrackedGroup clones;
+    clones.setField(11, "clones");
+    TrackedGroup fails;
+    fails.failsToClone = true;
+    original.addGroup(78, clones);
+    original.addGroup(78, clones);
+    original.addGroup(78, fails);
+    const int live = TrackedGroup::live;
+
+    FieldMap target;
+    target.setField(1, "target");
+
+    TrackedGroup::cloningFails = true;
+    SECTION("copyConstruction") { CHECK_THROWS_AS(FieldMap(original), std::runtime_error); }
+    SECTION("copyAssignment")
+    {
+        CHECK_THROWS_AS(target = original, std::runtime_error);
+        CHECK(target.getField(1) == "target");
+        CHECK(target.groupCount(78) == 0);
+    }
+    TrackedGroup::cloningFails = false;
+
+    CHECK(TrackedGroup::live == live);
 }

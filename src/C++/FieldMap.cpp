@@ -38,12 +38,33 @@ FieldMap::FieldMap(const int order[]) : m_order(message_order(order)) { m_fields
 
 FieldMap::FieldMap(const FieldMap &copy) : m_fields(copy.m_fields), m_order(copy.m_order)
 {
-    for (auto const &tagWithGroups : copy.m_groups)
+    // A constructor that throws never runs its destructor, so a clone that fails part
+    // way must not leave the groups cloned so far behind (#131).
+    try
     {
-        for (auto const &group : tagWithGroups.second)
+        for (auto const &tagWithGroups : copy.m_groups)
         {
-            m_groups[tagWithGroups.first].push_back(group->cloneInto(getArena()));
+            std::vector<FieldMap *> &groups = m_groups[tagWithGroups.first];
+            for (auto const &group : tagWithGroups.second)
+            {
+                FieldMap *clone = group->cloneInto(getArena());
+                try
+                {
+                    groups.push_back(clone);
+                }
+                catch (...)
+                {
+                    clone->~FieldMap();
+                    m_arena->deallocate(clone);
+                    throw;
+                }
+            }
         }
+    }
+    catch (...)
+    {
+        clear();
+        throw;
     }
 }
 

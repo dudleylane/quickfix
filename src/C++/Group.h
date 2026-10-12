@@ -62,7 +62,16 @@ public:
     FieldMap *cloneInto(GroupArena &arena) const override
     {
         void *p = arena.allocate();
-        return new (p) Group(*this);
+        // The slot is the heap's once the arena is full: give it back if the copy throws.
+        try
+        {
+            return new (p) Group(*this);
+        }
+        catch (...)
+        {
+            arena.deallocate(p);
+            throw;
+        }
     }
 
 private:
