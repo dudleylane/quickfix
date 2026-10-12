@@ -31,7 +31,7 @@ public:
 
 inline void deleteSession(std::string sender, std::string target)
 {
-    file_unlink(("store/FIX.4.2-" + sender + "-" + target + ".messages").c_str());
+    file_unlink(("store/FIX.4.2-" + sender + "-" + target + ".body").c_str());
     file_unlink(("store/FIX.4.2-" + sender + "-" + target + ".header").c_str());
     file_unlink(("store/FIX.4.2-" + sender + "-" + target + ".seqnums").c_str());
     file_unlink(("store/FIX.4.2-" + sender + "-" + target + ".session").c_str());

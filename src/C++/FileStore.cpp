@@ -247,17 +247,28 @@ void FileStore::populateCache()
     FILE *sessionFile = file_fopen(m_sessionFileName.c_str(), "r+");
     if (sessionFile)
     {
-        char time[22];
+        // setSession writes 17 characters; 31 still fits a nanosecond timestamp, so a
+        // longer token is cut short and fails to convert. The read was unbounded into
+        // 22 bytes, and a corrupted file overflowed the stack (#126).
+        char time[32];
 #ifdef HAVE_FSCANF_S
-        int result = FILE_FSCANF(sessionFile, "%s", time, 22);
+        int result = FILE_FSCANF(sessionFile, "%31s", time, 32);
 #else
-        int result = FILE_FSCANF(sessionFile, "%s", time);
+        int result = FILE_FSCANF(sessionFile, "%31s", time);
 #endif
+        fclose(sessionFile);
         if (result == 1)
         {
-            m_cache.setCreationTime(UtcTimeStampConvertor::convert(time));
+            try
+            {
+                m_cache.setCreationTime(UtcTimeStampConvertor::convert(time));
+            }
+            catch (FieldConvertError &)
+            {
+                // The creation time decides session resets, so fail rather than guess.
+                throw IOException("Unreadable creation time in " + m_sessionFileName + ": " + time);
+            }
         }
-        fclose(sessionFile);
     }
 }
 

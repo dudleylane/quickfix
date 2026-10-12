@@ -192,3 +192,63 @@ TEST_CASE_METHOD(resetBeforeAndAfterWithTestFileManager, "FileStoreTests_6")
         fileStoreFactory.destroy(fileStore);
     }
 }
+// A store opened over damaged files (#126). The session file holds the creation
+// time; it was read without a bound into 22 bytes on the stack.
+TEST_CASE("FileStoreCorruptionTests")
+{
+    SessionID sessionID(BeginString("FIX.4.2"), SenderCompID("CORRUPT"), TargetCompID("TEST"));
+    const std::string prefix = "store/FIX.4.2-CORRUPT-TEST.";
+    deleteSession("CORRUPT", "TEST");
+    delete new FileStore(UtcTimeStamp::now(), "store", sessionID); // creates the files
+
+    auto overwrite = [](const std::string &name, const std::string &content)
+    {
+        FILE *file = fopen(name.c_str(), "w");
+        REQUIRE(file != nullptr);
+        fputs(content.c_str(), file);
+        fclose(file);
+    };
+
+    SECTION("anOverlongCreationTimeIsAConfigErrorNotAnOverflow")
+    {
+        overwrite(prefix + "session", std::string(200, '9'));
+        CHECK_THROWS_AS(FileStore(UtcTimeStamp::now(), "store", sessionID), ConfigError);
+    }
+
+    SECTION("anUnreadableCreationTimeIsAConfigErrorNamingTheFile")
+    {
+        overwrite(prefix + "session", "not-a-time");
+        try
+        {
+            FileStore store(UtcTimeStamp::now(), "store", sessionID);
+            FAIL("opened a store with an unreadable creation time");
+        }
+        catch (ConfigError &e)
+        {
+            CHECK(std::string(e.what()).find(prefix + "session") != std::string::npos);
+        }
+    }
+
+    SECTION("aTornHeaderEntryKeepsTheMessagesBeforeIt")
+    {
+        {
+            FileStore store(UtcTimeStamp::now(), "store", sessionID);
+            store.set(1, "first");
+            store.set(2, "second");
+        }
+        // A crash between writing a message and finishing its header entry.
+        FILE *header = fopen((prefix + "header").c_str(), "a");
+        REQUIRE(header != nullptr);
+        fputs("3,11,", header);
+        fclose(header);
+
+        FileStore store(UtcTimeStamp::now(), "store", sessionID);
+        std::vector<std::string> messages;
+        store.get(1, 3, messages);
+        REQUIRE(messages.size() == 2);
+        CHECK(messages[0] == "first");
+        CHECK(messages[1] == "second");
+    }
+
+    deleteSession("CORRUPT", "TEST");
+}
