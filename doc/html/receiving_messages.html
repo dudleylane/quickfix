@@ -28,7 +28,7 @@
     standard spec.</p>
     <pre class='fragment'>
 void fromApp( const FIX::Message&amp; message, const FIX::SessionID&amp; sessionID )
-  throw( FIX::FieldNotFound&amp;, FIX::IncorrectDataFormat&amp;, FIX::IncorrectTagValue&amp;, FIX::UnsupportedMessageType&amp; )
+  // may throw FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::UnsupportedMessageType
 {
   crack(message, sessionID);
 }
@@ -88,7 +88,7 @@ class MyApplication
     "ruby/receiving_messages_2.html">RUBY</a>
     <pre class='fragment'>
 void fromApp( const FIX::Message&amp; message, const FIX::SessionID&amp; sessionID )
-  throw( FIX::FieldNotFound&amp;, FIX::IncorrectDataFormat&amp;, FIX::IncorrectTagValue&amp;, FIX::UnsupportedMessageType&amp; )
+  // may throw FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::UnsupportedMessageType
 {
   // retrieve value into field class
   FIX::Price price;
@@ -108,7 +108,7 @@ void fromApp( const FIX::Message&amp; message, const FIX::SessionID&amp; session
     <a href="ruby/receiving_messages_1.html">RUBY</a>
     <pre class='fragment'>
 void fromApp( const FIX::Message&amp; message, const FIX::SessionID&amp; sessionID )
-  throw( FIX::FieldNotFound&amp;, FIX::IncorrectDataFormat&amp;, FIX::IncorrectTagValue&amp;, FIX::UnsupportedMessageType&amp; )
+  // may throw FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::UnsupportedMessageType
 {
   // retreive value into string with integer field ID
   std::string value;

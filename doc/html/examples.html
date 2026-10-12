@@ -52,13 +52,19 @@
     and demonstrates basic order execution flow.</p>
 
     <h2>Running the Examples</h2>
-    <p>Example configuration files are provided in <b>examples/cfg/</b>.
-    To run the examples:</p>
-    <ol>
-      <li>Build QuickFIX with examples enabled (<code>-DQUICKFIX_EXAMPLES=ON</code> for CMake)</li>
-      <li>Navigate to the example directory</li>
-      <li>Run the executable with the appropriate configuration file</li>
-    </ol>
+    <p>Build with the examples enabled (<code>-DQUICKFIX_EXAMPLES=ON</code>, the default). The
+    programs land in <code>lib/</code>, and <code>bin/</code> holds links to them, their
+    configuration files (<code>bin/cfg/</code>) and a script per example, runnable from anywhere:</p>
+    <ul>
+      <li><code>bin/run_executor_cpp.sh</code>, <code>bin/run_executor_ssl_cpp.sh</code> (TLS)</li>
+      <li><code>bin/run_executor_python3.sh</code> (needs <code>-DHAVE_PYTHON3=ON</code>),
+        <code>bin/run_executor_ruby.sh</code> (needs <code>src/ruby/make_ruby.sh</code>)</li>
+      <li><code>bin/run_ordermatch.sh</code></li>
+      <li><code>bin/run_tradeclient.sh</code>, <code>bin/run_tradeclient_ssl.sh</code> (TLS)</li>
+    </ul>
+    <p>Start an executor or ordermatch, then a tradeclient in another terminal. The TLS runs use the
+    certificates in <code>bin/cfg/certs/</code>; their keys are public, for the examples only (see
+    <code>bin/cfg/certs/README</code>).</p>
 
     <h2>Using Examples as Templates</h2>
     <p>These examples serve as excellent templates for building your own

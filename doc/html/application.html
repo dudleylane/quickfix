@@ -31,12 +31,9 @@ namespace FIX
     virtual void onLogon( const SessionID&amp; ) = 0;
     virtual void onLogout( const SessionID&amp; ) = 0;
     virtual void toAdmin( Message&amp;, const SessionID&amp; ) = 0;
-    virtual void toApp( Message&amp;, const SessionID&amp; )
-      throw( DoNotSend ) = 0;
-    virtual void fromAdmin( const Message&amp;, const SessionID&amp; )
-      throw( FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon ) = 0;
-    virtual void fromApp( const Message&amp;, const SessionID&amp; )
-      throw( FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType ) = 0;
+    virtual void toApp( Message&amp;, const SessionID&amp; ) = 0; // may throw DoNotSend
+    virtual void fromAdmin( const Message&amp;, const SessionID&amp; ) = 0; // may throw FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon
+    virtual void fromApp( const Message&amp;, const SessionID&amp; ) = 0; // may throw FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType
   };
 }
 </pre>

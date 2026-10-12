@@ -21,22 +21,18 @@
     "ruby/sending_messages_1.html">RUBY</a>
     <pre class='fragment'>
 // send a message that already contains a <i>BeginString</i>, <i>SenderCompID</i>, and a <i>TargetCompID</i>
-static bool sendToTarget( Message&amp;, const std::string&amp; qualifier = "" )
-  throw(SessionNotFound&amp;);
+static bool sendToTarget( Message&amp;, const std::string&amp; qualifier = "" ); // throws SessionNotFound when no session matches
 
 // send a message based on the sessionID, convenient for use
 // in <i>fromApp</i> since it provides a session ID for incoming
 // messages
-static bool sendToTarget( Message&amp;, const SessionID&amp; )
-  throw(SessionNotFound&amp;);
+static bool sendToTarget( Message&amp;, const SessionID&amp; ); // throws SessionNotFound when no session matches
 
 // append a <i>SenderCompID</i> and <i>TargetCompID</i> before sending
-static bool sendToTarget( Message&amp;, const SenderCompID&amp;, const TargetCompID&amp;, const std::string&amp; qualifier = "" )
-  throw(SessionNotFound&amp;);
+static bool sendToTarget( Message&amp;, const SenderCompID&amp;, const TargetCompID&amp;, const std::string&amp; qualifier = "" ); // throws SessionNotFound when no session matches
 
 // pass SenderCompID and TargetCompID in as strings
-static bool sendToTarget( Message&amp;, const std::string&amp;, const std::string&amp;, const std::string&amp; qualifier = "" )
-  throw(SessionNotFound&amp;);
+static bool sendToTarget( Message&amp;, const std::string&amp;, const std::string&amp;, const std::string&amp; qualifier = "" ); // throws SessionNotFound when no session matches
 </pre>
 
     <br/><hr/>

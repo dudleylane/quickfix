@@ -20,45 +20,39 @@
     "https://github.com/catchorg/Catch2">Catch2</a>.
     Catch2 allows developers to test C++ code by writing code
     that calls functions on objects and asserting correct behavior.
-    These test verifies not only that the code works correctly, but
-    also that it works the same on all platforms.</p>
+    The suite also runs under AddressSanitizer, UndefinedBehaviorSanitizer and
+    ThreadSanitizer in CI.</p>
 
-    <p>This sample shows the setup and execution of the test that
-    verifies the Parser object can correctly extract messages from
-    a stream.</p>
+    <p>This sample, abridged from <code>src/C++/test/ParserTestCase.cpp</code>, checks that the
+    Parser extracts complete messages from a stream and rejects a bad BodyLength.</p>
     <pre class='fragment'>
-struct readFixMessageFixture
+TEST_CASE("ParserTests")
 {
-  readFixMessageFixture()
-  {
-    fixMsg1 = "8=FIX.4.2\0019=12\00135=A\001108=30\00110=31\001";
-    fixMsg2 = "8=FIX.4.2\0019=17\00135=4\00136=88\001123=Y\00110=34\001";
-    fixMsg3 = "8=FIX.4.2\0019=19\00135=A\001108=30\0019710=8\00110=31\001";
+    Parser object;
 
-    object.addToStream( fixMsg1 + fixMsg2 + fixMsg3 );
-  }
+    SECTION("readFixMessage")
+    {
+        std::string fixMsg1 = "8=FIX.4.2\0019=12\00135=A\001108=30\00110=31\001";
+        std::string fixMsg2 = "8=FIX.4.2\0019=17\00135=4\00136=88\001123=Y\00110=34\001";
+        std::string badLength = "8=FIX.4.2\0019=200A\00135=A\001108=30\00110=31\001";
 
-  std::string fixMsg1;
-  std::string fixMsg2;
-  std::string fixMsg3;
-  Parser object;
-};
+        object.addToStream(fixMsg1 + fixMsg2 + badLength);
 
-TEST_FIXTURE(readFixMessageFixture, readFixMessage)
-{
-  std::string readFixMsg1;
-  CHECK( object.readFixMessage( readFixMsg1 ) );
-  CHECK_EQUAL( fixMsg1, readFixMsg1 );
+        std::string readFixMsg;
+        CHECK(object.readFixMessage(readFixMsg));
+        CHECK(fixMsg1 == readFixMsg);
 
-  std::string readFixMsg2;
-  CHECK( object.readFixMessage( readFixMsg2 ) );
-  CHECK_EQUAL( fixMsg2, readFixMsg2 );
+        CHECK(object.readFixMessage(readFixMsg));
+        CHECK(fixMsg2 == readFixMsg);
 
-  std::string readFixMsg3;
-  CHECK( object.readFixMessage( readFixMsg3 ) );
-  CHECK_EQUAL( fixMsg3, readFixMsg3 );
+        CHECK_THROWS_AS(object.readFixMessage(readFixMsg), MessageParseError);
+    }
 }
 </pre>
+
+    <p>The tests live in <code>src/C++/test/</code>, one <code>*TestCase.cpp</code> per area, each
+    listed by hand in <code>src/C++/test/CMakeLists.txt</code>. See <a href="testing.html">Testing</a>
+    for how to run them.</p>
   </div>
 </body>
 </html>

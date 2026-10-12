@@ -15,47 +15,38 @@
   </div>
 
   <div class='contents'>
+    <p>The scripts are in <code>src/sql/</code>, one directory per database; run them from their
+    own directory. The library must be built with the matching option (<code>HAVE_MYSQL</code>,
+    <code>HAVE_POSTGRESQL</code> or <code>HAVE_ODBC</code>).</p>
+
     <h1>MySQL</h1>
-
-    <p>You must have MySQL installed with the deamon running.</p>
-
-    <p>Run the create script in <b>src/sql/mysql</b>. You must pass
-    in a mysql user with permissions authorized to create a new
-    database.</p>
+    <p>With a MySQL or MariaDB server running, from <code>src/sql/mysql</code>, pass a user that may
+    create a database, and its password:</p>
     <pre class='fragment'>
-./create.sh mysql
+./create.sh root password
 </pre>
-    <pre class='fragment'>
-create.bat mysql
-</pre>
-
-    <br/><hr/>
-    <h1>MSSQL</h1>
-
-    <p>You must have MySQL installed with the deamon running.</p>
-
-    <p>Run the create script in <b>src/sql/mssql</b>. You must pass
-    in a mssql user with permissions authorized to create a new
-    database.</p>
-    <pre class='fragment'>
-create.bat sa
-</pre>
+    <p><code>create_user.sh</code> then creates the <code>quickfix</code> user from
+    <code>user.sql</code>. The client library CI builds against is mariadb-connector-c.</p>
 
     <br/><hr/>
     <h1>PostgreSQL</h1>
-
-    <p>You must have PostgreSQL installed with the deamon
-    running.</p>
-
-    <p>Run the create script in <b>src/sql/postgresql</b>. You must
-    pass in a postgresql user with permissions authorized to create
-    a new database.</p>
+    <p>With a PostgreSQL server running, from <code>src/sql/postgresql</code>, pass a user that may
+    create a database:</p>
     <pre class='fragment'>
 ./create.sh postgres
+./create_user.sh postgres
 </pre>
-    <pre class='fragment'>
-create.bat postgres
-</pre>
+    <p>The first drops and creates the <code>quickfix</code> database and its tables; the second
+    creates the <code>quickfix</code> role. The unit tests' configuration
+    (<code>test/cfg/ut.cfg</code>) connects as that role with no password on localhost;
+    CONTRIBUTING.md has the full setup CI's runner uses.</p>
+
+    <br/><hr/>
+    <h1>ODBC</h1>
+    <p>OdbcStore and OdbcLog reach any database through an ODBC driver. CI runs them through
+    psqlODBC against the PostgreSQL database above. <code>src/sql/mssql/mssql.sql</code> is a schema
+    for Microsoft SQL Server, to load with that server's own tools; there is no separate MSSQL
+    store.</p>
   </div>
 </body>
 </html>
