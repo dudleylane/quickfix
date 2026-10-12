@@ -9315,8 +9315,16 @@ SWIGINTERN PyObject *_wrap_VectorString___setitem____SWIG_2(PyObject *self, Py_s
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -9485,8 +9493,16 @@ SWIGINTERN PyObject *_wrap_VectorString_append(PyObject *self, PyObject *args) {
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -10267,8 +10283,16 @@ SWIGINTERN PyObject *_wrap_new_VectorString__SWIG_3(PyObject *self, Py_ssize_t n
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -10382,8 +10406,16 @@ SWIGINTERN PyObject *_wrap_VectorString_push_back(PyObject *self, PyObject *args
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -10530,8 +10562,16 @@ SWIGINTERN PyObject *_wrap_VectorString_assign(PyObject *self, PyObject *args) {
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -10597,8 +10637,16 @@ SWIGINTERN PyObject *_wrap_VectorString_resize__SWIG_1(PyObject *self, Py_ssize_
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -10722,8 +10770,16 @@ SWIGINTERN PyObject *_wrap_VectorString_insert__SWIG_0(PyObject *self, Py_ssize_
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -10803,8 +10859,16 @@ SWIGINTERN PyObject *_wrap_VectorString_insert__SWIG_1(PyObject *self, Py_ssize_
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res4)) delete arg4;
@@ -12798,16 +12862,32 @@ SWIGINTERN PyObject *_wrap_new_FIXException(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -12895,8 +12975,16 @@ SWIGINTERN PyObject *_wrap_FIXException_type_set(PyObject *self, PyObject *args)
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -12972,8 +13060,16 @@ SWIGINTERN PyObject *_wrap_FIXException_detail_set(PyObject *self, PyObject *arg
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -13115,16 +13211,32 @@ SWIGINTERN PyObject *_wrap_new_DataDictionaryNotFound__SWIG_0(PyObject *self, Py
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -13177,8 +13289,16 @@ SWIGINTERN PyObject *_wrap_new_DataDictionaryNotFound__SWIG_1(PyObject *self, Py
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -13302,8 +13422,16 @@ SWIGINTERN PyObject *_wrap_DataDictionaryNotFound_version_set(PyObject *self, Py
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -13401,8 +13529,16 @@ SWIGINTERN PyObject *_wrap_new_FieldNotFound__SWIG_0(PyObject *self, Py_ssize_t 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -13676,8 +13812,16 @@ SWIGINTERN PyObject *_wrap_new_FieldConvertError__SWIG_0(PyObject *self, Py_ssiz
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -13835,8 +13979,16 @@ SWIGINTERN PyObject *_wrap_new_MessageParseError__SWIG_0(PyObject *self, Py_ssiz
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -13994,8 +14146,16 @@ SWIGINTERN PyObject *_wrap_new_InvalidMessage__SWIG_0(PyObject *self, Py_ssize_t
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -14153,8 +14313,16 @@ SWIGINTERN PyObject *_wrap_new_ConfigError__SWIG_0(PyObject *self, Py_ssize_t no
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -14312,8 +14480,16 @@ SWIGINTERN PyObject *_wrap_new_RuntimeError__SWIG_0(PyObject *self, Py_ssize_t n
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -14479,8 +14655,16 @@ SWIGINTERN PyObject *_wrap_new_InvalidTagNumber__SWIG_0(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -14762,8 +14946,16 @@ SWIGINTERN PyObject *_wrap_new_RequiredTagMissing__SWIG_0(PyObject *self, Py_ssi
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -15045,8 +15237,16 @@ SWIGINTERN PyObject *_wrap_new_TagNotDefinedForMessage__SWIG_0(PyObject *self, P
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -15328,8 +15528,16 @@ SWIGINTERN PyObject *_wrap_new_NoTagValue__SWIG_0(PyObject *self, Py_ssize_t nob
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -15611,8 +15819,16 @@ SWIGINTERN PyObject *_wrap_new_IncorrectTagValue__SWIG_0(PyObject *self, Py_ssiz
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -15894,8 +16110,16 @@ SWIGINTERN PyObject *_wrap_new_IncorrectDataFormat__SWIG_0(PyObject *self, Py_ss
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -16169,8 +16393,16 @@ SWIGINTERN PyObject *_wrap_new_IncorrectMessageStructure__SWIG_0(PyObject *self,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -16328,8 +16560,16 @@ SWIGINTERN PyObject *_wrap_new_DuplicateFieldNumber__SWIG_0(PyObject *self, Py_s
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -16487,8 +16727,16 @@ SWIGINTERN PyObject *_wrap_new_InvalidMessageType__SWIG_0(PyObject *self, Py_ssi
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -16646,8 +16894,16 @@ SWIGINTERN PyObject *_wrap_new_UnsupportedMessageType__SWIG_0(PyObject *self, Py
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -16805,8 +17061,16 @@ SWIGINTERN PyObject *_wrap_new_UnsupportedVersion__SWIG_0(PyObject *self, Py_ssi
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -16972,8 +17236,16 @@ SWIGINTERN PyObject *_wrap_new_TagOutOfOrder__SWIG_0(PyObject *self, Py_ssize_t 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -17255,8 +17527,16 @@ SWIGINTERN PyObject *_wrap_new_EmbeddedSOH__SWIG_0(PyObject *self, Py_ssize_t no
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -17538,8 +17818,16 @@ SWIGINTERN PyObject *_wrap_new_OutOfOrderGroupMembers__SWIG_0(PyObject *self, Py
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -17821,8 +18109,16 @@ SWIGINTERN PyObject *_wrap_new_RepeatedTag__SWIG_0(PyObject *self, Py_ssize_t no
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -18104,8 +18400,16 @@ SWIGINTERN PyObject *_wrap_new_RepeatingGroupCountMismatch__SWIG_0(PyObject *sel
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -18379,8 +18683,16 @@ SWIGINTERN PyObject *_wrap_new_DoNotSend__SWIG_0(PyObject *self, Py_ssize_t nobj
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -18538,8 +18850,16 @@ SWIGINTERN PyObject *_wrap_new_RejectLogon__SWIG_0(PyObject *self, Py_ssize_t no
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -18697,8 +19017,16 @@ SWIGINTERN PyObject *_wrap_new_SessionNotFound__SWIG_0(PyObject *self, Py_ssize_
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -18856,8 +19184,16 @@ SWIGINTERN PyObject *_wrap_new_IOException__SWIG_0(PyObject *self, Py_ssize_t no
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -19044,8 +19380,16 @@ SWIGINTERN PyObject *_wrap_new_SocketException__SWIG_1(PyObject *self, Py_ssize_
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -19232,8 +19576,16 @@ SWIGINTERN PyObject *_wrap_new_SocketSendFailed__SWIG_1(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -19407,8 +19759,16 @@ SWIGINTERN PyObject *_wrap_new_SocketRecvFailed__SWIG_1(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -19571,8 +19931,16 @@ SWIGINTERN PyObject *_wrap_new_SocketCloseFailed__SWIG_1(PyObject *self, Py_ssiz
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -27921,8 +28289,16 @@ SWIGINTERN PyObject *_wrap_new_FieldBase__SWIG_0(PyObject *self, Py_ssize_t nobj
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -28199,8 +28575,16 @@ SWIGINTERN PyObject *_wrap_FieldBase_setString(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -28345,7 +28729,12 @@ SWIGINTERN PyObject *_wrap_FieldBase_appendTo(PyObject *self, PyObject *args) {
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
-    temp2 = std::string((char*)PyUnicode_AsUTF8(swig_obj[1]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[1]);
+    if( !utf8 )
+    SWIG_fail;
+    temp2 = std::string(utf8);
     arg2 = &temp2;
   }
   {
@@ -28369,8 +28758,16 @@ SWIGINTERN PyObject *_wrap_FieldBase_appendTo(PyObject *self, PyObject *args) {
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -28793,8 +29190,16 @@ SWIGINTERN PyObject *_wrap_new_StringField__SWIG_0(PyObject *self, Py_ssize_t no
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -28932,8 +29337,16 @@ SWIGINTERN PyObject *_wrap_StringField_setValue(PyObject *self, PyObject *args) 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -30072,8 +30485,16 @@ SWIGINTERN PyObject *_wrap___lt____SWIG_3(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -30140,8 +30561,16 @@ SWIGINTERN PyObject *_wrap___lt____SWIG_4(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -30208,8 +30637,16 @@ SWIGINTERN PyObject *_wrap___gt____SWIG_3(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -30276,8 +30713,16 @@ SWIGINTERN PyObject *_wrap___gt____SWIG_4(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -30419,8 +30864,16 @@ SWIGINTERN PyObject *_wrap___eq____SWIG_3(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -30487,8 +30940,16 @@ SWIGINTERN PyObject *_wrap___eq____SWIG_4(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -30555,8 +31016,16 @@ SWIGINTERN PyObject *_wrap___ne____SWIG_3(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -30623,8 +31092,16 @@ SWIGINTERN PyObject *_wrap___ne____SWIG_4(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -30691,8 +31168,16 @@ SWIGINTERN PyObject *_wrap___le____SWIG_3(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -30759,8 +31244,16 @@ SWIGINTERN PyObject *_wrap___le____SWIG_4(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -30902,8 +31395,16 @@ SWIGINTERN PyObject *_wrap___ge____SWIG_3(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -30970,8 +31471,16 @@ SWIGINTERN PyObject *_wrap___ge____SWIG_4(PyObject *self, Py_ssize_t nobjs, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -35911,8 +36420,16 @@ SWIGINTERN PyObject *_wrap_FieldMap_setField__SWIG_2(PyObject *self, Py_ssize_t 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -37620,7 +38137,12 @@ SWIGINTERN PyObject *_wrap_FieldMap_calculateString(PyObject *self, PyObject *ar
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    temp2 = std::string((char*)PyUnicode_AsUTF8(swig_obj[1]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[1]);
+    if( !utf8 )
+    SWIG_fail;
+    temp2 = std::string(utf8);
     arg2 = &temp2;
   }
   {
@@ -37644,8 +38166,16 @@ SWIGINTERN PyObject *_wrap_FieldMap_calculateString(PyObject *self, PyObject *ar
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -39933,8 +40463,16 @@ SWIGINTERN PyObject *_wrap_new_Message__SWIG_2(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -39985,8 +40523,16 @@ SWIGINTERN PyObject *_wrap_new_Message__SWIG_3(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -40056,8 +40602,16 @@ SWIGINTERN PyObject *_wrap_new_Message__SWIG_4(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -40119,8 +40673,16 @@ SWIGINTERN PyObject *_wrap_new_Message__SWIG_5(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -40201,8 +40763,16 @@ SWIGINTERN PyObject *_wrap_new_Message__SWIG_6(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -40275,8 +40845,16 @@ SWIGINTERN PyObject *_wrap_new_Message__SWIG_7(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -40379,8 +40957,16 @@ SWIGINTERN PyObject *_wrap_new_Message__SWIG_8(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res4)) delete arg4;
@@ -40475,8 +41061,16 @@ SWIGINTERN PyObject *_wrap_new_Message__SWIG_9(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res4)) delete arg4;
@@ -40590,8 +41184,16 @@ SWIGINTERN PyObject *_wrap_new_Message__SWIG_10(PyObject *self, Py_ssize_t nobjs
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res4)) delete arg4;
@@ -40697,8 +41299,16 @@ SWIGINTERN PyObject *_wrap_new_Message__SWIG_11(PyObject *self, Py_ssize_t nobjs
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res4)) delete arg4;
@@ -41147,8 +41757,16 @@ SWIGINTERN PyObject *_wrap_Message_InitializeXML(PyObject *self, PyObject *args)
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -41848,7 +42466,12 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_4(PyObject *self, Py_ssize_t n
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    temp2 = std::string((char*)PyUnicode_AsUTF8(swig_obj[1]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[1]);
+    if( !utf8 )
+    SWIG_fail;
+    temp2 = std::string(utf8);
     arg2 = &temp2;
   }
   ecode3 = SWIG_AsVal_int(swig_obj[2], &val3);
@@ -41887,8 +42510,16 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_4(PyObject *self, Py_ssize_t n
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -41920,7 +42551,12 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_5(PyObject *self, Py_ssize_t n
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    temp2 = std::string((char*)PyUnicode_AsUTF8(swig_obj[1]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[1]);
+    if( !utf8 )
+    SWIG_fail;
+    temp2 = std::string(utf8);
     arg2 = &temp2;
   }
   ecode3 = SWIG_AsVal_int(swig_obj[2], &val3);
@@ -41954,8 +42590,16 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_5(PyObject *self, Py_ssize_t n
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -41984,7 +42628,12 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_6(PyObject *self, Py_ssize_t n
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    temp2 = std::string((char*)PyUnicode_AsUTF8(swig_obj[1]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[1]);
+    if( !utf8 )
+    SWIG_fail;
+    temp2 = std::string(utf8);
     arg2 = &temp2;
   }
   ecode3 = SWIG_AsVal_int(swig_obj[2], &val3);
@@ -42013,8 +42662,16 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_6(PyObject *self, Py_ssize_t n
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -42040,7 +42697,12 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_7(PyObject *self, Py_ssize_t n
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    temp2 = std::string((char*)PyUnicode_AsUTF8(swig_obj[1]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[1]);
+    if( !utf8 )
+    SWIG_fail;
+    temp2 = std::string(utf8);
     arg2 = &temp2;
   }
   {
@@ -42064,8 +42726,16 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_7(PyObject *self, Py_ssize_t n
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -42316,7 +42986,12 @@ SWIGINTERN PyObject *_wrap_Message_toXML__SWIG_1(PyObject *self, Py_ssize_t nobj
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    temp2 = std::string((char*)PyUnicode_AsUTF8(swig_obj[1]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[1]);
+    if( !utf8 )
+    SWIG_fail;
+    temp2 = std::string(utf8);
     arg2 = &temp2;
   }
   {
@@ -42340,8 +43015,16 @@ SWIGINTERN PyObject *_wrap_Message_toXML__SWIG_1(PyObject *self, Py_ssize_t nobj
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -42486,8 +43169,16 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_0(PyObject *self, Py_ssize_t 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -42553,8 +43244,16 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_1(PyObject *self, Py_ssize_t 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -42628,8 +43327,16 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_2(PyObject *self, Py_ssize_t 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -42711,8 +43418,16 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_3(PyObject *self, Py_ssize_t 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -42933,16 +43648,32 @@ SWIGINTERN PyObject *_wrap_Message_setGroup(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -43004,8 +43735,16 @@ SWIGINTERN PyObject *_wrap_Message_setStringHeader(PyObject *self, PyObject *arg
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -43254,7 +43993,8 @@ SWIGINTERN PyObject *_wrap_Message_hasValidStructure(PyObject *self, PyObject *a
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    SWIG_AsVal_int(swig_obj[1], &temp2);
+    if( !SWIG_IsOK(SWIG_AsVal_int(swig_obj[1], &temp2)) )
+    SWIG_exception_fail(SWIG_TypeError, "in method 'Message_hasValidStructure', argument 2 must be an int");
     arg2 = &temp2;
   }
   {
@@ -43278,8 +44018,15 @@ SWIGINTERN PyObject *_wrap_Message_hasValidStructure(PyObject *self, PyObject *a
     if( std::string("int &") == "int &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyLong_FromLong(*arg2) );    
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyLong_FromLong(*arg2);
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -43306,7 +44053,8 @@ SWIGINTERN PyObject *_wrap_Message_hasEmbeddedSOH(PyObject *self, PyObject *args
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    SWIG_AsVal_int(swig_obj[1], &temp2);
+    if( !SWIG_IsOK(SWIG_AsVal_int(swig_obj[1], &temp2)) )
+    SWIG_exception_fail(SWIG_TypeError, "in method 'Message_hasEmbeddedSOH', argument 2 must be an int");
     arg2 = &temp2;
   }
   {
@@ -43330,8 +44078,15 @@ SWIGINTERN PyObject *_wrap_Message_hasEmbeddedSOH(PyObject *self, PyObject *args
     if( std::string("int &") == "int &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyLong_FromLong(*arg2) );    
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyLong_FromLong(*arg2);
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -43358,7 +44113,8 @@ SWIGINTERN PyObject *_wrap_Message_hasOutOfOrderGroupMembers(PyObject *self, PyO
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    SWIG_AsVal_int(swig_obj[1], &temp2);
+    if( !SWIG_IsOK(SWIG_AsVal_int(swig_obj[1], &temp2)) )
+    SWIG_exception_fail(SWIG_TypeError, "in method 'Message_hasOutOfOrderGroupMembers', argument 2 must be an int");
     arg2 = &temp2;
   }
   {
@@ -43382,8 +44138,15 @@ SWIGINTERN PyObject *_wrap_Message_hasOutOfOrderGroupMembers(PyObject *self, PyO
     if( std::string("int &") == "int &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyLong_FromLong(*arg2) );    
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyLong_FromLong(*arg2);
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -44001,8 +44764,16 @@ SWIGINTERN PyObject *_wrap_Message_isAdminMsgType(PyObject *self, PyObject *args
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -44055,8 +44826,16 @@ SWIGINTERN PyObject *_wrap_Message_toApplVerID(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -44629,8 +45408,16 @@ SWIGINTERN PyObject *_wrap_Message_getSessionID__SWIG_0(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -44914,8 +45701,16 @@ SWIGINTERN PyObject *_wrap_identifyType(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -45917,8 +46712,16 @@ SWIGINTERN PyObject *_wrap_new_BeginString__SWIG_1(PyObject *self, Py_ssize_t no
     if( std::string("FIX::STRING const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -46076,8 +46879,16 @@ SWIGINTERN PyObject *_wrap_new_SenderCompID__SWIG_1(PyObject *self, Py_ssize_t n
     if( std::string("FIX::STRING const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -46235,8 +47046,16 @@ SWIGINTERN PyObject *_wrap_new_TargetCompID__SWIG_1(PyObject *self, Py_ssize_t n
     if( std::string("FIX::STRING const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -127745,32 +128564,64 @@ SWIGINTERN PyObject *_wrap_new_SessionID__SWIG_1(PyObject *self, Py_ssize_t nobj
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -127853,24 +128704,48 @@ SWIGINTERN PyObject *_wrap_new_SessionID__SWIG_2(PyObject *self, Py_ssize_t nobj
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -128262,8 +129137,16 @@ SWIGINTERN PyObject *_wrap_SessionID_fromString(PyObject *self, PyObject *args) 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -128291,7 +129174,12 @@ SWIGINTERN PyObject *_wrap_SessionID_toString__SWIG_1(PyObject *self, Py_ssize_t
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
-    temp2 = std::string((char*)PyUnicode_AsUTF8(swig_obj[1]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[1]);
+    if( !utf8 )
+    SWIG_fail;
+    temp2 = std::string(utf8);
     arg2 = &temp2;
   }
   {
@@ -128315,8 +129203,16 @@ SWIGINTERN PyObject *_wrap_SessionID_toString__SWIG_1(PyObject *self, Py_ssize_t
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   return resultobj;
@@ -128813,8 +129709,16 @@ SWIGINTERN PyObject *_wrap_new_Dictionary__SWIG_0(PyObject *self, Py_ssize_t nob
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -129055,8 +129959,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_getString__SWIG_0(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129115,8 +130027,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_getString__SWIG_1(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129226,8 +130146,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_getInt(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129287,8 +130215,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_getDouble(PyObject *self, PyObject *args) 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129348,8 +130284,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_getBool(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129409,8 +130353,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_getDay(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129482,16 +130434,32 @@ SWIGINTERN PyObject *_wrap_Dictionary_setString(PyObject *self, PyObject *args) 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129560,8 +130528,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_setInt(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129628,8 +130604,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_setDouble(PyObject *self, PyObject *args) 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129696,8 +130680,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_setBool(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129764,8 +130756,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_setDay(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -129825,8 +130825,16 @@ SWIGINTERN PyObject *_wrap_Dictionary_has(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -131749,8 +132757,16 @@ SWIGINTERN PyObject *_wrap_new_SessionSettings__SWIG_3(PyObject *self, Py_ssize_
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -131801,8 +132817,16 @@ SWIGINTERN PyObject *_wrap_new_SessionSettings__SWIG_4(PyObject *self, Py_ssize_
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -132563,8 +133587,16 @@ SWIGINTERN PyObject *_wrap_SessionSettings_setFromString(PyObject *self, PyObjec
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -132747,8 +133779,16 @@ SWIGINTERN PyObject *_wrap_Session_logout__SWIG_0(PyObject *self, Py_ssize_t nob
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -133373,8 +134413,16 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_0(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -133549,8 +134597,16 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_3(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res4)) delete arg4;
@@ -133700,24 +134756,48 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_5(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -133796,16 +134876,32 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_6(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -134111,8 +135207,16 @@ SWIGINTERN PyObject *_wrap_Session_lookupSession__SWIG_1(PyObject *self, Py_ssiz
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -134163,8 +135267,16 @@ SWIGINTERN PyObject *_wrap_Session_lookupSession__SWIG_2(PyObject *self, Py_ssiz
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -134728,8 +135840,16 @@ SWIGINTERN PyObject *_wrap_Session_setSenderDefaultApplVerID(PyObject *self, PyO
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -134827,8 +135947,16 @@ SWIGINTERN PyObject *_wrap_Session_setTargetDefaultApplVerID(PyObject *self, PyO
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -135928,8 +137056,16 @@ SWIGINTERN PyObject *_wrap_Session_supportsSubSecondTimestamps(PyObject *self, P
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -136412,8 +137548,16 @@ SWIGINTERN PyObject *_wrap_Session_inAllowedRemoteAddresses(PyObject *self, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -136631,8 +137775,16 @@ SWIGINTERN PyObject *_wrap_Session_next__SWIG_1(PyObject *self, Py_ssize_t nobjs
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -136701,8 +137853,16 @@ SWIGINTERN PyObject *_wrap_Session_next__SWIG_2(PyObject *self, Py_ssize_t nobjs
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -138023,8 +139183,16 @@ SWIGINTERN PyObject *_wrap_Log_onIncoming(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -138091,8 +139259,16 @@ SWIGINTERN PyObject *_wrap_Log_onOutgoing(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -138159,8 +139335,16 @@ SWIGINTERN PyObject *_wrap_Log_onEvent(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -138377,8 +139561,16 @@ SWIGINTERN PyObject *_wrap_NullLog_onIncoming(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -138437,8 +139629,16 @@ SWIGINTERN PyObject *_wrap_NullLog_onOutgoing(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -138497,8 +139697,16 @@ SWIGINTERN PyObject *_wrap_NullLog_onEvent(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -138894,8 +140102,16 @@ SWIGINTERN PyObject *_wrap_ScreenLog_onIncoming(PyObject *self, PyObject *args) 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -138954,8 +140170,16 @@ SWIGINTERN PyObject *_wrap_ScreenLog_onOutgoing(PyObject *self, PyObject *args) 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -139014,8 +140238,16 @@ SWIGINTERN PyObject *_wrap_ScreenLog_onEvent(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -139155,8 +140387,16 @@ SWIGINTERN PyObject *_wrap_new_FileLogFactory__SWIG_1(PyObject *self, Py_ssize_t
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -139220,16 +140460,32 @@ SWIGINTERN PyObject *_wrap_new_FileLogFactory__SWIG_2(PyObject *self, Py_ssize_t
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -139562,8 +140818,16 @@ SWIGINTERN PyObject *_wrap_new_FileLog__SWIG_0(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -139627,16 +140891,32 @@ SWIGINTERN PyObject *_wrap_new_FileLog__SWIG_1(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -139700,8 +140980,16 @@ SWIGINTERN PyObject *_wrap_new_FileLog__SWIG_2(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -139776,16 +141064,32 @@ SWIGINTERN PyObject *_wrap_new_FileLog__SWIG_3(PyObject *self, Py_ssize_t nobjs,
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -140028,8 +141332,16 @@ SWIGINTERN PyObject *_wrap_FileLog_onIncoming(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -140088,8 +141400,16 @@ SWIGINTERN PyObject *_wrap_FileLog_onOutgoing(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -140148,8 +141468,16 @@ SWIGINTERN PyObject *_wrap_FileLog_onEvent(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -140599,8 +141927,16 @@ SWIGINTERN PyObject *_wrap_MessageStore_set(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -141150,8 +142486,16 @@ SWIGINTERN PyObject *_wrap_MemoryStore_set(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -142063,8 +143407,16 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_set(PyObject *self, PyOb
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -142813,8 +144165,16 @@ SWIGINTERN PyObject *_wrap_new_FileStoreFactory__SWIG_1(PyObject *self, Py_ssize
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -143170,8 +144530,16 @@ SWIGINTERN PyObject *_wrap_FileStore_set(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -146365,8 +147733,16 @@ SWIGINTERN PyObject *_wrap_Acceptor_getSession__SWIG_0(PyObject *self, Py_ssize_
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -147268,8 +148644,16 @@ SWIGINTERN PyObject *_wrap_new_DataDictionary__SWIG_4(PyObject *self, Py_ssize_t
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -147320,8 +148704,16 @@ SWIGINTERN PyObject *_wrap_new_DataDictionary__SWIG_5(PyObject *self, Py_ssize_t
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -147497,8 +148889,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_readFromURL(PyObject *self, PyObject *
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -147771,8 +149171,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getMessageOrderedFields(PyObject *self
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -147831,8 +149239,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_setVersion(PyObject *self, PyObject *a
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -147983,8 +149399,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addFieldName(PyObject *self, PyObject 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -148021,7 +149445,12 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getFieldName(PyObject *self, PyObject 
   } 
   arg2 = static_cast< int >(val2);
   {
-    temp3 = std::string((char*)PyUnicode_AsUTF8(swig_obj[2]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[2]);
+    if( !utf8 )
+    SWIG_fail;
+    temp3 = std::string(utf8);
     arg3 = &temp3;
   }
   {
@@ -148045,8 +149474,24 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getFieldName(PyObject *self, PyObject 
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
+    }
+  }
+  {
+    if( !result )
+    {
+      Py_XDECREF(resultobj);
+      resultobj = Py_None;
+      Py_INCREF(Py_None);
     }
   }
   return resultobj;
@@ -148086,7 +149531,8 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getFieldTag(PyObject *self, PyObject *
     arg2 = ptr;
   }
   {
-    SWIG_AsVal_int(swig_obj[2], &temp3);
+    if( !SWIG_IsOK(SWIG_AsVal_int(swig_obj[2], &temp3)) )
+    SWIG_exception_fail(SWIG_TypeError, "in method 'DataDictionary_getFieldTag', argument 3 must be an int");
     arg3 = &temp3;
   }
   {
@@ -148110,19 +149556,42 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getFieldTag(PyObject *self, PyObject *
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("int &") == "int &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyLong_FromLong(*arg3) );    
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyLong_FromLong(*arg3);
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
+  {
+    if( !result )
+    {
+      Py_XDECREF(resultobj);
+      resultobj = Py_None;
+      Py_INCREF(Py_None);
+    }
+  }
   return resultobj;
 fail:
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -148199,16 +149668,32 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addValueName(PyObject *self, PyObject 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -148260,7 +149745,12 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getValueName(PyObject *self, PyObject 
     arg3 = ptr;
   }
   {
-    temp4 = std::string((char*)PyUnicode_AsUTF8(swig_obj[3]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[3]);
+    if( !utf8 )
+    SWIG_fail;
+    temp4 = std::string(utf8);
     arg4 = &temp4;
   }
   {
@@ -148284,19 +149774,43 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getValueName(PyObject *self, PyObject 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
+  {
+    if( !result )
+    {
+      Py_XDECREF(resultobj);
+      resultobj = Py_None;
+      Py_INCREF(Py_None);
+    }
+  }
   return resultobj;
 fail:
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -148343,7 +149857,12 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getNameValue(PyObject *self, PyObject 
     arg3 = ptr;
   }
   {
-    temp4 = std::string((char*)PyUnicode_AsUTF8(swig_obj[3]));
+    // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+    // constructing a std::string from its null aborted the process (#124).
+    const char *utf8 = PyUnicode_AsUTF8(swig_obj[3]);
+    if( !utf8 )
+    SWIG_fail;
+    temp4 = std::string(utf8);
     arg4 = &temp4;
   }
   {
@@ -148367,19 +149886,43 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getNameValue(PyObject *self, PyObject 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
+  {
+    if( !result )
+    {
+      Py_XDECREF(resultobj);
+      resultobj = Py_None;
+      Py_INCREF(Py_None);
+    }
+  }
   return resultobj;
 fail:
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -148481,8 +150024,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addMsgType(PyObject *self, PyObject *a
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -148542,8 +150093,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isMsgType(PyObject *self, PyObject *ar
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -148610,8 +150169,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addMsgField(PyObject *self, PyObject *
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -148679,8 +150246,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isMsgField(PyObject *self, PyObject *a
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -149055,8 +150630,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addRequiredField(PyObject *self, PyObj
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -149124,8 +150707,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isRequiredField(PyObject *self, PyObje
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -149192,8 +150783,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addFieldValue(PyObject *self, PyObject
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -149307,8 +150906,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isFieldValue(PyObject *self, PyObject 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -149394,8 +151001,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addGroup(PyObject *self, PyObject *arg
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -149463,8 +151078,16 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isGroup(PyObject *self, PyObject *args
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -149515,7 +151138,8 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getGroup(PyObject *self, PyObject *arg
   } 
   arg3 = static_cast< int >(val3);
   {
-    SWIG_AsVal_int(swig_obj[3], &temp4);
+    if( !SWIG_IsOK(SWIG_AsVal_int(swig_obj[3], &temp4)) )
+    SWIG_exception_fail(SWIG_TypeError, "in method 'DataDictionary_getGroup', argument 4 must be an int");
     arg4 = &temp4;
   }
   {
@@ -149544,16 +151168,31 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getGroup(PyObject *self, PyObject *arg
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("int &") == "int &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyLong_FromLong(*arg4) );    
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyLong_FromLong(*arg4);
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
@@ -149569,6 +151208,14 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getGroup(PyObject *self, PyObject *arg
   if (SWIG_IsNewObj(res2)) delete arg2;
   {
     delete[] arg5;
+  }
+  {
+    if( !result )
+    {
+      Py_XDECREF(resultobj);
+      resultobj = Py_None;
+      Py_INCREF(Py_None);
+    }
   }
   return resultobj;
 fail:
@@ -150453,8 +152100,16 @@ SWIGINTERN PyObject *_wrap_SSLSocketAcceptorBase_setPassword(PyObject *self, PyO
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -150884,8 +152539,16 @@ SWIGINTERN PyObject *_wrap_SSLSocketInitiatorBase_setPassword(PyObject *self, Py
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -151176,32 +152839,64 @@ SWIGINTERN PyObject *_wrap_new_DatabaseConnectionID(PyObject *self, PyObject *ar
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -151969,8 +153664,16 @@ SWIGINTERN PyObject *_wrap_new_MySQLQuery(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -152412,32 +154115,64 @@ SWIGINTERN PyObject *_wrap_new_MySQLConnection__SWIG_1(PyObject *self, Py_ssize_
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -152958,32 +154693,64 @@ SWIGINTERN PyObject *_wrap_new_MySQLStoreFactory__SWIG_2(PyObject *self, Py_ssiz
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -153427,32 +155194,64 @@ SWIGINTERN PyObject *_wrap_new_MySQLStore__SWIG_1(PyObject *self, Py_ssize_t nob
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg5->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg5->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg6->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg6->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -153637,8 +155436,16 @@ SWIGINTERN PyObject *_wrap_MySQLStore_set(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -154298,32 +156105,64 @@ SWIGINTERN PyObject *_wrap_new_MySQLLog__SWIG_2(PyObject *self, Py_ssize_t nobjs
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg5->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg5->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -154427,32 +156266,64 @@ SWIGINTERN PyObject *_wrap_new_MySQLLog__SWIG_3(PyObject *self, Py_ssize_t nobjs
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -154737,8 +156608,16 @@ SWIGINTERN PyObject *_wrap_MySQLLog_setIncomingTable(PyObject *self, PyObject *a
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -154797,8 +156676,16 @@ SWIGINTERN PyObject *_wrap_MySQLLog_setOutgoingTable(PyObject *self, PyObject *a
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -154857,8 +156744,16 @@ SWIGINTERN PyObject *_wrap_MySQLLog_setEventTable(PyObject *self, PyObject *args
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -154917,8 +156812,16 @@ SWIGINTERN PyObject *_wrap_MySQLLog_onIncoming(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -154977,8 +156880,16 @@ SWIGINTERN PyObject *_wrap_MySQLLog_onOutgoing(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -155037,8 +156948,16 @@ SWIGINTERN PyObject *_wrap_MySQLLog_onEvent(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -155257,32 +157176,64 @@ SWIGINTERN PyObject *_wrap_new_MySQLLogFactory__SWIG_1(PyObject *self, Py_ssize_
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -155659,8 +157610,16 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLQuery(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -156102,32 +158061,64 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLConnection__SWIG_1(PyObject *self, Py_s
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -156648,32 +158639,64 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLStoreFactory__SWIG_2(PyObject *self, Py
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -157117,32 +159140,64 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLStore__SWIG_1(PyObject *self, Py_ssize_
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg5->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg5->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg6->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg6->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -157327,8 +159382,16 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_set(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;
@@ -157988,32 +160051,64 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLog__SWIG_2(PyObject *self, Py_ssize_t 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg5->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg5->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -158117,32 +160212,64 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLog__SWIG_3(PyObject *self, Py_ssize_t 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -158427,8 +160554,16 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_setIncomingTable(PyObject *self, PyObje
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -158487,8 +160622,16 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_setOutgoingTable(PyObject *self, PyObje
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -158547,8 +160690,16 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_setEventTable(PyObject *self, PyObject 
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -158607,8 +160758,16 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_onIncoming(PyObject *self, PyObject *ar
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -158667,8 +160826,16 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_onOutgoing(PyObject *self, PyObject *ar
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -158727,8 +160894,16 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_onEvent(PyObject *self, PyObject *args)
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -158947,32 +161122,64 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLogFactory__SWIG_1(PyObject *self, Py_s
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg1->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg2->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg4->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg4->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -160075,8 +162282,16 @@ SWIGINTERN PyObject *_wrap_NullStore_set(PyObject *self, PyObject *args) {
     if( std::string("std::string const &") == "std::string &" )
     {
       if( !PyDict_Check(resultobj) )
-      resultobj = PyDict_New();
-      PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString(arg3->c_str()) );
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
     }
   }
   if (SWIG_IsNewObj(res3)) delete arg3;

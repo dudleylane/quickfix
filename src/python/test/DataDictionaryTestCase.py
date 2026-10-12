@@ -103,9 +103,9 @@ class DataDictionaryTestCase(unittest.TestCase):
         # A group the message type does not have leaves the target alone; the
         # wrapper copied from an uninitialised pointer and crashed (#121).
         e = fix.DataDictionary()
-        self.object.getGroup( "A", 999, delim, e )
+        self.assertIsNone( self.object.getGroup( "A", 999, delim, e ) )
         self.assertFalse( e.isMsgType( "1" ) )
-        self.object.getGroup( "B", 100, delim, e )
+        self.assertIsNone( self.object.getGroup( "B", 100, delim, e ) )
         self.assertFalse( e.isMsgType( "1" ) )
 
     def test_addFieldName(self):
@@ -122,6 +122,14 @@ class DataDictionaryTestCase(unittest.TestCase):
         self.assertEqual( "BeginString", self.object.getFieldName(8, "")[0] )
         self.assertEqual( 8, self.object.getFieldTag("BeginString", 0)[0] )
 
+        # A miss is None, not a dict that looks like a hit (#124).
+        self.assertIsNone( self.object.getFieldName(999, "") )
+        self.assertIsNone( self.object.getFieldTag("Nope", 0) )
+        # A wrong argument type is a TypeError; None used to abort the process.
+        self.assertRaises( TypeError, self.object.getFieldName, 1, None )
+        self.assertRaises( TypeError, self.object.getFieldName, 1, b"x" )
+        self.assertRaises( TypeError, self.object.getFieldTag, "Account", None )
+
     def test_addValueName(self):
         self.object.setVersion( "FIX.4.2" )
 
@@ -132,6 +140,11 @@ class DataDictionaryTestCase(unittest.TestCase):
         self.assertEqual( "VALUE_12_0", self.object.getValueName(12, "0", "")[0] )
         self.assertEqual( "VALUE_12_B", self.object.getValueName(12, "B", "")[0] )
         self.assertEqual( "VALUE_23_BOO", self.object.getValueName(23, "BOO", "")[0] )
+
+        self.assertIsNone( self.object.getValueName(12, "Z", "") )
+        self.assertIsNone( self.object.getValueName(999, "0", "") )
+        self.assertEqual( "0", self.object.getNameValue(12, "VALUE_12_0", "")[0] )
+        self.assertIsNone( self.object.getNameValue(12, "NO_SUCH_NAME", "") )
 
     def test_checkValidTagNumber(self):
         self.object.setVersion( fix.BeginString_FIX40 )

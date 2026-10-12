@@ -65,7 +65,12 @@
 }
 
 %typemap(in) std::string& (std::string temp) {
-  temp = std::string((char*)PyUnicode_AsUTF8($input));
+  // PyUnicode_AsUTF8 fails, with a TypeError set, for anything but a str;
+  // constructing a std::string from its null aborted the process (#124).
+  const char *utf8 = PyUnicode_AsUTF8($input);
+  if( !utf8 )
+    SWIG_fail;
+  temp = std::string(utf8);
   $1 = &temp;
 }
 
@@ -73,13 +78,22 @@
   if( std::string("$1_type") == "std::string &" )
   {
     if( !PyDict_Check(resultobj) )
+    {
+      Py_XDECREF(resultobj);
       resultobj = PyDict_New();
-    PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyUnicode_FromString($1->c_str()) );
+    }
+    // PyDict_SetItem takes its own references to both.
+    PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+    PyObject *value = PyUnicode_FromString($1->c_str());
+    PyDict_SetItem( resultobj, key, value );
+    Py_XDECREF(key);
+    Py_XDECREF(value);
   }
 }
 
 %typemap(in) int& (int temp) {
-  SWIG_AsVal_int($input, &temp);
+  if( !SWIG_IsOK(SWIG_AsVal_int($input, &temp)) )
+    SWIG_exception_fail(SWIG_TypeError, "in method '$symname', argument $argnum must be an int");
   $1 = &temp;
 }
 
@@ -87,8 +101,29 @@
   if( std::string("$1_type") == "int &" )
   {
     if( !PyDict_Check(resultobj) )
+    {
+      Py_XDECREF(resultobj);
       resultobj = PyDict_New();
-    PyDict_SetItem( resultobj, PyLong_FromLong(PyDict_Size(resultobj)), PyLong_FromLong(*$1) );    
+    }
+    PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+    PyObject *value = PyLong_FromLong(*$1);
+    PyDict_SetItem( resultobj, key, value );
+    Py_XDECREF(key);
+    Py_XDECREF(value);
+  }
+}
+
+// A DataDictionary lookup that finds nothing returns None. The out-parameter
+// typemaps above replace the bool with a dict of the outputs, so a miss looked
+// like a hit: getFieldName(999, "") was {0: ''} (#124). A hit keeps the dict.
+%typemap(ret) bool FIX::DataDictionary::getFieldName, bool FIX::DataDictionary::getFieldTag,
+              bool FIX::DataDictionary::getValueName, bool FIX::DataDictionary::getNameValue,
+              bool FIX::DataDictionary::getGroup {
+  if( !$1 )
+  {
+    Py_XDECREF($result);
+    $result = Py_None;
+    Py_INCREF(Py_None);
   }
 }
 
