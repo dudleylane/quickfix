@@ -3364,3 +3364,63 @@ TEST_CASE("ApplicationLockOrderTests")
         CHECK(3 == syncResponder.wire().size());
     }
 }
+
+// What these settings do, not only that they read back (#131).
+TEST_CASE_METHOD(acceptorFixture, "SessionSettingBehaviourTests")
+{
+    object->next(createLogon("ISLD", "TW", 1), now);
+    REQUIRE(object->isLoggedOn());
+
+    SECTION("resetOnLogoutResetsBothSequenceNumbers")
+    {
+        object->setResetOnLogout(true);
+        object->next(createHeartbeat("ISLD", "TW", 2), now);
+        object->next(createLogout("ISLD", "TW", 3), now);
+        CHECK(1 == object->getExpectedSenderNum());
+        CHECK(1 == object->getExpectedTargetNum());
+    }
+
+    SECTION("withoutResetOnLogoutTheNumbersCarryOn")
+    {
+        object->setResetOnLogout(false);
+        object->next(createHeartbeat("ISLD", "TW", 2), now);
+        object->next(createLogout("ISLD", "TW", 3), now);
+        CHECK(4 == object->getExpectedTargetNum());
+        CHECK(1 < object->getExpectedSenderNum());
+    }
+
+    SECTION("aSecondGapSendsNoSecondResendRequestByDefault")
+    {
+        object->setSendRedundantResendRequests(false);
+        object->next(createHeartbeat("ISLD", "TW", 5), now);
+        CHECK(1 == toResendRequest);
+        object->next(createHeartbeat("ISLD", "TW", 6), now);
+        CHECK(1 == toResendRequest);
+    }
+
+    SECTION("sendRedundantResendRequestsSendsOnePerGap")
+    {
+        object->setSendRedundantResendRequests(true);
+        object->next(createHeartbeat("ISLD", "TW", 5), now);
+        CHECK(1 == toResendRequest);
+        object->next(createHeartbeat("ISLD", "TW", 6), now);
+        CHECK(2 == toResendRequest);
+    }
+
+    SECTION("aMessageFromTheWrongCompIDIsRefused")
+    {
+        object->setCheckCompId(true);
+        object->next(createHeartbeat("NOTISLD", "TW", 2), now);
+        CHECK(0 == fromHeartbeat);
+        CHECK(1 == toReject);
+    }
+
+    SECTION("checkCompIDOffAcceptsTheWrongCompID")
+    {
+        object->setCheckCompId(false);
+        object->next(createHeartbeat("NOTISLD", "TW", 2), now);
+        CHECK(1 == fromHeartbeat);
+        CHECK(0 == toReject);
+        CHECK(3 == object->getExpectedTargetNum());
+    }
+}

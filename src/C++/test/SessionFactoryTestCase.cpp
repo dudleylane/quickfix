@@ -28,6 +28,10 @@
 
 #include "catch_amalgamated.hpp"
 
+#include <cstdlib>
+#include <ctime>
+#include <string>
+
 using namespace FIX;
 
 TEST_CASE("SessionFactoryTests")
@@ -181,4 +185,55 @@ TEST_CASE("SessionFactoryDataDictionaryTests")
         object.destroy(plain);
         object.destroy(ordered);
     }
+}
+
+// UseLocalTime decides whether StartTime and EndTime are local times or UTC
+// (#131). Under a zone ten hours from UTC, a window around the local time now is
+// open only when the times are read as local.
+TEST_CASE("SessionFactoryUseLocalTimeTests")
+{
+    const char *savedTZ = std::getenv("TZ");
+    const std::string saved = savedTZ ? savedTZ : "";
+    ::setenv("TZ", "UTC-10", 1);
+    ::tzset();
+
+    auto localTime = [](std::time_t when)
+    {
+        std::tm parts{};
+        ::localtime_r(&when, &parts);
+        char text[16];
+        std::strftime(text, sizeof(text), "%H:%M:%S", &parts);
+        return std::string(text);
+    };
+    const std::time_t now = std::time(nullptr);
+
+    auto inSession = [&](const std::string &useLocalTime)
+    {
+        NullApplication application;
+        MemoryStoreFactory messageStoreFactory;
+        SessionFactory object(application, messageStoreFactory, 0);
+        Dictionary settings;
+        settings.setString(CONNECTION_TYPE, "acceptor");
+        settings.setString(USE_DATA_DICTIONARY, "N");
+        settings.setString(START_TIME, localTime(now - 1800));
+        settings.setString(END_TIME, localTime(now + 1800));
+        settings.setString(USE_LOCAL_TIME, useLocalTime);
+        Session *session = object.create(SessionID("FIX.4.2", "LOCAL" + useLocalTime, "TARGET"), settings);
+        const bool open = session->isSessionTime(UtcTimeStamp::now());
+        object.destroy(session);
+        return open;
+    };
+
+    SECTION("localTimesWithUseLocalTime") { CHECK(inSession("Y")); }
+    SECTION("utcTimesWithoutIt") { CHECK_FALSE(inSession("N")); }
+
+    if (savedTZ)
+    {
+        ::setenv("TZ", saved.c_str(), 1);
+    }
+    else
+    {
+        ::unsetenv("TZ");
+    }
+    ::tzset();
 }
