@@ -11,6 +11,7 @@
   {
     SWIG_fail;
   }
+  redeliverKill();
 }
 %enddef
 
@@ -35,6 +36,7 @@
   {
     SWIG_fail;
   }
+  redeliverKill();
 }
 %enddef
 
@@ -55,6 +57,7 @@ QUICKFIX_RUBY_EXCEPTION
   {
     SWIG_fail;
   }
+  redeliverKill();
 }
 
 %exception FIX::Acceptor::block
@@ -70,6 +73,7 @@ QUICKFIX_RUBY_EXCEPTION
   {
     SWIG_fail;
   }
+  redeliverKill();
 }
 
 // An Application, LogFactory or Log implemented in Ruby is handed to the engine
@@ -188,6 +192,55 @@ VALUE withoutGvl(std::function<VALUE()> call, std::function<void()> unblock = {}
     std::rethrow_exception(w.error);
   }
   return w.result;
+}
+
+// Thread#kill (and Thread#exit) reaches a callback's rb_protect not as an
+// exception but as Ruby's fatal tag, and director:except used to take it for an
+// error and end the process with status 1 (#147). The kill may not unwind the
+// engine's C++ frames either, so the callback returns as if it had finished,
+// with the kill still in $!: the transport this thread runs is stopped, as
+// Ruby's unblock function would have stopped it, no further callback runs on the
+// thread, and the kill goes on once the thread is out of the engine -- where the
+// wrapper of the method Ruby called would raise (QUICKFIX_RUBY_EXCEPTION), or
+// after the dispatcher's callback. Ruby marks a thread when a kill first lands
+// and ignores a second Thread#kill, and unwinding a killed thread needs $! to
+// hold the tag, which rb_set_errinfo refuses to set; so the kill is never
+// cleared, and goes on with rb_jump_tag.
+namespace
+{
+// vm_core.h's TAG_FATAL, the tag Ruby ends a killed thread with.
+const int killTag = 8;
+thread_local bool t_deferredKill = false;
+}
+
+bool deferKill(VALUE error)
+{
+  if (!FIXNUM_P(error) || FIX2INT(error) != killTag)
+  {
+    return false;
+  }
+  t_deferredKill = true;
+  if (t_withoutGvl && !t_withoutGvl->unblocked && *t_withoutGvl->unblock)
+  {
+    t_withoutGvl->unblocked = true;
+    (*t_withoutGvl->unblock)();
+  }
+  return true;
+}
+
+// With the GVL, where a longjmp leaves no C++ frame that needs unwinding.
+void redeliverKill()
+{
+  if (!t_deferredKill)
+  {
+    return;
+  }
+  t_deferredKill = false;
+  if (rb_errinfo() != INT2FIX(killTag))
+  {
+    rb_raise(rb_eThreadError, "quickfix: a Thread#kill that landed in a callback was lost before it could be delivered");
+  }
+  rb_jump_tag(killTag);
 }
 
 // block() without the GVL. When Ruby asks the thread to stop, a thread of its
@@ -357,6 +410,7 @@ VALUE dispatcherLoop(VALUE)
         dispatch->error = std::current_exception();
       }
       finishDispatch(dispatch);
+      redeliverKill();
     }
   }
   return Qnil;
@@ -461,6 +515,10 @@ void dispatch(const std::function<void()> &callback)
 // hands the call to the dispatcher.
 void withGvl(const std::function<void()> &callback)
 {
+  if (t_deferredKill)
+  {
+    return;
+  }
   if (ruby_thread_has_gvl_p())
   {
     callback();
@@ -710,45 +768,58 @@ private:
 %define QUICKFIX_RUBY_EXIT_ON_ERROR(method)
 %feature("director:except") method {
   if( $error != 0 ) {
+    if( deferKill( $error ) ) return Qnil;
     exitOnCallbackError( $error );
   }
 }
 %enddef
+
+// create has a Log to return and none to make, so a kill there still ends the
+// process.
+%feature("director:except") FIX::LogFactory::create {
+  if( $error != 0 ) {
+    exitOnCallbackError( $error );
+  }
+}
 
 QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::Log::clear)
 QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::Log::backup)
 QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::Log::onIncoming)
 QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::Log::onOutgoing)
 QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::Log::onEvent)
-QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::LogFactory::create)
 QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::LogFactory::destroy)
 
 %feature("director:except") FIX::Application::onCreate {
   if( $error != 0 ) {
+    if( deferKill( $error ) ) return Qnil;
     exitOnCallbackError( $error );
   }
 }
 
 %feature("director:except") FIX::Application::onLogon {
   if( $error != 0 ) {
+    if( deferKill( $error ) ) return Qnil;
     exitOnCallbackError( $error );
   }
 }
 
 %feature("director:except") FIX::Application::onLogout {
   if( $error != 0 ) {
+    if( deferKill( $error ) ) return Qnil;
     exitOnCallbackError( $error );
   }
 }
 
 %feature("director:except") FIX::Application::toAdmin {
   if( $error != 0 ) {
+    if( deferKill( $error ) ) return Qnil;
     exitOnCallbackError( $error );
   }
 }
 
 %feature("director:except") FIX::Application::toApp {
   if( $error != 0 ) {
+    if( deferKill( $error ) ) return Qnil;
     void* result;
 
     if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__DoNotSend, 0 ) != -1 ) {
@@ -762,6 +833,7 @@ QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::LogFactory::destroy)
 
 %feature("director:except") FIX::Application::fromAdmin {
   if( $error != 0 ) {
+    if( deferKill( $error ) ) return Qnil;
     void* result;
 
     if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__FieldNotFound, 0 ) != -1 ) {
@@ -784,6 +856,7 @@ QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::LogFactory::destroy)
 
 %feature("director:except") FIX::Application::fromApp {
   if( $error != 0 ) {
+    if( deferKill( $error ) ) return Qnil;
     void* result;
 
     if( SWIG_ConvertPtr($error, &result, SWIGTYPE_p_FIX__FieldNotFound, 0 ) != -1 ) {

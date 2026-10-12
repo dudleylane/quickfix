@@ -2635,6 +2635,55 @@ VALUE withoutGvl(std::function<VALUE()> call, std::function<void()> unblock = {}
   return w.result;
 }
 
+// Thread#kill (and Thread#exit) reaches a callback's rb_protect not as an
+// exception but as Ruby's fatal tag, and director:except used to take it for an
+// error and end the process with status 1 (#147). The kill may not unwind the
+// engine's C++ frames either, so the callback returns as if it had finished,
+// with the kill still in $!: the transport this thread runs is stopped, as
+// Ruby's unblock function would have stopped it, no further callback runs on the
+// thread, and the kill goes on once the thread is out of the engine -- where the
+// wrapper of the method Ruby called would raise (QUICKFIX_RUBY_EXCEPTION), or
+// after the dispatcher's callback. Ruby marks a thread when a kill first lands
+// and ignores a second Thread#kill, and unwinding a killed thread needs $! to
+// hold the tag, which rb_set_errinfo refuses to set; so the kill is never
+// cleared, and goes on with rb_jump_tag.
+namespace
+{
+// vm_core.h's TAG_FATAL, the tag Ruby ends a killed thread with.
+const int killTag = 8;
+thread_local bool t_deferredKill = false;
+}
+
+bool deferKill(VALUE error)
+{
+  if (!FIXNUM_P(error) || FIX2INT(error) != killTag)
+  {
+    return false;
+  }
+  t_deferredKill = true;
+  if (t_withoutGvl && !t_withoutGvl->unblocked && *t_withoutGvl->unblock)
+  {
+    t_withoutGvl->unblocked = true;
+    (*t_withoutGvl->unblock)();
+  }
+  return true;
+}
+
+// With the GVL, where a longjmp leaves no C++ frame that needs unwinding.
+void redeliverKill()
+{
+  if (!t_deferredKill)
+  {
+    return;
+  }
+  t_deferredKill = false;
+  if (rb_errinfo() != INT2FIX(killTag))
+  {
+    rb_raise(rb_eThreadError, "quickfix: a Thread#kill that landed in a callback was lost before it could be delivered");
+  }
+  rb_jump_tag(killTag);
+}
+
 // block() without the GVL. When Ruby asks the thread to stop, a thread of its
 // own calls stop(true) -- the unblock function may not block, and stop() takes
 // engine locks -- and block() returns once the transport has stopped. That
@@ -2802,6 +2851,7 @@ VALUE dispatcherLoop(VALUE)
         dispatch->error = std::current_exception();
       }
       finishDispatch(dispatch);
+      redeliverKill();
     }
   }
   return Qnil;
@@ -2906,6 +2956,10 @@ void dispatch(const std::function<void()> &callback)
 // hands the call to the dispatcher.
 void withGvl(const std::function<void()> &callback)
 {
+  if (t_deferredKill)
+  {
+    return;
+  }
   if (ruby_thread_has_gvl_p())
   {
     callback();
@@ -6092,6 +6146,8 @@ bool tryPythonException(std::function<bool()> const& function)
 template<typename Exception>
 void raiseRubyException(Exception const& e, swig_type_info* swigType)
 {
+  // A kill that landed in a callback outranks what the engine threw (#147).
+  redeliverKill();
   rb_exc_raise(SWIG_Ruby_ExceptionType(swigType, SWIG_NewPointerObj((new Exception(static_cast<const Exception&>(e))),swigType,SWIG_POINTER_OWN)));
 }
 
@@ -6223,11 +6279,11 @@ VALUE tryRubyException(std::function<VALUE()> const& function)
   }
   catch(std::exception const& e) 
   {
-    SWIG_Error(SWIG_RuntimeError, e.what()); return Qnil;
+    redeliverKill(); SWIG_Error(SWIG_RuntimeError, e.what()); return Qnil;
   }
   catch(...)
   {
-    SWIG_Error(SWIG_RuntimeError, "unknown exception"); return Qnil;
+    redeliverKill(); SWIG_Error(SWIG_RuntimeError, "unknown exception"); return Qnil;
   }
 }
 #endif
@@ -6787,6 +6843,7 @@ VALUE LogFactory_destroy_rescue(VALUE args, VALUE error) {
   LogFactory_destroy_call_depth--;
   if (LogFactory_destroy_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
   }
@@ -6809,6 +6866,7 @@ VALUE Log_clear_rescue(VALUE args, VALUE error) {
   Log_clear_call_depth--;
   if (Log_clear_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
   }
@@ -6831,6 +6889,7 @@ VALUE Log_backup_rescue(VALUE args, VALUE error) {
   Log_backup_call_depth--;
   if (Log_backup_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
   }
@@ -6853,6 +6912,7 @@ VALUE Log_onIncoming_rescue(VALUE args, VALUE error) {
   Log_onIncoming_call_depth--;
   if (Log_onIncoming_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
   }
@@ -6875,6 +6935,7 @@ VALUE Log_onOutgoing_rescue(VALUE args, VALUE error) {
   Log_onOutgoing_call_depth--;
   if (Log_onOutgoing_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
   }
@@ -6897,6 +6958,7 @@ VALUE Log_onEvent_rescue(VALUE args, VALUE error) {
   Log_onEvent_call_depth--;
   if (Log_onEvent_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
   }
@@ -6919,6 +6981,7 @@ VALUE Application_onCreate_rescue(VALUE args, VALUE error) {
   Application_onCreate_call_depth--;
   if (Application_onCreate_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
   }
@@ -6941,6 +7004,7 @@ VALUE Application_onLogon_rescue(VALUE args, VALUE error) {
   Application_onLogon_call_depth--;
   if (Application_onLogon_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
   }
@@ -6963,6 +7027,7 @@ VALUE Application_onLogout_rescue(VALUE args, VALUE error) {
   Application_onLogout_call_depth--;
   if (Application_onLogout_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
   }
@@ -6985,6 +7050,7 @@ VALUE Application_toAdmin_rescue(VALUE args, VALUE error) {
   Application_toAdmin_call_depth--;
   if (Application_toAdmin_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
   }
@@ -7007,6 +7073,7 @@ VALUE Application_toApp_rescue(VALUE args, VALUE error) {
   Application_toApp_call_depth--;
   if (Application_toApp_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       void* result;
       
       if( SWIG_ConvertPtr(error, &result, SWIGTYPE_p_FIX__DoNotSend, 0 ) != -1 ) {
@@ -7036,6 +7103,7 @@ VALUE Application_fromAdmin_rescue(VALUE args, VALUE error) {
   Application_fromAdmin_call_depth--;
   if (Application_fromAdmin_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       void* result;
       
       if( SWIG_ConvertPtr(error, &result, SWIGTYPE_p_FIX__FieldNotFound, 0 ) != -1 ) {
@@ -7074,6 +7142,7 @@ VALUE Application_fromApp_rescue(VALUE args, VALUE error) {
   Application_fromApp_call_depth--;
   if (Application_fromApp_call_depth == 0) {
     if( error != 0 ) {
+      if( deferKill( error ) ) return Qnil;
       void* result;
       
       if( SWIG_ConvertPtr(error, &result, SWIGTYPE_p_FIX__FieldNotFound, 0 ) != -1 ) {
@@ -7501,6 +7570,7 @@ _wrap_GC_VALUE_inspect(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -7539,6 +7609,7 @@ _wrap_GC_VALUE_to_s(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -7590,6 +7661,7 @@ _wrap_ConstIterator_value(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -7633,6 +7705,7 @@ _wrap_ConstIterator_dup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__ConstIterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -7676,6 +7749,7 @@ _wrap_ConstIterator_inspect(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -7719,6 +7793,7 @@ _wrap_ConstIterator_to_s(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -7762,6 +7837,7 @@ _wrap_ConstIterator_next__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__ConstIterator, 0 |  0 );
   return vresult;
@@ -7805,6 +7881,7 @@ _wrap_ConstIterator_next__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__ConstIterator, 0 |  0 );
   return vresult;
@@ -7893,6 +7970,7 @@ _wrap_ConstIterator_previous__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__ConstIterator, 0 |  0 );
   return vresult;
@@ -7936,6 +8014,7 @@ _wrap_ConstIterator_previous__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__ConstIterator, 0 |  0 );
   return vresult;
@@ -8035,6 +8114,7 @@ _wrap_ConstIterator___eq__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -8094,6 +8174,7 @@ _wrap_ConstIterator___add__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__ConstIterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -8154,6 +8235,7 @@ _wrap_ConstIterator___sub____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__ConstIterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -8200,6 +8282,7 @@ _wrap_ConstIterator___sub____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_ptrdiff_t(static_cast< ptrdiff_t >(result));
   return vresult;
@@ -8291,6 +8374,7 @@ _wrap_Iterator_valuee___(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -8334,6 +8418,7 @@ _wrap_Iterator_dup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__Iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -8377,6 +8462,7 @@ _wrap_Iterator_next__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__Iterator, 0 |  0 );
   return vresult;
@@ -8420,6 +8506,7 @@ _wrap_Iterator_next__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__Iterator, 0 |  0 );
   return vresult;
@@ -8508,6 +8595,7 @@ _wrap_Iterator_previous__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__Iterator, 0 |  0 );
   return vresult;
@@ -8551,6 +8639,7 @@ _wrap_Iterator_previous__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__Iterator, 0 |  0 );
   return vresult;
@@ -8639,6 +8728,7 @@ _wrap_Iterator_inspect(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -8682,6 +8772,7 @@ _wrap_Iterator_to_s(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -8736,6 +8827,7 @@ _wrap_Iterator___eq__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -8795,6 +8887,7 @@ _wrap_Iterator___add__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__Iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -8855,6 +8948,7 @@ _wrap_Iterator___sub____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_swig__Iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -8901,6 +8995,7 @@ _wrap_Iterator___sub____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_ptrdiff_t(static_cast< ptrdiff_t >(result));
   return vresult;
@@ -9002,6 +9097,7 @@ _wrap_VectorString_dup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__vectorT_std__string_t, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -9045,6 +9141,7 @@ _wrap_VectorString_inspect(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -9088,6 +9185,7 @@ _wrap_VectorString_to_a(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -9131,6 +9229,7 @@ _wrap_VectorString_to_s(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -9194,6 +9293,7 @@ _wrap_VectorString_slice(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -9237,6 +9337,7 @@ _wrap_VectorString_each(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   return vresult;
@@ -9285,6 +9386,7 @@ _wrap_VectorString___delete2__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   {
@@ -9337,6 +9439,7 @@ _wrap_VectorString_select(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__vectorT_std__string_t, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -9388,6 +9491,7 @@ _wrap_VectorString_delete_at(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -9439,6 +9543,7 @@ _wrap_VectorString_at(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -9504,6 +9609,7 @@ _wrap_VectorString___getitem____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -9547,6 +9653,7 @@ _wrap_VectorString___getitem____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -9588,6 +9695,7 @@ _wrap_VectorString___getitem____SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -9726,6 +9834,7 @@ _wrap_VectorString___setitem____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   {
@@ -9803,6 +9912,7 @@ _wrap_VectorString___setitem____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   if (SWIG_IsNewObj(res4)) delete arg4;
@@ -9911,6 +10021,7 @@ _wrap_VectorString_rejectN___(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   return vresult;
@@ -9954,6 +10065,7 @@ _wrap_VectorString_pop(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -10010,6 +10122,7 @@ _wrap_VectorString_push(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   {
@@ -10062,6 +10175,7 @@ _wrap_VectorString_reject(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__vectorT_std__string_t, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -10105,6 +10219,7 @@ _wrap_VectorString_shift(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -10165,6 +10280,7 @@ _wrap_VectorString_insert__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   return vresult;
@@ -10215,6 +10331,7 @@ _wrap_VectorString_unshift(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   return vresult;
@@ -10243,6 +10360,7 @@ _wrap_new_VectorString__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -10283,6 +10401,7 @@ _wrap_new_VectorString__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
   return self;
@@ -10327,6 +10446,7 @@ _wrap_VectorString_emptyq___(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -10370,6 +10490,7 @@ _wrap_VectorString_size(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -10414,6 +10535,7 @@ _wrap_VectorString_swap(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -10456,6 +10578,7 @@ _wrap_VectorString_begin(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(swig::make_nonconst_iterator(static_cast< const std::vector< std::string >::iterator & >(result),
       self),
@@ -10501,6 +10624,7 @@ _wrap_VectorString_end(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(swig::make_nonconst_iterator(static_cast< const std::vector< std::string >::iterator & >(result),
       self),
@@ -10546,6 +10670,7 @@ _wrap_VectorString_rbegin(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(swig::make_nonconst_iterator(static_cast< const std::vector< std::string >::reverse_iterator & >(result),
       self),
@@ -10591,6 +10716,7 @@ _wrap_VectorString_rend(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(swig::make_nonconst_iterator(static_cast< const std::vector< std::string >::reverse_iterator & >(result),
       self),
@@ -10634,6 +10760,7 @@ _wrap_VectorString_clear(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -10668,6 +10795,7 @@ _wrap_VectorString_get_allocator(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new std::vector< std::string >::allocator_type(result)), SWIGTYPE_p_std__allocatorT_std__string_t, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -10704,6 +10832,7 @@ _wrap_new_VectorString__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -10753,6 +10882,7 @@ _wrap_VectorString_resize__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -10810,6 +10940,7 @@ _wrap_VectorString_erase__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(swig::make_nonconst_iterator(static_cast< const std::vector< std::string >::iterator & >(result),
       self),
@@ -10875,6 +11006,7 @@ _wrap_VectorString_erase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(swig::make_nonconst_iterator(static_cast< const std::vector< std::string >::iterator & >(result),
       self),
@@ -10993,6 +11125,7 @@ _wrap_new_VectorString__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" ) 	 
@@ -11101,6 +11234,7 @@ _wrap_VectorString_front(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -11144,6 +11278,7 @@ _wrap_VectorString_back(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -11207,6 +11342,7 @@ _wrap_VectorString_assign(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" ) 	 
@@ -11279,6 +11415,7 @@ _wrap_VectorString_resize__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" ) 	 
@@ -11412,6 +11549,7 @@ _wrap_VectorString_insert__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(swig::make_nonconst_iterator(static_cast< const std::vector< std::string >::iterator & >(result),
       self),
@@ -11492,6 +11630,7 @@ _wrap_VectorString_insert__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::vector< std::string >::value_type const &") == "std::string &" ) 	 
@@ -11634,6 +11773,7 @@ _wrap_VectorString_reserve(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -11676,6 +11816,7 @@ _wrap_VectorString_capacity(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -11711,6 +11852,7 @@ _wrap_VectorString_map_bang(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   return vresult;
@@ -11767,6 +11909,7 @@ _wrap_VectorString___delete__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   {
@@ -11835,6 +11978,7 @@ _wrap_new_IntArray(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -11894,6 +12038,7 @@ _wrap_IntArray___getitem__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -11951,6 +12096,7 @@ _wrap_IntArray___setitem__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -11985,6 +12131,7 @@ _wrap_IntArray_cast(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_int, 0 |  0 );
   return vresult;
@@ -12020,6 +12167,7 @@ _wrap_IntArray_frompointer(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_IntArray, 0 |  0 );
   return vresult;
@@ -12061,6 +12209,7 @@ _wrap_new_SessionIDSet__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -12103,6 +12252,7 @@ _wrap_SessionIDSet_dup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__setT_FIX__SessionID_t, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -12146,6 +12296,7 @@ _wrap_SessionIDSet_inspect(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -12189,6 +12340,7 @@ _wrap_SessionIDSet_to_a(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -12232,6 +12384,7 @@ _wrap_SessionIDSet_to_s(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -12295,6 +12448,7 @@ _wrap_SessionIDSet_slice(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -12338,6 +12492,7 @@ _wrap_SessionIDSet_each(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   return vresult;
@@ -12384,6 +12539,7 @@ _wrap_SessionIDSet___delete2__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -12427,6 +12583,7 @@ _wrap_SessionIDSet_select(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__setT_FIX__SessionID_t, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -12478,6 +12635,7 @@ _wrap_SessionIDSet_delete_at(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = result;
   return vresult;
@@ -12521,6 +12679,7 @@ _wrap_SessionIDSet_rejectN___(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   return vresult;
@@ -12575,6 +12734,7 @@ _wrap_SessionIDSet_push(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new std::set< FIX::SessionID >::value_type(result)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -12621,6 +12781,7 @@ _wrap_SessionIDSet_includeq___(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -12676,6 +12837,7 @@ _wrap_SessionIDSet___getitem__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new std::set< FIX::SessionID >::value_type(result)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -12704,6 +12866,7 @@ _wrap_new_SessionIDSet__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -12759,6 +12922,7 @@ _wrap_new_SessionIDSet__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
   return self;
@@ -12844,6 +13008,7 @@ _wrap_SessionIDSet_emptyq___(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -12887,6 +13052,7 @@ _wrap_SessionIDSet_size(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -12928,6 +13094,7 @@ _wrap_SessionIDSet_clear(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -12971,6 +13138,7 @@ _wrap_SessionIDSet_swap(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -13026,6 +13194,7 @@ _wrap_SessionIDSet_erase__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -13072,6 +13241,7 @@ _wrap_SessionIDSet_count(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -13115,6 +13285,7 @@ _wrap_SessionIDSet_begin(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((swig::make_set_nonconst_iterator<std::set< FIX::SessionID >::iterator>(result, self)), swig::Iterator::descriptor(), SWIG_POINTER_OWN);
   return vresult;
@@ -13158,6 +13329,7 @@ _wrap_SessionIDSet_end(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((swig::make_set_nonconst_iterator<std::set< FIX::SessionID >::iterator>(result, self)), swig::Iterator::descriptor(), SWIG_POINTER_OWN);
   return vresult;
@@ -13201,6 +13373,7 @@ _wrap_SessionIDSet_rbegin(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((swig::make_set_nonconst_iterator<std::set< FIX::SessionID >::reverse_iterator>(result, self)), swig::Iterator::descriptor(), SWIG_POINTER_OWN);
   return vresult;
@@ -13244,6 +13417,7 @@ _wrap_SessionIDSet_rend(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((swig::make_set_nonconst_iterator<std::set< FIX::SessionID >::reverse_iterator>(result, self)), swig::Iterator::descriptor(), SWIG_POINTER_OWN);
   return vresult;
@@ -13301,6 +13475,7 @@ _wrap_SessionIDSet_erase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -13361,6 +13536,7 @@ _wrap_SessionIDSet_erase__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -13480,6 +13656,7 @@ _wrap_SessionIDSet_find(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((swig::make_set_nonconst_iterator<std::set< FIX::SessionID >::iterator>(result, self)), swig::Iterator::descriptor(), SWIG_POINTER_OWN);
   return vresult;
@@ -13526,6 +13703,7 @@ _wrap_SessionIDSet_lower_bound(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((swig::make_set_nonconst_iterator<std::set< FIX::SessionID >::iterator>(result, self)), swig::Iterator::descriptor(), SWIG_POINTER_OWN);
   return vresult;
@@ -13572,6 +13750,7 @@ _wrap_SessionIDSet_upper_bound(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((swig::make_set_nonconst_iterator<std::set< FIX::SessionID >::iterator>(result, self)), swig::Iterator::descriptor(), SWIG_POINTER_OWN);
   return vresult;
@@ -13618,6 +13797,7 @@ _wrap_SessionIDSet_equal_range(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = rb_ary_new2(2);
   rb_ary_push(vresult, SWIG_NewPointerObj(swig::make_const_iterator(static_cast< const std::pair< std::set< FIX::SessionID >::iterator,std::set< FIX::SessionID >::iterator > & >(result).first),
@@ -13676,6 +13856,7 @@ _wrap_SessionIDSet_insert(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = rb_ary_new2(2);
   rb_ary_push(vresult, SWIG_NewPointerObj((swig::make_set_nonconst_iterator((&result)->first)), swig::Iterator::descriptor(), SWIG_POINTER_OWN));
@@ -13755,6 +13936,7 @@ _wrap_new_Exception(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -13949,6 +14131,7 @@ _wrap_Exception___str__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -14005,6 +14188,7 @@ _wrap_new_DataDictionaryNotFound__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -14078,6 +14262,7 @@ _wrap_new_DataDictionaryNotFound__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -14251,6 +14436,7 @@ _wrap_new_FieldNotFound__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -14295,6 +14481,7 @@ _wrap_new_FieldNotFound__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -14337,6 +14524,7 @@ _wrap_new_FieldNotFound__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -14486,6 +14674,7 @@ _wrap_new_FieldConvertError__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -14537,6 +14726,7 @@ _wrap_new_FieldConvertError__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -14616,6 +14806,7 @@ _wrap_new_MessageParseError__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -14667,6 +14858,7 @@ _wrap_new_MessageParseError__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -14746,6 +14938,7 @@ _wrap_new_InvalidMessage__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -14797,6 +14990,7 @@ _wrap_new_InvalidMessage__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -14876,6 +15070,7 @@ _wrap_new_ConfigError__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -14927,6 +15122,7 @@ _wrap_new_ConfigError__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -15006,6 +15202,7 @@ _wrap_new_RuntimeError__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -15057,6 +15254,7 @@ _wrap_new_RuntimeError__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -15144,6 +15342,7 @@ _wrap_new_InvalidTagNumber__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -15188,6 +15387,7 @@ _wrap_new_InvalidTagNumber__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -15230,6 +15430,7 @@ _wrap_new_InvalidTagNumber__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -15387,6 +15588,7 @@ _wrap_new_RequiredTagMissing__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -15431,6 +15633,7 @@ _wrap_new_RequiredTagMissing__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -15473,6 +15676,7 @@ _wrap_new_RequiredTagMissing__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -15630,6 +15834,7 @@ _wrap_new_TagNotDefinedForMessage__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -15674,6 +15879,7 @@ _wrap_new_TagNotDefinedForMessage__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -15716,6 +15922,7 @@ _wrap_new_TagNotDefinedForMessage__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -15873,6 +16080,7 @@ _wrap_new_NoTagValue__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -15917,6 +16125,7 @@ _wrap_new_NoTagValue__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -15959,6 +16168,7 @@ _wrap_new_NoTagValue__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -16116,6 +16326,7 @@ _wrap_new_IncorrectTagValue__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -16160,6 +16371,7 @@ _wrap_new_IncorrectTagValue__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -16202,6 +16414,7 @@ _wrap_new_IncorrectTagValue__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -16359,6 +16572,7 @@ _wrap_new_IncorrectDataFormat__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -16403,6 +16617,7 @@ _wrap_new_IncorrectDataFormat__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -16445,6 +16660,7 @@ _wrap_new_IncorrectDataFormat__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -16594,6 +16810,7 @@ _wrap_new_IncorrectMessageStructure__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -16645,6 +16862,7 @@ _wrap_new_IncorrectMessageStructure__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -16724,6 +16942,7 @@ _wrap_new_DuplicateFieldNumber__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -16775,6 +16994,7 @@ _wrap_new_DuplicateFieldNumber__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -16854,6 +17074,7 @@ _wrap_new_InvalidMessageType__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -16905,6 +17126,7 @@ _wrap_new_InvalidMessageType__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -16984,6 +17206,7 @@ _wrap_new_UnsupportedMessageType__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -17035,6 +17258,7 @@ _wrap_new_UnsupportedMessageType__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -17114,6 +17338,7 @@ _wrap_new_UnsupportedVersion__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -17165,6 +17390,7 @@ _wrap_new_UnsupportedVersion__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -17252,6 +17478,7 @@ _wrap_new_TagOutOfOrder__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -17296,6 +17523,7 @@ _wrap_new_TagOutOfOrder__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -17338,6 +17566,7 @@ _wrap_new_TagOutOfOrder__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -17495,6 +17724,7 @@ _wrap_new_EmbeddedSOH__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -17539,6 +17769,7 @@ _wrap_new_EmbeddedSOH__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -17581,6 +17812,7 @@ _wrap_new_EmbeddedSOH__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -17738,6 +17970,7 @@ _wrap_new_OutOfOrderGroupMembers__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -17782,6 +18015,7 @@ _wrap_new_OutOfOrderGroupMembers__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -17824,6 +18058,7 @@ _wrap_new_OutOfOrderGroupMembers__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -17981,6 +18216,7 @@ _wrap_new_RepeatedTag__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -18025,6 +18261,7 @@ _wrap_new_RepeatedTag__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -18067,6 +18304,7 @@ _wrap_new_RepeatedTag__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -18224,6 +18462,7 @@ _wrap_new_RepeatingGroupCountMismatch__SWIG_0(int argc, VALUE *argv, VALUE self)
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -18268,6 +18507,7 @@ _wrap_new_RepeatingGroupCountMismatch__SWIG_1(int argc, VALUE *argv, VALUE self)
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -18310,6 +18550,7 @@ _wrap_new_RepeatingGroupCountMismatch__SWIG_2(int argc, VALUE *argv, VALUE self)
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -18459,6 +18700,7 @@ _wrap_new_DoNotSend__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -18510,6 +18752,7 @@ _wrap_new_DoNotSend__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -18589,6 +18832,7 @@ _wrap_new_RejectLogon__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -18640,6 +18884,7 @@ _wrap_new_RejectLogon__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -18719,6 +18964,7 @@ _wrap_new_SessionNotFound__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -18770,6 +19016,7 @@ _wrap_new_SessionNotFound__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -18849,6 +19096,7 @@ _wrap_new_IOException__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -18900,6 +19148,7 @@ _wrap_new_IOException__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -18966,6 +19215,7 @@ _wrap_new_SocketException__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -19021,6 +19271,7 @@ _wrap_new_SocketException__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -19087,6 +19338,7 @@ _wrap_SocketException_errorToWhat(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -19123,6 +19375,7 @@ _wrap_new_SocketSendFailed__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -19178,6 +19431,7 @@ _wrap_new_SocketSendFailed__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -19267,6 +19521,7 @@ _wrap_new_SocketRecvFailed__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -19322,6 +19577,7 @@ _wrap_new_SocketRecvFailed__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -19403,6 +19659,7 @@ _wrap_new_SocketCloseFailed__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -19458,6 +19715,7 @@ _wrap_new_SocketCloseFailed__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -19648,6 +19906,7 @@ _wrap_new_DateTime__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -19691,6 +19950,7 @@ _wrap_new_DateTime__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -19774,6 +20034,7 @@ _wrap_new_DateTime__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -19880,6 +20141,7 @@ _wrap_new_DateTime__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -20059,6 +20321,7 @@ _wrap_DateTime_getYear(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20094,6 +20357,7 @@ _wrap_DateTime_getMonth(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20129,6 +20393,7 @@ _wrap_DateTime_getDay(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20164,6 +20429,7 @@ _wrap_DateTime_getDate(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20199,6 +20465,7 @@ _wrap_DateTime_getJulianDate(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20234,6 +20501,7 @@ _wrap_DateTime_getHour(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20269,6 +20537,7 @@ _wrap_DateTime_getMinute(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20304,6 +20573,7 @@ _wrap_DateTime_getSecond(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20339,6 +20609,7 @@ _wrap_DateTime_getMillisecond(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20374,6 +20645,7 @@ _wrap_DateTime_getMicrosecond(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20409,6 +20681,7 @@ _wrap_DateTime_getNanosecond(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_int(static_cast< unsigned int >(result));
   return vresult;
@@ -20452,6 +20725,7 @@ _wrap_DateTime_getFraction(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20487,6 +20761,7 @@ _wrap_DateTime_getWeekDay(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -20522,6 +20797,7 @@ _wrap_DateTime_getTimeT(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     vresult = rb_time_new(result, 0);
@@ -20559,6 +20835,7 @@ _wrap_DateTime_getTmUtc(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new tm(result)), SWIGTYPE_p_tm, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -20616,6 +20893,7 @@ _wrap_DateTime_setYMD(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -20680,6 +20958,7 @@ _wrap_DateTime_setHMS__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -20752,6 +21031,7 @@ _wrap_DateTime_setHMS__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -20885,6 +21165,7 @@ _wrap_DateTime_setHour(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -20925,6 +21206,7 @@ _wrap_DateTime_setMinute(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -20965,6 +21247,7 @@ _wrap_DateTime_setSecond(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -21005,6 +21288,7 @@ _wrap_DateTime_setMillisecond(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -21045,6 +21329,7 @@ _wrap_DateTime_setMicrosecond(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -21085,6 +21370,7 @@ _wrap_DateTime_setNanosecond(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -21133,6 +21419,7 @@ _wrap_DateTime_setFraction(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -21165,6 +21452,7 @@ _wrap_DateTime_clearDate(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -21197,6 +21485,7 @@ _wrap_DateTime_clearTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -21245,6 +21534,7 @@ _wrap_DateTime_set__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -21288,6 +21578,7 @@ _wrap_DateTime_set__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -21386,6 +21677,7 @@ _wrap_DateTime_convertToNanos(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -21445,6 +21737,7 @@ _wrap_DateTime_makeHMS(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_long_SS_long(static_cast< long long >(result));
   return vresult;
@@ -21472,6 +21765,7 @@ _wrap_DateTime_nowUtc(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -21499,6 +21793,7 @@ _wrap_DateTime_nowLocal(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -21541,6 +21836,7 @@ _wrap_DateTime_fromUtcTimeT__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -21575,6 +21871,7 @@ _wrap_DateTime_fromUtcTimeT__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -21617,6 +21914,7 @@ _wrap_DateTime_fromLocalTimeT__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -21651,6 +21949,7 @@ _wrap_DateTime_fromLocalTimeT__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -21701,6 +22000,7 @@ _wrap_DateTime_fromUtcTimeT__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -21817,6 +22117,7 @@ _wrap_DateTime_fromLocalTimeT__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -21929,6 +22230,7 @@ _wrap_DateTime_fromTm__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -21967,6 +22269,7 @@ _wrap_DateTime_fromTm__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -22021,6 +22324,7 @@ _wrap_DateTime_fromTm__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::DateTime(result)), SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -22138,6 +22442,7 @@ _wrap_DateTime_julianDate(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -22201,6 +22506,7 @@ _wrap___eq____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -22264,6 +22570,7 @@ _wrap___lt____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -22325,6 +22632,7 @@ _wrap___gt____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -22386,6 +22694,7 @@ _wrap___le____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -22447,6 +22756,7 @@ _wrap___ge____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -22504,6 +22814,7 @@ _wrap___sub__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -22533,6 +22844,7 @@ _wrap_UtcTimeStamp_now(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeStamp(result)), SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -22561,6 +22873,7 @@ _wrap_new_UtcTimeStamp__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -22602,6 +22915,7 @@ _wrap_new_UtcTimeStamp__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -22661,6 +22975,7 @@ _wrap_new_UtcTimeStamp__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -22712,6 +23027,7 @@ _wrap_new_UtcTimeStamp__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -22779,6 +23095,7 @@ _wrap_new_UtcTimeStamp__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -22854,6 +23171,7 @@ _wrap_new_UtcTimeStamp__SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -22937,6 +23255,7 @@ _wrap_new_UtcTimeStamp__SWIG_6(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23028,6 +23347,7 @@ _wrap_new_UtcTimeStamp__SWIG_7(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23070,6 +23390,7 @@ _wrap_new_UtcTimeStamp__SWIG_8(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23104,6 +23425,7 @@ _wrap_new_UtcTimeStamp__SWIG_9(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23154,6 +23476,7 @@ _wrap_new_UtcTimeStamp__SWIG_10(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23197,6 +23520,7 @@ _wrap_new_UtcTimeStamp__SWIG_11(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23232,6 +23556,7 @@ _wrap_new_UtcTimeStamp__SWIG_12(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23298,6 +23623,7 @@ _wrap_new_UtcTimeStamp__SWIG_13(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23686,6 +24012,7 @@ _wrap_UtcTimeStamp_setCurrent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -23721,6 +24048,7 @@ _wrap_new_LocalTimeStamp__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23780,6 +24108,7 @@ _wrap_new_LocalTimeStamp__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23831,6 +24160,7 @@ _wrap_new_LocalTimeStamp__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23898,6 +24228,7 @@ _wrap_new_LocalTimeStamp__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -23973,6 +24304,7 @@ _wrap_new_LocalTimeStamp__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24056,6 +24388,7 @@ _wrap_new_LocalTimeStamp__SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24147,6 +24480,7 @@ _wrap_new_LocalTimeStamp__SWIG_6(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24189,6 +24523,7 @@ _wrap_new_LocalTimeStamp__SWIG_7(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24223,6 +24558,7 @@ _wrap_new_LocalTimeStamp__SWIG_8(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24273,6 +24609,7 @@ _wrap_new_LocalTimeStamp__SWIG_9(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24316,6 +24653,7 @@ _wrap_new_LocalTimeStamp__SWIG_10(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24351,6 +24689,7 @@ _wrap_new_LocalTimeStamp__SWIG_11(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24417,6 +24756,7 @@ _wrap_new_LocalTimeStamp__SWIG_12(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24795,6 +25135,7 @@ _wrap_LocalTimeStamp_setCurrent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -24830,6 +25171,7 @@ _wrap_new_UtcTimeOnly__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24868,6 +25210,7 @@ _wrap_new_UtcTimeOnly__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24927,6 +25270,7 @@ _wrap_new_UtcTimeOnly__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -24978,6 +25322,7 @@ _wrap_new_UtcTimeOnly__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25045,6 +25390,7 @@ _wrap_new_UtcTimeOnly__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25087,6 +25433,7 @@ _wrap_new_UtcTimeOnly__SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25121,6 +25468,7 @@ _wrap_new_UtcTimeOnly__SWIG_6(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25171,6 +25519,7 @@ _wrap_new_UtcTimeOnly__SWIG_7(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25214,6 +25563,7 @@ _wrap_new_UtcTimeOnly__SWIG_8(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25249,6 +25599,7 @@ _wrap_new_UtcTimeOnly__SWIG_9(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25315,6 +25666,7 @@ _wrap_new_UtcTimeOnly__SWIG_10(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25562,6 +25914,7 @@ _wrap_UtcTimeOnly_setCurrent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -25597,6 +25950,7 @@ _wrap_new_LocalTimeOnly__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25635,6 +25989,7 @@ _wrap_new_LocalTimeOnly__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25694,6 +26049,7 @@ _wrap_new_LocalTimeOnly__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25745,6 +26101,7 @@ _wrap_new_LocalTimeOnly__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25812,6 +26169,7 @@ _wrap_new_LocalTimeOnly__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25854,6 +26212,7 @@ _wrap_new_LocalTimeOnly__SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25888,6 +26247,7 @@ _wrap_new_LocalTimeOnly__SWIG_6(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25938,6 +26298,7 @@ _wrap_new_LocalTimeOnly__SWIG_7(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -25981,6 +26342,7 @@ _wrap_new_LocalTimeOnly__SWIG_8(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26016,6 +26378,7 @@ _wrap_new_LocalTimeOnly__SWIG_9(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26082,6 +26445,7 @@ _wrap_new_LocalTimeOnly__SWIG_10(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26329,6 +26693,7 @@ _wrap_LocalTimeOnly_setCurrent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -26364,6 +26729,7 @@ _wrap_new_UtcDate__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26402,6 +26768,7 @@ _wrap_new_UtcDate__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26453,6 +26820,7 @@ _wrap_new_UtcDate__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26488,6 +26856,7 @@ _wrap_new_UtcDate__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26538,6 +26907,7 @@ _wrap_new_UtcDate__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26646,6 +27016,7 @@ _wrap_UtcDate_setCurrent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -26681,6 +27052,7 @@ _wrap_new_LocalDate__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26719,6 +27091,7 @@ _wrap_new_LocalDate__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26770,6 +27143,7 @@ _wrap_new_LocalDate__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26805,6 +27179,7 @@ _wrap_new_LocalDate__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26855,6 +27230,7 @@ _wrap_new_LocalDate__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -26963,6 +27339,7 @@ _wrap_LocalDate_setCurrent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -27019,6 +27396,7 @@ _wrap_new_FieldBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -27081,6 +27459,7 @@ _wrap_new_FieldBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -27167,6 +27546,7 @@ _wrap_FieldBase_swap(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -27207,6 +27587,7 @@ _wrap_FieldBase_setTag(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -27247,6 +27628,7 @@ _wrap_FieldBase_setField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -27293,6 +27675,7 @@ _wrap_FieldBase_setString(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -27336,6 +27719,7 @@ _wrap_FieldBase_getTag(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -27371,6 +27755,7 @@ _wrap_FieldBase_getField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -27406,6 +27791,7 @@ _wrap_FieldBase_getString(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -27446,6 +27832,7 @@ _wrap_FieldBase_appendTo(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string &") == "std::string &" ) 	 
@@ -27487,6 +27874,7 @@ _wrap_FieldBase_getFixString(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -27522,6 +27910,7 @@ _wrap_FieldBase_getLength(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -27557,6 +27946,7 @@ _wrap_FieldBase_getTotal(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -27611,6 +28001,7 @@ _wrap_FieldBase___lt__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -27646,6 +28037,7 @@ _wrap_FieldBase___str__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -27712,6 +28104,7 @@ _wrap___lshift____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__ostream, 0 |  0 );
   return vresult;
@@ -27759,6 +28152,7 @@ _wrap_swap(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -27809,6 +28203,7 @@ _wrap_new_StringField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -27868,6 +28263,7 @@ _wrap_new_StringField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -27958,6 +28354,7 @@ _wrap_StringField_setValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -28004,6 +28401,7 @@ _wrap_StringField_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -28039,6 +28437,7 @@ _wrap_StringField_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -28093,6 +28492,7 @@ _wrap_StringField___lt__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -28147,6 +28547,7 @@ _wrap_StringField___gt__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -28201,6 +28602,7 @@ _wrap_StringField___eq__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -28255,6 +28657,7 @@ _wrap_StringField___le__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -28309,6 +28712,7 @@ _wrap_StringField___ge__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -28370,6 +28774,7 @@ _wrap___lt____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
@@ -28419,6 +28824,7 @@ _wrap___lt____SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
@@ -28480,6 +28886,7 @@ _wrap___gt____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
@@ -28529,6 +28936,7 @@ _wrap___gt____SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
@@ -28592,6 +29000,7 @@ _wrap___eq____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
@@ -28641,6 +29050,7 @@ _wrap___eq____SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
@@ -28702,6 +29112,7 @@ _wrap___le____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
@@ -28751,6 +29162,7 @@ _wrap___le____SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
@@ -28812,6 +29224,7 @@ _wrap___ge____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
@@ -28861,6 +29274,7 @@ _wrap___ge____SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
@@ -28928,6 +29342,7 @@ _wrap___lt____SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -28988,6 +29403,7 @@ _wrap___lt____SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -29060,6 +29476,7 @@ _wrap___gt____SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -29120,6 +29537,7 @@ _wrap___gt____SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -29283,6 +29701,7 @@ _wrap___eq____SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -29343,6 +29762,7 @@ _wrap___eq____SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -29415,6 +29835,7 @@ _wrap___le____SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -29475,6 +29896,7 @@ _wrap___le____SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -29636,6 +30058,7 @@ _wrap___ge____SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -29696,6 +30119,7 @@ _wrap___ge____SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -29846,6 +30270,7 @@ _wrap_new_CharField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -29896,6 +30321,7 @@ _wrap_new_CharField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -29982,6 +30408,7 @@ _wrap_CharField_setValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -30019,6 +30446,7 @@ _wrap_CharField_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_char(static_cast< char >(result));
   return vresult;
@@ -30054,6 +30482,7 @@ _wrap_CharField_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_char(static_cast< char >(result));
   return vresult;
@@ -30114,6 +30543,7 @@ _wrap_new_DoubleField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -30157,6 +30587,7 @@ _wrap_new_DoubleField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -30207,6 +30638,7 @@ _wrap_new_DoubleField__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -30324,6 +30756,7 @@ _wrap_DoubleField_setValue__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -30364,6 +30797,7 @@ _wrap_DoubleField_setValue__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -30458,6 +30892,7 @@ _wrap_DoubleField_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_double(static_cast< double >(result));
   return vresult;
@@ -30493,6 +30928,7 @@ _wrap_DoubleField_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_double(static_cast< double >(result));
   return vresult;
@@ -30545,6 +30981,7 @@ _wrap_new_IntField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -30595,6 +31032,7 @@ _wrap_new_IntField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -30681,6 +31119,7 @@ _wrap_IntField_setValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -30718,6 +31157,7 @@ _wrap_IntField_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -30753,6 +31193,7 @@ _wrap_IntField_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -30805,6 +31246,7 @@ _wrap_new_Int64Field__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -30855,6 +31297,7 @@ _wrap_new_Int64Field__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -30941,6 +31384,7 @@ _wrap_Int64Field_setValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -30978,6 +31422,7 @@ _wrap_Int64Field_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_long_SS_long(static_cast< long long >(result));
   return vresult;
@@ -31013,6 +31458,7 @@ _wrap_Int64Field_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_long_SS_long(static_cast< long long >(result));
   return vresult;
@@ -31065,6 +31511,7 @@ _wrap_new_UInt64Field__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -31115,6 +31562,7 @@ _wrap_new_UInt64Field__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -31201,6 +31649,7 @@ _wrap_UInt64Field_setValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -31238,6 +31687,7 @@ _wrap_UInt64Field_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -31273,6 +31723,7 @@ _wrap_UInt64Field_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -31325,6 +31776,7 @@ _wrap_new_BoolField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -31375,6 +31827,7 @@ _wrap_new_BoolField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -31461,6 +31914,7 @@ _wrap_BoolField_setValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -31498,6 +31952,7 @@ _wrap_BoolField_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -31533,6 +31988,7 @@ _wrap_BoolField_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -31596,6 +32052,7 @@ _wrap_new_UtcTimeStampField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -31642,6 +32099,7 @@ _wrap_new_UtcTimeStampField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -31685,6 +32143,7 @@ _wrap_new_UtcTimeStampField__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -31735,6 +32194,7 @@ _wrap_new_UtcTimeStampField__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -31862,6 +32322,7 @@ _wrap_UtcTimeStampField_setValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -31899,6 +32360,7 @@ _wrap_UtcTimeStampField_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeStampField::value_type(result)), SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -31934,6 +32396,7 @@ _wrap_UtcTimeStampField_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeStamp(result)), SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -31988,6 +32451,7 @@ _wrap_UtcTimeStampField___lt__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -32042,6 +32506,7 @@ _wrap_UtcTimeStampField___eq__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -32097,6 +32562,7 @@ _wrap_new_UtcDateField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -32147,6 +32613,7 @@ _wrap_new_UtcDateField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -32235,6 +32702,7 @@ _wrap_UtcDateField_setValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -32272,6 +32740,7 @@ _wrap_UtcDateField_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcDateField::value_type(result)), SWIGTYPE_p_FIX__UtcDate, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -32307,6 +32776,7 @@ _wrap_UtcDateField_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcDate(result)), SWIGTYPE_p_FIX__UtcDate, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -32361,6 +32831,7 @@ _wrap_UtcDateField___lt__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -32415,6 +32886,7 @@ _wrap_UtcDateField___eq__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -32478,6 +32950,7 @@ _wrap_new_UtcTimeOnlyField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -32524,6 +32997,7 @@ _wrap_new_UtcTimeOnlyField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -32567,6 +33041,7 @@ _wrap_new_UtcTimeOnlyField__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -32617,6 +33092,7 @@ _wrap_new_UtcTimeOnlyField__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -32744,6 +33220,7 @@ _wrap_UtcTimeOnlyField_setValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -32781,6 +33258,7 @@ _wrap_UtcTimeOnlyField_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeOnlyField::value_type(result)), SWIGTYPE_p_FIX__UtcTimeOnly, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -32816,6 +33294,7 @@ _wrap_UtcTimeOnlyField_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeOnly(result)), SWIGTYPE_p_FIX__UtcTimeOnly, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -32870,6 +33349,7 @@ _wrap_UtcTimeOnlyField___lt__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -32924,6 +33404,7 @@ _wrap_UtcTimeOnlyField___eq__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -32976,6 +33457,7 @@ _wrap_new_CheckSumField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -33026,6 +33508,7 @@ _wrap_new_CheckSumField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -33112,6 +33595,7 @@ _wrap_CheckSumField_setValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -33149,6 +33633,7 @@ _wrap_CheckSumField_valueOf(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -33184,6 +33669,7 @@ _wrap_CheckSumField_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -33220,6 +33706,7 @@ _wrap_new_GroupArena__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -33270,6 +33757,7 @@ _wrap_new_GroupArena__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -33337,6 +33825,7 @@ _wrap_GroupArena_allocate(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_void, 0 |  0 );
   return vresult;
@@ -33376,6 +33865,7 @@ _wrap_GroupArena_deallocate(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -33416,6 +33906,7 @@ _wrap_GroupArena_owns(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -33449,6 +33940,7 @@ _wrap_GroupArena_reset(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -33483,6 +33975,7 @@ _wrap_GroupArena_count(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -33530,6 +34023,7 @@ _wrap_new_FieldMap__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -33557,6 +34051,7 @@ _wrap_new_FieldMap__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -33592,6 +34087,7 @@ _wrap_new_FieldMap__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -33630,6 +34126,7 @@ _wrap_new_FieldMap__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -33689,6 +34186,7 @@ _wrap_new_FieldMap__SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -33808,6 +34306,7 @@ _wrap_FieldMap_setField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -33851,6 +34350,7 @@ _wrap_FieldMap_setField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -33905,6 +34405,7 @@ _wrap_FieldMap_setField__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -34034,6 +34535,7 @@ _wrap_FieldMap_getFieldIfSet(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -34080,6 +34582,7 @@ _wrap_FieldMap_getField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   return vresult;
@@ -34123,6 +34626,7 @@ _wrap_FieldMap_getField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -34216,6 +34720,7 @@ _wrap_FieldMap_getFieldRef(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   return vresult;
@@ -34259,6 +34764,7 @@ _wrap_FieldMap_getFieldPtr(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   return vresult;
@@ -34305,6 +34811,7 @@ _wrap_FieldMap_isSetField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -34348,6 +34855,7 @@ _wrap_FieldMap_isSetField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -34439,6 +34947,7 @@ _wrap_FieldMap_removeField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -34498,6 +35007,7 @@ _wrap_FieldMap_addGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -34549,6 +35059,7 @@ _wrap_FieldMap_addGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -34672,6 +35183,7 @@ _wrap_FieldMap_addGroupPtr__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -34720,6 +35232,7 @@ _wrap_FieldMap_addGroupPtr__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -34846,6 +35359,7 @@ _wrap_FieldMap_replaceGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -34907,6 +35421,7 @@ _wrap_FieldMap_getGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   return vresult;
@@ -34958,6 +35473,7 @@ _wrap_FieldMap_getGroupRef(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   return vresult;
@@ -35009,6 +35525,7 @@ _wrap_FieldMap_getGroupPtr(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   return vresult;
@@ -35044,6 +35561,7 @@ _wrap_FieldMap_groups(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t, 0 |  0 );
   return vresult;
@@ -35093,6 +35611,7 @@ _wrap_FieldMap_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -35133,6 +35652,7 @@ _wrap_FieldMap_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -35232,6 +35752,7 @@ _wrap_FieldMap_hasGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -35283,6 +35804,7 @@ _wrap_FieldMap_hasGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -35383,6 +35905,7 @@ _wrap_FieldMap_groupCount(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -35424,6 +35947,7 @@ _wrap_FieldMap_clear(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -35467,6 +35991,7 @@ _wrap_FieldMap_swap(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -35501,6 +36026,7 @@ _wrap_FieldMap_isEmpty(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -35536,6 +36062,7 @@ _wrap_FieldMap_totalFields(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -35577,6 +36104,7 @@ _wrap_FieldMap_calculateString(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__string, 0 |  0 );
   {
@@ -35643,6 +36171,7 @@ _wrap_FieldMap_calculateLength__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -35694,6 +36223,7 @@ _wrap_FieldMap_calculateLength__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -35737,6 +36267,7 @@ _wrap_FieldMap_calculateLength__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -35772,6 +36303,7 @@ _wrap_FieldMap_calculateLength__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -35910,6 +36442,7 @@ _wrap_FieldMap_calculateTotal__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -35945,6 +36478,7 @@ _wrap_FieldMap_calculateTotal__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -36034,6 +36568,7 @@ _wrap_FieldMap_begin__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::FieldMap::iterator(result)), SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -36078,6 +36613,7 @@ _wrap_FieldMap_end__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::FieldMap::iterator(result)), SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -36122,6 +36658,7 @@ _wrap_FieldMap_begin__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::FieldMap::const_iterator(result)), SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__const_iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -36205,6 +36742,7 @@ _wrap_FieldMap_end__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::FieldMap::const_iterator(result)), SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__const_iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -36279,6 +36817,7 @@ _wrap_FieldMap_g_begin__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::FieldMap::g_iterator(result)), SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -36314,6 +36853,7 @@ _wrap_FieldMap_g_end__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::FieldMap::g_iterator(result)), SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -36349,6 +36889,7 @@ _wrap_FieldMap_g_begin__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::FieldMap::g_const_iterator(result)), SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__const_iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -36423,6 +36964,7 @@ _wrap_FieldMap_g_end__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::FieldMap::g_const_iterator(result)), SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__const_iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -36508,6 +37050,7 @@ _wrap_FieldMap_cloneInto(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   return vresult;
@@ -36538,6 +37081,7 @@ _wrap_new_Header__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -36591,6 +37135,7 @@ _wrap_new_Header__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -36666,6 +37211,7 @@ _wrap_Header_addGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -36717,6 +37263,7 @@ _wrap_Header_replaceGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -36770,6 +37317,7 @@ _wrap_Header_getGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_Group, 0 |  0 );
   return vresult;
@@ -36822,6 +37370,7 @@ _wrap_Header_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -36865,6 +37414,7 @@ _wrap_Header_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -36965,6 +37515,7 @@ _wrap_Header_hasGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -37019,6 +37570,7 @@ _wrap_Header_hasGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -37110,6 +37662,7 @@ _wrap_new_Trailer__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -37163,6 +37716,7 @@ _wrap_new_Trailer__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -37238,6 +37792,7 @@ _wrap_Trailer_addGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -37289,6 +37844,7 @@ _wrap_Trailer_replaceGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -37342,6 +37898,7 @@ _wrap_Trailer_getGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_Group, 0 |  0 );
   return vresult;
@@ -37394,6 +37951,7 @@ _wrap_Trailer_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -37437,6 +37995,7 @@ _wrap_Trailer_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -37537,6 +38096,7 @@ _wrap_Trailer_hasGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -37591,6 +38151,7 @@ _wrap_Trailer_hasGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -37682,6 +38243,7 @@ _wrap_new_Message__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -37742,6 +38304,7 @@ _wrap_new_Message__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -37790,6 +38353,7 @@ _wrap_new_Message__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -37839,6 +38403,7 @@ _wrap_new_Message__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -37907,6 +38472,7 @@ _wrap_new_Message__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -37967,6 +38533,7 @@ _wrap_new_Message__SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -38046,6 +38613,7 @@ _wrap_new_Message__SWIG_6(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -38117,6 +38685,7 @@ _wrap_new_Message__SWIG_7(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -38218,6 +38787,7 @@ _wrap_new_Message__SWIG_8(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -38311,6 +38881,7 @@ _wrap_new_Message__SWIG_9(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -38423,6 +38994,7 @@ _wrap_new_Message__SWIG_10(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -38527,6 +39099,7 @@ _wrap_new_Message__SWIG_11(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -38574,6 +39147,7 @@ _wrap_new_Message__SWIG_12(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -38633,6 +39207,7 @@ _wrap_new_Message__SWIG_13(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -38980,6 +39555,7 @@ _wrap_Message_InitializeXML(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -39033,6 +39609,7 @@ _wrap_Message_addGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -39084,6 +39661,7 @@ _wrap_Message_replaceGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -39137,6 +39715,7 @@ _wrap_Message_getGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_Group, 0 |  0 );
   return vresult;
@@ -39189,6 +39768,7 @@ _wrap_Message_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -39232,6 +39812,7 @@ _wrap_Message_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -39332,6 +39913,7 @@ _wrap_Message_hasGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -39386,6 +39968,7 @@ _wrap_Message_hasGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -39500,6 +40083,7 @@ _wrap_Message_toString__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -39551,6 +40135,7 @@ _wrap_Message_toString__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -39594,6 +40179,7 @@ _wrap_Message_toString__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -39629,6 +40215,7 @@ _wrap_Message_toString__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -39694,6 +40281,7 @@ _wrap_Message_toString__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__string, 0 |  0 );
   {
@@ -39758,6 +40346,7 @@ _wrap_Message_toString__SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__string, 0 |  0 );
   {
@@ -39814,6 +40403,7 @@ _wrap_Message_toString__SWIG_6(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__string, 0 |  0 );
   {
@@ -39862,6 +40452,7 @@ _wrap_Message_toString__SWIG_7(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__string, 0 |  0 );
   {
@@ -40095,6 +40686,7 @@ _wrap_Message_toXML__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -40136,6 +40728,7 @@ _wrap_Message_toXML__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__string, 0 |  0 );
   {
@@ -40231,6 +40824,7 @@ _wrap_Message_reverseRoute(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -40277,6 +40871,7 @@ _wrap_Message_setString__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -40340,6 +40935,7 @@ _wrap_Message_setString__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -40411,6 +41007,7 @@ _wrap_Message_setString__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -40490,6 +41087,7 @@ _wrap_Message_setString__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -40710,6 +41308,7 @@ _wrap_Message_setGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = rb_ary_new();
   {
@@ -40776,6 +41375,7 @@ _wrap_Message_setStringHeader(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -40820,6 +41420,7 @@ _wrap_Message_getHeader__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Header, 0 |  0 );
   return vresult;
@@ -40855,6 +41456,7 @@ _wrap_Message_getHeader__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Header, 0 |  0 );
   return vresult;
@@ -40929,6 +41531,7 @@ _wrap_Message_getTrailer__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Trailer, 0 |  0 );
   return vresult;
@@ -40964,6 +41567,7 @@ _wrap_Message_getTrailer__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Trailer, 0 |  0 );
   return vresult;
@@ -41044,6 +41648,7 @@ _wrap_Message_hasValidStructure(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -41091,6 +41696,7 @@ _wrap_Message_hasEmbeddedSOH(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -41138,6 +41744,7 @@ _wrap_Message_hasOutOfOrderGroupMembers(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -41203,6 +41810,7 @@ _wrap_Message_bodyLength__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -41254,6 +41862,7 @@ _wrap_Message_bodyLength__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -41297,6 +41906,7 @@ _wrap_Message_bodyLength__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -41332,6 +41942,7 @@ _wrap_Message_bodyLength__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -41470,6 +42081,7 @@ _wrap_Message_checkSum__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -41505,6 +42117,7 @@ _wrap_Message_checkSum__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -41585,6 +42198,7 @@ _wrap_Message_isAdmin(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -41620,6 +42234,7 @@ _wrap_Message_isApp(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -41655,6 +42270,7 @@ _wrap_Message_isEmpty(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -41696,6 +42312,7 @@ _wrap_Message_clear(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -41735,6 +42352,7 @@ _wrap_Message_isAdminMsgType(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -41784,6 +42402,7 @@ _wrap_Message_toApplVerID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new ApplVerID(result)), SWIGTYPE_p_ApplVerID, SWIG_POINTER_OWN |  0 );
   {
@@ -41831,6 +42450,7 @@ _wrap_Message_toBeginString(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new BeginString(result)), SWIGTYPE_p_BeginString, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -41866,6 +42486,7 @@ _wrap_Message_isHeaderField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -41912,6 +42533,7 @@ _wrap_Message_isHeaderField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -41950,6 +42572,7 @@ _wrap_Message_isHeaderField__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -41993,6 +42616,7 @@ _wrap_Message_isHeaderField__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -42098,6 +42722,7 @@ _wrap_Message_isTrailerField__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -42144,6 +42769,7 @@ _wrap_Message_isTrailerField__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -42182,6 +42808,7 @@ _wrap_Message_isTrailerField__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -42225,6 +42852,7 @@ _wrap_Message_isTrailerField__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -42343,6 +42971,7 @@ _wrap_Message_getSessionID__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new SessionID(result)), SWIGTYPE_p_SessionID, SWIG_POINTER_OWN |  0 );
   {
@@ -42387,6 +43016,7 @@ _wrap_Message_getSessionID__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new SessionID(result)), SWIGTYPE_p_SessionID, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -42474,6 +43104,7 @@ _wrap_Message_setSessionID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -42508,6 +43139,7 @@ _wrap_Message___str__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -42568,6 +43200,7 @@ _wrap___lshift____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__ostream, 0 |  0 );
   return vresult;
@@ -42608,6 +43241,7 @@ _wrap_identifyType(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new MsgType(result)), SWIGTYPE_p_MsgType, SWIG_POINTER_OWN |  0 );
   {
@@ -42663,6 +43297,7 @@ _wrap_new_Group__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -42714,6 +43349,7 @@ _wrap_new_Group__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -42768,6 +43404,7 @@ _wrap_new_Group__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -42821,6 +43458,7 @@ _wrap_new_Group__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -42944,6 +43582,7 @@ _wrap_Group_field(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -42979,6 +43618,7 @@ _wrap_Group_delim(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -43023,6 +43663,7 @@ _wrap_Group_addGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -43074,6 +43715,7 @@ _wrap_Group_replaceGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -43127,6 +43769,7 @@ _wrap_Group_getGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Group, 0 |  0 );
   return vresult;
@@ -43179,6 +43822,7 @@ _wrap_Group_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -43222,6 +43866,7 @@ _wrap_Group_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -43322,6 +43967,7 @@ _wrap_Group_hasGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -43376,6 +44022,7 @@ _wrap_Group_hasGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -43477,6 +44124,7 @@ _wrap_Group_cloneInto(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   return vresult;
@@ -43513,6 +44161,7 @@ _wrap_new_BeginString__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -43568,6 +44217,7 @@ _wrap_new_BeginString__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("FIX::STRING const &") == "std::string &" ) 	 
@@ -43643,6 +44293,7 @@ _wrap_new_SenderCompID__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -43698,6 +44349,7 @@ _wrap_new_SenderCompID__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("FIX::STRING const &") == "std::string &" ) 	 
@@ -43773,6 +44425,7 @@ _wrap_new_TargetCompID__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -43828,6 +44481,7 @@ _wrap_new_TargetCompID__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("FIX::STRING const &") == "std::string &" ) 	 
@@ -96175,6 +96829,7 @@ _wrap_new_SessionID__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -96254,6 +96909,7 @@ _wrap_new_SessionID__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -96371,6 +97027,7 @@ _wrap_new_SessionID__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -96492,6 +97149,7 @@ _wrap_SessionID_getBeginString(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__BeginString, 0 |  0 );
   return vresult;
@@ -96527,6 +97185,7 @@ _wrap_SessionID_getSenderCompID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__SenderCompID, 0 |  0 );
   return vresult;
@@ -96562,6 +97221,7 @@ _wrap_SessionID_getTargetCompID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__TargetCompID, 0 |  0 );
   return vresult;
@@ -96597,6 +97257,7 @@ _wrap_SessionID_getSessionQualifier(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -96632,6 +97293,7 @@ _wrap_SessionID_isFIXT(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -96667,6 +97329,7 @@ _wrap_SessionID_toString__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -96702,6 +97365,7 @@ _wrap_SessionID_toStringFrozen(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -96749,6 +97413,7 @@ _wrap_SessionID_fromString(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -96798,6 +97463,7 @@ _wrap_SessionID_toString__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__string, 0 |  0 );
   {
@@ -96912,6 +97578,7 @@ _wrap___lt____SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -96975,6 +97642,7 @@ _wrap___eq____SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -97035,6 +97703,7 @@ _wrap___lshift____SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__ostream, 0 |  0 );
   return vresult;
@@ -97093,6 +97762,7 @@ _wrap___rshift____SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__istream, 0 |  0 );
   return vresult;
@@ -97136,6 +97806,7 @@ _wrap_SessionID___invert__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::SessionID(result)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -97171,6 +97842,7 @@ _wrap_SessionID___str__(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -97220,6 +97892,7 @@ _wrap_new_Dictionary__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -97271,6 +97944,7 @@ _wrap_new_Dictionary__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -97342,6 +98016,7 @@ _wrap_Dictionary_getName(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -97385,6 +98060,7 @@ _wrap_Dictionary_size(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -97441,6 +98117,7 @@ _wrap_Dictionary_getString__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   {
@@ -97498,6 +98175,7 @@ _wrap_Dictionary_getString__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   {
@@ -97608,6 +98286,7 @@ _wrap_Dictionary_getInt(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   {
@@ -97665,6 +98344,7 @@ _wrap_Dictionary_getDouble(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_double(static_cast< double >(result));
   {
@@ -97722,6 +98402,7 @@ _wrap_Dictionary_getBool(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -97779,6 +98460,7 @@ _wrap_Dictionary_getDay(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   {
@@ -97848,6 +98530,7 @@ _wrap_Dictionary_setString(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = rb_ary_new();
   {
@@ -97921,6 +98604,7 @@ _wrap_Dictionary_setInt(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -97984,6 +98668,7 @@ _wrap_Dictionary_setDouble(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -98047,6 +98732,7 @@ _wrap_Dictionary_setBool(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -98110,6 +98796,7 @@ _wrap_Dictionary_setDay(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -98166,6 +98853,7 @@ _wrap_Dictionary_has(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -98219,6 +98907,7 @@ _wrap_Dictionary_merge(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -98261,6 +98950,7 @@ _wrap_Dictionary_begin(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::Dictionary::iterator(result)), SWIGTYPE_p_std__mapT_std__string_std__string_t__const_iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -98304,6 +98994,7 @@ _wrap_Dictionary_end(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::Dictionary::iterator(result)), SWIGTYPE_p_std__mapT_std__string_std__string_t__const_iterator, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -99360,6 +100051,7 @@ _wrap_new_SessionSettings__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -99406,6 +100098,7 @@ _wrap_new_SessionSettings__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -99444,6 +100137,7 @@ _wrap_new_SessionSettings__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -99492,6 +100186,7 @@ _wrap_new_SessionSettings__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -99556,6 +100251,7 @@ _wrap_new_SessionSettings__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -99682,6 +100378,7 @@ _wrap_SessionSettings_has(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -99728,6 +100425,7 @@ _wrap_SessionSettings_get__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   return vresult;
@@ -99786,6 +100484,7 @@ _wrap_SessionSettings_set__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -99820,6 +100519,7 @@ _wrap_SessionSettings_get__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   return vresult;
@@ -99908,6 +100608,7 @@ _wrap_SessionSettings_set__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -100004,6 +100705,7 @@ _wrap_SessionSettings_size(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -100039,6 +100741,7 @@ _wrap_SessionSettings_getSessions(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = swig::from(static_cast< std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > >(result));
   return vresult;
@@ -100097,6 +100800,7 @@ _wrap___rshift____SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__istream, 0 |  0 );
   return vresult;
@@ -100205,6 +100909,7 @@ _wrap___lshift____SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__ostream, 0 |  0 );
   return vresult;
@@ -100330,6 +101035,7 @@ _wrap_SessionSettings_setFromString(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -100386,6 +101092,7 @@ _wrap_Session_logon(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -100433,6 +101140,7 @@ _wrap_Session_logout__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -100475,6 +101183,7 @@ _wrap_Session_logout__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -100553,6 +101262,7 @@ _wrap_Session_isEnabled(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -100589,6 +101299,7 @@ _wrap_Session_sentLogon(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -100625,6 +101336,7 @@ _wrap_Session_sentLogout(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -100661,6 +101373,7 @@ _wrap_Session_receivedLogon(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -100697,6 +101410,7 @@ _wrap_Session_isLoggedOn(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -100731,6 +101445,7 @@ _wrap_Session_reset(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -100764,6 +101479,7 @@ _wrap_Session_refresh(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -100805,6 +101521,7 @@ _wrap_Session_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -100846,6 +101563,7 @@ _wrap_Session_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -100881,6 +101599,7 @@ _wrap_Session_getSessionID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   return vresult;
@@ -100926,6 +101645,7 @@ _wrap_Session_setDataDictionaryProvider(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -100961,6 +101681,7 @@ _wrap_Session_getDataDictionaryProvider(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_DataDictionaryProvider, 0 |  0 );
   return vresult;
@@ -101013,6 +101734,7 @@ _wrap_Session_sendToTarget__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -101061,6 +101783,7 @@ _wrap_Session_sendToTarget__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -101111,6 +101834,7 @@ _wrap_Session_sendToTarget__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -101185,6 +101909,7 @@ _wrap_Session_sendToTarget__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -101255,6 +101980,7 @@ _wrap_Session_sendToTarget__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -101333,6 +102059,7 @@ _wrap_Session_sendToTarget__SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -101425,6 +102152,7 @@ _wrap_Session_sendToTarget__SWIG_6(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -101612,6 +102340,7 @@ _wrap_Session_getSessions(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = swig::from(static_cast< std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > >(result));
   return vresult;
@@ -101651,6 +102380,7 @@ _wrap_Session_doesSessionExist(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -101690,6 +102420,7 @@ _wrap_Session_lookupSession__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
   return vresult;
@@ -101739,6 +102470,7 @@ _wrap_Session_lookupSession__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
   {
@@ -101789,6 +102521,7 @@ _wrap_Session_lookupSession__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
   {
@@ -101889,6 +102622,7 @@ _wrap_Session_isSessionRegistered(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -101928,6 +102662,7 @@ _wrap_Session_registerSession(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
   return vresult;
@@ -101965,6 +102700,7 @@ _wrap_Session_unregisterSession(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -101992,6 +102728,7 @@ _wrap_Session_numSessions(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_size_t(static_cast< size_t >(result));
   return vresult;
@@ -102039,6 +102776,7 @@ _wrap_Session_isSessionTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -102086,6 +102824,7 @@ _wrap_Session_isLogonTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -102122,6 +102861,7 @@ _wrap_Session_isInitiator(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -102158,6 +102898,7 @@ _wrap_Session_isAcceptor(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -102194,6 +102935,7 @@ _wrap_Session_getLogonTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_TimeRange, 0 |  0 );
   return vresult;
@@ -102239,6 +102981,7 @@ _wrap_Session_setLogonTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -102274,6 +103017,7 @@ _wrap_Session_getSenderDefaultApplVerID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -102322,6 +103066,7 @@ _wrap_Session_setSenderDefaultApplVerID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -102366,6 +103111,7 @@ _wrap_Session_getTargetDefaultApplVerID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -102414,6 +103160,7 @@ _wrap_Session_setTargetDefaultApplVerID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -102458,6 +103205,7 @@ _wrap_Session_getSendRedundantResendRequests(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -102500,6 +103248,7 @@ _wrap_Session_setSendRedundantResendRequests(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -102535,6 +103284,7 @@ _wrap_Session_getCheckCompId(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -102577,6 +103327,7 @@ _wrap_Session_setCheckCompId(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -102612,6 +103363,7 @@ _wrap_Session_getCheckLatency(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -102654,6 +103406,7 @@ _wrap_Session_setCheckLatency(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -102689,6 +103442,7 @@ _wrap_Session_getMaxLatency(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -102731,6 +103485,7 @@ _wrap_Session_setMaxLatency(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -102766,6 +103521,7 @@ _wrap_Session_getLogonTimeout(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -102808,6 +103564,7 @@ _wrap_Session_setLogonTimeout(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -102843,6 +103600,7 @@ _wrap_Session_getLogoutTimeout(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -102885,6 +103643,7 @@ _wrap_Session_setLogoutTimeout(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -102920,6 +103679,7 @@ _wrap_Session_getResetOnLogon(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -102962,6 +103722,7 @@ _wrap_Session_setResetOnLogon(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -102997,6 +103758,7 @@ _wrap_Session_getResetOnLogout(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -103039,6 +103801,7 @@ _wrap_Session_setResetOnLogout(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103074,6 +103837,7 @@ _wrap_Session_getResetOnDisconnect(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -103116,6 +103880,7 @@ _wrap_Session_setResetOnDisconnect(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103151,6 +103916,7 @@ _wrap_Session_getRefreshOnLogon(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -103193,6 +103959,7 @@ _wrap_Session_setRefreshOnLogon(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103228,6 +103995,7 @@ _wrap_Session_getMillisecondsInTimeStamp(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -103270,6 +104038,7 @@ _wrap_Session_setMillisecondsInTimeStamp(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103305,6 +104074,7 @@ _wrap_Session_getTimestampPrecision(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -103347,6 +104117,7 @@ _wrap_Session_setTimestampPrecision(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103382,6 +104153,7 @@ _wrap_Session_getSupportedTimestampPrecision(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -103423,6 +104195,7 @@ _wrap_Session_supportsSubSecondTimestamps(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -103468,6 +104241,7 @@ _wrap_Session_getPersistMessages(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -103510,6 +104284,7 @@ _wrap_Session_setPersistMessages(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103545,6 +104320,7 @@ _wrap_Session_getValidateLengthAndChecksum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -103587,6 +104363,7 @@ _wrap_Session_setValidateLengthAndChecksum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103622,6 +104399,7 @@ _wrap_Session_getSendNextExpectedMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -103664,6 +104442,7 @@ _wrap_Session_setSendNextExpectedMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103699,6 +104478,7 @@ _wrap_Session_getIsNonStopSession(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -103741,6 +104521,7 @@ _wrap_Session_setIsNonStopSession(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103776,6 +104557,7 @@ _wrap_Session_getAllowedRemoteAddresses(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t, 0 |  0 );
   return vresult;
@@ -103821,6 +104603,7 @@ _wrap_Session_setAllowedRemoteAddresses(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103869,6 +104652,7 @@ _wrap_Session_inAllowedRemoteAddresses(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -103920,6 +104704,7 @@ _wrap_Session_setResponder(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -103966,6 +104751,7 @@ _wrap_Session_send(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -104011,6 +104797,7 @@ _wrap_Session_next__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -104077,6 +104864,7 @@ _wrap_Session_next__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -104144,6 +104932,7 @@ _wrap_Session_next__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -104216,6 +105005,7 @@ _wrap_Session_next__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -104271,6 +105061,7 @@ _wrap_Session_next__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -104428,6 +105219,7 @@ _wrap_Session_disconnect(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -104463,6 +105255,7 @@ _wrap_Session_getExpectedSenderNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -104499,6 +105292,7 @@ _wrap_Session_getExpectedTargetNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -104535,6 +105329,7 @@ _wrap_Session_getLog(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_Log, 0 |  0 );
   return vresult;
@@ -104571,6 +105366,7 @@ _wrap_Session_getStore(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_MessageStore, 0 |  0 );
   return vresult;
@@ -104623,6 +105419,7 @@ _wrap_LogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -104685,6 +105482,7 @@ _wrap_LogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -104786,6 +105584,7 @@ _wrap_LogFactory_destroy(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -104841,6 +105640,7 @@ _wrap_new_LogFactory(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -104909,6 +105709,7 @@ _wrap_new_ScreenLogFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -104975,6 +105776,7 @@ _wrap_new_ScreenLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -105060,6 +105862,7 @@ _wrap_ScreenLogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Log, 0 |  0 );
   return vresult;
@@ -105106,6 +105909,7 @@ _wrap_ScreenLogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Log, 0 |  0 );
   return vresult;
@@ -105191,6 +105995,7 @@ _wrap_ScreenLogFactory_destroy(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -105254,6 +106059,7 @@ _wrap_Log_clear(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -105299,6 +106105,7 @@ _wrap_Log_backup(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -105358,6 +106165,7 @@ _wrap_Log_onIncoming(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -105426,6 +106234,7 @@ _wrap_Log_onOutgoing(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -105494,6 +106303,7 @@ _wrap_Log_onEvent(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -105558,6 +106368,7 @@ _wrap_new_Log(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -105625,6 +106436,7 @@ _wrap_NullLog_clear(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -105657,6 +106469,7 @@ _wrap_NullLog_backup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -105703,6 +106516,7 @@ _wrap_NullLog_onIncoming(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -105758,6 +106572,7 @@ _wrap_NullLog_onOutgoing(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -105813,6 +106628,7 @@ _wrap_NullLog_onEvent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -105864,6 +106680,7 @@ _wrap_new_NullLog(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -105923,6 +106740,7 @@ _wrap_new_ScreenLog__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -106000,6 +106818,7 @@ _wrap_new_ScreenLog__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -106109,6 +106928,7 @@ _wrap_ScreenLog_clear(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -106141,6 +106961,7 @@ _wrap_ScreenLog_backup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -106187,6 +107008,7 @@ _wrap_ScreenLog_onIncoming(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -106242,6 +107064,7 @@ _wrap_ScreenLog_onOutgoing(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -106297,6 +107120,7 @@ _wrap_ScreenLog_onEvent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -106352,6 +107176,7 @@ _wrap_new_FileLogFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -106392,6 +107217,7 @@ _wrap_new_FileLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -106469,6 +107295,7 @@ _wrap_new_FileLogFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -106572,6 +107399,7 @@ _wrap_FileLogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -106624,6 +107452,7 @@ _wrap_FileLogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -106714,6 +107543,7 @@ _wrap_FileLogFactory_destroy(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -106762,6 +107592,7 @@ _wrap_new_FileLog__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -106824,6 +107655,7 @@ _wrap_new_FileLog__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -106893,6 +107725,7 @@ _wrap_new_FileLog__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -106981,6 +107814,7 @@ _wrap_new_FileLog__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -107117,6 +107951,7 @@ _wrap_FileLog_clear(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -107149,6 +107984,7 @@ _wrap_FileLog_backup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -107195,6 +108031,7 @@ _wrap_FileLog_onIncoming(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -107250,6 +108087,7 @@ _wrap_FileLog_onOutgoing(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -107305,6 +108143,7 @@ _wrap_FileLog_onEvent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -107378,6 +108217,7 @@ _wrap_MessageStoreFactory_create(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   return vresult;
@@ -107419,6 +108259,7 @@ _wrap_MessageStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -107477,6 +108318,7 @@ _wrap_MemoryStoreFactory_create(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   return vresult;
@@ -107518,6 +108360,7 @@ _wrap_MemoryStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -107560,6 +108403,7 @@ _wrap_new_MemoryStoreFactory(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -107629,6 +108473,7 @@ _wrap_MessageStore_set(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -107698,6 +108543,7 @@ _wrap_MessageStore_get(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -107732,6 +108578,7 @@ _wrap_MessageStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -107767,6 +108614,7 @@ _wrap_MessageStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -107808,6 +108656,7 @@ _wrap_MessageStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -107848,6 +108697,7 @@ _wrap_MessageStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -107880,6 +108730,7 @@ _wrap_MessageStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -107912,6 +108763,7 @@ _wrap_MessageStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -107946,6 +108798,7 @@ _wrap_MessageStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeStamp(result)), SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -107990,6 +108843,7 @@ _wrap_MessageStore_reset(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108022,6 +108876,7 @@ _wrap_MessageStore_refresh(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108077,6 +108932,7 @@ _wrap_new_MemoryStore(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -108132,6 +108988,7 @@ _wrap_MemoryStore_set(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -108201,6 +109058,7 @@ _wrap_MemoryStore_get(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108235,6 +109093,7 @@ _wrap_MemoryStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -108270,6 +109129,7 @@ _wrap_MemoryStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -108311,6 +109171,7 @@ _wrap_MemoryStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108351,6 +109212,7 @@ _wrap_MemoryStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108383,6 +109245,7 @@ _wrap_MemoryStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108415,6 +109278,7 @@ _wrap_MemoryStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108458,6 +109322,7 @@ _wrap_MemoryStore_setCreationTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108492,6 +109357,7 @@ _wrap_MemoryStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeStamp(result)), SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -108536,6 +109402,7 @@ _wrap_MemoryStore_reset(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108568,6 +109435,7 @@ _wrap_MemoryStore_refresh(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108626,6 +109494,7 @@ _wrap_new_MessageStoreFactoryExceptionWrapper(int argc, VALUE *argv, VALUE self)
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -108704,6 +109573,7 @@ _wrap_MessageStoreFactoryExceptionWrapper_create(int argc, VALUE *argv, VALUE se
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   return vresult;
@@ -108745,6 +109615,7 @@ _wrap_MessageStoreFactoryExceptionWrapper_destroy(int argc, VALUE *argv, VALUE s
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -108803,6 +109674,7 @@ _wrap_new_MessageStoreExceptionWrapper(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -108886,6 +109758,7 @@ _wrap_MessageStoreExceptionWrapper_set(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -108977,6 +109850,7 @@ _wrap_MessageStoreExceptionWrapper_get(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -109033,6 +109907,7 @@ _wrap_MessageStoreExceptionWrapper_getNextSenderMsgSeqNum(int argc, VALUE *argv,
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -109090,6 +109965,7 @@ _wrap_MessageStoreExceptionWrapper_getNextTargetMsgSeqNum(int argc, VALUE *argv,
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -109153,6 +110029,7 @@ _wrap_MessageStoreExceptionWrapper_setNextSenderMsgSeqNum(int argc, VALUE *argv,
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -109215,6 +110092,7 @@ _wrap_MessageStoreExceptionWrapper_setNextTargetMsgSeqNum(int argc, VALUE *argv,
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -109269,6 +110147,7 @@ _wrap_MessageStoreExceptionWrapper_incrNextSenderMsgSeqNum(int argc, VALUE *argv
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -109323,6 +110202,7 @@ _wrap_MessageStoreExceptionWrapper_incrNextTargetMsgSeqNum(int argc, VALUE *argv
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -109379,6 +110259,7 @@ _wrap_MessageStoreExceptionWrapper_getCreationTime(int argc, VALUE *argv, VALUE 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeStamp(result)), SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -109445,6 +110326,7 @@ _wrap_MessageStoreExceptionWrapper_reset(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -109499,6 +110381,7 @@ _wrap_MessageStoreExceptionWrapper_refresh(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -109539,6 +110422,7 @@ _wrap_new_FileStoreFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -109594,6 +110478,7 @@ _wrap_new_FileStoreFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -109696,6 +110581,7 @@ _wrap_FileStoreFactory_create(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   return vresult;
@@ -109737,6 +110623,7 @@ _wrap_FileStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -109819,6 +110706,7 @@ _wrap_new_FileStore(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -109880,6 +110768,7 @@ _wrap_FileStore_set(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -109949,6 +110838,7 @@ _wrap_FileStore_get(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -109983,6 +110873,7 @@ _wrap_FileStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -110018,6 +110909,7 @@ _wrap_FileStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -110059,6 +110951,7 @@ _wrap_FileStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -110099,6 +110992,7 @@ _wrap_FileStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -110131,6 +111025,7 @@ _wrap_FileStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -110163,6 +111058,7 @@ _wrap_FileStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -110197,6 +111093,7 @@ _wrap_FileStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeStamp(result)), SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -110241,6 +111138,7 @@ _wrap_FileStore_reset(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -110273,6 +111171,7 @@ _wrap_FileStore_refresh(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -110333,6 +111232,7 @@ _wrap_Application_onCreate(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -110389,6 +111289,7 @@ _wrap_Application_onLogon(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -110445,6 +111346,7 @@ _wrap_Application_onLogout(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -110512,6 +111414,7 @@ _wrap_Application_toAdmin(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -110579,6 +111482,7 @@ _wrap_Application_toApp(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -110646,6 +111550,7 @@ _wrap_Application_fromAdmin(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -110713,6 +111618,7 @@ _wrap_Application_fromApp(int argc, VALUE *argv, VALUE self) {
       {
         SWIG_fail;
       }
+      redeliverKill();
     }
   } catch (Swig::DirectorException& e) {
     rb_exc_raise(e.getError());
@@ -110768,6 +111674,7 @@ _wrap_new_Application(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -110850,6 +111757,7 @@ _wrap_new_SynchronizedApplication(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -110893,6 +111801,7 @@ _wrap_SynchronizedApplication_onCreate(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -110936,6 +111845,7 @@ _wrap_SynchronizedApplication_onLogon(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -110979,6 +111889,7 @@ _wrap_SynchronizedApplication_onLogout(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -111033,6 +111944,7 @@ _wrap_SynchronizedApplication_toAdmin(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -111087,6 +111999,7 @@ _wrap_SynchronizedApplication_toApp(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -111141,6 +112054,7 @@ _wrap_SynchronizedApplication_fromAdmin(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -111195,6 +112109,7 @@ _wrap_SynchronizedApplication_fromApp(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -111289,6 +112204,7 @@ _wrap_SynchronizedApplication_app(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -111419,6 +112335,7 @@ _wrap_new_NullApplication(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -111466,6 +112383,7 @@ _wrap_Initiator_start(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -111499,6 +112417,7 @@ _wrap_Initiator_block(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -111534,6 +112453,7 @@ _wrap_Initiator_poll(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -111576,6 +112496,7 @@ _wrap_Initiator_stop__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -111609,6 +112530,7 @@ _wrap_Initiator_stop__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -111689,6 +112611,7 @@ _wrap_Initiator_isLoggedOn(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -111747,6 +112670,7 @@ _wrap_Initiator_getSession__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
   return vresult;
@@ -111783,6 +112707,7 @@ _wrap_Initiator_getSessions(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = swig::from(static_cast< std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > >(*result));
   return vresult;
@@ -111830,6 +112755,7 @@ _wrap_Initiator_getSession__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
   return vresult;
@@ -111931,6 +112857,7 @@ _wrap_Initiator_getSessionSettings(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   return vresult;
@@ -111978,6 +112905,7 @@ _wrap_Initiator_has(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -112014,6 +112942,7 @@ _wrap_Initiator_isStopped(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -112051,6 +112980,7 @@ _wrap_Initiator_getApplication(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -112097,6 +113027,7 @@ _wrap_Initiator_getMessageStoreFactory(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__MessageStoreFactory, 0 |  0 );
   return vresult;
@@ -112134,6 +113065,7 @@ _wrap_Initiator_getLog(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -112204,6 +113136,7 @@ _wrap_new_SocketInitiatorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -112294,6 +113227,7 @@ _wrap_new_SocketInitiatorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -112407,6 +113341,7 @@ _wrap_Acceptor_getLog(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -112446,6 +113381,7 @@ _wrap_Acceptor_start(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -112479,6 +113415,7 @@ _wrap_Acceptor_block(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -112514,6 +113451,7 @@ _wrap_Acceptor_poll(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -112556,6 +113494,7 @@ _wrap_Acceptor_stop__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -112589,6 +113528,7 @@ _wrap_Acceptor_stop__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -112669,6 +113609,7 @@ _wrap_Acceptor_isLoggedOn(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -112729,6 +113670,7 @@ _wrap_Acceptor_getSession__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
   {
@@ -112774,6 +113716,7 @@ _wrap_Acceptor_getSessions(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = swig::from(static_cast< std::set< FIX::SessionID,std::less< FIX::SessionID >,std::allocator< FIX::SessionID > > >(*result));
   return vresult;
@@ -112821,6 +113764,7 @@ _wrap_Acceptor_getSession__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
   return vresult;
@@ -112921,6 +113865,7 @@ _wrap_Acceptor_getSessionSettings(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   return vresult;
@@ -112968,6 +113913,7 @@ _wrap_Acceptor_has(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -113004,6 +113950,7 @@ _wrap_Acceptor_isStopped(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -113040,6 +113987,7 @@ _wrap_Acceptor_getMaxPendingConnections(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -113077,6 +114025,7 @@ _wrap_Acceptor_getApplication(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -113123,6 +114072,7 @@ _wrap_Acceptor_getMessageStoreFactory(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__MessageStoreFactory, 0 |  0 );
   return vresult;
@@ -113188,6 +114138,7 @@ _wrap_new_SocketAcceptorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -113278,6 +114229,7 @@ _wrap_new_SocketAcceptorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -113381,6 +114333,7 @@ _wrap_SocketAcceptorBase_sessionToPort(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__mapT_FIX__SessionID_unsigned_short_t, 0 |  0 );
   return vresult;
@@ -113411,6 +114364,7 @@ _wrap_new_DataDictionary__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -113449,6 +114403,7 @@ _wrap_new_DataDictionary__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -113495,6 +114450,7 @@ _wrap_new_DataDictionary__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -113533,6 +114489,7 @@ _wrap_new_DataDictionary__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -113581,6 +114538,7 @@ _wrap_new_DataDictionary__SWIG_4(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -113645,6 +114603,7 @@ _wrap_new_DataDictionary__SWIG_5(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -113788,6 +114747,7 @@ _wrap_DataDictionary_readFromURL(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -113840,6 +114800,7 @@ _wrap_DataDictionary_readFromDocument(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -113883,6 +114844,7 @@ _wrap_DataDictionary_readFromStream(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -113917,6 +114879,7 @@ _wrap_DataDictionary_getOrderedFields(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_message_order, 0 |  0 );
   return vresult;
@@ -113952,6 +114915,7 @@ _wrap_DataDictionary_getHeaderOrderedFields(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_message_order, 0 |  0 );
   return vresult;
@@ -113987,6 +114951,7 @@ _wrap_DataDictionary_getTrailerOrderedFields(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_message_order, 0 |  0 );
   return vresult;
@@ -114035,6 +115000,7 @@ _wrap_DataDictionary_getMessageOrderedFields(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_message_order, 0 |  0 );
   {
@@ -114091,6 +115057,7 @@ _wrap_DataDictionary_setVersion(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -114134,6 +115101,7 @@ _wrap_DataDictionary_getVersion(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(result));
   return vresult;
@@ -114175,6 +115143,7 @@ _wrap_DataDictionary_addField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -114229,6 +115198,7 @@ _wrap_DataDictionary_addFieldName(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -114286,6 +115256,7 @@ _wrap_DataDictionary__getFieldName(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -114347,6 +115318,7 @@ _wrap_DataDictionary__getFieldTag(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -114430,6 +115402,7 @@ _wrap_DataDictionary_addValueName(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = rb_ary_new();
   {
@@ -114510,6 +115483,7 @@ _wrap_DataDictionary__getValueName(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -114588,6 +115562,7 @@ _wrap_DataDictionary_getNameValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -114647,6 +115622,7 @@ _wrap_DataDictionary_isField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -114694,6 +115670,7 @@ _wrap_DataDictionary_addMsgType(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -114750,6 +115727,7 @@ _wrap_DataDictionary_isMsgType(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -114814,6 +115792,7 @@ _wrap_DataDictionary_addMsgField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -114878,6 +115857,7 @@ _wrap_DataDictionary_isMsgField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -114936,6 +115916,7 @@ _wrap_DataDictionary_addHeaderField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -114978,6 +115959,7 @@ _wrap_DataDictionary_isHeaderField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -115027,6 +116009,7 @@ _wrap_DataDictionary_addTrailerField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -115069,6 +116052,7 @@ _wrap_DataDictionary_isTrailerField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -115118,6 +116102,7 @@ _wrap_DataDictionary_addFieldType(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -115171,6 +116156,7 @@ _wrap_DataDictionary_getFieldType(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -115226,6 +116212,7 @@ _wrap_DataDictionary_addRequiredField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -115290,6 +116277,7 @@ _wrap_DataDictionary_isRequiredField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -115354,6 +116342,7 @@ _wrap_DataDictionary_addFieldValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -115405,6 +116394,7 @@ _wrap_DataDictionary_hasFieldValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -115461,6 +116451,7 @@ _wrap_DataDictionary_isFieldValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -115544,6 +116535,7 @@ _wrap_DataDictionary_addGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -115608,6 +116600,7 @@ _wrap_DataDictionary_isGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -115685,6 +116678,7 @@ _wrap_DataDictionary__getGroup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -115759,6 +116753,7 @@ _wrap_DataDictionary_isDataField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -115802,6 +116797,7 @@ _wrap_DataDictionary_isMultipleValueField(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -115843,6 +116839,7 @@ _wrap_DataDictionary_checkFieldsOutOfOrder(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -115883,6 +116880,7 @@ _wrap_DataDictionary_checkFieldsHaveValues(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -115923,6 +116921,7 @@ _wrap_DataDictionary_checkUserDefinedFields(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -115963,6 +116962,7 @@ _wrap_DataDictionary_allowUnknownMsgFields(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -116003,6 +117003,7 @@ _wrap_DataDictionary_preserveMessageFieldsOrder(int argc, VALUE *argv, VALUE sel
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -116037,6 +117038,7 @@ _wrap_DataDictionary_isMessageFieldsOrderPreserved(int argc, VALUE *argv, VALUE 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -116089,6 +117091,7 @@ _wrap_DataDictionary_validate__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -116132,6 +117135,7 @@ _wrap_DataDictionary_validate__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -116183,6 +117187,7 @@ _wrap_DataDictionary_validate__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -116322,6 +117327,7 @@ _wrap_new_SSLSocketAcceptorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -116412,6 +117418,7 @@ _wrap_new_SSLSocketAcceptorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -116527,6 +117534,7 @@ _wrap_SSLSocketAcceptorBase_setPassword(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -116595,6 +117603,7 @@ _wrap_SSLSocketAcceptorBase_passwordHandleCallback(int argc, VALUE *argv, VALUE 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
@@ -116655,6 +117664,7 @@ _wrap_SSLSocketAcceptorBase_passPhraseHandleCB(int argc, VALUE *argv, VALUE self
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
@@ -116722,6 +117732,7 @@ _wrap_new_SSLSocketInitiatorBase__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -116812,6 +117823,7 @@ _wrap_new_SSLSocketInitiatorBase__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -116927,6 +117939,7 @@ _wrap_SSLSocketInitiatorBase_setPassword(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -116984,6 +117997,7 @@ _wrap_SSLSocketInitiatorBase_setCertAndKey(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -117043,6 +118057,7 @@ _wrap_SSLSocketInitiatorBase_passwordHandleCallback(int argc, VALUE *argv, VALUE
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
@@ -117103,6 +118118,7 @@ _wrap_SSLSocketInitiatorBase_passwordHandleCB(int argc, VALUE *argv, VALUE self)
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
@@ -117210,6 +118226,7 @@ _wrap_new_DatabaseConnectionID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -117308,6 +118325,7 @@ _wrap___lt____SWIG_6(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -117490,6 +118508,7 @@ _wrap___eq____SWIG_6(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -117644,6 +118663,7 @@ _wrap_DatabaseConnectionID_getDatabase(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -117679,6 +118699,7 @@ _wrap_DatabaseConnectionID_getUser(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -117714,6 +118735,7 @@ _wrap_DatabaseConnectionID_getPassword(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -117749,6 +118771,7 @@ _wrap_DatabaseConnectionID_getHost(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -117784,6 +118807,7 @@ _wrap_DatabaseConnectionID_getPort(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_short(static_cast< short >(result));
   return vresult;
@@ -117848,6 +118872,7 @@ _wrap_new_MySQLQuery(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -117905,6 +118930,7 @@ _wrap_MySQLQuery_execute(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -117940,6 +118966,7 @@ _wrap_MySQLQuery_success(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -117975,6 +119002,7 @@ _wrap_MySQLQuery_rows(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -118010,6 +119038,7 @@ _wrap_MySQLQuery_reason(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_std_string(static_cast< std::string >(*result));
   return vresult;
@@ -118061,6 +119090,7 @@ _wrap_MySQLQuery_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_FromCharPtr((const char *)result);
   return vresult;
@@ -118094,6 +119124,7 @@ _wrap_MySQLQuery_throwException(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -118134,6 +119165,7 @@ _wrap_new_MySQLConnection__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -118236,6 +119268,7 @@ _wrap_new_MySQLConnection__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -118367,6 +119400,7 @@ _wrap_MySQLConnection_connectionID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
   return vresult;
@@ -118402,6 +119436,7 @@ _wrap_MySQLConnection_connected(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -118437,6 +119472,7 @@ _wrap_MySQLConnection_reconnect(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -118483,6 +119519,7 @@ _wrap_MySQLConnection_execute(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -118569,6 +119606,7 @@ _wrap_new_MySQLStoreFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -118607,6 +119645,7 @@ _wrap_new_MySQLStoreFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -118694,6 +119733,7 @@ _wrap_new_MySQLStoreFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -118772,6 +119812,7 @@ _wrap_new_MySQLStoreFactory__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -118897,6 +119938,7 @@ _wrap_MySQLStoreFactory_create(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   return vresult;
@@ -118938,6 +119980,7 @@ _wrap_MySQLStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -119014,6 +120057,7 @@ _wrap_new_MySQLStore__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -119138,6 +120182,7 @@ _wrap_new_MySQLStore__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -119315,6 +120360,7 @@ _wrap_MySQLStore_set(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -119384,6 +120430,7 @@ _wrap_MySQLStore_get(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -119418,6 +120465,7 @@ _wrap_MySQLStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -119453,6 +120501,7 @@ _wrap_MySQLStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -119494,6 +120543,7 @@ _wrap_MySQLStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -119534,6 +120584,7 @@ _wrap_MySQLStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -119566,6 +120617,7 @@ _wrap_MySQLStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -119598,6 +120650,7 @@ _wrap_MySQLStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -119632,6 +120685,7 @@ _wrap_MySQLStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeStamp(result)), SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -119676,6 +120730,7 @@ _wrap_MySQLStore_reset(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -119708,6 +120763,7 @@ _wrap_MySQLStore_refresh(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -119767,6 +120823,7 @@ _wrap_new_MySQLLog__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -119813,6 +120870,7 @@ _wrap_new_MySQLLog__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -119911,6 +120969,7 @@ _wrap_new_MySQLLog__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -120049,6 +121108,7 @@ _wrap_new_MySQLLog__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -120243,6 +121303,7 @@ _wrap_MySQLLog_clear(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -120275,6 +121336,7 @@ _wrap_MySQLLog_backup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -120321,6 +121383,7 @@ _wrap_MySQLLog_setIncomingTable(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -120376,6 +121439,7 @@ _wrap_MySQLLog_setOutgoingTable(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -120431,6 +121495,7 @@ _wrap_MySQLLog_setEventTable(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -120486,6 +121551,7 @@ _wrap_MySQLLog_onIncoming(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -120541,6 +121607,7 @@ _wrap_MySQLLog_onOutgoing(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -120596,6 +121663,7 @@ _wrap_MySQLLog_onEvent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -120690,6 +121758,7 @@ _wrap_new_MySQLLogFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -120777,6 +121846,7 @@ _wrap_new_MySQLLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -120855,6 +121925,7 @@ _wrap_new_MySQLLogFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -120949,6 +122020,7 @@ _wrap_MySQLLogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -121001,6 +122073,7 @@ _wrap_MySQLLogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -121091,6 +122164,7 @@ _wrap_MySQLLogFactory_destroy(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -121154,6 +122228,7 @@ _wrap_new_PostgreSQLQuery(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -121211,6 +122286,7 @@ _wrap_PostgreSQLQuery_execute(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -121246,6 +122322,7 @@ _wrap_PostgreSQLQuery_success(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -121281,6 +122358,7 @@ _wrap_PostgreSQLQuery_rows(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   return vresult;
@@ -121316,6 +122394,7 @@ _wrap_PostgreSQLQuery_reason(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_FromCharPtr((const char *)result);
   return vresult;
@@ -121367,6 +122446,7 @@ _wrap_PostgreSQLQuery_getValue(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_FromCharPtr((const char *)result);
   return vresult;
@@ -121400,6 +122480,7 @@ _wrap_PostgreSQLQuery_throwException(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -121440,6 +122521,7 @@ _wrap_new_PostgreSQLConnection__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -121542,6 +122624,7 @@ _wrap_new_PostgreSQLConnection__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -121673,6 +122756,7 @@ _wrap_PostgreSQLConnection_connectionID(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
   return vresult;
@@ -121708,6 +122792,7 @@ _wrap_PostgreSQLConnection_connected(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -121743,6 +122828,7 @@ _wrap_PostgreSQLConnection_reconnect(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -121789,6 +122875,7 @@ _wrap_PostgreSQLConnection_execute(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -121875,6 +122962,7 @@ _wrap_new_PostgreSQLStoreFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -121913,6 +123001,7 @@ _wrap_new_PostgreSQLStoreFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -122000,6 +123089,7 @@ _wrap_new_PostgreSQLStoreFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -122078,6 +123168,7 @@ _wrap_new_PostgreSQLStoreFactory__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -122203,6 +123294,7 @@ _wrap_PostgreSQLStoreFactory_create(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   return vresult;
@@ -122244,6 +123336,7 @@ _wrap_PostgreSQLStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -122320,6 +123413,7 @@ _wrap_new_PostgreSQLStore__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -122444,6 +123538,7 @@ _wrap_new_PostgreSQLStore__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -122621,6 +123716,7 @@ _wrap_PostgreSQLStore_set(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -122690,6 +123786,7 @@ _wrap_PostgreSQLStore_get(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -122724,6 +123821,7 @@ _wrap_PostgreSQLStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -122759,6 +123857,7 @@ _wrap_PostgreSQLStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -122800,6 +123899,7 @@ _wrap_PostgreSQLStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -122840,6 +123940,7 @@ _wrap_PostgreSQLStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -122872,6 +123973,7 @@ _wrap_PostgreSQLStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self)
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -122904,6 +124006,7 @@ _wrap_PostgreSQLStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self)
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -122938,6 +124041,7 @@ _wrap_PostgreSQLStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeStamp(result)), SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -122982,6 +124086,7 @@ _wrap_PostgreSQLStore_reset(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -123014,6 +124119,7 @@ _wrap_PostgreSQLStore_refresh(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -123073,6 +124179,7 @@ _wrap_new_PostgreSQLLog__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -123119,6 +124226,7 @@ _wrap_new_PostgreSQLLog__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -123217,6 +124325,7 @@ _wrap_new_PostgreSQLLog__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -123355,6 +124464,7 @@ _wrap_new_PostgreSQLLog__SWIG_3(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -123549,6 +124659,7 @@ _wrap_PostgreSQLLog_clear(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -123581,6 +124692,7 @@ _wrap_PostgreSQLLog_backup(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -123627,6 +124739,7 @@ _wrap_PostgreSQLLog_setIncomingTable(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -123682,6 +124795,7 @@ _wrap_PostgreSQLLog_setOutgoingTable(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -123737,6 +124851,7 @@ _wrap_PostgreSQLLog_setEventTable(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -123792,6 +124907,7 @@ _wrap_PostgreSQLLog_onIncoming(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -123847,6 +124963,7 @@ _wrap_PostgreSQLLog_onOutgoing(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -123902,6 +125019,7 @@ _wrap_PostgreSQLLog_onEvent(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -123996,6 +125114,7 @@ _wrap_new_PostgreSQLLogFactory__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -124083,6 +125202,7 @@ _wrap_new_PostgreSQLLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -124161,6 +125281,7 @@ _wrap_new_PostgreSQLLogFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -124255,6 +125376,7 @@ _wrap_PostgreSQLLogFactory_create__SWIG_0(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -124307,6 +125429,7 @@ _wrap_PostgreSQLLogFactory_create__SWIG_1(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   director = dynamic_cast<Swig::Director *>(result);
   if (director) {
@@ -124397,6 +125520,7 @@ _wrap_PostgreSQLLogFactory_destroy(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -124467,6 +125591,7 @@ _wrap_new_ThreadedSocketAcceptorBase__SWIG_0(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -124557,6 +125682,7 @@ _wrap_new_ThreadedSocketAcceptorBase__SWIG_1(int argc, VALUE *argv, VALUE self) 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -124690,6 +125816,7 @@ _wrap_new_ThreadedSocketInitiatorBase__SWIG_0(int argc, VALUE *argv, VALUE self)
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -124780,6 +125907,7 @@ _wrap_new_ThreadedSocketInitiatorBase__SWIG_1(int argc, VALUE *argv, VALUE self)
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -124913,6 +126041,7 @@ _wrap_new_ThreadedSSLSocketAcceptorBase__SWIG_0(int argc, VALUE *argv, VALUE sel
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -125003,6 +126132,7 @@ _wrap_new_ThreadedSSLSocketAcceptorBase__SWIG_1(int argc, VALUE *argv, VALUE sel
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -125118,6 +126248,7 @@ _wrap_ThreadedSSLSocketAcceptorBase_setPassword(int argc, VALUE *argv, VALUE sel
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -125186,6 +126317,7 @@ _wrap_ThreadedSSLSocketAcceptorBase_passwordHandleCallback(int argc, VALUE *argv
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
@@ -125246,6 +126378,7 @@ _wrap_ThreadedSSLSocketAcceptorBase_passPhraseHandleCB(int argc, VALUE *argv, VA
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
@@ -125313,6 +126446,7 @@ _wrap_new_ThreadedSSLSocketInitiatorBase__SWIG_0(int argc, VALUE *argv, VALUE se
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -125403,6 +126537,7 @@ _wrap_new_ThreadedSSLSocketInitiatorBase__SWIG_1(int argc, VALUE *argv, VALUE se
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -125518,6 +126653,7 @@ _wrap_ThreadedSSLSocketInitiatorBase_setPassword(int argc, VALUE *argv, VALUE se
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -125575,6 +126711,7 @@ _wrap_ThreadedSSLSocketInitiatorBase_setCertAndKey(int argc, VALUE *argv, VALUE 
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -125634,6 +126771,7 @@ _wrap_ThreadedSSLSocketInitiatorBase_passwordHandleCallback(int argc, VALUE *arg
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
@@ -125694,6 +126832,7 @@ _wrap_ThreadedSSLSocketInitiatorBase_passwordHandleCB(int argc, VALUE *argv, VAL
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_int(static_cast< int >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
@@ -125755,6 +126894,7 @@ _wrap_NullStoreFactory_create(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   return vresult;
@@ -125796,6 +126936,7 @@ _wrap_NullStoreFactory_destroy(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -125838,6 +126979,7 @@ _wrap_new_NullStoreFactory(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -125899,6 +127041,7 @@ _wrap_new_NullStore(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return self;
 fail:
@@ -125954,6 +127097,7 @@ _wrap_NullStore_set(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -126023,6 +127167,7 @@ _wrap_NullStore_get(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -126057,6 +127202,7 @@ _wrap_NullStore_getNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -126092,6 +127238,7 @@ _wrap_NullStore_getNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
   return vresult;
@@ -126133,6 +127280,7 @@ _wrap_NullStore_setNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -126173,6 +127321,7 @@ _wrap_NullStore_setNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -126205,6 +127354,7 @@ _wrap_NullStore_incrNextSenderMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -126237,6 +127387,7 @@ _wrap_NullStore_incrNextTargetMsgSeqNum(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -126280,6 +127431,7 @@ _wrap_NullStore_setCreationTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -126314,6 +127466,7 @@ _wrap_NullStore_getCreationTime(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   vresult = SWIG_NewPointerObj((new FIX::UtcTimeStamp(result)), SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_OWN |  0 );
   return vresult;
@@ -126358,6 +127511,7 @@ _wrap_NullStore_reset(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:
@@ -126390,6 +127544,7 @@ _wrap_NullStore_refresh(int argc, VALUE *argv, VALUE self) {
     {
       SWIG_fail;
     }
+    redeliverKill();
   }
   return Qnil;
 fail:

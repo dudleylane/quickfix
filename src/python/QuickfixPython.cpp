@@ -6277,6 +6277,8 @@ bool tryPythonException(std::function<bool()> const& function)
 template<typename Exception>
 void raiseRubyException(Exception const& e, swig_type_info* swigType)
 {
+  // A kill that landed in a callback outranks what the engine threw (#147).
+  redeliverKill();
   rb_exc_raise(SWIG_Ruby_ExceptionType(swigType, SWIG_NewPointerObj((new Exception(static_cast<const Exception&>(e))),swigType,SWIG_POINTER_OWN)));
 }
 
@@ -6408,11 +6410,11 @@ VALUE tryRubyException(std::function<VALUE()> const& function)
   }
   catch(std::exception const& e) 
   {
-    SWIG_Error(SWIG_RuntimeError, e.what()); return Qnil;
+    redeliverKill(); SWIG_Error(SWIG_RuntimeError, e.what()); return Qnil;
   }
   catch(...)
   {
-    SWIG_Error(SWIG_RuntimeError, "unknown exception"); return Qnil;
+    redeliverKill(); SWIG_Error(SWIG_RuntimeError, "unknown exception"); return Qnil;
   }
 }
 #endif
