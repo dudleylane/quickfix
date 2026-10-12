@@ -579,6 +579,19 @@ AppDataDictionary.FIX.4.4=FIX44.xml
 
           <td>Y</td>
         </tr>
+
+        <tr align="left" valign="middle">
+          <td><b>AllowUnknownMsgFields</b></td>
+
+          <td>If set to Y, fields below 5000 (the standard range) that the data dictionary
+          does not define for the message are not rejected. Fields of 5000 and above are
+          governed by ValidateUserDefinedFields.</td>
+
+          <td>Y<br>
+          N</td>
+
+          <td>N</td>
+        </tr>
         
         <tr align="left" valign="middle">
           <td><b>PreserveMessageFieldsOrder</b></td>
@@ -782,6 +795,29 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           name</td>
 
           <td></td>
+        </tr>
+
+        <tr align="left" valign="middle">
+          <td><b>SocketConnectSourceHost</b></td>
+
+          <td>Local address to connect from. Only used by an initiator. The failover
+          entries take the same suffix: SocketConnectSourceHost1 goes with
+          SocketConnectHost1.</td>
+
+          <td>valid IP address in the format of x.x.x.x or a domain name</td>
+
+          <td>any</td>
+        </tr>
+
+        <tr align="left" valign="middle">
+          <td><b>SocketConnectSourcePort</b></td>
+
+          <td>Local port to connect from. Only used by an initiator; numbered like
+          SocketConnectSourceHost. 0 lets the system choose.</td>
+
+          <td>0 to 65535</td>
+
+          <td>0</td>
         </tr>
 
         <tr align="left" valign="middle">
@@ -1398,7 +1434,7 @@ AppDataDictionary.FIX.4.4=FIX44.xml
         </tr>
 
         <tr align="left" valign="middle">
-          <td><b>PostgresSQLLogIncomingTable</b></td>
+          <td><b>PostgreSQLLogIncomingTable</b></td>
 
           <td>Name of table where incoming messages will be
           logged.</td>
@@ -1409,7 +1445,7 @@ AppDataDictionary.FIX.4.4=FIX44.xml
         </tr>
 
         <tr align="left" valign="middle">
-          <td><b>PostgresSQLLogOutgoingTable</b></td>
+          <td><b>PostgreSQLLogOutgoingTable</b></td>
 
           <td>Name of table where outgoing messages will be
           logged.</td>
@@ -1420,7 +1456,7 @@ AppDataDictionary.FIX.4.4=FIX44.xml
         </tr>
 
         <tr align="left" valign="middle">
-          <td><b>PostgresSQLLogEventTable</b></td>
+          <td><b>PostgreSQLLogEventTable</b></td>
 
           <td>Name of table where events will be logged.</td>
 
@@ -1519,91 +1555,52 @@ AppDataDictionary.FIX.4.4=FIX44.xml
         <tr align="left" valign="middle">
           <td><b>SSLProtocol</b></td>
 
-          <td>This directive can be used to control the SSL protocol flavors the application
-          should use when establishing its environment.<br><br>
+          <td>The TLS protocol versions to allow: a list of tokens, each optionally
+          prefixed with + (add) or - (remove), read left to right from none. The tokens
+          (case-insensitive) are SSLv2, SSLv3, TLSv1, TLSv1_1, TLSv1_2, TLSv1_3 and all.
+          Any other token -- TLSv1.3 for TLSv1_3, say -- is an error: the acceptor or
+          initiator fails to start rather than ignore the setting.<br><br>
 
-          The available (case-insensitive) protocols are:<br><br>
+          Without this setting only TLS 1.2 and 1.3 are allowed. Up to and including 22.2.0,
+          the default was every version but SSLv2, which offered SSLv3, TLS 1.0
+          and TLS 1.1 -- deprecated by RFC 8996 -- unless OpenSSL or the system crypto
+          policy refused them. <code>SSLProtocol=all</code> allows every version again,
+          subject to the same OpenSSL and system policy.<br><br>
 
-          SSLv2<br>
-
-          This is the Secure Sockets Layer (SSL) protocol, version 2.0. It is the
-          original SSL protocol as designed by Netscape Corporation.<br><br>
-
-          SSLv3<br>
-
-          This is the Secure Sockets Layer (SSL) protocol, version 3.0. It is the
-          successor to SSLv2 and the currently (as of February 1999) de-facto
-          standardized SSL protocol from Netscape Corporation. It&apos;s supported by
-          almost all popular browsers.<br><br>
-
-          TLSv1<br>
-
-          This is the Transport Layer Security (TLS) protocol, version 1.0.<br><br>
-
-          TLSv1_1<br>
-
-          This is the Transport Layer Security (TLS) protocol, version 1.1.<br><br>
-
-          TLSv1_2<br>
-
-          This is the Transport Layer Security (TLS) protocol, version 1.2.<br><br>
-
-          TLSv1_3<br>
-
-          This is the Transport Layer Security (TLS) protocol, version 1.3 (OpenSSL 1.1.1 and later).<br><br>
-
-          all<br>
-
-          This is a shortcut for +SSLv2 +SSLv3 +TLSv1 +TLSv1_1 +TLSv1_2 +TLSv1_3 and a convenient way for
-          enabling all protocols except one when used in combination with the minus
-          sign on a protocol as the example above shows.<br><br>
-
-          A token not listed here -- TLSv1.3 for TLSv1_3, say -- is an error: the SSL
-          acceptor or initiator fails to start rather than ignore the setting.<br><br>
-
-          Example:<br>
-
-          enable all but not SSLv2<br>
-          SSL_PROTOCOL = all -SSLv2</td>
+          Example: TLS 1.3 only<br>
+          SSLProtocol=-all +TLSv1_3</td>
 
           <td></td>
 
-          <td>all -SSLv2</td>
+          <td>TLSv1_2 TLSv1_3</td>
         </tr>
         <tr align="left" valign="middle">
           <td><b>SSLCipherSuite</b></td>
 
-          <td>This complex directive uses a colon-separated cipher-spec string consisting
-          of OpenSSL cipher specifications to configure the Cipher Suite the client is
-          permitted to negotiate in the SSL handshake phase. Notice that this directive
-          can be used both in per-server and per-directory context. In per-server
-          context it applies to the standard SSL handshake when a connection is
-          established. In per-directory context it forces a SSL renegotation with the
-          reconfigured Cipher Suite after the HTTP request was read but before the HTTP
-          response is sent.<br><br>
+          <td>The cipher list for TLS 1.2 and earlier, in OpenSSL's cipher-list format
+          (see <code>man ciphers</code>), passed to <code>SSL_CTX_set_cipher_list</code>.
+          It does not govern TLS 1.3, whose suites TLSCipherSuites sets. An invalid list is
+          an error at start. Without it, OpenSSL's default list applies, as narrowed by the
+          system crypto policy.<br><br>
 
-          An SSL cipher specification in cipher-spec is composed of 4 major attributes
-          plus a few extra minor ones.<br><br>
-
-          Key Exchange Algorithm:<br>
-          RSA or Diffie-Hellman variants.<br><br>
-
-          Authentication Algorithm:<br>
-          RSA, Diffie-Hellman, DSS or none.<br><br>
-
-          Cipher/Encryption Algorithm:<br>
-          DES, Triple-DES, RC4, RC2, IDEA or none.<br><br>
-
-          MAC Digest Algorithm:<br>
-          MD5, SHA or SHA1.<br><br>
-
-          For more details refer to mod_ssl documentation.<br><br>
-
-          Example: RC4+RSA:+HIGH:</td>
+          Example: ECDHE+AESGCM:ECDHE+CHACHA20</td>
 
           <td></td>
 
-          <td>HIGH:!RC4</td>
+          <td>OpenSSL's default</td>
+        </tr>
+        <tr align="left" valign="middle">
+          <td><b>TLSCipherSuites</b></td>
+
+          <td>The TLS 1.3 cipher suites, colon-separated, passed to
+          <code>SSL_CTX_set_ciphersuites</code>. An invalid list is an error at
+          start.<br><br>
+
+          Example: TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256</td>
+
+          <td></td>
+
+          <td>OpenSSL's default</td>
         </tr>
         <tr align="left" valign="middle">
           <td><b>CertificationAuthoritiesFile</b></td>

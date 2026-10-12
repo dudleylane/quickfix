@@ -1115,10 +1115,12 @@ long protocolOptions(const char *opt)
         }
     }
     else
-    { /* default all except SSLv2 */
-        options = SSL_PROTOCOL_ALL;
-        thisopt = SSL_PROTOCOL_SSLV2;
-        options &= ~thisopt;
+    {
+        // TLS 1.2 and later. The default was every version but SSLv2, which offered SSLv3, TLS 1.0
+        // and TLS 1.1 -- deprecated by RFC 8996 -- unless OpenSSL or the system policy refused
+        // them; an explicit SSLProtocol, such as "all", still decides (#143).
+        options =
+            SSL_PROTOCOL_ALL & ~(SSL_PROTOCOL_SSLV2 | SSL_PROTOCOL_SSLV3 | SSL_PROTOCOL_TLSV1 | SSL_PROTOCOL_TLSV1_1);
     }
 
     return options;

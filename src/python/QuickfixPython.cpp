@@ -131086,20 +131086,6 @@ SWIGINTERN PyObject *Swig_var_USE_DATA_DICTIONARY_get(void) {
 }
 
 
-SWIGINTERN int Swig_var_SEND_RESETSEQNUMFLAG_set(PyObject *) {
-  SWIG_Error(SWIG_AttributeError,"Variable SEND_RESETSEQNUMFLAG is read-only.");
-  return 1;
-}
-
-
-SWIGINTERN PyObject *Swig_var_SEND_RESETSEQNUMFLAG_get(void) {
-  PyObject *pyobj = 0;
-  
-  pyobj = SWIG_FromCharPtr(FIX::SEND_RESETSEQNUMFLAG);
-  return pyobj;
-}
-
-
 SWIGINTERN int Swig_var_SEND_REDUNDANT_RESENDREQUESTS_set(PyObject *) {
   SWIG_Error(SWIG_AttributeError,"Variable SEND_REDUNDANT_RESENDREQUESTS is read-only.");
   return 1;
@@ -172385,7 +172371,6 @@ SWIG_init(void) {
   SWIG_addvarlink(globals, "DEFAULT_APPLVERID", Swig_var_DEFAULT_APPLVERID_get, Swig_var_DEFAULT_APPLVERID_set);
   SWIG_addvarlink(globals, "CONNECTION_TYPE", Swig_var_CONNECTION_TYPE_get, Swig_var_CONNECTION_TYPE_set);
   SWIG_addvarlink(globals, "USE_DATA_DICTIONARY", Swig_var_USE_DATA_DICTIONARY_get, Swig_var_USE_DATA_DICTIONARY_set);
-  SWIG_addvarlink(globals, "SEND_RESETSEQNUMFLAG", Swig_var_SEND_RESETSEQNUMFLAG_get, Swig_var_SEND_RESETSEQNUMFLAG_set);
   SWIG_addvarlink(globals, "SEND_REDUNDANT_RESENDREQUESTS", Swig_var_SEND_REDUNDANT_RESENDREQUESTS_get, Swig_var_SEND_REDUNDANT_RESENDREQUESTS_set);
   SWIG_addvarlink(globals, "SEND_NEXT_EXPECTED_MSG_SEQ_NUM", Swig_var_SEND_NEXT_EXPECTED_MSG_SEQ_NUM_get, Swig_var_SEND_NEXT_EXPECTED_MSG_SEQ_NUM_set);
   SWIG_addvarlink(globals, "DATA_DICTIONARY", Swig_var_DATA_DICTIONARY_get, Swig_var_DATA_DICTIONARY_set);

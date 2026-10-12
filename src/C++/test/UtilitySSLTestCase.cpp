@@ -418,6 +418,25 @@ TEST_CASE("SSLSettingsTests")
         SSL_CTX_free(no12);
     }
 
+    SECTION("theDefaultIsTls12AndLater")
+    {
+        // With no SSLProtocol the engine offered every version but SSLv2 (#143).
+        SSL_CTX *ctx = createSSLContext(true, settingsFrom(""), err);
+        REQUIRE(ctx != nullptr);
+        CHECK((SSL_CTX_get_options(ctx) & SSL_OP_NO_SSLv3) != 0);
+        CHECK((SSL_CTX_get_options(ctx) & SSL_OP_NO_TLSv1) != 0);
+        CHECK((SSL_CTX_get_options(ctx) & SSL_OP_NO_TLSv1_1) != 0);
+        CHECK((SSL_CTX_get_options(ctx) & SSL_OP_NO_TLSv1_2) == 0);
+        CHECK((SSL_CTX_get_options(ctx) & SSL_OP_NO_TLSv1_3) == 0);
+        SSL_CTX_free(ctx);
+
+        // An explicit setting still decides.
+        SSL_CTX *all = createSSLContext(true, settingsFrom("SSLProtocol=all\n"), err);
+        REQUIRE(all != nullptr);
+        CHECK((SSL_CTX_get_options(all) & SSL_OP_NO_TLSv1) == 0);
+        SSL_CTX_free(all);
+    }
+
     SECTION("eitherRevocationListSettingWorksAlone")
     {
         // Setting only one of the two used to hand OpenSSL an empty path for the other, and the

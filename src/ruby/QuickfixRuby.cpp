@@ -98376,15 +98376,6 @@ _wrap_USE_DATA_DICTIONARY_get(VALUE self) {
 
 
 SWIGINTERN VALUE
-_wrap_SEND_RESETSEQNUMFLAG_get(VALUE self) {
-  VALUE _val;
-  
-  _val = SWIG_FromCharPtr(FIX::SEND_RESETSEQNUMFLAG);
-  return _val;
-}
-
-
-SWIGINTERN VALUE
 _wrap_SEND_REDUNDANT_RESENDREQUESTS_get(VALUE self) {
   VALUE _val;
   
@@ -134548,7 +134539,6 @@ SWIGEXPORT void Init_quickfix(void) {
   rb_define_singleton_method(mQuickfix, "DEFAULT_APPLVERID", VALUEFUNC(_wrap_DEFAULT_APPLVERID_get), 0);
   rb_define_singleton_method(mQuickfix, "CONNECTION_TYPE", VALUEFUNC(_wrap_CONNECTION_TYPE_get), 0);
   rb_define_singleton_method(mQuickfix, "USE_DATA_DICTIONARY", VALUEFUNC(_wrap_USE_DATA_DICTIONARY_get), 0);
-  rb_define_singleton_method(mQuickfix, "SEND_RESETSEQNUMFLAG", VALUEFUNC(_wrap_SEND_RESETSEQNUMFLAG_get), 0);
   rb_define_singleton_method(mQuickfix, "SEND_REDUNDANT_RESENDREQUESTS", VALUEFUNC(_wrap_SEND_REDUNDANT_RESENDREQUESTS_get), 0);
   rb_define_singleton_method(mQuickfix, "SEND_NEXT_EXPECTED_MSG_SEQ_NUM", VALUEFUNC(_wrap_SEND_NEXT_EXPECTED_MSG_SEQ_NUM_get), 0);
   rb_define_singleton_method(mQuickfix, "DATA_DICTIONARY", VALUEFUNC(_wrap_DATA_DICTIONARY_get), 0);
