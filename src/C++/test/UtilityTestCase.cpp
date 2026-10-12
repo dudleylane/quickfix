@@ -20,16 +20,20 @@
 #include "config.h"
 
 #include <FieldMap.h>
+#include <Mutex.h>
 #include <Utility.h>
 
 #include "catch_amalgamated.hpp"
 
 #include <cerrno>
+#include <chrono>
 #include <dirent.h>
+#include <future>
 #include <memory>
 #include <netinet/in.h>
 #include <set>
 #include <sys/socket.h>
+#include <thread>
 #include <type_traits>
 #include <unistd.h>
 
@@ -310,5 +314,36 @@ TEST_CASE("StringSplitTests")
         CHECK(string_split(" 10.0.0.1 ,\t10.0.0.2\t", ',') == std::set<std::string>{"10.0.0.1", "10.0.0.2"});
         CHECK(string_split(",, ,", ',').empty());
         CHECK(string_split("", ',').empty());
+    }
+}
+
+// FIX::Mutex is recursive: Initiator::connect and the threaded transports take
+// m_mutex while already holding it (#131). The locking runs on its own thread so
+// that a regression fails here instead of hanging the suite.
+TEST_CASE("MutexTests")
+{
+    struct Shared
+    {
+        FIX::Mutex mutex;
+        std::promise<void> done;
+    };
+    auto shared = std::make_shared<Shared>();
+    std::future<void> done = shared->done.get_future();
+    std::thread locker(
+        [shared]
+        {
+            FIX::Locker outer(shared->mutex);
+            FIX::Locker inner(shared->mutex);
+            shared->done.set_value();
+        });
+    if (done.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+    {
+        locker.join();
+        SUCCEED("locked twice by one thread");
+    }
+    else
+    {
+        locker.detach(); // deadlocked; it owns what it uses
+        FAIL("a Mutex locked twice by one thread deadlocked");
     }
 }

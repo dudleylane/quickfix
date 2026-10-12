@@ -34,6 +34,7 @@
 #include <fix42/OrderCancelReplaceRequest.h>
 #include <fix42/OrderCancelRequest.h>
 #include <fix42/OrderStatusRequest.h>
+#include <fix42/QuoteAcknowledgement.h>
 #include <fix42/Reject.h>
 #include <fix42/ResendRequest.h>
 #include <fix42/SequenceReset.h>
@@ -1474,4 +1475,38 @@ TEST_CASE("MessageTests")
         FIX::Message object;
         CHECK_THROWS_AS(object.setString(msg, false, &dataDictionary), InvalidMessage);
     }
+}
+
+// FIX 4.2's QuoteAcknowledgement carries QuoteStatus, tag 297. The generated
+// class used QuoteAckStatus, 1865, a FIX 5.0 SP2 tag FIX42.xml does not define,
+// so a FIX 4.2 peer rejected it (25b23432, #131).
+TEST_CASE("QuoteAcknowledgementTests")
+{
+    FIX42::QuoteAcknowledgement object(FIX::QuoteStatus(FIX::QuoteStatus_ACCEPTED));
+    CHECK(object.isSetField(297));
+    CHECK_FALSE(object.isSetField(1865));
+}
+
+// A repeating group instance that opens with a member rather than its delimiter
+// is reported as out of order, naming the member, not as a count mismatch on a
+// count that is right (74fe9320, #131). Until now only future/14j covered it.
+TEST_CASE("OutOfOrderGroupMemberTests")
+{
+    FIX::DataDictionary dictionary(FIX::TestSettings::pathForSpec("FIX42"));
+    const std::string body = std::string("35=D\00134=2\00149=TW\00152=20000426-12:05:06\00156=ISLD\001") +
+                             "11=ID\00121=1\00140=1\00154=1\00138=200\00155=INTC\00160=20000426-12:05:06\001" +
+                             "78=2\00180=50\00179=acct1\00180=150\00179=acct2\001";
+    std::string framed = "8=FIX.4.2\0019=" + std::to_string(body.size()) + "\001" + body;
+    int sum = 0;
+    for (unsigned char c : framed)
+    {
+        sum += c;
+    }
+    framed += "10=" + std::to_string(1000 + sum % 256).substr(1) + "\001";
+
+    FIX::Message object;
+    object.setString(framed, false, &dictionary);
+    int tag = 0;
+    CHECK(object.hasOutOfOrderGroupMembers(tag));
+    CHECK(tag == 80);
 }
