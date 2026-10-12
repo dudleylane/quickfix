@@ -59,6 +59,29 @@ extern "C" int select(int count, fd_set *read, fd_set *write, fd_set *except, ti
     return libcSelect(count, read, write, except, timeout);
 }
 
+// accept() for the process, failing with EMFILE while acceptFailures is above
+// zero -- the descriptor limit, say -- and forwarding to libc's otherwise (#131).
+namespace
+{
+std::atomic<int> acceptFailures{0};
+}
+
+extern "C" int accept(int socket, sockaddr *address, socklen_t *length)
+{
+    int failures = acceptFailures.load();
+    while (failures > 0)
+    {
+        if (acceptFailures.compare_exchange_weak(failures, failures - 1))
+        {
+            errno = EMFILE;
+            return -1;
+        }
+    }
+    using Accept = int (*)(int, sockaddr *, socklen_t *);
+    static const Accept libcAccept = reinterpret_cast<Accept>(::dlsym(RTLD_NEXT, "accept"));
+    return libcAccept(socket, address, length);
+}
+
 // A threaded connection is read by its own thread, but disconnect() is reached
 // from any thread -- Session::disconnect() through the responder, or a
 // transport's onStop. It may shut the socket down, which wakes the reader, but
@@ -1108,4 +1131,72 @@ TEST_CASE("AcceptPortRangeTests")
     ThreadedSocketAcceptor acceptor(application, factory, any);
     CHECK_NOTHROW(acceptor.start());
     acceptor.stop();
+}
+
+namespace
+{
+// The next acceptFailures calls to accept() in this process fail with EMFILE,
+// through the accept() defined at the top of this file. Starving the process
+// of descriptors instead also starves the sanitizers' runtimes of them.
+template <typename AcceptorType> void checkAcceptFailureIsSurvived(const std::string &sender, bool tls)
+{
+    NullApplication application;
+    MemoryStoreFactory factory;
+    const int port = freePort();
+    AcceptorType acceptor(application, factory, deadlineSettings(port, sender));
+    StopOnExit stopOnExit{acceptor};
+    acceptFailures = 2; // its accept thread's first two calls; it backs off a second after each
+    acceptor.start();
+
+    const int client = connectTo(port);
+    REQUIRE(client >= 0);
+
+#if (HAVE_SSL > 0)
+    SSL_CTX *ctx = nullptr;
+    SSL *ssl = nullptr;
+    if (tls)
+    {
+        ctx = SSL_CTX_new(TLS_client_method());
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
+        ssl = tlsClientSending(client, ctx, logonTo(sender));
+        CHECK(ssl != nullptr);
+    }
+    else
+#endif
+    {
+        (void)tls;
+        CHECK(sendAll(client, logonTo(sender)));
+    }
+
+    // The acceptor kept listening through both failures, and serves the client.
+    CHECK(waitUntil([&]() { return acceptor.isLoggedOn(); }, std::chrono::milliseconds(6000)));
+    CHECK(acceptFailures == 0);
+    acceptFailures = 0;
+
+    acceptor.stop(true);
+#if (HAVE_SSL > 0)
+    if (ssl)
+    {
+        SSL_free(ssl);
+    }
+    if (ctx)
+    {
+        SSL_CTX_free(ctx);
+    }
+#endif
+    ::close(client);
+}
+} // namespace
+
+// A threaded acceptor keeps listening after a failed accept() (063a9e5b, #131);
+// it used to end its accept thread at the first one.
+TEST_CASE("AcceptFailureTests")
+{
+    SECTION("ThreadedSocketAcceptor") { checkAcceptFailureIsSurvived<ThreadedSocketAcceptor>("ACCEPTFAIL1", false); }
+#if (HAVE_SSL > 0)
+    SECTION("ThreadedSSLSocketAcceptor")
+    {
+        checkAcceptFailureIsSurvived<ThreadedSSLSocketAcceptor>("ACCEPTFAIL2", true);
+    }
+#endif
 }
