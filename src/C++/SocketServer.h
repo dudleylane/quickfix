@@ -28,6 +28,7 @@
 
 #include "Exceptions.h"
 #include "SocketMonitor.h"
+#include <cstdint>
 #include <map>
 #include <queue>
 #include <set>
@@ -39,13 +40,15 @@ struct SocketInfo
 {
     SocketInfo() : m_socket(INVALID_SOCKET_HANDLE), m_port(0), m_noDelay(false), m_sendBufSize(0), m_rcvBufSize(0) {}
 
-    SocketInfo(socket_handle socket, short port, bool noDelay, int sendBufSize, int rcvBufSize)
+    SocketInfo(socket_handle socket, uint16_t port, bool noDelay, int sendBufSize, int rcvBufSize)
         : m_socket(socket), m_port(port), m_noDelay(noDelay), m_sendBufSize(sendBufSize), m_rcvBufSize(rcvBufSize)
     {
     }
 
     socket_handle m_socket;
-    short m_port;
+    // Unsigned, like the port settings since #99: a short made socketToPort() negative above 32767,
+    // and SSLSocketAcceptor then found no sessions for the port (#119).
+    uint16_t m_port;
     bool m_noDelay;
     int m_sendBufSize;
     int m_rcvBufSize;

@@ -3,6 +3,9 @@
 #if (HAVE_SSL > 0)
 
 #include <Application.h>
+#include <FixFields.h>
+#include <FixValues.h>
+#include <Message.h>
 #include <MessageStore.h>
 #include <SSLSocketAcceptor.h>
 #include <SessionSettings.h>
@@ -143,6 +146,76 @@ TEST_CASE("SSLSocketAcceptorTests")
         acceptor.stop(true);
         CHECK(since(start) < std::chrono::milliseconds(3000));
         ::close(client);
+    }
+
+    SECTION("aSessionLogsOnThroughAPortAbove32767")
+    {
+        // #119. SocketServer reported a port above 32767 negative, so the acceptor
+        // found no sessions for the connection and refused the Logon.
+        int port = freePort();
+        for (int attempt = 0; port <= 32767 && attempt < 100; ++attempt)
+        {
+            port = freePort();
+        }
+        REQUIRE(port > 32767);
+        SSLSocketAcceptor acceptor(application, factory, acceptorSettings(port));
+        REQUIRE(acceptor.poll());
+
+        const int client = connectTo(port);
+        REQUIRE(client >= 0);
+        SSL_CTX *ctx = SSL_CTX_new(TLS_client_method());
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
+        SSL *ssl = SSL_new(ctx);
+        REQUIRE(::fcntl(client, F_SETFL, ::fcntl(client, F_GETFL) | O_NONBLOCK) == 0);
+        SSL_set_fd(ssl, client);
+        const auto start = std::chrono::steady_clock::now();
+        bool connected = false;
+        while (!connected && since(start) < std::chrono::milliseconds(5000))
+        {
+            connected = SSL_connect(ssl) == 1;
+            acceptor.poll();
+        }
+        REQUIRE(connected);
+
+        Message logon;
+        logon.getHeader().setField(BeginString(BeginString_FIX42));
+        logon.getHeader().setField(MsgType(MsgType_Logon));
+        logon.getHeader().setField(SenderCompID("TW"));
+        logon.getHeader().setField(TargetCompID("SSLACCEPTOR"));
+        logon.getHeader().setField(MsgSeqNum(1));
+        logon.getHeader().setField(SendingTime(UtcTimeStamp::now()));
+        logon.setField(EncryptMethod(0));
+        logon.setField(HeartBtInt(30));
+        const std::string request = logon.toString();
+        bool sent = false;
+        while (!sent && since(start) < std::chrono::milliseconds(5000))
+        {
+            sent = SSL_write(ssl, request.data(), static_cast<int>(request.size())) == static_cast<int>(request.size());
+            acceptor.poll();
+        }
+        REQUIRE(sent);
+
+        std::string reply;
+        char buffer[512];
+        while (reply.find("\00135=A\001") == std::string::npos && since(start) < std::chrono::milliseconds(5000))
+        {
+            acceptor.poll();
+            const int count = SSL_read(ssl, buffer, sizeof(buffer));
+            if (count > 0)
+            {
+                reply.append(buffer, count);
+            }
+            else if (SSL_get_error(ssl, count) != SSL_ERROR_WANT_READ)
+            {
+                break;
+            }
+        }
+        CHECK(reply.find("\00135=A\001") != std::string::npos);
+
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
+        ::close(client);
+        acceptor.stop(true);
     }
 }
 

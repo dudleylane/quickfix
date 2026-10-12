@@ -147,6 +147,31 @@ TEST_CASE("SocketServerTests")
         CHECK(strategy.disconnectSocket > 0);
     }
 
+    SECTION("socketToPortReturnsAPortAbove32767")
+    {
+        // #119. SocketInfo held the port as a short, so above 32767 socketToPort()
+        // returned it negative, and SSLSocketAcceptor looked its sessions up under
+        // the wrong number.
+        SocketServer object(0);
+        socket_handle listener = INVALID_SOCKET_HANDLE;
+        int port = 47000;
+        for (; port < 48000 && listener == INVALID_SOCKET_HANDLE; ++port)
+        {
+            try
+            {
+                listener = object.add(port, true);
+            }
+            catch (SocketException &)
+            {
+            }
+        }
+        --port;
+        REQUIRE(listener != INVALID_SOCKET_HANDLE);
+        CHECK(object.socketToPort(listener) == port);
+        CHECK(object.portToSocket(port) == listener);
+        object.close();
+    }
+
     SECTION("close")
     {
         SocketServer object(0);
