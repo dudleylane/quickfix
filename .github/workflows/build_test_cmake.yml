@@ -68,6 +68,15 @@ jobs:
           git diff --exit-code --stat -- src/python src/ruby \
             || { echo "::error::the SWIG wrappers are stale -- run src/python/swig.sh and src/ruby/swig.sh and commit the result"; exit 1; }
 
+      - name: Test the acceptance harness
+        # Comparator.rb decides pass or fail for every acceptance definition, and
+        # the parser, reflector and socket server around it drive them. Their own
+        # tests were written for runit, which Ruby removed in 1.9, and could not
+        # load until #135. A few seconds, so every event; Debug only.
+        if: matrix.configuration == 'Debug'
+        working-directory: ./test
+        run: ruby -I. test.rb
+
       - name: Check the generated code matches spec/
         # spec/generate.sh writes the message classes, the MessageCracker.h
         # files, FixFields.h and friends, and the Python and Ruby field modules

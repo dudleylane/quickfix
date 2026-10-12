@@ -1,11 +1,13 @@
 require './FixParser'
-require 'runit/testcase'
+require 'test/unit'
+require_relative 'harness_test_helper'
 require "thread"
 require './SocketServer'
 
-class FixParserTestCase < RUNIT::TestCase
+class FixParserTestCase < Test::Unit::TestCase
 
   def test_readFixMessage
+    port = HarnessTest.port
     fixMsg1 = "8=FIX.4.2\0019=12\00135=A\001108=30\00110=31\001"
     fixMsg2 = "8=FIX.4.2\0019=17\00135=4\00136=88\001123=Y\00110=34\001"
 
@@ -26,15 +28,15 @@ class FixParserTestCase < RUNIT::TestCase
 
     server.message = fixMsg1 + fixMsg2
     Thread.start do
-      server.listen(RUNIT::TestCase.port)
+      server.listen(port)
     end
     server.wait
 
-    s = TCPSocket.open("localhost", RUNIT::TestCase.port)
+    s = TCPSocket.open("localhost", port)
     parser = FixParser.new(s)
     begin
-      assert_equals(fixMsg1, parser.readFixMessage)
-      assert_equals(fixMsg2, parser.readFixMessage)
+      assert_equal(fixMsg1, parser.readFixMessage)
+      assert_equal(fixMsg2, parser.readFixMessage)
     rescue IOError
       # I have no idea why this is being thrown
     end

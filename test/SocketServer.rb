@@ -25,7 +25,12 @@ class SocketServer
     addr = @gs.addr
     addr.shift
     while !@gs.closed?
-      ns = @gs.accept
+      begin
+        ns = @gs.accept
+      rescue IOError, Errno::EBADF
+        break if closed? # stop() closed it under this accept
+        raise
+      end
       Thread.start do
 	s = ns
 	connectAction(s)
@@ -43,12 +48,15 @@ class SocketServer
     end
   end
 
+  # Closed until listen has opened the server socket: a caller in wait() used to
+  # reach @gs before listen() had set it, and failed on nil (#135).
   def closed?
-    return @gs.closed?
+    return @gs.nil? || @gs.closed?
   end
 
   def wait
-    while( closed? ) 
+    while( closed? )
+      sleep 0.01
     end
   end
 

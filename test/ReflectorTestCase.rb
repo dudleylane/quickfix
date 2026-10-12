@@ -7,9 +7,10 @@ class MockReflector < Reflector
   end
 end
 
-require 'runit/testcase'
+require 'test/unit'
+require_relative 'harness_test_helper'
 
-class ReflectorTestCase < RUNIT::TestCase
+class ReflectorTestCase < Test::Unit::TestCase
 
   def test_identifyMessage
     reflector = Reflector.new
@@ -33,13 +34,13 @@ class ReflectorTestCase < RUNIT::TestCase
     str = "8=FIX.4.235=D34=249=PATS52=<TIME>56=RCG1=acct111=121=138=240=154=155=ESU260=<TIME>167=FUT204=1207=CME9701=omni19702=19706=E9707=1239708=G"
     reflector.timeify!(str)
     reflector.fixify!(str)
-    assert_equals("8=FIX.4.29=17135=D34=249=PATS52=20000101-20:15:0156=RCG1=acct111=121=138=240=154=155=ESU260=20000101-20:15:01167=FUT204=1207=CME9701=omni19702=19706=E9707=1239708=G10=121", str)
+    assert_equal("8=FIX.4.29=17135=D34=249=PATS52=20000101-20:15:0156=RCG1=acct111=121=138=240=154=155=ESU260=20000101-20:15:01167=FUT204=1207=CME9701=omni19702=19706=E9707=1239708=G10=121", str)
     
     str = "8=FIX.4.235=D34=249=PATS52=<TIME>56=RCG1=acct111=121=138=240=154=155=<FILE:test.txt>60=<TIME>167=FUT204=1207=CME9701=omni19702=19706=E9707=1239708=G9709=PEA"
     reflector.timeify!(str)
     reflector.fileify!(str)
     reflector.fixify!(str)    
-    assert_equals("8=FIX.4.29=18935=D34=249=PATS52=20000101-20:15:0156=RCG1=acct111=121=138=240=154=155=File Contents60=20000101-20:15:01167=FUT204=1207=CME9701=omni19702=19706=E9707=1239708=G9709=PEA10=062", str)
+    assert_equal("8=FIX.4.29=18935=D34=249=PATS52=20000101-20:15:0156=RCG1=acct111=121=138=240=154=155=File Contents60=20000101-20:15:01167=FUT204=1207=CME9701=omni19702=19706=E9707=1239708=G9709=PEA10=062", str)
     
   end
 
@@ -49,12 +50,12 @@ class ReflectorTestCase < RUNIT::TestCase
     str = "8=FIX.4.235=A34=149=TW52=20000426-12:05:06" + 
       "56=ISLD98=0108=30"
     reflector.fixify!(str)
-    assert_equals("8=FIX.4.29=5735=A34=149=TW52=20000426-12:05:0656=ISLD98=0108=3010=005", str)
+    assert_equal("8=FIX.4.29=5735=A34=149=TW52=20000426-12:05:0656=ISLD98=0108=3010=005", str)
     
     str = "8=FIX.4.29=5735=A34=149=TW52=20000426-12:05:06" +
       "56=ISLD98=0108=3010=005"
     reflector.fixify!(str)
-    assert_equals("8=FIX.4.29=5735=A34=149=TW52=20000426-12:05:0656=ISLD98=0108=3010=005", str)
+    assert_equal("8=FIX.4.29=5735=A34=149=TW52=20000426-12:05:0656=ISLD98=0108=3010=005", str)
   end
 
   def test_timeify_bang
@@ -62,7 +63,7 @@ class ReflectorTestCase < RUNIT::TestCase
     
     str = "8=FIX.4.29=5735=A34=149=TW52=20011010-10:10:1056=ISLD98=0108=3010=005"
     reflector.timeify!(str)
-    assert_equals("8=FIX.4.29=5735=A34=149=TW52=20011010-10:10:1056=ISLD98=0108=3010=005", str)
+    assert_equal("8=FIX.4.29=5735=A34=149=TW52=20011010-10:10:1056=ISLD98=0108=3010=005", str)
 
     str = "8=FIX.4.29=5735=A34=149=TW52=<TIME>56=ISLD98=0" + 
       "108=3010=005"
@@ -209,14 +210,14 @@ class ReflectorTestCase < RUNIT::TestCase
 
     #messages = "E8=1\nI8=2\n\nI8=3\nE8=4\n#foo\nE8=5\nE8=6\nI8=7\niCONNECT\neDISCONNECT\neCONNECT\niDISCONNECT\nE2,8=8\n"
 
-    assert_equals("1,8=1|1,8=2|1,8=3|1,8=4|1,8=5|1,8=6|1,8=7|" +
+    assert_equal("1,8=1|1,8=2|1,8=3|1,8=4|1,8=5|1,8=6|1,8=7|" +
                   "1,iCONNECT|1,eDISCONNECT|1,eCONNECT|1,iDISCONNECT|2,8=8|", 
                    reflector.cum)
-    assert_equals("1,8=2|1,8=3|1,8=7|", reflector.ini)
-    assert_equals("1,8=1|1,8=4|1,8=5|1,8=6|2,8=8|", reflector.exp)
-    assert_equals("1,iCONNECT|", reflector.icon)
-    assert_equals("1,iDISCONNECT|", reflector.idis)
-    assert_equals("1,eCONNECT|", reflector.econ)
-    assert_equals("1,eDISCONNECT|", reflector.edis)
+    assert_equal("1,8=2|1,8=3|1,8=7|", reflector.ini)
+    assert_equal("1,8=1|1,8=4|1,8=5|1,8=6|2,8=8|", reflector.exp)
+    assert_equal("1,iCONNECT|", reflector.icon)
+    assert_equal("1,iDISCONNECT|", reflector.idis)
+    assert_equal("1,eCONNECT|", reflector.econ)
+    assert_equal("1,eDISCONNECT|", reflector.edis)
   end
 end

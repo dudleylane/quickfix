@@ -18,6 +18,7 @@
 
 require './ReflectorClient'
 require './Comparator'
+require './ReflectorServer'
 
 def extendProcess(c)
 
@@ -87,48 +88,50 @@ def createProcess(file, address, port)
   return nil
 end
 
-i = 0
-exitValue = 0
-total = 0
-failures = 0
+# Runs the definitions named on the command line only when run as a script, so
+# the harness's own tests (test.rb) can load this file (#135). The guard it had
+# came after the exit, with nothing in it.
+if __FILE__ == $0
+  i = 0
+  exitValue = 0
+  total = 0
+  failures = 0
 
-begin
-  ARGV[2, ARGV.length-2].each do
-    | v |
-    puts v
-    file = File.open(v, "r")
-    process = createProcess(file, ARGV[0], ARGV[1])
-    if process.nil? then
-      puts "    Test definition did not contain iCONNECT or eCONNECT"
-      exitValue += 1
-      next
+  begin
+    ARGV[2, ARGV.length-2].each do
+      | v |
+      puts v
+      file = File.open(v, "r")
+      process = createProcess(file, ARGV[0], ARGV[1])
+      if process.nil? then
+        puts "    Test definition did not contain iCONNECT or eCONNECT"
+        exitValue += 1
+        next
+      end
+      file.rewind
+      extendProcess(process)
+
+    sleep(0.1)
+      total += 1
+      begin
+        process.start
+        printResult(v, nil)
+        process.stop
+      rescue
+        failures += 1
+        exitValue += 1
+        printResult(v, $!)
+        process.stop
+      end
     end
-    file.rewind
-    extendProcess(process)
-
-  sleep(0.1)
-    total += 1
-    begin
-      process.start
-      printResult(v, nil)
-      process.stop
-    rescue
-      failures += 1
-      exitValue += 1
-      printResult(v, $!)
-      process.stop
+    if failures != 0
+      puts "FAILED #{failures} out of #{total} tests"
+    else
+      puts "#{total} tests passed"
     end
+  rescue
+    print "  ",$!,"\n"
   end
-  if failures != 0
-    puts "FAILED #{failures} out of #{total} tests"
-  else
-    puts "#{total} tests passed"
-  end
-rescue
-  print "  ",$!,"\n"
-end
 
-exit exitValue
-
-if not Object.respond_to?("is_testing") or not Object.is_testing then
+  exit exitValue
 end

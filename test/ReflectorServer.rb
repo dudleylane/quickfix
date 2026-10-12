@@ -44,6 +44,12 @@ class ReflectorServer < SocketServer
       @parser = s
     end
 
+    # As ReflectorClient does: a line that fails goes to the process's
+    # errorAction, which Runner.rb's extendProcess supplies (#135).
+    def @reflector.errorAction(lineNum, line)
+      @server.errorAction(lineNum, line)
+    end
+
     def @reflector.expectedAction(msg, cid)
       m = @parser.readFixMessage
       @server.compareAction(msg, m)

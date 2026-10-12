@@ -1,13 +1,14 @@
 require './Comparator'
-require 'runit/testcase'
+require 'test/unit'
+require_relative 'harness_test_helper'
 
-class ComparatorTestCase < RUNIT::TestCase
+class ComparatorTestCase < Test::Unit::TestCase
 
   def test_parsePatterns
     patterns = "10=\\d{1,3}\n52=\\d{8}-\\d2:\\d2:\\d2\n"
     comp = Comparator.new(patterns)
-    assert_equals(/\d{1,3}/, comp[10])
-    assert_equals(/\d{8}-\d2:\d2:\d2/, comp[52])
+    assert_equal(/\d{1,3}/, comp[10])
+    assert_equal(/\d{8}-\d2:\d2:\d2/, comp[52])
   end
 
   def test_compare
