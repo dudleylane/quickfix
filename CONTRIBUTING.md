@@ -241,9 +241,14 @@ The acceptance harness has tests of its own -- the comparator that judges each d
 parser, reflector and socket server around it: `cd test && ruby -I. test.rb` (a few seconds; CI
 runs it on every push).
 
-CI runs the unit tests on every push, the acceptance suite on pull requests and manual runs
-(`gh workflow run build_test_cmake.yml --ref master`), and `pt` only in
-the Release configuration.
+CI runs, on every push: the Debug and Release builds and `ut`; the SWIG and generated-code
+checks, the binding suites, the staged install with its C++ consumers, and the acceptance
+harness's own tests (Debug); a `pt` smoke run (Release); and `ut` under ASan + UBSan and under
+TSan. On pull requests and manual runs (`gh workflow run build_test_cmake.yml --ref master`) it
+adds the acceptance suite in both legs and under both sanitizers, the acceptance subset through
+the Python and Ruby bindings, the database link and test step, the no-SSL and TBB-allocator
+builds, and the `pt` regression gate, which compares this commit's `pt` with the base's
+(`-f pt_base=<full SHA>` for a manual run; otherwise the previous commit).
 
 The Debug leg also covers the checked-in SWIG output, which went 33 commits without compiling at
 all before anyone noticed. It configures with `-DHAVE_PYTHON3=ON`, so CMake compiles and links
@@ -439,14 +444,16 @@ the gate on it.
   ```
 - **Debian/Ubuntu**: `g++-15 cmake ninja-build ruby`
 - For SSL: `openssl-devel` / `libssl-dev`
-- For MySQL: `mysql-devel` / `libmysqlclient-dev`
+- For MySQL: `mariadb-connector-c-devel` / `libmariadb-dev` (what CI builds against)
 - For PostgreSQL: `libpq-devel` / `libpq-dev`
 
 ## Getting Help
 
-- **Questions**: Use [GitHub Discussions](https://github.com/dudleylane/quickfix/discussions)
-- **Chat**: Join the community on the mailing list
-- **Issues**: For bugs and feature requests only
+- **Questions, bugs and feature requests**: open a
+  [GitHub issue](https://github.com/dudleylane/quickfix/issues); the fork has no Discussions board
+  and no mailing list
+- **Security problems**: report them privately, as [SECURITY.md](SECURITY.md) describes, not in an
+  issue
 
 ## Recognition
 
