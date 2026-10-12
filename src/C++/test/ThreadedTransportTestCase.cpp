@@ -26,6 +26,7 @@
 #include <chrono>
 #include <csignal>
 #include <dirent.h>
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <memory>
 #include <netinet/in.h>
@@ -33,11 +34,29 @@
 #include <pthread.h>
 #include <sstream>
 #include <sys/resource.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <thread>
 #include <unistd.h>
 
 using namespace FIX;
+
+// Every select() made in this process, the library's included: an executable's
+// definition of a symbol the library references takes the library's calls. It
+// forwards to libc's. No Linux transport waits with select() -- an fd_set
+// overflows at FD_SETSIZE (GHSA-ppch) -- so a test can require none (#130).
+namespace
+{
+std::atomic<int> selectCalls{0};
+}
+
+extern "C" int select(int count, fd_set *read, fd_set *write, fd_set *except, timeval *timeout)
+{
+    ++selectCalls;
+    using Select = int (*)(int, fd_set *, fd_set *, fd_set *, timeval *);
+    static const Select libcSelect = reinterpret_cast<Select>(::dlsym(RTLD_NEXT, "select"));
+    return libcSelect(count, read, write, except, timeout);
+}
 
 // A threaded connection is read by its own thread, but disconnect() is reached
 // from any thread -- Session::disconnect() through the responder, or a
@@ -223,10 +242,11 @@ TEST_CASE("ThreadedTransportTests")
         // transports, so a descriptor of FD_SETSIZE (1024) or more is served normally. Put the
         // connection's socket at a descriptor >= 1024 and drive one read through it.
         //
-        // This checks the poll() path works at a high descriptor; it does not detect a return
-        // to the fd_set path. Verified 2026-10-04: with the fd_set code restored, this section
-        // still passes, AddressSanitizer included (likely because the overrun lands inside the
-        // connection object, which ASan does not instrument).
+        // The overrun itself goes unseen: with the fd_set code restored this read still
+        // works, AddressSanitizer included (verified 2026-10-04; the overrun lands inside
+        // the connection object, which ASan does not instrument). So the section also
+        // counts select() calls, through the select() defined at the top of this file,
+        // and requires none (#130).
         rlimit limit{};
         REQUIRE(::getrlimit(RLIMIT_NOFILE, &limit) == 0);
         if (limit.rlim_cur <= FD_SETSIZE)
@@ -271,6 +291,7 @@ TEST_CASE("ThreadedTransportTests")
             new ThreadedSSLSocketConnection(high, server, ThreadedSSLSocketConnection::Sessions(), nullptr);
 
         REQUIRE(SSL_write(client, "x", 1) == 1);
+        const int selectsBefore = selectCalls;
         std::atomic<bool> done{false};
         std::thread reader(
             [connection, &done]
@@ -280,6 +301,9 @@ TEST_CASE("ThreadedTransportTests")
             });
         reader.join();
         CHECK(done.load());
+        // The read waited without select(), whose fd_set this descriptor would
+        // overrun. This is what fails if the fd_set path comes back (#130).
+        CHECK(selectCalls == selectsBefore);
 
         delete connection;
         SSL_free(server);
