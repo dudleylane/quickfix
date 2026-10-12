@@ -57,6 +57,7 @@ option(HAVE_MYSQL "Build with MySQL")
 option(HAVE_POSTGRESQL "Build with PostgreSQL")
 option(HAVE_ODBC "Build with ODBC")
 option(HAVE_PYTHON3 "Build with default Python3 version")
+option(HAVE_RUBY "Build the Ruby binding")
 option(ENABLE_TBB_ALLOCATOR "Use TBB scalable allocator for internal containers")
 
 # add option to build shared or static
@@ -117,6 +118,12 @@ if (HAVE_PYTHON3)
   # (#108); FindPython keeps it and the headers to one Python.
   find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
   include_directories(${Python3_INCLUDE_DIRS})
+endif ()
+
+if (HAVE_RUBY)
+  # The interpreter, to ask RbConfig where modules go, and the headers; the module links libruby, as
+  # mkmf's does (#118).
+  find_package(Ruby 3 REQUIRED)
 endif ()
 
 add_subdirectory(src)

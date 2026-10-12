@@ -49,3 +49,7 @@ endif()
 if (HAVE_PYTHON3)
 add_subdirectory(python3)
 endif ()
+
+if (HAVE_RUBY)
+add_subdirectory(ruby)
+endif ()

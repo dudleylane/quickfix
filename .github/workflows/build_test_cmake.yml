@@ -101,7 +101,8 @@ jobs:
           cmake -B build -S . -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
             -DHAVE_SSL=ON \
-            -DHAVE_PYTHON3=${{ matrix.configuration == 'Debug' && 'ON' || 'OFF' }}
+            -DHAVE_PYTHON3=${{ matrix.configuration == 'Debug' && 'ON' || 'OFF' }} \
+            -DHAVE_RUBY=${{ matrix.configuration == 'Debug' && 'ON' || 'OFF' }}
 
       - name: Build
         shell: bash
@@ -139,7 +140,13 @@ jobs:
         working-directory: ./src/ruby
         shell: bash
         run: |
+          # The suite runs on the module CMake built (-DHAVE_RUBY=ON, lib/ruby/),
+          # which test.sh puts first (#118); make_ruby.sh's, for builds without
+          # CMake, must still build and load.
           bash make_ruby.sh "$CXX" "-std=c++23 -DHAVE_SSL=1" "-lssl -lcrypto"
+          LD_LIBRARY_PATH="${{ github.workspace }}/lib:$LD_LIBRARY_PATH" RUBYLIB="$PWD" \
+            ruby -e 'require "quickfix_ruby"; exit $LOADED_FEATURES.grep(/quickfix\.so$/).first == File.join(Dir.pwd, "quickfix.so")' \
+            || { echo "::error::make_ruby.sh's module did not load"; exit 1; }
           ./test.sh
 
       - name: Compile the database backends
@@ -287,13 +294,25 @@ jobs:
             python3 -c 'import sys, quickfix, quickfix44; f = quickfix._quickfix.__file__; print("python:", f); sys.exit(not f.startswith(sys.argv[1]))' "$site" \
             || { echo "::error::python3 did not load the staged module"; exit 1; }
 
-          DESTDIR="$stage" src/ruby/install.sh
+          # Ruby, as cmake --install put it (-DHAVE_RUBY=ON, #118): Ruby's site
+          # directories, relative to the prefix.
+          rbarch=$(sed -n 's/^QUICKFIX_RUBY_ARCH_INSTALL_DIR:STRING=//p' build/CMakeCache.txt)
+          rblib=$(sed -n 's/^QUICKFIX_RUBY_LIB_INSTALL_DIR:STRING=//p' build/CMakeCache.txt)
+          LD_LIBRARY_PATH="$stage/lib:$LD_LIBRARY_PATH" \
+            ruby -I "$stage/$rblib" -I "$stage/$rbarch" \
+              -e 'require "quickfix_ruby"; f = $LOADED_FEATURES.grep(/quickfix\.so$/).first; puts "ruby: #{f}"; exit f.start_with?(ARGV[0])' "$stage" \
+            || { echo "::error::ruby did not load the module cmake --install staged"; exit 1; }
+
+          # And as install.sh puts make_ruby.sh's, for builds without CMake.
+          rbstage="$RUNNER_TEMP/stage-ruby"
+          rm -rf "$rbstage"
+          DESTDIR="$rbstage" src/ruby/install.sh
           arch=$(ruby -rrbconfig -e 'print RbConfig::CONFIG["sitearchdir"]')
           lib=$(ruby -rrbconfig -e 'print RbConfig::CONFIG["sitelibdir"]')
           LD_LIBRARY_PATH="$stage/lib:$LD_LIBRARY_PATH" \
-            ruby -I "$stage$lib" -I "$stage$arch" \
-              -e 'require "quickfix_ruby"; f = $LOADED_FEATURES.grep(/quickfix\.so$/).first; puts "ruby: #{f}"; exit f.start_with?(ARGV[0])' "$stage" \
-            || { echo "::error::ruby did not load the staged module"; exit 1; }
+            ruby -I "$rbstage$lib" -I "$rbstage$arch" \
+              -e 'require "quickfix_ruby"; f = $LOADED_FEATURES.grep(/quickfix\.so$/).first; puts "ruby: #{f}"; exit f.start_with?(ARGV[0])' "$rbstage" \
+            || { echo "::error::ruby did not load the module install.sh staged"; exit 1; }
 
           # A C++ consumer of the same install, both ways a consumer finds it:
           # find_package and pkg-config. Nothing built one against the install

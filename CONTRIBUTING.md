@@ -256,8 +256,8 @@ builds, and the `pt` regression gate, which compares this commit's `pt` with the
 
 The Debug leg also covers the checked-in SWIG output, which went 33 commits without compiling at
 all before anyone noticed. It configures with `-DHAVE_PYTHON3=ON`, so CMake compiles and links
-`src/python/QuickfixPython.cpp` into `_quickfix.so`; Ruby has no CMake path, so the same leg
-builds `src/ruby/QuickfixRuby.cpp` with the project's own `make_ruby.sh`. Before either, it
+`src/python/QuickfixPython.cpp` into `_quickfix.so`, and with `-DHAVE_RUBY=ON`, so it builds
+`src/ruby/QuickfixRuby.cpp` into `lib/ruby/quickfix.so` too (#118). Before either, it
 regenerates both wrappers and fails if the result differs from what is checked in, so **a change
 to a header `src/quickfix.i` wraps must commit the regenerated output with it**: run
 `src/python/swig.sh` and `src/ruby/swig.sh` (from their own directories) and never hand-edit the
@@ -305,30 +305,30 @@ sudo dnf install postgresql-odbc   # /etc/odbcinst.ini already names the driver 
 `DRIVER={PostgreSQL};SERVER=localhost;DATABASE=quickfix;`.
 
 The Debug leg then **runs** both binding suites: the Python bindings' 52 tests
-(`src/python/test/`) and the Ruby bindings' 48 (`src/ruby/test/`, via `TestSuite.rb`). Ruby has no
-CMake path, so CI builds it with the project's own `make_ruby.sh` rather than a direct compiler
-invocation — if that script breaks, the step goes red instead of something else quietly covering for
-it. Running the Ruby suite needs `rubygem-test-unit` on the runner, since Ruby 3.3 no longer bundles
+(`src/python/test/`) and the Ruby bindings' 48 (`src/ruby/test/`, via `TestSuite.rb`), the Ruby
+one on the module CMake built. `src/ruby/make_ruby.sh` builds the same module with mkmf for builds
+without CMake; CI builds and loads that one too, so the script cannot rot. Running the Ruby suite needs `rubygem-test-unit` on the runner, since Ruby 3.3 no longer bundles
 `test/unit`.
 
 To run both suites yourself, use the scripts CI runs. Each works from any directory and exits
 with its suite's status:
 
 ```bash
-cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=ON -DHAVE_PYTHON3=ON
+cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=ON -DHAVE_PYTHON3=ON -DHAVE_RUBY=ON
 cmake --build build -j"$(nproc)"
 src/python/test-python3.sh
-
-(cd src/ruby && bash make_ruby.sh "$CXX" "-std=c++23 -DHAVE_SSL=1" "-lssl -lcrypto")
 src/ruby/test.sh
 ```
 
 To install them, `cmake --install` puts the Python module, with the library, in the directory the
 interpreter searches for that prefix -- `lib64/python3.12/site-packages` here, from Python's own
-`sysconfig`; `-DQUICKFIX_PYTHON3_INSTALL_DIR=<dir relative to the prefix>` overrides it. The Ruby
-module has its own script, run after `make_ruby.sh`: `src/ruby/install.sh` copies `quickfix.so` and
-the `quickfix*.rb` files into Ruby's `sitearchdir` and `sitelibdir`, and honours `DESTDIR`. The Debug
-leg installs both into a staging prefix and loads them from there (#108).
+`sysconfig`; `-DQUICKFIX_PYTHON3_INSTALL_DIR=<dir relative to the prefix>` overrides it. With
+`-DHAVE_RUBY=ON` it puts the Ruby module and the `quickfix*.rb` files in Ruby's `sitearchdir` and
+`sitelibdir`, relative to the prefix when they lie under it (`lib64/ruby/site_ruby` and
+`share/ruby/site_ruby` for `/usr/local` here); `QUICKFIX_RUBY_ARCH_INSTALL_DIR` and
+`QUICKFIX_RUBY_LIB_INSTALL_DIR` override them (#118). Without CMake, `src/ruby/install.sh` installs
+`make_ruby.sh`'s module the same way and honours `DESTDIR`. The Debug leg installs both bindings into
+a staging prefix and loads them from there (#108).
 
 ### Writing Tests
 
