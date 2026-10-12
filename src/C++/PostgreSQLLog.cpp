@@ -25,7 +25,6 @@
 #include "SessionID.h"
 #include "SessionSettings.h"
 #include "Utility.h"
-#include "strptime.h"
 #include <fstream>
 
 namespace FIX

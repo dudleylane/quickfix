@@ -18,8 +18,8 @@ jobs:
       # catch_amalgamated.cpp/.hpp are vendored — formatted upstream).
       # clang-format-22 also honours the tree's .clang-format-ignore files,
       # which exempt generated code (src/C++/fix*/, the SWIG wrappers), other
-      # vendored code (double-conversion, getopt), index.h (a comment) and the
-      # dead strptime.*; CONTRIBUTING lists them and why (#134).
+      # vendored code (double-conversion, getopt) and index.h (a comment);
+      # CONTRIBUTING lists them and why (#134).
       shell: bash
       run: |
         git ls-files \

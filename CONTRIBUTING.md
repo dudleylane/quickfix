@@ -134,7 +134,6 @@ honours the `.clang-format-ignore` files, which exempt:
   regenerate them, never hand-format them;
 - vendored code: `src/C++/double-conversion/`, `src/getopt.c` and `src/getopt-repl.h`;
 - `src/C++/index.h`, the Doxygen main page, which is a comment only;
-- `src/C++/strptime.*`, Windows-only and compiled by nothing;
 - `include/**`, which the build copies there.
 
 Anything else is checked, and a new exemption needs a reason in this list. Formatting-only commits
