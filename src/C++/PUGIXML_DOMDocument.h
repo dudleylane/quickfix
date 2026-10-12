@@ -28,26 +28,24 @@
 
 namespace FIX
 {
-  /// XML attribute as represented by pugixml.
-  class PUGIXML_DOMAttributes : public DOMAttributes
-  {
-  public:
-    PUGIXML_DOMAttributes( pugi::xml_node pNode )
-    : m_pNode(pNode) {}
+/// XML attribute as represented by pugixml.
+class PUGIXML_DOMAttributes : public DOMAttributes
+{
+public:
+    PUGIXML_DOMAttributes(pugi::xml_node pNode) : m_pNode(pNode) {}
 
-    bool get( const std::string&, std::string& );
+    bool get(const std::string &, std::string &);
     DOMAttributes::map toMap();
 
-  private:
+private:
     pugi::xml_node m_pNode;
-  };
+};
 
-  /// XML node as represented by pugixml.
-  class PUGIXML_DOMNode : public DOMNode
-  {
-  public:
-    PUGIXML_DOMNode( pugi::xml_node pNode )
-    : m_pNode(pNode) {}
+/// XML node as represented by pugixml.
+class PUGIXML_DOMNode : public DOMNode
+{
+public:
+    PUGIXML_DOMNode(pugi::xml_node pNode) : m_pNode(pNode) {}
     ~PUGIXML_DOMNode() {}
 
     DOMNodePtr getFirstChildNode();
@@ -56,26 +54,26 @@ namespace FIX
     std::string getName();
     std::string getText();
 
-  private:
+private:
     pugi::xml_node m_pNode;
-  };
+};
 
-  /// XML document as represented by pugixml.
-  class PUGIXML_DOMDocument : public DOMDocument
-  {
-  public:
-    PUGIXML_DOMDocument() EXCEPT ( ConfigError );
+/// XML document as represented by pugixml.
+class PUGIXML_DOMDocument : public DOMDocument
+{
+public:
+    PUGIXML_DOMDocument() EXCEPT(ConfigError);
     ~PUGIXML_DOMDocument();
 
-    bool load( std::istream& );
-    bool load( const std::string& );
-    bool xml( std::ostream& );
+    bool load(std::istream &);
+    bool load(const std::string &);
+    bool xml(std::ostream &);
 
-    DOMNodePtr getNode( const std::string& );
+    DOMNodePtr getNode(const std::string &);
 
-  private:
+private:
     pugi::xml_document m_pDoc;
-  };
-}
+};
+} // namespace FIX
 
 #endif

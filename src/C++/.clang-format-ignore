@@ -2,8 +2,6 @@ index.h
 pugixml.cpp
 strptime.c
 strptime.h
-PUGIXML_DOMDocument.h
-PUGIXML_DOMDocument.cpp
 fix40/*
 fix41/*
 fix42/*
