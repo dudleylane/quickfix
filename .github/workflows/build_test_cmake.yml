@@ -68,6 +68,24 @@ jobs:
           git diff --exit-code --stat -- src/python src/ruby \
             || { echo "::error::the SWIG wrappers are stale -- run src/python/swig.sh and src/ruby/swig.sh and commit the result"; exit 1; }
 
+      - name: Check the generated code matches spec/
+        # spec/generate.sh writes the message classes, the MessageCracker.h
+        # files, FixFields.h and friends, and the Python and Ruby field modules
+        # from spec/FIX*.xml. Nothing ran it, so a hand edit to a generated file
+        # or an XML change committed without regenerating went unseen until the
+        # next regeneration -- 25b23432 found 66 lines of such drift (#133).
+        # About a minute and a half; every event, like the SWIG check. Debug
+        # only: the output does not depend on the configuration.
+        if: matrix.configuration == 'Debug'
+        shell: bash
+        run: |
+          (cd spec && ./generate.sh)
+          if ! git diff --exit-code --stat || [ -n "$(git status --porcelain --untracked-files=all -- src spec)" ]; then
+            git status --short -- src spec
+            echo "::error::the generated code does not match spec/ -- run spec/generate.sh and commit the result"
+            exit 1
+          fi
+
       - name: Configure
         shell: bash
         run: |
