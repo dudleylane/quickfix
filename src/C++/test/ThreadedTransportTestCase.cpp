@@ -4,7 +4,6 @@
 #include <DataDictionaryProvider.h>
 #include <MessageStore.h>
 #include <Parser.h>
-#include <SSLSocketAcceptor.h>
 #include <Session.h>
 #include <SessionSettings.h>
 #include <SocketAcceptor.h>
@@ -13,6 +12,7 @@
 #include <ThreadedSocketInitiator.h>
 #include <TimeRange.h>
 #if (HAVE_SSL > 0)
+#include <SSLSocketAcceptor.h>
 #include <ThreadedSSLSocketAcceptor.h>
 #include <ThreadedSSLSocketConnection.h>
 #include <UtilitySSL.h>

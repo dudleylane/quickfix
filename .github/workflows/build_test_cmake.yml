@@ -276,6 +276,31 @@ jobs:
         working-directory: ./test
         run: ./runat.sh 54321
 
+      - name: Build and test without SSL
+        # Every other step configures with HAVE_SSL=ON, so nothing built the
+        # tree without it, and ut did not compile that way from 20.0.0 until
+        # #120. Pull requests and manual runs only, like the database link
+        # step, and for the same reasons: a second full build, and its own
+        # output dir so the test links stay on the build the other steps use.
+        if: github.event_name != 'push' && matrix.configuration == 'Debug'
+        shell: bash
+        run: |
+          cmake -B build-nossl -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=OFF \
+            -DQUICKFIX_LIB_OUTPUT_DIR="${{ github.workspace }}/build-nossl/out"
+          cmake --build build-nossl -j"$(nproc)"
+
+          # Exiting 0 is not the check: confirm SSL really was left out.
+          lib=$(find build-nossl/out -name 'libquickfix.so.*' -type f | head -1)
+          if ldd "$lib" | grep libssl; then
+            echo "::error::$lib links libssl in a HAVE_SSL=OFF build"; exit 1
+          fi
+          (cd test && ../build-nossl/out/ut \
+              --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
+
+          # configure_file rewrote the tracked src/C++/config.h to undefine
+          # HAVE_SSL; put it back, as the database link step does.
+          git checkout -- src/C++/config.h
+
       - name: Run performance tests
         # Release-only: pt benchmarks against the Debug build are noise.
         # On a push, a smoke test for crashes and hangs; elsewhere the
