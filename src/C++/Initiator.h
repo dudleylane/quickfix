@@ -102,7 +102,11 @@ protected:
     bool isPending(const SessionID &) const;
     bool isConnected(const SessionID &) const;
     bool isDisconnected(const SessionID &) const;
+    /// Starts each disconnected session whose ReconnectInterval has passed since
+    /// its last attempt; the transports call it on every tick.
     void connect();
+    /// A session's ReconnectInterval in seconds: its own, [DEFAULT]'s, or 30.
+    static int reconnectInterval(const Dictionary &);
 
 private:
     void initialize() EXCEPT(ConfigError);
@@ -123,7 +127,7 @@ private:
     static THREAD_PROC startThread(void *p);
 
     typedef std::set<SessionID> SessionIDs;
-    typedef std::map<SessionID, int> SessionState;
+    typedef std::map<SessionID, int> ConnectAttempts;
     typedef std::map<SessionID, Session *> Sessions;
 
     Sessions m_sessions;
@@ -131,7 +135,10 @@ private:
     SessionIDs m_pending;
     SessionIDs m_connected;
     SessionIDs m_disconnected;
-    SessionState m_sessionState;
+    // When connect() last started each session, in steady-clock seconds, so each
+    // waits its own ReconnectInterval (#125). Under m_mutex. It is the slot of
+    // upstream's m_sessionState, which nothing used, so the layout is unchanged.
+    ConnectAttempts m_lastConnectAttempt;
 
     thread_id m_threadid;
     Application &m_application;

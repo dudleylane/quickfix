@@ -196,6 +196,8 @@ private:
     SocketConnections m_pendingSSLHandshakes;
     SocketConnections m_pendingConnections;
     SocketConnections m_connections;
+    // Unused since #125: each session's reconnect timing is in Initiator. Kept
+    // so the layout does not change before the next soname bump.
     time_t m_lastConnect;
     int m_reconnectInterval;
     bool m_noDelay;

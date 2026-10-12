@@ -27,6 +27,7 @@
 #include "scope_guard.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <fstream>
 
 namespace FIX
@@ -68,6 +69,9 @@ void Initiator::initialize() EXCEPT(ConfigError)
         {
             if (m_settings.get(*i).getString("ConnectionType") == "initiator")
             {
+                // connect() reads it on every tick, so a value that is not a number
+                // fails here, as a ConfigError (#125).
+                reconnectInterval(m_settings.get(*i));
                 m_sessionIDs.insert(*i);
                 m_sessions[*i] = factory.create(*i, m_settings.get(*i));
                 setDisconnected(*i);
@@ -150,6 +154,10 @@ void Initiator::connect()
 {
     Locker l(m_mutex);
 
+    // Steady seconds, so a wall-clock step neither stalls nor rushes a retry.
+    const int now = static_cast<int>(
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+
     SessionIDs disconnected = m_disconnected;
     SessionIDs::iterator i = disconnected.begin();
     for (; i != disconnected.end(); ++i)
@@ -157,9 +165,23 @@ void Initiator::connect()
         Session *pSession = Session::lookupSession(*i);
         if (pSession && pSession->isEnabled() && pSession->isSessionTime(UtcTimeStamp::now()))
         {
-            doConnect(*i, m_settings.get(*i));
+            const Dictionary &settings = m_settings.get(*i);
+            // Each session waits its own interval. The transports used to keep one
+            // interval for all of them, set by whichever session connected last (#125).
+            ConnectAttempts::const_iterator last = m_lastConnectAttempt.find(*i);
+            if (last != m_lastConnectAttempt.end() && now - last->second < reconnectInterval(settings))
+            {
+                continue;
+            }
+            m_lastConnectAttempt[*i] = now;
+            doConnect(*i, settings);
         }
     }
+}
+
+int Initiator::reconnectInterval(const Dictionary &settings)
+{
+    return settings.has(RECONNECT_INTERVAL) ? settings.getInt(RECONNECT_INTERVAL) : 30;
 }
 
 void Initiator::setPending(const SessionID &sessionID)

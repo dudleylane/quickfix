@@ -57,10 +57,6 @@ void SocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(ConfigError)
 {
     const Dictionary &dict = s.get();
 
-    if (dict.has(RECONNECT_INTERVAL)) // ReconnectInterval in [DEFAULT]
-    {
-        m_reconnectInterval = dict.getInt(RECONNECT_INTERVAL);
-    }
     if (dict.has(SOCKET_NODELAY))
     {
         m_noDelay = dict.getBool(SOCKET_NODELAY);
@@ -142,14 +138,10 @@ void SocketInitiator::doConnect(const SessionID &s, const Dictionary &d)
         Log *log = session->getLog();
 
         HostDetails host = m_hostDetailsProvider.getHost(s, d);
-        if (d.has(RECONNECT_INTERVAL)) // ReconnectInterval in [SESSION]
-        {
-            m_reconnectInterval = d.getInt(RECONNECT_INTERVAL);
-        }
 
         log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert(host.port) + " (Source " +
                      host.sourceAddress + ":" + IntConvertor::convert(host.sourcePort) +
-                     ") ReconnectInterval=" + IntConvertor::convert((int)m_reconnectInterval));
+                     ") ReconnectInterval=" + IntConvertor::convert(reconnectInterval(d)));
         socket_handle result = m_connector.connect(host.address, host.port, m_noDelay, m_sendBufSize, m_rcvBufSize,
                                                    host.sourceAddress, host.sourcePort);
         setPending(s);
@@ -238,14 +230,8 @@ void SocketInitiator::onError(SocketConnector &connector) { onTimeout(connector)
 
 void SocketInitiator::onTimeout(SocketConnector &)
 {
-    time_t now;
-    ::time(&now);
-
-    if ((now - m_lastConnect) >= m_reconnectInterval)
-    {
-        connect();
-        m_lastConnect = now;
-    }
+    // connect() starts only the sessions whose own ReconnectInterval has passed (#125).
+    connect();
 
     SocketConnections::iterator i;
     for (i = m_connections.begin(); i != m_connections.end(); ++i)

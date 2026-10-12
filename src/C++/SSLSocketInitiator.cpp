@@ -181,10 +181,6 @@ void SSLSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(ConfigErro
 {
     const Dictionary &dict = s.get();
 
-    if (dict.has(RECONNECT_INTERVAL)) // ReconnectInterval in [DEFAULT]
-    {
-        m_reconnectInterval = dict.getInt(RECONNECT_INTERVAL);
-    }
     if (dict.has(SOCKET_NODELAY))
     {
         m_noDelay = dict.getBool(SOCKET_NODELAY);
@@ -311,14 +307,10 @@ void SSLSocketInitiator::doConnect(const SessionID &sessionID, const Dictionary 
         Log *log = session->getLog();
 
         HostDetails host = m_hostDetailsProvider.getHost(sessionID, dictionary);
-        if (dictionary.has(RECONNECT_INTERVAL)) // ReconnectInterval in [SESSION]
-        {
-            m_reconnectInterval = dictionary.getInt(RECONNECT_INTERVAL);
-        }
 
         log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert(host.port) + " (Source " +
                      host.sourceAddress + ":" + IntConvertor::convert(host.sourcePort) +
-                     ") ReconnectInterval=" + IntConvertor::convert((int)m_reconnectInterval));
+                     ") ReconnectInterval=" + IntConvertor::convert(reconnectInterval(dictionary)));
         socket_handle result = m_connector.connect(host.address, host.port, m_noDelay, m_sendBufSize, m_rcvBufSize,
                                                    host.sourceAddress, host.sourcePort);
 
@@ -571,11 +563,8 @@ void SSLSocketInitiator::onTimeout(SocketConnector &)
 
     disconnectPendingSSLHandshakesThatTakeTooLong(now);
 
-    if ((now - m_lastConnect) >= m_reconnectInterval)
-    {
-        connect();
-        m_lastConnect = now;
-    }
+    // connect() starts only the sessions whose own ReconnectInterval has passed (#125).
+    connect();
 
     SocketConnections::iterator i;
     for (i = m_connections.begin(); i != m_connections.end(); ++i)

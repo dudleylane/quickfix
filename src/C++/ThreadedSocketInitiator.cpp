@@ -48,10 +48,6 @@ void ThreadedSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(Confi
 {
     const Dictionary &dict = s.get();
 
-    if (dict.has(RECONNECT_INTERVAL)) // ReconnectInterval in [DEFAULT]
-    {
-        m_reconnectInterval = dict.getInt(RECONNECT_INTERVAL);
-    }
     if (dict.has(SOCKET_NODELAY))
     {
         m_noDelay = dict.getBool(SOCKET_NODELAY);
@@ -72,10 +68,7 @@ void ThreadedSocketInitiator::onStart()
 {
     while (!isStopped())
     {
-        time_t now;
-        ::time(&now);
-
-        if ((now - m_lastConnect) >= m_reconnectInterval)
+        // connect() starts only the sessions whose own ReconnectInterval has passed (#125).
         {
             Locker l(m_mutex);
             // stop() can come between the loop's check and this lock. It sets m_stop
@@ -86,7 +79,6 @@ void ThreadedSocketInitiator::onStart()
                 break;
             }
             connect();
-            m_lastConnect = now;
         }
 
         process_sleep(1);
@@ -149,10 +141,6 @@ void ThreadedSocketInitiator::doConnect(const SessionID &s, const Dictionary &d)
         Log *log = session->getLog();
 
         HostDetails host = m_hostDetailsProvider.getHost(s, d);
-        if (d.has(RECONNECT_INTERVAL)) // ReconnectInterval in [SESSION]
-        {
-            m_reconnectInterval = d.getInt(RECONNECT_INTERVAL);
-        }
 
         socket_handle socket = socket_createConnector();
         if (m_noDelay)
@@ -171,7 +159,7 @@ void ThreadedSocketInitiator::doConnect(const SessionID &s, const Dictionary &d)
         setPending(s);
         log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert(host.port) + " (Source " +
                      host.sourceAddress + ":" + IntConvertor::convert(host.sourcePort) +
-                     ") ReconnectInterval=" + IntConvertor::convert((int)m_reconnectInterval));
+                     ") ReconnectInterval=" + IntConvertor::convert(reconnectInterval(d)));
 
         ThreadedSocketConnection *pConnection = new ThreadedSocketConnection(
             s, socket, host.address, host.port, getLog(), host.sourceAddress, host.sourcePort);
