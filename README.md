@@ -227,13 +227,19 @@ Programs built against the installed headers get the matching allocator from the
 `cmake --install` ships a CMake package and a pkg-config file. The headers need C++23.
 
 ```cmake
-find_package(quickfix 21 CONFIG REQUIRED)   # any 21.x: the major version is the soname
+find_package(quickfix 22 CONFIG REQUIRED)   # any 22.x: the major version is the soname
 target_link_libraries(app PRIVATE quickfix::quickfix)
 ```
 
 ```bash
 g++ -std=c++23 app.cpp $(pkg-config --cflags --libs quickfix)
 ```
+
+`cmake --install` puts `quickfix.pc` in `<prefix>/lib/pkgconfig`, and the library in `<prefix>/lib`.
+Under `/usr/local` neither is on every distribution's default search path -- RHEL's pkg-config looks
+only in `/usr/lib64/pkgconfig` and `/usr/share/pkgconfig` -- so set
+`PKG_CONFIG_PATH=/usr/local/lib/pkgconfig`, and run `sudo ldconfig` (with `/usr/local/lib` in
+`/etc/ld.so.conf.d/`) or set `LD_LIBRARY_PATH` for the program to find the library.
 
 A project that adds this tree with `add_subdirectory` or `FetchContent` links `quickfix::quickfix`
 too; the target makes its headers available in the tree before anything that links it compiles
@@ -294,9 +300,10 @@ unaffected and everything else remains visible to ASan.)
 
 #### Known baseline — the suite is clean
 
-As of `74fe9320` (2026-09-25), `ut` runs **56 test cases / 2034 assertions**, all passing, and
-**exits 0 under every sanitizer** — ASan + UBSan with no leak record and no report, and
-ThreadSanitizer with no warning. That is the baseline to diff against — anything a run reports is
+As of `74fe9320` (2026-09-25), when `ut` ran 56 test cases / 2034 assertions, it passed and
+**exited 0 under every sanitizer** — ASan + UBSan with no leak record and no report, and
+ThreadSanitizer with no warning — and it has stayed clean as it grew: 103 test cases on 2026-10-12,
+which CI's sanitizer job runs on every push (#141). That is the baseline to diff against — anything a run reports is
 yours. Re-verified at that commit rather than carried forward: `26aa506c` and `74fe9320` changed the
 parse path, and `26aa506c` in particular added hand-written indexing over the message buffer on a
 malformed-input path, which is exactly what ASan is for.
@@ -335,8 +342,8 @@ tracked the report count. It was 2,697,884 bytes in 173 records until `558f56d0`
 The counts were identical with and without `ENABLE_TBB_ALLOCATOR` and in a static build, so they
 were never an allocator or shared-library RTTI artefact.
 
-**ThreadSanitizer is clean too, as of `f4c9c0c3`** — `ut` exits 0 with no warning, 56 test cases and
-2034 assertions. That is the first result the TSan recipe has ever produced on this tree, and the
+**ThreadSanitizer is clean too, as of `f4c9c0c3`** — `ut` exited 0 with no warning, 56 test cases
+and 2034 assertions then. That is the first result the TSan recipe has ever produced on this tree, and the
 reason is worth recording rather than filing as an absence: `UtilityTestCase` joined a thread and
 then detached the same id, which is undefined behaviour once `pthread_join` has invalidated the
 handle. TSan does not report that — it aborts its own runtime on it, so `ut` exited 66 having run no
@@ -390,7 +397,7 @@ with no report and `at` exiting 0.
 #### Exercising the concurrent paths
 
 `ut` under TSan barely drives what is concurrent in production — the reactor's
-`select()` loop, the per-connection threads of the `Threaded*` transports, and the
+`poll()` loop, the per-connection threads of the `Threaded*` transports, and the
 session registry under `s_mutex`. Two runs cover those (this is issue #15):
 
 - The acceptance suite against a TSan build of `at`, in both transports
