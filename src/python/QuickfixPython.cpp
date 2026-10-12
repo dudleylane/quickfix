@@ -4095,6 +4095,57 @@ namespace swig {
 }
 
 
+#include <cstdio>
+#include <unistd.h>
+
+// An exception a Python callback lets out, other than the FIX exceptions the
+// engine expects, ends the process (#122). Py_Exit would finalize the
+// interpreter, deleting the module's transports under the engine threads still
+// running in them; it crashed on the reactor transports. So print the exception
+// as Python prints an uncaught one, flush Python's and C's buffered output, and
+// _exit, which runs no finalizer. PyErr_Print would itself call Py_Exit for a
+// SystemExit, so that one is handled here: its code is the exit status.
+[[noreturn]] void exitOnCallbackError()
+{
+  int status = 1;
+  if( PyErr_ExceptionMatches(PyExc_SystemExit) )
+  {
+    PyObject *ptype, *pvalue, *ptraceback;
+    PyErr_Fetch( &ptype, &pvalue, &ptraceback );
+    PyErr_NormalizeException( &ptype, &pvalue, &ptraceback );
+    PyObject *code = pvalue ? PyObject_GetAttrString( pvalue, "code" ) : nullptr;
+    if( code == Py_None )
+      status = 0;
+    else if( code && PyLong_Check(code) )
+      status = static_cast<int>( PyLong_AsLong(code) );
+    else if( code )
+    {
+      PyObject *err = PySys_GetObject( "stderr" );
+      if( err && err != Py_None && PyFile_WriteObject( code, err, Py_PRINT_RAW ) == 0 )
+        PyFile_WriteString( "\n", err );
+    }
+    Py_XDECREF( code );
+    Py_XDECREF( ptype );
+    Py_XDECREF( pvalue );
+    Py_XDECREF( ptraceback );
+    PyErr_Clear();
+  }
+  else
+  {
+    PyErr_Print();
+  }
+  for( const char *name : { "stdout", "stderr" } )
+  {
+    PyObject *stream = PySys_GetObject( name );
+    if( stream && stream != Py_None )
+      Py_XDECREF( PyObject_CallMethod( stream, "flush", nullptr ) );
+    PyErr_Clear();
+  }
+  fflush( nullptr );
+  _exit( status );
+}
+
+
 #include <string>
 
 
@@ -6643,8 +6694,7 @@ FIX::Log *SwigDirector_LogFactory::create() {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -6689,8 +6739,7 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -6730,8 +6779,7 @@ void SwigDirector_LogFactory::destroy(FIX::Log *arg0) {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -6773,8 +6821,7 @@ void SwigDirector_Log::clear() {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -6806,8 +6853,7 @@ void SwigDirector_Log::backup() {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -6840,8 +6886,7 @@ void SwigDirector_Log::onIncoming(std::string const &arg0) {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -6874,8 +6919,7 @@ void SwigDirector_Log::onOutgoing(std::string const &arg0) {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -6908,8 +6952,7 @@ void SwigDirector_Log::onEvent(std::string const &arg0) {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -6952,8 +6995,7 @@ void SwigDirector_Application::onCreate(FIX::SessionID const &arg0) {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -6986,8 +7028,7 @@ void SwigDirector_Application::onLogon(FIX::SessionID const &arg0) {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -7020,8 +7061,7 @@ void SwigDirector_Application::onLogout(FIX::SessionID const &arg0) {
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -7056,8 +7096,7 @@ void SwigDirector_Application::toAdmin(FIX::Message &arg0,FIX::SessionID const &
           PyObject *ptype, *pvalue, *ptraceback;
           PyErr_Fetch( &ptype, &pvalue, &ptraceback );
           PyErr_Restore( ptype, pvalue, ptraceback );
-          PyErr_Print();
-          Py_Exit(1);
+          exitOnCallbackError();
         }
       }
     }
@@ -7097,8 +7136,7 @@ void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &ar
             throw *((FIX::DoNotSend*)result);
           } else {
             PyErr_Restore( ptype, pvalue, ptraceback );
-            PyErr_Print();
-            Py_Exit(1);
+            exitOnCallbackError();
           }
         }
       }
@@ -7145,8 +7183,7 @@ void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID
             throw *((FIX::RejectLogon*)result);
           } else {
             PyErr_Restore( ptype, pvalue, ptraceback );
-            PyErr_Print();
-            Py_Exit(1);
+            exitOnCallbackError();
           }
         }
       }
@@ -7193,8 +7230,7 @@ void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID c
             throw *((FIX::UnsupportedMessageType*)result);
           } else {
             PyErr_Restore( ptype, pvalue, ptraceback );
-            PyErr_Print();
-            Py_Exit(1);
+            exitOnCallbackError();
           }
         }
       }

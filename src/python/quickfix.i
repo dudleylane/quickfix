@@ -1,3 +1,55 @@
+%{
+#include <cstdio>
+#include <unistd.h>
+
+// An exception a Python callback lets out, other than the FIX exceptions the
+// engine expects, ends the process (#122). Py_Exit would finalize the
+// interpreter, deleting the module's transports under the engine threads still
+// running in them; it crashed on the reactor transports. So print the exception
+// as Python prints an uncaught one, flush Python's and C's buffered output, and
+// _exit, which runs no finalizer. PyErr_Print would itself call Py_Exit for a
+// SystemExit, so that one is handled here: its code is the exit status.
+[[noreturn]] void exitOnCallbackError()
+{
+  int status = 1;
+  if( PyErr_ExceptionMatches(PyExc_SystemExit) )
+  {
+    PyObject *ptype, *pvalue, *ptraceback;
+    PyErr_Fetch( &ptype, &pvalue, &ptraceback );
+    PyErr_NormalizeException( &ptype, &pvalue, &ptraceback );
+    PyObject *code = pvalue ? PyObject_GetAttrString( pvalue, "code" ) : nullptr;
+    if( code == Py_None )
+      status = 0;
+    else if( code && PyLong_Check(code) )
+      status = static_cast<int>( PyLong_AsLong(code) );
+    else if( code )
+    {
+      PyObject *err = PySys_GetObject( "stderr" );
+      if( err && err != Py_None && PyFile_WriteObject( code, err, Py_PRINT_RAW ) == 0 )
+        PyFile_WriteString( "\n", err );
+    }
+    Py_XDECREF( code );
+    Py_XDECREF( ptype );
+    Py_XDECREF( pvalue );
+    Py_XDECREF( ptraceback );
+    PyErr_Clear();
+  }
+  else
+  {
+    PyErr_Print();
+  }
+  for( const char *name : { "stdout", "stderr" } )
+  {
+    PyObject *stream = PySys_GetObject( name );
+    if( stream && stream != Py_None )
+      Py_XDECREF( PyObject_CallMethod( stream, "flush", nullptr ) );
+    PyErr_Clear();
+  }
+  fflush( nullptr );
+  _exit( status );
+}
+%}
+
 %exception
 {
   if(!tryPythonException([&]() mutable 
@@ -99,8 +151,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 %feature("director:except") FIX::Log::backup {
@@ -108,8 +159,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 %feature("director:except") FIX::Log::onIncoming {
@@ -117,8 +167,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 %feature("director:except") FIX::Log::onOutgoing {
@@ -126,8 +175,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 %feature("director:except") FIX::Log::onEvent {
@@ -135,8 +183,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 
@@ -145,8 +192,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 %feature("director:except") FIX::LogFactory::destroy {
@@ -154,8 +200,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 
@@ -166,8 +211,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 
@@ -176,8 +220,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 
@@ -186,8 +229,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 
@@ -196,8 +238,7 @@ def start(self):
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch( &ptype, &pvalue, &ptraceback );
     PyErr_Restore( ptype, pvalue, ptraceback );
-    PyErr_Print();
-    Py_Exit(1);
+    exitOnCallbackError();
   }
 }
 
@@ -211,8 +252,7 @@ def start(self):
       throw *((FIX::DoNotSend*)result);
     } else {
       PyErr_Restore( ptype, pvalue, ptraceback );
-      PyErr_Print();
-      Py_Exit(1);
+      exitOnCallbackError();
     }
   }
 }
@@ -233,8 +273,7 @@ def start(self):
       throw *((FIX::RejectLogon*)result);
     } else {
       PyErr_Restore( ptype, pvalue, ptraceback );
-      PyErr_Print();
-      Py_Exit(1);
+      exitOnCallbackError();
     }
   }
 }
@@ -255,8 +294,7 @@ def start(self):
       throw *((FIX::UnsupportedMessageType*)result);
     } else {
       PyErr_Restore( ptype, pvalue, ptraceback );
-      PyErr_Print();
-      Py_Exit(1);
+      exitOnCallbackError();
     }
   }
 }

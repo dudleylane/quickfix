@@ -277,7 +277,7 @@ sudo dnf install postgresql-odbc   # /etc/odbcinst.ini already names the driver 
 `test/cfg/ut.cfg` connects as `quickfix` with no password; the ODBC tests use the DSN-less string
 `DRIVER={PostgreSQL};SERVER=localhost;DATABASE=quickfix;`.
 
-The Debug leg then **runs** both binding suites: the Python bindings' 40 tests
+The Debug leg then **runs** both binding suites: the Python bindings' 48 tests
 (`src/python/test/`) and the Ruby bindings' 44 (`src/ruby/test/`, via `TestSuite.rb`). Ruby has no
 CMake path, so CI builds it with the project's own `make_ruby.sh` rather than a direct compiler
 invocation — if that script breaks, the step goes red instead of something else quietly covering for
