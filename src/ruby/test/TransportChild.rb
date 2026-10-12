@@ -7,9 +7,19 @@ $stdout.sync = true
 
 dir, port, kind = ARGV
 # The threaded transports call back on threads Ruby did not create (#104).
-acceptorClass, initiatorClass = kind == 'threaded' ?
-	[Quickfix::ThreadedSocketAcceptorBase, Quickfix::ThreadedSocketInitiatorBase] :
-	[Quickfix::SocketAcceptor, Quickfix::SocketInitiator]
+acceptorClass, initiatorClass = {
+	'socket' => [Quickfix::SocketAcceptor, Quickfix::SocketInitiator],
+	'threaded' => [Quickfix::ThreadedSocketAcceptorBase, Quickfix::ThreadedSocketInitiatorBase],
+	# TLS on both transports, with the example certificates (#139).
+	'ssl' => [Quickfix::SSLSocketAcceptor, Quickfix::SSLSocketInitiator],
+	'threadedssl' => [Quickfix::ThreadedSSLSocketAcceptor, Quickfix::ThreadedSSLSocketInitiator],
+}.fetch(kind)
+certs = File.expand_path('../../../bin/cfg/certs', __dir__)
+acceptorTls = kind.include?('ssl') ?
+	"ServerCertificateFile=#{certs}/127_0_0_1_server.crt\nServerCertificateKeyFile=#{certs}/127_0_0_1_server.key\n" : ''
+initiatorTls = kind.include?('ssl') ?
+	"CertificationAuthoritiesFile=#{certs}/certs/cacert.pem\nClientCertificateFile=#{certs}/127_0_0_1_client.crt\n" \
+	"ClientCertificateKeyFile=#{certs}/127_0_0_1_client.key\n" : ''
 
 class App < Quickfix::Application
 	attr_reader :received
@@ -68,10 +78,10 @@ end
 
 acceptorApp, initiatorApp, logFactory = App.new, App.new, CountingLogFactory.new
 acceptor = acceptorClass.new(acceptorApp, Quickfix::MemoryStoreFactory.new,
-	settings(dir, 'acceptor', "ConnectionType=acceptor\nSocketAcceptPort=#{port}\n" \
+	settings(dir, 'acceptor', "ConnectionType=acceptor\nSocketAcceptPort=#{port}\n#{acceptorTls}" \
 		"[SESSION]\nBeginString=FIX.4.2\nSenderCompID=ACC\nTargetCompID=INI\n"), logFactory)
 initiator = initiatorClass.new(initiatorApp, Quickfix::MemoryStoreFactory.new,
-	settings(dir, 'initiator', "ConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=#{port}\n" \
+	settings(dir, 'initiator', "ConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=#{port}\n#{initiatorTls}" \
 		"ReconnectInterval=1\nHeartBtInt=30\n[SESSION]\nBeginString=FIX.4.2\nSenderCompID=INI\nTargetCompID=ACC\n"))
 
 # What a transport was made with must outlive a collection (#107).

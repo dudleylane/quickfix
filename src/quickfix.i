@@ -34,6 +34,8 @@ namespace std
 %rename(SSLSocketAcceptorBase) FIX::SSLSocketAcceptor;
 %rename(ThreadedSocketInitiatorBase) FIX::ThreadedSocketInitiator;
 %rename(ThreadedSocketAcceptorBase) FIX::ThreadedSocketAcceptor;
+%rename(ThreadedSSLSocketInitiatorBase) FIX::ThreadedSSLSocketInitiator;
+%rename(ThreadedSSLSocketAcceptorBase) FIX::ThreadedSSLSocketAcceptor;
 
 // Rename enum's as they're clashing with some classes
 %rename("%(regex:/^FIX::TYPE::(.*)/Enum\\1/)s", regextarget=1, fullname=1) "^FIX::TYPE::";
@@ -91,8 +93,12 @@ namespace std
 #include <SSLSocketAcceptor.h>
 #include <SSLSocketInitiator.h>
 #include <SSLSocketConnection.h>
+#include <ThreadedSSLSocketAcceptor.h>
+#include <ThreadedSSLSocketInitiator.h>
 #else
-#include <SSLStubs.h>
+// The wrappers are generated with HAVE_SSL (swig.sh) and use the SSL transports throughout. This
+// included an SSLStubs.h that never existed (#139).
+#error "the Python and Ruby wrappers are generated with SSL; build them with HAVE_SSL"
 #endif
 
 #ifdef HAVE_MYSQL
@@ -593,4 +599,6 @@ QUICKFIX_RUBY_EXCEPTION
 %include "../C++/PostgreSQLLog.h"
 %include "../C++/ThreadedSocketAcceptor.h"
 %include "../C++/ThreadedSocketInitiator.h"
+%include "../C++/ThreadedSSLSocketAcceptor.h"
+%include "../C++/ThreadedSSLSocketInitiator.h"
 %include "../C++/NullStore.h"

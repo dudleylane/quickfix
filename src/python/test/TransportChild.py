@@ -5,6 +5,7 @@
 # interpreter's exit to deal with. Everything but the applications is passed as
 # a temporary: the transport must keep what it was made with (#110).
 import gc
+import os
 import sys
 import threading
 import time
@@ -18,7 +19,16 @@ acceptorClass, initiatorClass = {
     'threaded': (fix.ThreadedSocketAcceptor, fix.ThreadedSocketInitiator),
     'base': (fix.SocketAcceptorBase, fix.SocketInitiatorBase),
     'threadedbase': (fix.ThreadedSocketAcceptorBase, fix.ThreadedSocketInitiatorBase),
+    # TLS on both transports, with the example certificates (#139).
+    'ssl': (fix.SSLSocketAcceptor, fix.SSLSocketInitiator),
+    'threadedssl': (fix.ThreadedSSLSocketAcceptor, fix.ThreadedSSLSocketInitiator),
 }[kind]
+certs = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'bin', 'cfg', 'certs')
+acceptorTls = (f'ServerCertificateFile={certs}/127_0_0_1_server.crt\n'
+               f'ServerCertificateKeyFile={certs}/127_0_0_1_server.key\n') if 'ssl' in kind else ''
+initiatorTls = (f'CertificationAuthoritiesFile={certs}/certs/cacert.pem\n'
+                f'ClientCertificateFile={certs}/127_0_0_1_client.crt\n'
+                f'ClientCertificateKeyFile={certs}/127_0_0_1_client.key\n') if 'ssl' in kind else ''
 
 
 class App(fix.Application):
@@ -97,11 +107,11 @@ def order(id):
 
 acceptorApp, initiatorApp = App(), App()
 acceptor = acceptorClass(acceptorApp, fix.MemoryStoreFactory(),
-                         settings('acceptor', f'ConnectionType=acceptor\nSocketAcceptPort={port}\n'
+                         settings('acceptor', f'ConnectionType=acceptor\nSocketAcceptPort={port}\n' + acceptorTls +
                                   '[SESSION]\nBeginString=FIX.4.2\nSenderCompID=ACC\nTargetCompID=INI\n'),
                          CountingLogFactory())
 initiator = initiatorClass(initiatorApp, fix.MemoryStoreFactory(),
-                           settings('initiator', 'ConnectionType=initiator\nSocketConnectHost=127.0.0.1\n'
+                           settings('initiator', 'ConnectionType=initiator\nSocketConnectHost=127.0.0.1\n' + initiatorTls +
                                     f'SocketConnectPort={port}\nReconnectInterval=1\nHeartBtInt=30\n'
                                     '[SESSION]\nBeginString=FIX.4.2\nSenderCompID=INI\nTargetCompID=ACC\n'),
                            CountingLogFactory())

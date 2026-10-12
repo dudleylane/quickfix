@@ -437,6 +437,20 @@ class SSLSocketAcceptor(SSLSocketAcceptorBase):
     self.storeFactory = storeFactory
     self.settings = settings
     self.logFactory = logFactory
+
+class ThreadedSSLSocketInitiator(ThreadedSSLSocketInitiatorBase):
+  def __init__(self, application, storeFactory, settings, logFactory=None):
+    if logFactory == None:
+      ThreadedSSLSocketInitiatorBase.__init__(self, application, storeFactory, settings)
+    else:
+      ThreadedSSLSocketInitiatorBase.__init__(self, application, storeFactory, settings, logFactory)
+
+class ThreadedSSLSocketAcceptor(ThreadedSSLSocketAcceptorBase):
+  def __init__(self, application, storeFactory, settings, logFactory=None):
+    if logFactory == None:
+      ThreadedSSLSocketAcceptorBase.__init__(self, application, storeFactory, settings)
+    else:
+      ThreadedSSLSocketAcceptorBase.__init__(self, application, storeFactory, settings, logFactory)
 #endif
 
 # An initiator or acceptor holds C++ references to what it was made with. The classes above keep

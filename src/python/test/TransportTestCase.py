@@ -36,6 +36,19 @@ class TransportTestCase(unittest.TestCase):
     def test_threaded_base_left_running(self):
         self.checkTransports('threadedbase', 'exit')
 
+    # TLS on both transports; no binding test used SSL before #139.
+    def test_ssl_stopped(self):
+        self.checkTransports('ssl', 'stop')
+
+    def test_ssl_left_running(self):
+        self.checkTransports('ssl', 'exit')
+
+    def test_threaded_ssl_stopped(self):
+        self.checkTransports('threadedssl', 'stop')
+
+    def test_threaded_ssl_left_running(self):
+        self.checkTransports('threadedssl', 'exit')
+
     def checkTransports(self, kind, ending):
         with socket.socket() as probe:
             probe.bind(('127.0.0.1', 0))

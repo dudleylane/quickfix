@@ -17,6 +17,15 @@ class TransportTestCase < Test::Unit::TestCase
 		checkTransports('threaded')
 	end
 
+	# TLS on both transports; no binding test used SSL before #139.
+	def test_start_leaves_ruby_running_ssl
+		checkTransports('ssl')
+	end
+
+	def test_start_leaves_ruby_running_threaded_ssl
+		checkTransports('threadedssl')
+	end
+
 	def checkTransports(kind)
 		port = TCPServer.open('127.0.0.1', 0) { |server| server.addr[1] }
 		Dir.mktmpdir do |dir|

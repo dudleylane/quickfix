@@ -84,7 +84,8 @@ module Quickfix
 		end
 	end
 
-	[ThreadedSocketInitiatorBase, ThreadedSocketAcceptorBase].each { |klass| klass.prepend(StopsOutsideCallbacks) }
+	[ThreadedSocketInitiatorBase, ThreadedSocketAcceptorBase,
+	 ThreadedSSLSocketInitiatorBase, ThreadedSSLSocketAcceptorBase].each { |klass| klass.prepend(StopsOutsideCallbacks) }
 
 	# At exit Ruby frees every object in no particular order, and an initiator or
 	# acceptor freed after its store factory, log factory or application used them
@@ -112,6 +113,15 @@ module Quickfix
 			end
 		end
 	end
+
+	# The plain names Python has for these too (#139). Every transport keeps its
+	# arguments through KeepsArguments above, so they add nothing else.
+	class ThreadedSocketInitiator < ThreadedSocketInitiatorBase; end
+	class ThreadedSocketAcceptor < ThreadedSocketAcceptorBase; end
+	class SSLSocketInitiator < SSLSocketInitiatorBase; end
+	class SSLSocketAcceptor < SSLSocketAcceptorBase; end
+	class ThreadedSSLSocketInitiator < ThreadedSSLSocketInitiatorBase; end
+	class ThreadedSSLSocketAcceptor < ThreadedSSLSocketAcceptorBase; end
 
 	class SocketInitiator < SocketInitiatorBase
 		def initialize( application, storeFactory, settings, logFactory = nil )

@@ -9119,6 +9119,49 @@ class ThreadedSocketInitiatorBase(Initiator):
 
 # Register ThreadedSocketInitiatorBase in _quickfix:
 _quickfix.ThreadedSocketInitiatorBase_swigregister(ThreadedSocketInitiatorBase)
+class ThreadedSSLSocketAcceptorBase(Acceptor):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        _quickfix.ThreadedSSLSocketAcceptorBase_swiginit(self, _quickfix.new_ThreadedSSLSocketAcceptorBase(*args))
+    __swig_destroy__ = _quickfix.delete_ThreadedSSLSocketAcceptorBase
+
+    def setPassword(self, pwd):
+        return _quickfix.ThreadedSSLSocketAcceptorBase_setPassword(self, pwd)
+
+    def passwordHandleCallback(self, buf, bufsize, verify):
+        return _quickfix.ThreadedSSLSocketAcceptorBase_passwordHandleCallback(self, buf, bufsize, verify)
+
+    @staticmethod
+    def passPhraseHandleCB(buf, bufsize, verify, instance):
+        return _quickfix.ThreadedSSLSocketAcceptorBase_passPhraseHandleCB(buf, bufsize, verify, instance)
+
+# Register ThreadedSSLSocketAcceptorBase in _quickfix:
+_quickfix.ThreadedSSLSocketAcceptorBase_swigregister(ThreadedSSLSocketAcceptorBase)
+class ThreadedSSLSocketInitiatorBase(Initiator):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        _quickfix.ThreadedSSLSocketInitiatorBase_swiginit(self, _quickfix.new_ThreadedSSLSocketInitiatorBase(*args))
+    __swig_destroy__ = _quickfix.delete_ThreadedSSLSocketInitiatorBase
+
+    def setPassword(self, pwd):
+        return _quickfix.ThreadedSSLSocketInitiatorBase_setPassword(self, pwd)
+
+    def setCertAndKey(self, cert, key):
+        return _quickfix.ThreadedSSLSocketInitiatorBase_setCertAndKey(self, cert, key)
+
+    def passwordHandleCallback(self, buf, bufsize, verify):
+        return _quickfix.ThreadedSSLSocketInitiatorBase_passwordHandleCallback(self, buf, bufsize, verify)
+
+    @staticmethod
+    def passwordHandleCB(buf, bufsize, verify, instance):
+        return _quickfix.ThreadedSSLSocketInitiatorBase_passwordHandleCB(buf, bufsize, verify, instance)
+
+# Register ThreadedSSLSocketInitiatorBase in _quickfix:
+_quickfix.ThreadedSSLSocketInitiatorBase_swigregister(ThreadedSSLSocketInitiatorBase)
 class NullStoreFactory(MessageStoreFactory):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -9293,6 +9336,20 @@ class SSLSocketAcceptor(SSLSocketAcceptorBase):
     self.storeFactory = storeFactory
     self.settings = settings
     self.logFactory = logFactory
+
+class ThreadedSSLSocketInitiator(ThreadedSSLSocketInitiatorBase):
+  def __init__(self, application, storeFactory, settings, logFactory=None):
+    if logFactory == None:
+      ThreadedSSLSocketInitiatorBase.__init__(self, application, storeFactory, settings)
+    else:
+      ThreadedSSLSocketInitiatorBase.__init__(self, application, storeFactory, settings, logFactory)
+
+class ThreadedSSLSocketAcceptor(ThreadedSSLSocketAcceptorBase):
+  def __init__(self, application, storeFactory, settings, logFactory=None):
+    if logFactory == None:
+      ThreadedSSLSocketAcceptorBase.__init__(self, application, storeFactory, settings)
+    else:
+      ThreadedSSLSocketAcceptorBase.__init__(self, application, storeFactory, settings, logFactory)
 #endif
 
 # An initiator or acceptor holds C++ references to what it was made with. The classes above keep
