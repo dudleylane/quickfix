@@ -100,6 +100,14 @@ class DataDictionaryTestCase(unittest.TestCase):
         self.assertEqual( 301, result[0] )
         self.assertTrue( d.isMsgType( "3" ) )
 
+        # A group the message type does not have leaves the target alone; the
+        # wrapper copied from an uninitialised pointer and crashed (#121).
+        e = fix.DataDictionary()
+        self.object.getGroup( "A", 999, delim, e )
+        self.assertFalse( e.isMsgType( "1" ) )
+        self.object.getGroup( "B", 100, delim, e )
+        self.assertFalse( e.isMsgType( "1" ) )
+
     def test_addFieldName(self):
         self.object.setVersion( "FIX.4.2" )
 

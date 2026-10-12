@@ -682,21 +682,25 @@ private:
   }
 }
 
-%typemap(in) FIX::DataDictionary const *& (FIX::DataDictionary* temp) {
-  $1 = new FIX::DataDictionary*[1];
-  *$1 = temp;
-} 	 
+%typemap(in) FIX::DataDictionary const *& {
+  // getGroup sets the pointer only when it finds the group (#121).
+  $1 = new FIX::DataDictionary *[1];
+  *$1 = 0;
+}
 
-%typemap(free) FIX::DataDictionary const *& {
-  delete[] temp; 	 
-} 	 
-	  	 
+%typemap(freearg) FIX::DataDictionary const *& {
+  delete[] $1;
+}
+
 %typemap(argout) FIX::DataDictionary const *& {
-  void* argp;
-  FIX::DataDictionary* pDD = 0;
-  int res = SWIG_ConvertPtr($input, &argp, SWIGTYPE_p_FIX__DataDictionary, 0 );
-  pDD = reinterpret_cast< FIX::DataDictionary * >(argp);
-  *pDD = *(*$1);
+  if( *$1 )
+  {
+    void* argp = 0;
+    int res = SWIG_ConvertPtr($input, &argp, SWIGTYPE_p_FIX__DataDictionary, 0 );
+    if( !SWIG_IsOK(res) || !argp )
+      SWIG_exception_fail(SWIG_TypeError, "getGroup needs a DataDictionary to copy the group's dictionary into");
+    *reinterpret_cast<FIX::DataDictionary *>(argp) = *(*$1);
+  }
 } 	 
 
 %include ../quickfix.i

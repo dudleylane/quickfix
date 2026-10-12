@@ -149452,7 +149452,6 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getGroup(PyObject *self, PyObject *arg
   int val3 ;
   int ecode3 = 0 ;
   int temp4 ;
-  FIX::DataDictionary *temp5 ;
   PyObject *swig_obj[5] ;
   bool result;
   
@@ -149484,8 +149483,9 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getGroup(PyObject *self, PyObject *arg
     arg4 = &temp4;
   }
   {
-    arg5 = new FIX::DataDictionary*[1];
-    *arg5 = temp5;
+    // getGroup sets the pointer only when it finds the group (#121).
+    arg5 = new FIX::DataDictionary *[1];
+    *arg5 = 0;
   }
   {
     if(!tryPythonException([&]() mutable 
@@ -149521,16 +149521,25 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getGroup(PyObject *self, PyObject *arg
     }
   }
   {
-    void* argp;
-    FIX::DataDictionary* pDD = 0;
-    int res = SWIG_ConvertPtr(swig_obj[4], &argp, SWIGTYPE_p_FIX__DataDictionary, 0 );
-    pDD = reinterpret_cast<FIX::DataDictionary *>(argp);
-    *pDD = *(*arg5);
+    if( *arg5 )
+    {
+      void* argp = 0;
+      int res = SWIG_ConvertPtr(swig_obj[4], &argp, SWIGTYPE_p_FIX__DataDictionary, 0 );
+      if( !SWIG_IsOK(res) || !argp )
+      SWIG_exception_fail(SWIG_TypeError, "getGroup needs a DataDictionary to copy the group's dictionary into");
+      *reinterpret_cast<FIX::DataDictionary *>(argp) = *(*arg5);
+    }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
+  {
+    delete[] arg5;
+  }
   return resultobj;
 fail:
   if (SWIG_IsNewObj(res2)) delete arg2;
+  {
+    delete[] arg5;
+  }
   return NULL;
 }
 

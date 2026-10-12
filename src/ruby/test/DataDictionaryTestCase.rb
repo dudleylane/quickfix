@@ -106,6 +106,11 @@ class DataDictionaryTestCase < Test::Unit::TestCase
 		result = @object.getGroup( "A", 300 )
 		assert_equal( 301, result[0] )
 		assert( result[1].isMsgType( "3" ) )
+
+		# A group the message type does not have is nil; the wrapper copied from
+		# an uninitialised pointer and crashed (#121).
+		assert_nil( @object.getGroup( "A", 999 ) )
+		assert_nil( @object.getGroup( "B", 100 ) )
 	end
 
 	def test_addFieldName
