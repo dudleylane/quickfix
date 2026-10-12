@@ -125,10 +125,21 @@ git ls-files \
   | tr '\n' '\0' | xargs -0 -r clang-format-22 --dry-run -Werror
 ```
 
-Vendored sources (`pugixml`, `scope_guard`, `catch_amalgamated`, `src/C++/double-conversion/`) are
-excluded — leave them formatted as upstream ships them. Two tree-wide reformats are recorded in
-`.git-blame-ignore-revs`; run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once to keep
-`git blame` readable.
+Two mechanisms exempt files from that check, and both are deliberate. The pipeline above drops the
+vendored `pugixml`, `scope_guard` and `catch_amalgamated` by name. `clang-format-22` itself then
+honours the `.clang-format-ignore` files, which exempt:
+
+- generated code: the message classes in `src/C++/fix40/` ... `fixt11/` and the SWIG wrappers
+  (`src/python/QuickfixPython.*`, `src/python3/QuickfixPython.*`, `src/ruby/QuickfixRuby.*`) --
+  regenerate them, never hand-format them;
+- vendored code: `src/C++/double-conversion/`, `src/getopt.c` and `src/getopt-repl.h`;
+- `src/C++/index.h`, the Doxygen main page, which is a comment only;
+- `src/C++/strptime.*`, Windows-only and compiled by nothing;
+- `include/**`, which the build copies there.
+
+Anything else is checked, and a new exemption needs a reason in this list. Formatting-only commits
+are recorded in `.git-blame-ignore-revs`; run `git config blame.ignoreRevsFile
+.git-blame-ignore-revs` once to keep `git blame` readable.
 
 ### General Guidelines
 

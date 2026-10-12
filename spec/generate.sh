@@ -21,7 +21,6 @@ if ! command -v "$FMT" >/dev/null 2>&1; then
   echo "generate.sh: $FMT not found; set CLANG_FORMAT to your clang-format" >&2
   exit 1
 fi
+# Only the top-level Fix*.h: src/C++/.clang-format-ignore exempts the per-version
+# directories, so clang-format -i leaves them as generated (#134).
 "$FMT" -i ../src/C++/Fix*.h
-for d in fix40 fix41 fix42 fix43 fix44 fix50 fix50sp1 fix50sp2 fixt11; do
-  "$FMT" -i ../src/C++/"$d"/*.h
-done

@@ -9,3 +9,6 @@
 
 # Finish the BSD/Allman + 120-column reformat: examples/, test/atrun/, UtilitySSL.h
 98339fae12a5ea6dfd474e4f2dfb0f2c8ea3aea9
+
+# Format PUGIXML_DOMDocument and stop exempting it from the format check (#134)
+3dd1fd4ffa00b7a40f328ffc3898437dce045fb5
