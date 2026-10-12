@@ -237,6 +237,10 @@ acceptor in `at`'s place -- `AT="python3 ../src/at.py" ./runat.sh 54321`, or
 `LD_LIBRARY_PATH` and, for Python, `PYTHONPATH` set as `test-python3.sh` sets them -- and
 `DEFINITIONS` narrows the run, e.g. `DEFINITIONS='definitions/server/fix42/*.def'`.
 
+`test/runexamples.sh` runs the example applications against tradeclient -- the executor in C++,
+over TLS, through Python and Ruby, and ordermatch -- and checks every order is answered (CI runs it
+on pull requests).
+
 The acceptance harness has tests of its own -- the comparator that judges each definition, and the
 parser, reflector and socket server around it: `cd test && ruby -I. test.rb` (a few seconds; CI
 runs it on every push).

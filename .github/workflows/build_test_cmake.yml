@@ -360,6 +360,15 @@ jobs:
           AT="python3 ../src/at.py" ./runat.sh 54321
           AT="ruby -I ../src/ruby ../src/at.rb" ./runat.sh 54321
 
+      - name: Run the example applications
+        # Nothing ran the examples, and running them by hand before 22.0.0 found
+        # #100, #101 and #103 (#114). Each acceptor example -- the executor in
+        # C++, over TLS on both transports, through Python and Ruby, and
+        # ordermatch -- with tradeclient sending an order per FIX version it
+        # serves. Debug, where both bindings are built; not on push.
+        if: github.event_name != 'push' && matrix.configuration == 'Debug'
+        run: test/runexamples.sh
+
       - name: Build and test without SSL
         # Every other step configures with HAVE_SSL=ON, so nothing built the
         # tree without it, and ut did not compile that way from 20.0.0 until
