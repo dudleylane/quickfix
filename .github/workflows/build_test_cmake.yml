@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       pt_base:
-        description: Commit to compare pt against (default the previous commit)
+        description: Commit or tag to compare pt against (default the previous commit)
         required: false
         default: ''
 
@@ -431,13 +431,11 @@ jobs:
         env:
           PT_BASE: ${{ github.event.pull_request.base.sha || inputs.pt_base }}
         run: |
-          base="$PT_BASE"
-          if [ -z "$base" ]; then
-            git fetch --no-tags --deepen=1 origin
-            base=$(git rev-parse HEAD~1)
-          else
-            git fetch --no-tags origin "$base"
-          fi
+          # The history and the tags, so that pt_base may be a short SHA or a
+          # tag name, not only a full SHA fetched by name (#115).
+          git fetch --quiet --tags --unshallow origin 2> /dev/null || git fetch --quiet --tags origin
+          base=$(git rev-parse --verify "${PT_BASE:-HEAD~1}^{commit}") \
+            || { echo "::error::pt_base '$PT_BASE' is not a commit"; exit 1; }
           ./ptgate.sh "$base"
 
   sanitizers:

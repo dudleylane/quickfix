@@ -23,6 +23,13 @@ if ! git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null; then
 fi
 
 TEST=$(pwd)
+
+# Nothing to compare when pt is built from the same sources on both sides: under
+# a busy machine the runs then only measure noise (#115).
+if git -C "$TEST" diff --quiet "$BASE" HEAD -- ../src/C++ ../src/pt.cpp ../CMakeLists.txt ../cmake ../spec; then
+    echo "pt's sources are the same at $BASE and HEAD; nothing to compare"
+    exit 0
+fi
 WORK=$(mktemp -d)
 trap 'git -C "$TEST" worktree remove --force "$WORK/base" 2>/dev/null; rm -rf "$WORK"' EXIT
 

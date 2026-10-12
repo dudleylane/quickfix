@@ -10,6 +10,11 @@ by more than THRESHOLD in both pairs, which keeps one disturbed run from
 failing the comparison. Benchmarks faster than MIN_US are reported but never
 fail it: at a few nanoseconds per operation the run-to-run variation on this
 runner reaches 10%, more than any regression worth gating on.
+
+When the two pairs disagree by more than NOISE on more than NOISY_SHARE of
+the benchmarks, the machine was too busy for either verdict, and the run is
+reported inconclusive -- still a failure, but one that asks for a re-run on a
+quiet machine rather than for a fix (#115).
 """
 
 import re
@@ -17,6 +22,8 @@ import sys
 
 THRESHOLD = 0.10
 MIN_US = 0.2
+NOISE = 0.25
+NOISY_SHARE = 0.25
 
 
 def medians(path):
@@ -41,6 +48,7 @@ def main(argv):
         return 1
 
     regressions = []
+    noisy = compared = 0
     print(f"{'benchmark':72} {'base us':>9} {'head us':>9} {'pair 1':>7} {'pair 2':>7}")
     for name, b1 in base1.items():
         if name not in head1 or name not in base2 or name not in head2:
@@ -48,6 +56,9 @@ def main(argv):
             continue
         d1 = head1[name] / b1 - 1
         d2 = head2[name] / base2[name] - 1
+        compared += 1
+        if abs(d1 - d2) > NOISE:
+            noisy += 1
         base = min(b1, base2[name])
         head = min(head1[name], head2[name])
         flag = ''
@@ -56,6 +67,10 @@ def main(argv):
             regressions.append(name)
         print(f'{name[:72]:72} {base:9.4f} {head:9.4f} {d1:+7.1%} {d2:+7.1%}{flag}')
 
+    if compared and noisy > NOISY_SHARE * compared:
+        print(f'INCONCLUSIVE: the two pairs disagree by more than {NOISE:.0%} on {noisy} of {compared} '
+              'benchmarks; the machine was too busy to judge -- re-run when it is quiet')
+        return 1
     if regressions:
         print(f'FAILED: {len(regressions)} benchmark(s) slower by more than {THRESHOLD:.0%} in both pairs')
         return 1
