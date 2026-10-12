@@ -406,8 +406,10 @@ THREAD_PROC ThreadedSSLSocketInitiator::socketThread(void *p)
         pConnection->disconnect();
         SSL *ssl = pConnection->sslObject();
         delete pConnection;
-        pInitiator->removeThread(SocketKey(socket, ssl));
+        // While registered: once removeThread() has detached this thread, onStop()
+        // no longer waits for it, and the initiator may be destroyed under it.
         pInitiator->setDisconnected(sessionID);
+        pInitiator->removeThread(SocketKey(socket, ssl));
         return 0;
     }
 
@@ -420,8 +422,10 @@ THREAD_PROC ThreadedSSLSocketInitiator::socketThread(void *p)
         pConnection->disconnect();
         SSL *ssl = pConnection->sslObject();
         delete pConnection;
-        pInitiator->removeThread(SocketKey(socket, ssl));
+        // While registered: once removeThread() has detached this thread, onStop()
+        // no longer waits for it, and the initiator may be destroyed under it.
         pInitiator->setDisconnected(sessionID);
+        pInitiator->removeThread(SocketKey(socket, ssl));
         return 0;
     }
 
@@ -436,12 +440,13 @@ THREAD_PROC ThreadedSSLSocketInitiator::socketThread(void *p)
 
     SSL *ssl = pConnection->sslObject();
     delete pConnection;
+    // setDisconnected first, while onStop() would still join this thread; after
+    // removeThread() the initiator may be gone.
+    pInitiator->setDisconnected(sessionID);
     if (!pInitiator->isStopped())
     {
         pInitiator->removeThread(SocketKey(socket, ssl));
     }
-
-    pInitiator->setDisconnected(sessionID);
     return 0;
 }
 

@@ -230,8 +230,10 @@ THREAD_PROC ThreadedSocketInitiator::socketThread(void *p)
         pInitiator->getLog()->onEvent("Connection failed");
         pConnection->disconnect();
         delete pConnection;
-        pInitiator->removeThread(socket);
+        // While registered: once removeThread() has detached this thread, onStop()
+        // no longer waits for it, and the initiator may be destroyed under it.
         pInitiator->setDisconnected(sessionID);
+        pInitiator->removeThread(socket);
         return 0;
     }
 
@@ -245,12 +247,13 @@ THREAD_PROC ThreadedSocketInitiator::socketThread(void *p)
     }
 
     delete pConnection;
+    // setDisconnected first, while onStop() would still join this thread; after
+    // removeThread() the initiator may be gone.
+    pInitiator->setDisconnected(sessionID);
     if (!pInitiator->isStopped())
     {
         pInitiator->removeThread(socket);
     }
-
-    pInitiator->setDisconnected(sessionID);
     return 0;
 }
 } // namespace FIX
