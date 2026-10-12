@@ -3424,3 +3424,101 @@ TEST_CASE_METHOD(acceptorFixture, "SessionSettingBehaviourTests")
         CHECK(3 == object->getExpectedTargetNum());
     }
 }
+
+namespace
+{
+// A Responder that only counts what it is given, from any thread.
+struct CountingResponder : public Responder
+{
+    bool send(const std::string &) override
+    {
+        ++sent;
+        return true;
+    }
+    void disconnect() override {}
+    std::atomic<int> sent{0};
+};
+} // namespace
+
+// Each pair of operations here runs on two threads, as the HTTP admin server's
+// thread and a transport's do, so that CI's TSan job reports a race if the
+// lock or atomic that orders them is removed (#131).
+TEST_CASE_METHOD(acceptorFixture, "SessionConcurrencyTests")
+{
+    object->next(createLogon("ISLD", "TW", 1), now);
+    REQUIRE(object->isLoggedOn());
+
+    SECTION("sendWhileTheResponderIsReplaced")
+    {
+        CountingResponder first, second;
+        std::thread replacer(
+            [&]
+            {
+                for (int i = 0; i < 2000; ++i)
+                {
+                    object->setResponder(i % 2 ? static_cast<Responder *>(&first) : &second);
+                }
+                object->setResponder(this);
+            });
+        for (int i = 0; i < 2000; ++i)
+        {
+            FIX::Message heartbeat = createHeartbeat("TW", "ISLD", 0);
+            object->send(heartbeat);
+        }
+        replacer.join();
+        CHECK(first.sent + second.sent > 0);
+    }
+
+    SECTION("settingsAndStateChangedWhileTheSessionWorks")
+    {
+        std::atomic<bool> done{false};
+        std::thread admin(
+            [&]
+            {
+                for (int i = 0; !done; ++i)
+                {
+                    object->setCheckLatency(i % 2 == 0);
+                    object->setMaxLatency(120 + i % 2);
+                    object->setResetOnLogout(false);
+                    object->setSendRedundantResendRequests(i % 2 == 0);
+                    (void)object->isEnabled();
+                    (void)object->isLoggedOn();
+                    (void)object->sentLogout();
+                }
+            });
+        for (int i = 0; i < 2000; ++i)
+        {
+            object->next(now);
+            object->next(createHeartbeat("ISLD", "TW", 2 + i), now);
+        }
+        done = true;
+        admin.join();
+        CHECK(object->isLoggedOn());
+    }
+}
+
+// The registry is read -- getSessions, lookupSession -- on transport threads
+// while sessions are created and destroyed on others (#131).
+TEST_CASE_METHOD(sessionFixture, "SessionRegistryConcurrencyTests")
+{
+    std::atomic<bool> done{false};
+    std::thread reader(
+        [&]
+        {
+            while (!done)
+            {
+                for (const SessionID &id : Session::getSessions())
+                {
+                    (void)Session::lookupSession(id);
+                }
+                (void)Session::numSessions();
+            }
+        });
+    for (int i = 0; i < 300; ++i)
+    {
+        createSession(0);
+    }
+    done = true;
+    reader.join();
+    CHECK(object != nullptr);
+}

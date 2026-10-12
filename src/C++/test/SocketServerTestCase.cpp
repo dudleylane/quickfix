@@ -27,10 +27,14 @@
 
 #include "catch_amalgamated.hpp"
 
+#include <atomic>
 #include <cerrno>
+#include <chrono>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <thread>
 #include <unistd.h>
+#include <vector>
 
 using namespace FIX;
 
@@ -240,5 +244,71 @@ TEST_CASE("SocketServerTests")
 
         destroySocket(second);
         object.close();
+    }
+}
+namespace
+{
+// Drops a socket on its hang-up, from the thread in block(), as the transports do.
+struct DroppingStrategy : public SocketMonitor::Strategy
+{
+    void onConnect(SocketMonitor &, socket_handle) override {}
+    void onEvent(SocketMonitor &monitor, socket_handle socket) override
+    {
+        char byte;
+        if (::recv(socket, &byte, 1, MSG_DONTWAIT) <= 0)
+        {
+            monitor.drop(socket);
+        }
+    }
+    void onWrite(SocketMonitor &, socket_handle) override {}
+    void onError(SocketMonitor &monitor, socket_handle socket) override { monitor.drop(socket); }
+    void onError(SocketMonitor &) override {}
+};
+} // namespace
+
+// drop() from a thread other than the one in block() -- an application thread,
+// the HTTP admin server resetting a session -- must leave the socket sets to
+// the blocking thread, which walks them unlocked (da37aab8, #131). Two threads
+// on one monitor, for CI's TSan job to watch.
+TEST_CASE("SocketMonitorConcurrencyTests")
+{
+    SocketMonitor monitor;
+    std::vector<int> peers;
+    std::vector<int> sockets;
+    for (int i = 0; i < 64; ++i)
+    {
+        int pair[2];
+        REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
+        REQUIRE(monitor.addRead(pair[0]));
+        sockets.push_back(pair[0]);
+        peers.push_back(pair[1]);
+    }
+
+    // The sets are the blocking thread's alone, so it is the one that counts them.
+    std::atomic<bool> dropping{false};
+    std::atomic<bool> allDropped{false};
+    std::thread blocker(
+        [&]
+        {
+            DroppingStrategy strategy;
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+            while (!allDropped && std::chrono::steady_clock::now() < deadline)
+            {
+                monitor.block(strategy, true, 0.01);
+                allDropped = dropping && monitor.numSockets() == 0;
+            }
+        });
+    std::this_thread::sleep_for(std::chrono::milliseconds(50)); // block() owns the monitor now
+    dropping = true;
+    for (int socket : sockets)
+    {
+        monitor.drop(socket);
+    }
+    blocker.join();
+
+    CHECK(allDropped);
+    for (int peer : peers)
+    {
+        ::close(peer);
     }
 }
