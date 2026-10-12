@@ -24,6 +24,7 @@ class App < Quickfix::Application
 	def fromApp(message, sessionID)
 		clOrdID = Quickfix::ClOrdID.new
 		message.getField(clOrdID)
+		raise Quickfix::UnsupportedMessageType.new if clOrdID.getValue.start_with?('unsupported')
 		@received << clOrdID.getValue
 	end
 end
@@ -87,8 +88,9 @@ puts "loggedOn=#{waitFor(20) { initiator.isLoggedOn && acceptor.isLoggedOn }}"
 
 order('sent')
 initiatorApp.refuse = true
-order('refused')
+%w[refused1 refused2 refused3].each { |id| order(id) }
 initiatorApp.refuse = false
+%w[unsupported1 unsupported2].each { |id| order(id) }
 order('after')
 waitFor(10) { acceptorApp.received.include?('after') }
 puts "received=#{acceptorApp.received.join(',')}"

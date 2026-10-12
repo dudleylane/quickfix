@@ -7003,8 +7003,6 @@ VALUE Application_toApp_rescue(VALUE args, VALUE error) {
     if( error != 0 ) {
       void* result;
       
-      Application_toApp_call_depth--;
-      
       if( SWIG_ConvertPtr(error, &result, SWIGTYPE_p_FIX__DoNotSend, 0 ) != -1 ) {
         rb_set_errinfo(Qnil);
         throw *((FIX::DoNotSend*)result);
@@ -7033,8 +7031,6 @@ VALUE Application_fromAdmin_rescue(VALUE args, VALUE error) {
   if (Application_fromAdmin_call_depth == 0) {
     if( error != 0 ) {
       void* result;
-      
-      Application_fromAdmin_call_depth--;
       
       if( SWIG_ConvertPtr(error, &result, SWIGTYPE_p_FIX__FieldNotFound, 0 ) != -1 ) {
         rb_set_errinfo(Qnil);
@@ -7073,8 +7069,6 @@ VALUE Application_fromApp_rescue(VALUE args, VALUE error) {
   if (Application_fromApp_call_depth == 0) {
     if( error != 0 ) {
       void* result;
-      
-      Application_fromApp_call_depth--;
       
       if( SWIG_ConvertPtr(error, &result, SWIGTYPE_p_FIX__FieldNotFound, 0 ) != -1 ) {
         rb_set_errinfo(Qnil);
