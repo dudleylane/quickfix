@@ -6,6 +6,9 @@
 # and Allocator.h by its own target below.
 file(GLOB QUICKFIX_TOP_LEVEL_HEADERS CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/src/C++/*.h)
 list(FILTER QUICKFIX_TOP_LEVEL_HEADERS EXCLUDE REGEX "/(config|Allocator)\\.h$")
+# DataDictionary's XML loader, included by two .cpp files only; it needs the vendored pugixml.hpp,
+# which is not shipped, so it is no consumer's to include (#136).
+list(FILTER QUICKFIX_TOP_LEVEL_HEADERS EXCLUDE REGEX "/PUGIXML_DOMDocument\\.h$")
 
 add_custom_target(QUICKFIX_HEADERS_COPY ALL 
 COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_SOURCE_DIR}/include/

@@ -148,10 +148,11 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/${PROJECT_NAME}${d
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/C++/ DESTINATION include/quickfix
         FILES_MATCHING PATTERN "*.h"
         PATTERN double-conversion EXCLUDE
-        PATTERN test EXCLUDE)
+        PATTERN test EXCLUDE
+        PATTERN PUGIXML_DOMDocument.h EXCLUDE)
 
-# Discovery for installed consumers: a CMake package, find_package(quickfix 21) -> quickfix::quickfix,
-# and a pkg-config file. Any 21.x satisfies a request for 21, since the major version is the soname.
+# Discovery for installed consumers: a CMake package, find_package(quickfix <major>) -> quickfix::quickfix,
+# and a pkg-config file. Any release with that major satisfies the request, since the major is the soname.
 # The package config finds the imported targets the exported link interface names (TBB, ODBC).
 include(CMakePackageConfigHelpers)
 install(EXPORT quickfixTargets NAMESPACE quickfix:: DESTINATION lib/cmake/quickfix)

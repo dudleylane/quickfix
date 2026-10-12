@@ -295,6 +295,43 @@ jobs:
               -e 'require "quickfix_ruby"; f = $LOADED_FEATURES.grep(/quickfix\.so$/).first; puts "ruby: #{f}"; exit f.start_with?(ARGV[0])' "$stage" \
             || { echo "::error::ruby did not load the staged module"; exit 1; }
 
+          # A C++ consumer of the same install, both ways a consumer finds it:
+          # find_package and pkg-config. Nothing built one against the install
+          # (#136). Then every installed header, compiled together: a header
+          # that includes one the install does not ship fails here. The database
+          # headers need HAVE_MYSQL and friends defined by hand until #137.
+          consumer="$RUNNER_TEMP/consumer"
+          rm -rf "$consumer"
+          mkdir -p "$consumer"
+          major=$(sed -n 's/^#define QUICKFIX_VERSION_MAJOR \([0-9]*\)$/\1/p' "$stage/include/quickfix/QuickFIXVersion.h")
+          cat > "$consumer/main.cpp" << 'CPP'
+          #include <quickfix/QuickFIXVersion.h>
+          #include <quickfix/fix44/NewOrderSingle.h>
+          #include <iostream>
+          int main()
+          {
+              FIX44::NewOrderSingle order(FIX::ClOrdID("1"), FIX::Side(FIX::Side_BUY), FIX::TransactTime(),
+                                          FIX::OrdType(FIX::OrdType_MARKET));
+              order.set(FIX::Symbol("IBM"));
+              FIX::Message parsed(order.toString(), false);
+              std::cout << QUICKFIX_VERSION << " " << parsed.getField(FIX::FIELD::Symbol) << std::endl;
+              return parsed.getField(FIX::FIELD::Symbol) == "IBM" ? 0 : 1;
+          }
+          CPP
+          printf 'cmake_minimum_required(VERSION 3.31)\nproject(consumer CXX)\nset(CMAKE_CXX_STANDARD 23)\nfind_package(quickfix %s CONFIG REQUIRED)\nadd_executable(app main.cpp)\ntarget_link_libraries(app PRIVATE quickfix::quickfix)\n' "$major" > "$consumer/CMakeLists.txt"
+          cmake -S "$consumer" -B "$consumer/build" -G Ninja -DCMAKE_PREFIX_PATH="$stage" > /dev/null
+          cmake --build "$consumer/build" > /dev/null
+          LD_LIBRARY_PATH="$stage/lib:$LD_LIBRARY_PATH" "$consumer/build/app" \
+            || { echo "::error::a find_package consumer of the install failed"; exit 1; }
+          flags=$(PKG_CONFIG_PATH="$stage/lib/pkgconfig" pkg-config --cflags --libs quickfix)
+          "$CXX" -std=c++23 "$consumer/main.cpp" $flags -o "$consumer/app-pc"
+          LD_LIBRARY_PATH="$stage/lib:$LD_LIBRARY_PATH" "$consumer/app-pc" \
+            || { echo "::error::a pkg-config consumer of the install failed"; exit 1; }
+          (cd "$stage/include" && find quickfix -maxdepth 1 -name '*.h' \
+             ! -name 'MySQL*' ! -name 'PostgreSQL*' ! -name 'Odbc*' | sort | sed 's/.*/#include <&>/') > "$consumer/all.cpp"
+          "$CXX" -std=c++23 -fsyntax-only $(PKG_CONFIG_PATH="$stage/lib/pkgconfig" pkg-config --cflags quickfix) "$consumer/all.cpp" \
+            || { echo "::error::an installed header does not compile on its own install"; exit 1; }
+
       - name: Run acceptance tests
         # Not on push: the at-driven Ruby runner takes about 7.5 minutes for the
         # 470 definitions (454 s on this runner) and isn't informative on every
