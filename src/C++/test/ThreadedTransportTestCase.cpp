@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cerrno>
 #include <csignal>
 #include <dirent.h>
 #include <dlfcn.h>
@@ -596,17 +597,45 @@ std::string rejectedFirstMessage(const std::string &target)
     return message.toString();
 }
 
-// True once the peer has closed the connection.
+// True once the peer has closed the connection. Drains whatever is readable
+// first -- rejects, or a TLS peer's records -- so they do not hide the close.
 bool closedByPeer(int fd)
 {
-    struct pollfd pfd = {fd, POLLIN, 0};
-    if (::poll(&pfd, 1, 0) <= 0)
+    while (true)
     {
-        return false;
+        struct pollfd pfd = {fd, POLLIN, 0};
+        if (::poll(&pfd, 1, 0) <= 0)
+        {
+            return false;
+        }
+        char bytes[4096];
+        const ssize_t n = ::recv(fd, bytes, sizeof(bytes), MSG_DONTWAIT);
+        if (n == 0 || (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK))
+        {
+            return true;
+        }
+        if (n < 0)
+        {
+            return (pfd.revents & (POLLHUP | POLLERR)) != 0;
+        }
     }
-    char byte;
-    return ::recv(fd, &byte, 1, MSG_DONTWAIT) == 0 || (pfd.revents & (POLLHUP | POLLERR));
 }
+
+#if (HAVE_SSL > 0)
+// A client that completes its TLS handshake and then sends `bytes`; the
+// connection is the caller's to close, the SSL object the caller's to free.
+SSL *tlsClientSending(int fd, SSL_CTX *ctx, const std::string &bytes)
+{
+    SSL *ssl = SSL_new(ctx);
+    SSL_set_fd(ssl, fd);
+    if (SSL_connect(ssl) != 1 || SSL_write(ssl, bytes.data(), static_cast<int>(bytes.size())) <= 0)
+    {
+        SSL_free(ssl);
+        return nullptr;
+    }
+    return ssl;
+}
+#endif
 } // namespace
 
 TEST_CASE("SetupDeadlineTests")
@@ -640,12 +669,35 @@ TEST_CASE("SetupDeadlineTests")
         clients.push_back(reactorBound);
 
 #if (HAVE_SSL > 0)
+        SSL_CTX *clientCtx = SSL_CTX_new(TLS_client_method());
+        SSL_CTX_set_verify(clientCtx, SSL_VERIFY_NONE, nullptr);
+        std::vector<SSL *> sessions;
+
         const int tlsPort = freePort();
         ThreadedSSLSocketAcceptor tls(application, factory, deadlineSettings(tlsPort, "DEADLINE3"));
         tls.start();
         const int tlsSilent = connectTo(tlsPort); // never starts its handshake
         REQUIRE(tlsSilent >= 0);
         clients.push_back(tlsSilent);
+        // #71 over TLS: the handshake completes and the first message only draws a reject.
+        const int tlsBound = connectTo(tlsPort);
+        REQUIRE(tlsBound >= 0);
+        sessions.push_back(tlsClientSending(tlsBound, clientCtx, rejectedFirstMessage("DEADLINE3")));
+        REQUIRE(sessions.back() != nullptr);
+        clients.push_back(tlsBound);
+
+        // The reactor's TLS acceptor, which no deadline test covered (#131).
+        const int tlsReactorPort = freePort();
+        SSLSocketAcceptor tlsReactor(application, factory, deadlineSettings(tlsReactorPort, "DEADLINE4"));
+        tlsReactor.start();
+        const int tlsReactorSilent = connectTo(tlsReactorPort);
+        REQUIRE(tlsReactorSilent >= 0);
+        clients.push_back(tlsReactorSilent);
+        const int tlsReactorBound = connectTo(tlsReactorPort);
+        REQUIRE(tlsReactorBound >= 0);
+        sessions.push_back(tlsClientSending(tlsReactorBound, clientCtx, rejectedFirstMessage("DEADLINE4")));
+        REQUIRE(sessions.back() != nullptr);
+        clients.push_back(tlsReactorBound);
 #endif
 
         std::this_thread::sleep_for(std::chrono::seconds(3));
@@ -674,6 +726,12 @@ TEST_CASE("SetupDeadlineTests")
         }
 
 #if (HAVE_SSL > 0)
+        for (SSL *session : sessions)
+        {
+            SSL_free(session);
+        }
+        SSL_CTX_free(clientCtx);
+        tlsReactor.stop();
         tls.stop();
 #endif
         reactor.stop();
