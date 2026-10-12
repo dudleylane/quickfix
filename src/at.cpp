@@ -26,7 +26,9 @@
 #include "Log.h"
 #include "SessionSettings.h"
 #include "SocketAcceptor.h"
+#include "SocketInitiator.h"
 #include "ThreadedSocketAcceptor.h"
+#include "ThreadedSocketInitiator.h"
 #include "Utility.h"
 #include "at_application.h"
 #include "getopt-repl.h"
@@ -36,16 +38,18 @@
 #include <signal.h>
 
 typedef std::unique_ptr<FIX::Acceptor> AcceptorPtr;
+typedef std::unique_ptr<FIX::Initiator> InitiatorPtr;
 
 int main(int argc, char **argv)
 {
     std::string file;
     bool threaded = false;
+    bool initiator = false;
     bool eventLog = false;
     bool usage = false;
 
     int option;
-    while ((option = getopt(argc, argv, "+f:tl")) != -1)
+    while ((option = getopt(argc, argv, "+f:til")) != -1)
     {
         switch (option)
         {
@@ -54,6 +58,9 @@ int main(int argc, char **argv)
             break;
         case 't':
             threaded = true;
+            break;
+        case 'i':
+            initiator = true;
             break;
         case 'l':
             eventLog = true;
@@ -66,7 +73,7 @@ int main(int argc, char **argv)
 
     if (usage || file.empty())
     {
-        std::cout << "usage: " << argv[0] << " -f FILE [-t] [-l]" << std::endl;
+        std::cout << "usage: " << argv[0] << " -f FILE [-t] [-i] [-l]" << std::endl;
         return 1;
     }
 
@@ -95,6 +102,29 @@ int main(int argc, char **argv)
         if (eventLog)
         {
             pLogFactory = std::make_unique<FIX::ScreenLogFactory>(false, false, true);
+        }
+
+        // -i: an initiator, for the client definitions, where the harness listens and the engine
+        // connects to it (#146).
+        if (initiator)
+        {
+            InitiatorPtr pInitiator;
+            if (threaded)
+            {
+                pInitiator.reset(pLogFactory
+                                     ? new FIX::ThreadedSocketInitiator(application, factory, settings, *pLogFactory)
+                                     : new FIX::ThreadedSocketInitiator(application, factory, settings));
+            }
+            else
+            {
+                pInitiator.reset(pLogFactory ? new FIX::SocketInitiator(application, factory, settings, *pLogFactory)
+                                             : new FIX::SocketInitiator(application, factory, settings));
+            }
+            pInitiator->start();
+            int received = 0;
+            sigwait(&stopSignals, &received);
+            pInitiator->stop();
+            return 0;
         }
 
         AcceptorPtr pAcceptor;

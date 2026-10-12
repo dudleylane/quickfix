@@ -359,6 +359,16 @@ jobs:
         working-directory: ./test
         run: ./runat.sh 54321
 
+      - name: Run the client definitions
+        # The acceptance suite tests an acceptor. These test an initiator: the
+        # harness listens and at -i connects to it, on both transports (#146).
+        # Seconds; with the acceptance suite, not on push.
+        if: github.event_name != 'push'
+        working-directory: ./test
+        run: |
+          ./runat_client.sh 54331
+          ./runat_client.sh 54332 -t
+
       - name: Run acceptance tests through the Python and Ruby bindings
         # src/at.py and src/at.rb are at.cpp through each binding, and nothing ran
         # them, so they had drifted (#127); run through the bindings, the suite

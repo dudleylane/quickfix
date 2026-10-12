@@ -61,31 +61,41 @@ def printResult(test, exception)
 end
 
 def createProcess(file, address, port)
-  (1...30).each do
-    | num |
-    begin
-      socket = TCPSocket.new(address, port);
-    rescue
-    end
-
-    if socket == nil 
-      sleep 1
-      next
-    else
-      socket.close
-      break
-    end
-  end
-
+  # The harness as the client (iCONNECT) connects to the engine under test, so
+  # wait for it to listen; as the server (eCONNECT) it listens itself, on the
+  # port given, and the engine connects to it (#146).
+  mode = nil
   file.each_line do
     | line |
     if line =~ /^i\d*,?CONNECT/ then
-      return ReflectorClient.new(file, address, port)
+      mode = :client
+      break
     elsif line =~ /^e\d*,?CONNECT/ then
-      return ReflectorServer.new(file)
+      mode = :server
+      break
     end
   end
-  return nil
+  return nil if mode.nil?
+
+  if mode == :client
+    (1...30).each do
+      | num |
+      begin
+        socket = TCPSocket.new(address, port);
+      rescue
+      end
+
+      if socket == nil
+        sleep 1
+        next
+      else
+        socket.close
+        break
+      end
+    end
+    return ReflectorClient.new(file, address, port)
+  end
+  return ReflectorServer.new(file, address, port)
 end
 
 # Runs the definitions named on the command line only when run as a script, so

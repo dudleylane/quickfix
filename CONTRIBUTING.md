@@ -235,7 +235,9 @@ events on stdout, and `-t` runs the threaded transport instead of the reactor. `
 acceptor in `at`'s place -- `AT="python3 ../src/at.py" ./runat.sh 54321`, or
 `AT="ruby -I ../src/ruby ../src/at.rb"`, the same acceptor through each binding, with
 `LD_LIBRARY_PATH` and, for Python, `PYTHONPATH` set as `test-python3.sh` sets them -- and
-`DEFINITIONS` narrows the run, e.g. `DEFINITIONS='definitions/server/fix42/*.def'`.
+`DEFINITIONS` narrows the run, e.g. `DEFINITIONS='definitions/server/fix42/*.def'`. `./runat_client.sh PORT [-t]` runs the client definitions in
+`definitions/client/` against `at -i`, an initiator: the harness listens and the engine connects to
+it, so the initiator's side of the session is tested too (#146).
 
 `test/runexamples.sh` runs the example applications against tradeclient -- the executor in C++,
 over TLS, through Python and Ruby, and ordermatch -- and checks every order is answered (CI runs it
