@@ -64,7 +64,9 @@ extern "C" int select(int count, fd_set *read, fd_set *write, fd_set *except, ti
 namespace
 {
 std::atomic<int> acceptFailures{0};
-}
+// Holds each socket accept() accepts this long before returning it.
+std::atomic<int> acceptDelayMilliseconds{0};
+} // namespace
 
 extern "C" int accept(int socket, sockaddr *address, socklen_t *length)
 {
@@ -79,7 +81,12 @@ extern "C" int accept(int socket, sockaddr *address, socklen_t *length)
     }
     using Accept = int (*)(int, sockaddr *, socklen_t *);
     static const Accept libcAccept = reinterpret_cast<Accept>(::dlsym(RTLD_NEXT, "accept"));
-    return libcAccept(socket, address, length);
+    const int accepted = libcAccept(socket, address, length);
+    if (accepted >= 0 && acceptDelayMilliseconds > 0)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(acceptDelayMilliseconds.load()));
+    }
+    return accepted;
 }
 
 // A threaded connection is read by its own thread, but disconnect() is reached
@@ -1311,5 +1318,49 @@ TEST_CASE("SlowFirstMessageTests")
     SECTION("SocketAcceptor") { checkSlowFirstMessage<SocketAcceptor>("SLOW1", "PROMPT1", false); }
 #if (HAVE_SSL > 0)
     SECTION("SSLSocketAcceptor") { checkSlowFirstMessage<SSLSocketAcceptor>("SLOW2", "PROMPT2", true); }
+#endif
+}
+
+namespace
+{
+// Stops a threaded acceptor while its accept thread holds a connection it has
+// just accepted. The thread spawned the connection after onStop() had taken its
+// snapshot of the threads to join, so the connection's thread and socket
+// outlived stop() (edacfa1e, #131).
+template <typename AcceptorType> void checkConnectionAcceptedWhileStopping(const std::string &sender)
+{
+    NullApplication application;
+    MemoryStoreFactory factory;
+    const int port = freePort();
+    const std::size_t before = openDescriptors();
+    {
+        AcceptorType acceptor(application, factory, deadlineSettings(port, sender));
+        StopOnExit stopOnExit{acceptor};
+        acceptor.start();
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+        acceptDelayMilliseconds = 300;
+        const int client = connectTo(port);
+        REQUIRE(client >= 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // the accept thread holds it
+        acceptor.stop(true);
+        acceptDelayMilliseconds = 0;
+        ::close(client);
+
+        // Nothing the acceptor made is left open: not its listener, not the
+        // connection it accepted while stopping.
+        CHECK(openDescriptors() == before);
+    }
+}
+} // namespace
+
+TEST_CASE("AcceptedWhileStoppingTests")
+{
+    SECTION("ThreadedSocketAcceptor") { checkConnectionAcceptedWhileStopping<ThreadedSocketAcceptor>("STOPPING1"); }
+#if (HAVE_SSL > 0)
+    SECTION("ThreadedSSLSocketAcceptor")
+    {
+        checkConnectionAcceptedWhileStopping<ThreadedSSLSocketAcceptor>("STOPPING2");
+    }
 #endif
 }
