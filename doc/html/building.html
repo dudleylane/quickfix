@@ -15,252 +15,61 @@
   </div>
 
   <div class='contents'>
-    <h1>Building with CMake (Recommended)</h1>
+    <p>This fork builds on Linux only, with CMake. README.md in the source tree is the full
+    reference; this page is the short version. See <a href="dependencies.html">Dependencies</a> for
+    what to install first.</p>
 
-    <p>QuickFIX uses CMake as its primary build system, providing consistent builds across all platforms.</p>
-
-    <h2>Prerequisites</h2>
-    <ul>
-      <li>C++17 compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)</li>
-      <li>CMake 3.5 or higher</li>
-      <li>Optional: OpenSSL for SSL/TLS support</li>
-      <li>Optional: MySQL, PostgreSQL, or ODBC client libraries</li>
-    </ul>
-
-    <h2>Windows</h2>
-
-    <p><b>Basic Build:</b></p>
-    <pre class='fragment'>
-mkdir build
-cd build
-cmake -G "Visual Studio 17 2022" -A x64 ..
-cmake --build . --config Release
-cmake --install . --config Release
+    <h2>Compiler</h2>
+    <p>The tree needs C++23 and GCC 15 or later: <code>FieldMap.h</code> uses
+    <code>std::flat_map</code>, which GCC 14's standard library does not have. On RHEL and its
+    relatives, GCC 15 comes from gcc-toolset-15:</p>
+<pre class="fragment">
+export CC=/opt/rh/gcc-toolset-15/root/usr/bin/gcc
+export CXX=/opt/rh/gcc-toolset-15/root/usr/bin/g++
+export PATH=/opt/rh/gcc-toolset-15/root/usr/bin:$PATH
+export LD_LIBRARY_PATH=/opt/rh/gcc-toolset-15/root/usr/lib64
 </pre>
 
-    <p><b>With SSL Support:</b></p>
-    <pre class='fragment'>
-mkdir build
-cd build
-cmake -G "Visual Studio 17 2022" -A x64 ^
-  -DHAVE_SSL=ON ^
-  -DOPENSSL_ROOT_DIR="C:\path\to\openssl" ^
-  -DCMAKE_INSTALL_PREFIX="C:\quickfix" ..
-cmake --build . --config Release
-cmake --install . --config Release
+    <h2>Configure, build, install</h2>
+<pre class="fragment">
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DHAVE_SSL=ON
+cmake --build build -j"$(nproc)"
+sudo cmake --install build
 </pre>
+    <p>Always pass <code>-DHAVE_SSL=ON</code> or <code>-DHAVE_SSL=OFF</code> as you intend: configure
+    rewrites the tracked <code>src/C++/config.h</code> from it. Libraries and programs are written to
+    <code>lib/</code> in the source tree, whichever build directory you use; give a second build tree
+    its own <code>-DQUICKFIX_LIB_OUTPUT_DIR</code>.</p>
 
-    <p><b>With Database Support:</b></p>
-    <pre class='fragment'>
-cmake -G "Visual Studio 17 2022" -A x64 ^
-  -DHAVE_MYSQL=ON ^
-  -DHAVE_POSTGRESQL=ON ^
-  -DHAVE_ODBC=ON ..
-cmake --build . --config Release
-</pre>
-
-    <p>Supported Visual Studio versions: VS 2017, VS 2019, VS 2022</p>
-
-    <br/><hr/>
-    <h2>Linux / macOS</h2>
-
-    <p><b>Basic Build:</b></p>
-    <pre class='fragment'>
-cmake -DCMAKE_BUILD_TYPE=Release .
-make -j$(nproc)
-sudo make install
-</pre>
-
-    <p><b>With SSL Support:</b></p>
-    <pre class='fragment'>
-cmake -DCMAKE_BUILD_TYPE=Release -DHAVE_SSL=ON .
-make -j$(nproc)
-sudo make install
-</pre>
-
-    <p><b>With Database Support:</b></p>
-    <pre class='fragment'>
-cmake -DCMAKE_BUILD_TYPE=Release \
-  -DHAVE_MYSQL=ON \
-  -DHAVE_POSTGRESQL=ON .
-make -j$(nproc)
-sudo make install
-</pre>
-
-    <p><b>Custom Installation Directory:</b></p>
-    <pre class='fragment'>
-cmake -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=/usr/local .
-make -j$(nproc)
-sudo make install
-</pre>
-
-    <h2>CMake Build Options</h2>
-    <table>
-      <tr>
-        <td><b>Option</b></td>
-        <td><b>Description</b></td>
-        <td><b>Default</b></td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DHAVE_SSL=ON</font></td>
-        <td>Enable SSL/TLS support (requires OpenSSL)</td>
-        <td>OFF</td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DHAVE_MYSQL=ON</font></td>
-        <td>Enable MySQL message store support</td>
-        <td>OFF</td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DHAVE_POSTGRESQL=ON</font></td>
-        <td>Enable PostgreSQL message store support</td>
-        <td>OFF</td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DHAVE_ODBC=ON</font></td>
-        <td>Enable ODBC message store support</td>
-        <td>OFF</td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DHAVE_PYTHON3=ON</font></td>
-        <td>Build Python 3 bindings</td>
-        <td>OFF</td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DQUICKFIX_PYTHON3_INSTALL_DIR=&lt;dir&gt;</font></td>
-        <td>Where cmake --install puts the Python module, relative to the install prefix</td>
-        <td>the interpreter's site-packages for the prefix</td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DQUICKFIX_SHARED_LIBS=ON</font></td>
-        <td>Build shared libraries instead of static</td>
-        <td>ON</td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DQUICKFIX_EXAMPLES=ON</font></td>
-        <td>Build example applications</td>
-        <td>ON</td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DQUICKFIX_TESTS=ON</font></td>
-        <td>Build test suite</td>
-        <td>ON</td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DCMAKE_BUILD_TYPE=Release</font></td>
-        <td>Build type (Debug, Release, RelWithDebInfo)</td>
-        <td>-</td>
-      </tr>
-      <tr>
-        <td><font color="#0000FF">-DCMAKE_INSTALL_PREFIX=/path</font></td>
-        <td>Installation directory</td>
-        <td>/usr/local</td>
-      </tr>
+    <h2>Options</h2>
+    <table class="doxtable">
+      <tr><th>Option</th><th>Default</th><th>Meaning</th></tr>
+      <tr><td>HAVE_SSL</td><td>OFF</td><td>TLS transports (OpenSSL 3)</td></tr>
+      <tr><td>HAVE_MYSQL, HAVE_POSTGRESQL, HAVE_ODBC</td><td>OFF</td><td>Database message stores and logs</td></tr>
+      <tr><td>HAVE_PYTHON3</td><td>OFF</td><td>The Python binding</td></tr>
+      <tr><td>QUICKFIX_PYTHON3_INSTALL_DIR</td><td>the interpreter's site-packages</td><td>Where the Python module installs, relative to the prefix</td></tr>
+      <tr><td>ENABLE_TBB_ALLOCATOR</td><td>OFF</td><td>TBB's scalable allocator for message fields and send queues</td></tr>
+      <tr><td>QUICKFIX_SHARED_LIBS</td><td>ON</td><td>Shared rather than static library</td></tr>
+      <tr><td>QUICKFIX_EXAMPLES</td><td>ON</td><td>The examples, and the <code>at</code> and <code>pt</code> test drivers</td></tr>
+      <tr><td>QUICKFIX_TESTS</td><td>ON</td><td>The unit tests, <code>ut</code></td></tr>
     </table>
 
-    <br/><hr/>
-    <h1>Building with Autotools (Alternative)</h1>
-
-    <p>QuickFIX also supports traditional autotools-based builds on Unix-like systems.</p>
-
-    <h2>Linux / macOS</h2>
-    <pre class='fragment'>
-./bootstrap
-./configure
-make
-make check
-sudo make install
+    <h2>Testing your build</h2>
+    <p>There is no <code>ctest</code> target. From <code>test/</code>:</p>
+<pre class="fragment">
+./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec   # unit tests
+./runat.sh 54321                                                       # acceptance tests (needs Ruby)
 </pre>
+    <p>See <a href="testing.html">Testing</a>.</p>
 
-    <p>You can run configure with the <font color=
-    "#0000FF">--prefix=&lt;base directory&gt;</font> option to
-    install to a custom location.</p>
+    <h2>The Python and Ruby bindings</h2>
+    <p>Python: configure with <code>-DHAVE_PYTHON3=ON</code>; <code>cmake --install</code> puts the
+    module in the interpreter's site-packages for the prefix. Ruby: build with
+    <code>src/ruby/make_ruby.sh</code>, then install with <code>src/ruby/install.sh</code>. Rebuild
+    the Ruby module after every library upgrade that changes the major version.</p>
 
-    <p><b>./configure</b> options:</p>
-
-    <table>
-      <tr>
-        <td><font color="#0000FF">--prefix=/usr/local</font></td>
-      </tr>
-      <tr>
-        <td>Installation directory</td>
-      </tr>
-
-      <tr>
-        <td><font color="#0000FF">--with-openssl[=PATH]</font></td>
-      </tr>
-      <tr>
-        <td>Enable SSL support, optionally specify OpenSSL installation path</td>
-      </tr>
-
-      <tr>
-        <td><font color="#0000FF">--with-python3</font></td>
-      </tr>
-      <tr>
-        <td>Build the Python 3 bindings</td>
-      </tr>
-
-      <tr>
-        <td><font color="#0000FF">--with-ruby</font></td>
-      </tr>
-      <tr>
-        <td>Build the Ruby bindings</td>
-      </tr>
-
-      <tr>
-        <td><font color="#0000FF">--with-mysql</font></td>
-      </tr>
-      <tr>
-        <td>Compile with MySQL support</td>
-      </tr>
-
-      <tr>
-        <td><font color="#0000FF">--with-postgresql</font></td>
-      </tr>
-      <tr>
-        <td>Compile with PostgreSQL support</td>
-      </tr>
-    </table>
-
-    <br/><hr/>
-    <h2>Testing Your Build</h2>
-
-    <p><b>With CMake:</b></p>
-    <pre class='fragment'>
-cmake --build . --target test
-# or
-ctest
-</pre>
-
-    <p><b>With Autotools:</b></p>
-    <pre class='fragment'>
-make check
-</pre>
-
-    <br/><hr/>
-    <h2>Using vcpkg</h2>
-
-    <p>QuickFIX is available via the vcpkg package manager:</p>
-    <pre class='fragment'>
-git clone https://github.com/Microsoft/vcpkg.git
-cd vcpkg
-./bootstrap-vcpkg.sh  # Windows: bootstrap-vcpkg.bat
-./vcpkg integrate install
-./vcpkg install quickfix
-</pre>
-
-    <br/><hr/>
-    <h2>Troubleshooting</h2>
-
-    <ul>
-      <li>Ensure your compiler supports C++17</li>
-      <li>For SSL issues, verify OpenSSL is properly installed and OPENSSL_ROOT_DIR is set correctly</li>
-      <li>For database support, ensure client libraries are installed and in the library path</li>
-      <li>On Windows, run CMake from the "Developer Command Prompt for Visual Studio"</li>
-      <li>Check the GitHub Issues page for known build problems</li>
-    </ul>
-
+    <p>Packages that install upstream QuickFIX, such as <code>vcpkg install quickfix</code>, do not
+    install this fork.</p>
   </div>
 </body>
 </html>
