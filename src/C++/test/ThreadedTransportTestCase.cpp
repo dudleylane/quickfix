@@ -1200,3 +1200,116 @@ TEST_CASE("AcceptFailureTests")
     }
 #endif
 }
+
+namespace
+{
+SessionSettings twoSessionSettings(int port, const std::string &first, const std::string &second)
+{
+    std::stringstream config;
+    config << "[DEFAULT]\nConnectionType=acceptor\nSocketAcceptPort=" << port
+           << "\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n"
+#if (HAVE_SSL > 0)
+           << "ServerCertificateFile=" << certPath("127_0_0_1_server.crt") << "\n"
+           << "ServerCertificateKeyFile=" << certPath("127_0_0_1_server.key") << "\n"
+#endif
+           << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=" << first << "\nTargetCompID=TW\n"
+           << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=" << second << "\nTargetCompID=TW\n";
+    return SessionSettings(config);
+}
+
+bool loggedOn(const std::string &acceptorCompID)
+{
+    Session *session = Session::lookupSession(SessionID("FIX.4.2", acceptorCompID, "TW"));
+    return session && session->isLoggedOn();
+}
+
+// One client sends half its Logon and stops. The reactor must go on serving
+// the others meanwhile; it used to read a first message in a loop of its own
+// (98e23483, GHSA-4jw9).
+template <typename AcceptorType>
+void checkSlowFirstMessage(const std::string &slow, const std::string &prompt, bool tls)
+{
+    NullApplication application;
+    MemoryStoreFactory factory;
+    const int port = freePort();
+    AcceptorType acceptor(application, factory, twoSessionSettings(port, slow, prompt));
+    StopOnExit stopOnExit{acceptor};
+    acceptor.start();
+
+    const std::string slowLogon = logonTo(slow);
+    const std::string firstHalf = slowLogon.substr(0, slowLogon.size() / 2);
+    const std::string secondHalf = slowLogon.substr(slowLogon.size() / 2);
+    const int slowClient = connectTo(port);
+    const int promptClient = connectTo(port);
+    REQUIRE(slowClient >= 0);
+    REQUIRE(promptClient >= 0);
+
+#if (HAVE_SSL > 0)
+    SSL_CTX *ctx = SSL_CTX_new(TLS_client_method());
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
+    SSL *slowSsl = nullptr;
+    SSL *promptSsl = nullptr;
+#endif
+    // Timed from before the prompt client's handshake: a stalled reactor would
+    // hold up the handshake too, not only the Logon.
+    std::chrono::steady_clock::time_point start;
+    if (tls)
+    {
+#if (HAVE_SSL > 0)
+        slowSsl = tlsClientSending(slowClient, ctx, firstHalf);
+        REQUIRE(slowSsl != nullptr);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200)); // the reactor has the half
+        start = std::chrono::steady_clock::now();
+        promptSsl = tlsClientSending(promptClient, ctx, logonTo(prompt));
+        REQUIRE(promptSsl != nullptr);
+#endif
+    }
+    else
+    {
+        REQUIRE(sendAll(slowClient, firstHalf));
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        start = std::chrono::steady_clock::now();
+        REQUIRE(sendAll(promptClient, logonTo(prompt)));
+    }
+
+    waitUntil([&]() { return loggedOn(prompt); }, std::chrono::milliseconds(5000));
+    CHECK(loggedOn(prompt));
+    CHECK(std::chrono::steady_clock::now() - start < std::chrono::milliseconds(2000));
+    CHECK_FALSE(loggedOn(slow));
+
+    if (tls)
+    {
+#if (HAVE_SSL > 0)
+        CHECK(SSL_write(slowSsl, secondHalf.data(), static_cast<int>(secondHalf.size())) > 0);
+#endif
+    }
+    else
+    {
+        CHECK(sendAll(slowClient, secondHalf));
+    }
+    CHECK(waitUntil([&]() { return loggedOn(slow); }, std::chrono::milliseconds(3000)));
+
+    acceptor.stop(true);
+#if (HAVE_SSL > 0)
+    if (slowSsl)
+    {
+        SSL_free(slowSsl);
+    }
+    if (promptSsl)
+    {
+        SSL_free(promptSsl);
+    }
+    SSL_CTX_free(ctx);
+#endif
+    ::close(slowClient);
+    ::close(promptClient);
+}
+} // namespace
+
+TEST_CASE("SlowFirstMessageTests")
+{
+    SECTION("SocketAcceptor") { checkSlowFirstMessage<SocketAcceptor>("SLOW1", "PROMPT1", false); }
+#if (HAVE_SSL > 0)
+    SECTION("SSLSocketAcceptor") { checkSlowFirstMessage<SSLSocketAcceptor>("SLOW2", "PROMPT2", true); }
+#endif
+}
