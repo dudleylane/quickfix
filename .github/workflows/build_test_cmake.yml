@@ -494,9 +494,13 @@ jobs:
           - sanitizer: ASan + UBSan
             compile: -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
             link: -fsanitize=address,undefined
+            bindings: 'ON'
+          # TSan in an uninstrumented interpreter would report the interpreter's
+          # own synchronization, so the bindings are built under ASan only (#116).
           - sanitizer: TSan
             compile: -fsanitize=thread -fno-omit-frame-pointer
             link: -fsanitize=thread
+            bindings: 'OFF'
     steps:
       - uses: actions/checkout@v6
 
@@ -506,7 +510,9 @@ jobs:
           cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=ON \
             -DCMAKE_CXX_FLAGS="${{ matrix.compile }}" \
             -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.link }}" \
-            -DCMAKE_SHARED_LINKER_FLAGS="${{ matrix.link }}"
+            -DCMAKE_SHARED_LINKER_FLAGS="${{ matrix.link }}" \
+            -DCMAKE_MODULE_LINKER_FLAGS="${{ matrix.link }}" \
+            -DHAVE_PYTHON3=${{ matrix.bindings }} -DHAVE_RUBY=${{ matrix.bindings }}
 
       - name: Build
         shell: bash
@@ -515,6 +521,26 @@ jobs:
       - name: Run unit tests
         working-directory: ./test
         run: ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
+
+      - name: Run the binding suites under ASan + UBSan
+        # The bindings' own lifetime and threading code (the Ruby GVL handling,
+        # callback adapters and teardown; Python's director mutex and argument
+        # keeping) was checked only by tests that happened to crash (#116). Both
+        # modules are built here with the sanitizer flags; the interpreters are
+        # not, so the ASan runtime is preloaded into them. Leak detection is off
+        # for them -- an interpreter keeps memory at exit by design -- and so is
+        # ASan's alternate signal stack, which Ruby replaces with its own on every
+        # thread and ASan then fails to unmap at thread exit. Everything else is
+        # reported, and their child processes inherit the settings.
+        if: matrix.bindings == 'ON'
+        shell: bash
+        run: |
+          asan=$(ldd lib/_quickfix.so | awk '/libasan/ {print $3}')
+          export LD_PRELOAD="$asan" ASAN_OPTIONS=detect_leaks=0:use_sigaltstack=0
+          export LD_LIBRARY_PATH="${{ github.workspace }}/lib:$LD_LIBRARY_PATH"
+          (cd src/python && PYTHONPATH="${{ github.workspace }}/lib:$PWD" \
+             python3 -m unittest discover -s test -p '*TestCase.py')
+          (cd src/ruby && RUBYLIB="${{ github.workspace }}/lib/ruby:$PWD" ruby test/TestSuite.rb)
 
       - name: Run acceptance tests (reactor)
         if: github.event_name != 'push'
