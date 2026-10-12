@@ -299,7 +299,7 @@ jobs:
           # find_package and pkg-config. Nothing built one against the install
           # (#136). Then every installed header, compiled together: a header
           # that includes one the install does not ship fails here. The database
-          # headers need HAVE_MYSQL and friends defined by hand until #137.
+          # headers are left out: this build has no backends, and they say so (#137).
           consumer="$RUNNER_TEMP/consumer"
           rm -rf "$consumer"
           mkdir -p "$consumer"

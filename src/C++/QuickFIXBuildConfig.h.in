@@ -30,4 +30,35 @@
 #error "HAVE_SSL is defined, but this quickfix was built without SSL"
 #endif
 
+// The database backends the library was built with, recorded as SSL is: their headers include this
+// file before they test HAVE_MYSQL, HAVE_POSTGRESQL or HAVE_ODBC, so a program built against a
+// database-enabled install can use them without defining those itself (#137).
+#cmakedefine01 QUICKFIX_HAVE_MYSQL
+#cmakedefine01 QUICKFIX_HAVE_POSTGRESQL
+#cmakedefine01 QUICKFIX_HAVE_ODBC
+
+#if QUICKFIX_HAVE_MYSQL
+#ifndef HAVE_MYSQL
+#define HAVE_MYSQL 1
+#endif
+#elif defined(HAVE_MYSQL) // config.h defines it with no value
+#error "HAVE_MYSQL is defined, but this quickfix was built without MySQL"
+#endif
+
+#if QUICKFIX_HAVE_POSTGRESQL
+#ifndef HAVE_POSTGRESQL
+#define HAVE_POSTGRESQL 1
+#endif
+#elif defined(HAVE_POSTGRESQL) // config.h defines it with no value
+#error "HAVE_POSTGRESQL is defined, but this quickfix was built without PostgreSQL"
+#endif
+
+#if QUICKFIX_HAVE_ODBC
+#ifndef HAVE_ODBC
+#define HAVE_ODBC 1
+#endif
+#elif defined(HAVE_ODBC) // config.h defines it with no value
+#error "HAVE_ODBC is defined, but this quickfix was built without ODBC"
+#endif
+
 #endif

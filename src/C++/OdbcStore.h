@@ -19,6 +19,14 @@
 **
 ****************************************************************************/
 
+// Defines HAVE_ODBC for a program built against an install that has it (#137); within the library's own
+// build, and in builds with no build tree, config.h or -DHAVE_ODBC does instead.
+#ifndef SWIG
+#if __has_include("QuickFIXBuildConfig.h")
+#include "QuickFIXBuildConfig.h"
+#endif
+#endif
+
 #ifndef HAVE_ODBC
 #error OdbcStore.h included, but HAVE_ODBC not defined
 #endif

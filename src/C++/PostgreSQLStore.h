@@ -22,6 +22,14 @@
 #ifndef FIX_POSTGRESQLSTORE_H
 #define FIX_POSTGRESQLSTORE_H
 
+// Defines HAVE_POSTGRESQL for a program built against an install that has it (#137); within the library's own
+// build, and in builds with no build tree, config.h or -DHAVE_POSTGRESQL does instead.
+#ifndef SWIG
+#if __has_include("QuickFIXBuildConfig.h")
+#include "QuickFIXBuildConfig.h"
+#endif
+#endif
+
 #ifndef HAVE_POSTGRESQL
 #error PostgreSQLStore.h included, but HAVE_POSTGRESQL not defined
 #endif

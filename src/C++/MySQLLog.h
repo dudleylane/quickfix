@@ -22,6 +22,14 @@
 #ifndef FIX_MYSQLLOG_H
 #define FIX_MYSQLLOG_H
 
+// Defines HAVE_MYSQL for a program built against an install that has it (#137); within the library's own
+// build, and in builds with no build tree, config.h or -DHAVE_MYSQL does instead.
+#ifndef SWIG
+#if __has_include("QuickFIXBuildConfig.h")
+#include "QuickFIXBuildConfig.h"
+#endif
+#endif
+
 #ifndef HAVE_MYSQL
 #error MySQLLog.h included, but HAVE_MYSQL not defined
 #endif
