@@ -2,7 +2,9 @@ require 'quickfix_ruby'
 
 class Application < Quickfix::Application
 
-	def initiatlize
+	# Spelt initiatlize until #127, so it never ran.
+	def initialize
+		super
 		@orderIDs = Hash.new
 	end
 
@@ -19,13 +21,22 @@ class Application < Quickfix::Application
 		reset()
 	end
 
-	def toAdmin(sessionID, message)
+	def toAdmin(message, sessionID)
 	end
 
-	def fromAdmin(sessionID, message)
+	# A FIXT counterparty's Logon names the application version it will use by
+	# default, and the definitions expect it back on ours.
+	def fromAdmin(message, sessionID)
+		msgType = Quickfix::MsgType.new
+		message.getHeader().getField( msgType )
+		if( msgType.getValue() == Quickfix::MsgType_Logon() && message.isSetField( Quickfix::DefaultApplVerID.new.getTag() ) )
+			defaultApplVerID = Quickfix::DefaultApplVerID.new
+			message.getField( defaultApplVerID )
+			Quickfix::Session.lookupSession( sessionID ).setSenderDefaultApplVerID( defaultApplVerID.getValue() )
+		end
 	end
 
-	def toApp(sessionID, message)
+	def toApp(message, sessionID)
 	end
 
 	def fromApp(message, sessionID)
@@ -47,6 +58,9 @@ class Application < Quickfix::Application
 				end
 			end
 			@orderIDs[[clOrdID.getString(), sessionID.toString()]] = [clOrdID.getString(), sessionID.toString()]
+			Quickfix::Session::sendToTarget( echo, sessionID )
+		elsif( msgType.getValue() == Quickfix::MsgType_Email() )
+			echo = Quickfix::Message.new( message )
 			Quickfix::Session::sendToTarget( echo, sessionID )
 		elsif( msgType.getValue() == Quickfix::MsgType_SecurityDefinition() )
 			echo = Quickfix::Message.new( message )

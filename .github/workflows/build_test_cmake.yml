@@ -276,6 +276,26 @@ jobs:
         working-directory: ./test
         run: ./runat.sh 54321
 
+      - name: Run acceptance tests through the Python and Ruby bindings
+        # src/at.py and src/at.rb are at.cpp through each binding, and nothing ran
+        # them, so they had drifted (#127); run through the bindings, the suite
+        # is also the strongest test the bindings get. A subset keeps it to a few
+        # minutes: fix40 and fix41 back to back, then fix42 and FIXT 1.1 with
+        # FIX 5.0 SP2. Debug only, where both modules are built, and not on push,
+        # like the acceptance step.
+        if: github.event_name != 'push' && matrix.configuration == 'Debug'
+        working-directory: ./test
+        shell: bash
+        env:
+          DEFINITIONS: >-
+            definitions/server/fix40/*.def definitions/server/fix41/*.def
+            definitions/server/fix42/*.def definitions/server/fix50sp2/*.def
+        run: |
+          export LD_LIBRARY_PATH="${{ github.workspace }}/lib:$LD_LIBRARY_PATH"
+          export PYTHONPATH="${{ github.workspace }}/lib:${{ github.workspace }}/src/python"
+          AT="python3 ../src/at.py" ./runat.sh 54321
+          AT="ruby -I ../src/ruby ../src/at.rb" ./runat.sh 54321
+
       - name: Build and test without SSL
         # Every other step configures with HAVE_SSL=ON, so nothing built the
         # tree without it, and ut did not compile that way from 20.0.0 until

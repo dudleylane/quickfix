@@ -30,13 +30,16 @@ stop_acceptor()
     wait "$pid"
 }
 
-# start_acceptor PORT [at arguments...]: starts at on cfg/at.cfg and returns
+# start_acceptor PORT [at arguments...]: starts at (or $AT) on cfg/at.cfg and returns
 # once it listens on PORT, or exits the script if it cannot.
 start_acceptor()
 {
     PORT=$1
     shift
-    ./at -f cfg/at.cfg "$@" &
+    # AT runs another acceptor in at's place, such as the Python or Ruby binding's
+    # (src/at.py, src/at.rb), which take the same -f and -t. Unquoted on purpose:
+    # it is a command and its arguments.
+    ${AT:-./at} -f cfg/at.cfg "$@" &
     PROCID=$!
 
     # Wait for at to listen before the first client connects. Runner.rb only

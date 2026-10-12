@@ -15,13 +15,15 @@ RUBY="ruby -I."
 DIR=`pwd`
 PORT=$1
 # Anything after the port goes to at: -t for the threaded transport, -l to log
-# session events on stdout.
+# session events on stdout. AT replaces at itself (see acceptor.sh).
 shift
 ./setup.sh $PORT
 
 start_acceptor $PORT "$@"
 
 cd $DIR
-$RUBY Runner.rb 127.0.0.1 $PORT definitions/server/fix4*/*.def definitions/server/fix50/*.def definitions/server/fix50sp1/*.def definitions/server/fix50sp2/*.def definitions/server/validate/*.def definitions/server/future/*.def
+# DEFINITIONS narrows the run, e.g. to 'definitions/server/fix42/*.def'; it is
+# expanded here, unquoted, so a glob in it works.
+$RUBY Runner.rb 127.0.0.1 $PORT ${DEFINITIONS:-definitions/server/fix4*/*.def definitions/server/fix50/*.def definitions/server/fix50sp1/*.def definitions/server/fix50sp2/*.def definitions/server/validate/*.def definitions/server/future/*.def}
 
 finish $?

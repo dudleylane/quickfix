@@ -221,7 +221,11 @@ to start. It prints its verdict: `470 tests passed`, or `FAILED n out of 470 tes
 `at` with SIGTERM and also fails if `at` exits non-zero or takes more than 30 seconds to stop,
 printing `FAILED: at exited with status n at shutdown` last; under AddressSanitizer that is how a
 leak report surfaces. Arguments after the port go to `at`: `./runat.sh 54321 -l` logs session
-events on stdout, and `-t` runs the threaded transport instead of the reactor.
+events on stdout, and `-t` runs the threaded transport instead of the reactor. `AT` runs another
+acceptor in `at`'s place -- `AT="python3 ../src/at.py" ./runat.sh 54321`, or
+`AT="ruby -I ../src/ruby ../src/at.rb"`, the same acceptor through each binding, with
+`LD_LIBRARY_PATH` and, for Python, `PYTHONPATH` set as `test-python3.sh` sets them -- and
+`DEFINITIONS` narrows the run, e.g. `DEFINITIONS='definitions/server/fix42/*.def'`.
 
 CI runs the unit tests on every push, the acceptance suite on pull requests and manual runs
 (`gh workflow run build_test_cmake.yml --ref master`), and `pt` only in
