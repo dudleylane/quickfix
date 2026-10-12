@@ -9,11 +9,20 @@ require_relative 'ChildLoadPath'
 class KillTestCase < Test::Unit::TestCase
 
 	def test_kill_inside_a_callback
+		checkKill('reactor')
+	end
+
+	# Ruby kills the "quickfix callbacks" thread at exit, perhaps in a callback.
+	def test_kill_inside_a_dispatched_callback
+		checkKill('dispatcher')
+	end
+
+	def checkKill(kind)
 		port = TCPServer.open('127.0.0.1', 0) { |server| server.addr[1] }
 		Dir.mktmpdir do |dir|
 			child = File.join(__dir__, 'KillChild.rb')
 			reader, writer = IO.pipe
-			pid = Process.spawn(ChildLoadPath.environment, RbConfig.ruby, child, dir, port.to_s,
+			pid = Process.spawn(ChildLoadPath.environment, RbConfig.ruby, child, dir, port.to_s, kind,
 				out: writer, err: writer)
 			writer.close
 			status = nil
@@ -32,8 +41,10 @@ class KillTestCase < Test::Unit::TestCase
 			assert_match(/^killed=true$/, output, report)
 			assert_match(/^stopped=true$/, output, report)
 			# The kill still ends the thread, as it would outside a callback.
-			assert_match(/^ensured=true$/, output, report)
-			assert_no_match(/^afterBlock=/, output, report)
+			if kind == 'reactor'
+				assert_match(/^ensured=true$/, output, report)
+				assert_no_match(/^afterBlock=/, output, report)
+			end
 			assert_match(/^status=false$/, output, report)
 			assert_match(/^ended=true$/, output, report)
 			assert(status[1].success?, report)
