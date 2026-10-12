@@ -17,10 +17,21 @@ class ExitTestCase < Test::Unit::TestCase
 		checkTransports('threaded')
 	end
 
-	def checkTransports(kind)
+	# A transport whose start failed is deleted at exit too (#123).
+	def test_exit_after_a_failed_start
+		output = checkTransports('socket', 'StartFailureChild.rb')
+		assert_match(/^startFailed=Quickfix::RuntimeError$/, output)
+	end
+
+	def test_exit_after_a_failed_start_threaded
+		output = checkTransports('threaded', 'StartFailureChild.rb')
+		assert_match(/^startFailed=Quickfix::RuntimeError$/, output)
+	end
+
+	def checkTransports(kind, script = 'ExitChild.rb')
 		port = TCPServer.open('127.0.0.1', 0) { |server| server.addr[1] }
 		Dir.mktmpdir do |dir|
-			child = File.join(__dir__, 'ExitChild.rb')
+			child = File.join(__dir__, script)
 			reader, writer = IO.pipe
 			pid = Process.spawn(RbConfig.ruby, '-I', File.expand_path('..', __dir__), child, dir, port.to_s, kind,
 				out: writer, err: writer)
@@ -37,8 +48,9 @@ class ExitTestCase < Test::Unit::TestCase
 			output = reader.read
 			reader.close
 
-			assert_match(/^loggedOn=true$/, output)
+			assert_match(/^loggedOn=true$/, output) if script == 'ExitChild.rb'
 			assert(status[1].success?, "exit status #{status[1].inspect}\n#{output}")
+			output
 		end
 	end
 end

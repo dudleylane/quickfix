@@ -72,8 +72,8 @@ module Quickfix
 	# while the connection thread that made them waits (#104), and stop joins the
 	# connection threads. Called from a callback, stop would join the thread
 	# waiting for that very callback and never return (#111). C++ and Python
-	# callbacks run on the connection thread itself, where the join fails at once;
-	# here it cannot be made to, so refuse it.
+	# callbacks run on the connection thread itself, where stop returns after its
+	# own wait times out (10-14 s); here it would never return, so refuse it.
 	module StopsOutsideCallbacks
 		def stop(*args)
 			if Thread.current.equal?(Quickfix._callbackThread)
@@ -98,7 +98,12 @@ module Quickfix
 				begin
 					transport.stop
 					thread = transport.instance_variable_get(:@quickfixThread)
-					thread.join(15) if thread
+					# A start that failed ended that thread with its error, and join
+					# raises it again; it must not skip the delete below (#123).
+					begin
+						thread.join(15) if thread
+					rescue Exception
+					end
 					deadline = Time.now + 15
 					sleep 0.05 while Quickfix.send(blocking, transport) && Time.now < deadline
 					Quickfix.send(destroy, transport)
