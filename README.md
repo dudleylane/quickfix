@@ -278,6 +278,41 @@ while (auto raw = receiveFromSocket()) {
 }
 ```
 
+### Low-latency configuration
+
+The engine's per-message costs were audited in #149. Several are settings or call patterns an
+application can avoid today, without changing the engine:
+
+- **Send through a cached `Session*`.** `Session::sendToTarget` rebuilds a `SessionID` from the
+  message header and looks it up in the session registry, under a lock every sending thread
+  shares, on every call (#164). Look the session up once and call `Session::send`, which fills in
+  BeginString, SenderCompID and TargetCompID itself. Any thread may call it. The pointer stays
+  valid until the `Acceptor` or `Initiator` that owns the session is destroyed: `stop()` does not
+  delete sessions, the destructor does.
+
+  ```cpp
+  FIX::Session *session = FIX::Session::lookupSession(sessionID); // once, after start()
+  // ...
+  session->send(order);                                          // per message
+  ```
+
+- **No log on the hot path.** `FileLog` and `ScreenLog` format a timestamp and flush once per
+  message, and the outbound line is written under the session's lock just before the send
+  (#153). With no `LogFactory`, a session skips logging without taking its state lock.
+- **Choose the store deliberately.** `FileStore` makes about seven syscalls for each message sent
+  and two for each received (#151); `MemoryStoreFactory` makes none, and `NullStoreFactory` keeps
+  nothing. `PersistMessages=N` keeps FileStore but stops it storing message bodies. Its
+  sequence-number write per message remains. What is not stored cannot be resent, so a resend
+  request is answered with a gap fill.
+- **`SocketNodelay`** is on by default since #150. With it off, Nagle's algorithm can hold a small
+  message for the peer's delayed ACK, up to ~40 ms on Linux.
+- **The threaded transports** (`ThreadedSocketAcceptor`, `ThreadedSocketInitiator`) round-trip
+  faster than the reactor ones in `pt` (3.4 µs against 4.7 µs above). Each connection gets its own
+  thread.
+- **Pin the process's threads** with `taskset` or a cpuset. The engine has no affinity or
+  busy-poll setting (#165), so every inbound message pays a scheduler wakeup, and on a busy machine
+  that dominates the tail.
+
 ### Sanitizer verification
 
 These recipes are how changes are checked under ThreadSanitizer and AddressSanitizer + UBSan. Run
