@@ -3774,184 +3774,185 @@ namespace Swig {
 #define SWIGTYPE_p_FIX__Application swig_types[9]
 #define SWIGTYPE_p_FIX__BeginString swig_types[10]
 #define SWIGTYPE_p_FIX__BoolField swig_types[11]
-#define SWIGTYPE_p_FIX__CharField swig_types[12]
-#define SWIGTYPE_p_FIX__CheckSumField swig_types[13]
-#define SWIGTYPE_p_FIX__ConfigError swig_types[14]
-#define SWIGTYPE_p_FIX__DataDictionary swig_types[15]
-#define SWIGTYPE_p_FIX__DataDictionaryNotFound swig_types[16]
-#define SWIGTYPE_p_FIX__DatabaseConnectionID swig_types[17]
-#define SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t swig_types[18]
-#define SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t swig_types[19]
-#define SWIGTYPE_p_FIX__DateTime swig_types[20]
-#define SWIGTYPE_p_FIX__Dictionary swig_types[21]
-#define SWIGTYPE_p_FIX__DoNotSend swig_types[22]
-#define SWIGTYPE_p_FIX__DoubleField swig_types[23]
-#define SWIGTYPE_p_FIX__DuplicateFieldNumber swig_types[24]
-#define SWIGTYPE_p_FIX__EmbeddedSOH swig_types[25]
-#define SWIGTYPE_p_FIX__Exception swig_types[26]
-#define SWIGTYPE_p_FIX__FieldBase swig_types[27]
-#define SWIGTYPE_p_FIX__FieldConvertError swig_types[28]
-#define SWIGTYPE_p_FIX__FieldMap swig_types[29]
-#define SWIGTYPE_p_FIX__FieldNotFound swig_types[30]
-#define SWIGTYPE_p_FIX__FileLog swig_types[31]
-#define SWIGTYPE_p_FIX__FileLogFactory swig_types[32]
-#define SWIGTYPE_p_FIX__FileStore swig_types[33]
-#define SWIGTYPE_p_FIX__FileStoreFactory swig_types[34]
-#define SWIGTYPE_p_FIX__Group swig_types[35]
-#define SWIGTYPE_p_FIX__GroupArena swig_types[36]
-#define SWIGTYPE_p_FIX__Header swig_types[37]
-#define SWIGTYPE_p_FIX__IOException swig_types[38]
-#define SWIGTYPE_p_FIX__IncorrectDataFormat swig_types[39]
-#define SWIGTYPE_p_FIX__IncorrectMessageStructure swig_types[40]
-#define SWIGTYPE_p_FIX__IncorrectTagValue swig_types[41]
-#define SWIGTYPE_p_FIX__Initiator swig_types[42]
-#define SWIGTYPE_p_FIX__Int64Field swig_types[43]
-#define SWIGTYPE_p_FIX__IntField swig_types[44]
-#define SWIGTYPE_p_FIX__InvalidMessage swig_types[45]
-#define SWIGTYPE_p_FIX__InvalidMessageType swig_types[46]
-#define SWIGTYPE_p_FIX__InvalidTagNumber swig_types[47]
-#define SWIGTYPE_p_FIX__LocalDate swig_types[48]
-#define SWIGTYPE_p_FIX__LocalTimeOnly swig_types[49]
-#define SWIGTYPE_p_FIX__LocalTimeStamp swig_types[50]
-#define SWIGTYPE_p_FIX__Log swig_types[51]
-#define SWIGTYPE_p_FIX__LogFactory swig_types[52]
-#define SWIGTYPE_p_FIX__MemoryStore swig_types[53]
-#define SWIGTYPE_p_FIX__MemoryStoreFactory swig_types[54]
-#define SWIGTYPE_p_FIX__Message swig_types[55]
-#define SWIGTYPE_p_FIX__MessageParseError swig_types[56]
-#define SWIGTYPE_p_FIX__MessageStore swig_types[57]
-#define SWIGTYPE_p_FIX__MessageStoreExceptionWrapper swig_types[58]
-#define SWIGTYPE_p_FIX__MessageStoreFactory swig_types[59]
-#define SWIGTYPE_p_FIX__MessageStoreFactoryExceptionWrapper swig_types[60]
-#define SWIGTYPE_p_FIX__MySQLConnection swig_types[61]
-#define SWIGTYPE_p_FIX__MySQLLog swig_types[62]
-#define SWIGTYPE_p_FIX__MySQLLogFactory swig_types[63]
-#define SWIGTYPE_p_FIX__MySQLQuery swig_types[64]
-#define SWIGTYPE_p_FIX__MySQLStore swig_types[65]
-#define SWIGTYPE_p_FIX__MySQLStoreFactory swig_types[66]
-#define SWIGTYPE_p_FIX__NoTagValue swig_types[67]
-#define SWIGTYPE_p_FIX__NullApplication swig_types[68]
-#define SWIGTYPE_p_FIX__NullLog swig_types[69]
-#define SWIGTYPE_p_FIX__NullStore swig_types[70]
-#define SWIGTYPE_p_FIX__NullStoreFactory swig_types[71]
-#define SWIGTYPE_p_FIX__OutOfOrderGroupMembers swig_types[72]
-#define SWIGTYPE_p_FIX__PostgreSQLConnection swig_types[73]
-#define SWIGTYPE_p_FIX__PostgreSQLLog swig_types[74]
-#define SWIGTYPE_p_FIX__PostgreSQLLogFactory swig_types[75]
-#define SWIGTYPE_p_FIX__PostgreSQLQuery swig_types[76]
-#define SWIGTYPE_p_FIX__PostgreSQLStore swig_types[77]
-#define SWIGTYPE_p_FIX__PostgreSQLStoreFactory swig_types[78]
-#define SWIGTYPE_p_FIX__RejectLogon swig_types[79]
-#define SWIGTYPE_p_FIX__RepeatedTag swig_types[80]
-#define SWIGTYPE_p_FIX__RepeatingGroupCountMismatch swig_types[81]
-#define SWIGTYPE_p_FIX__RequiredTagMissing swig_types[82]
-#define SWIGTYPE_p_FIX__RuntimeError swig_types[83]
-#define SWIGTYPE_p_FIX__SSLSocketAcceptor swig_types[84]
-#define SWIGTYPE_p_FIX__SSLSocketInitiator swig_types[85]
-#define SWIGTYPE_p_FIX__ScreenLog swig_types[86]
-#define SWIGTYPE_p_FIX__ScreenLogFactory swig_types[87]
-#define SWIGTYPE_p_FIX__SenderCompID swig_types[88]
-#define SWIGTYPE_p_FIX__Session swig_types[89]
-#define SWIGTYPE_p_FIX__SessionID swig_types[90]
-#define SWIGTYPE_p_FIX__SessionNotFound swig_types[91]
-#define SWIGTYPE_p_FIX__SessionSettings swig_types[92]
-#define SWIGTYPE_p_FIX__SocketAcceptor swig_types[93]
-#define SWIGTYPE_p_FIX__SocketCloseFailed swig_types[94]
-#define SWIGTYPE_p_FIX__SocketException swig_types[95]
-#define SWIGTYPE_p_FIX__SocketInitiator swig_types[96]
-#define SWIGTYPE_p_FIX__SocketRecvFailed swig_types[97]
-#define SWIGTYPE_p_FIX__SocketSendFailed swig_types[98]
-#define SWIGTYPE_p_FIX__StringField swig_types[99]
-#define SWIGTYPE_p_FIX__SyncFileStore swig_types[100]
-#define SWIGTYPE_p_FIX__SynchronizedApplication swig_types[101]
-#define SWIGTYPE_p_FIX__TYPE__Type swig_types[102]
-#define SWIGTYPE_p_FIX__TagNotDefinedForMessage swig_types[103]
-#define SWIGTYPE_p_FIX__TagOutOfOrder swig_types[104]
-#define SWIGTYPE_p_FIX__TargetCompID swig_types[105]
-#define SWIGTYPE_p_FIX__ThreadedSSLSocketAcceptor swig_types[106]
-#define SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator swig_types[107]
-#define SWIGTYPE_p_FIX__ThreadedSocketAcceptor swig_types[108]
-#define SWIGTYPE_p_FIX__ThreadedSocketInitiator swig_types[109]
-#define SWIGTYPE_p_FIX__Trailer swig_types[110]
-#define SWIGTYPE_p_FIX__UInt64Field swig_types[111]
-#define SWIGTYPE_p_FIX__UnsupportedMessageType swig_types[112]
-#define SWIGTYPE_p_FIX__UnsupportedVersion swig_types[113]
-#define SWIGTYPE_p_FIX__UtcDate swig_types[114]
-#define SWIGTYPE_p_FIX__UtcDateField swig_types[115]
-#define SWIGTYPE_p_FIX__UtcTimeOnly swig_types[116]
-#define SWIGTYPE_p_FIX__UtcTimeOnlyField swig_types[117]
-#define SWIGTYPE_p_FIX__UtcTimeStamp swig_types[118]
-#define SWIGTYPE_p_FIX__UtcTimeStampField swig_types[119]
-#define SWIGTYPE_p_Fields swig_types[120]
-#define SWIGTYPE_p_Group swig_types[121]
-#define SWIGTYPE_p_Groups swig_types[122]
-#define SWIGTYPE_p_IntArray swig_types[123]
-#define SWIGTYPE_p_IntField swig_types[124]
-#define SWIGTYPE_p_Log swig_types[125]
-#define SWIGTYPE_p_MYSQL swig_types[126]
-#define SWIGTYPE_p_MessageStore swig_types[127]
-#define SWIGTYPE_p_MsgType swig_types[128]
-#define SWIGTYPE_p_Mutex swig_types[129]
-#define SWIGTYPE_p_PGconn swig_types[130]
-#define SWIGTYPE_p_RSA swig_types[131]
-#define SWIGTYPE_p_Responder swig_types[132]
-#define SWIGTYPE_p_SessionID swig_types[133]
-#define SWIGTYPE_p_SessionToPort swig_types[134]
-#define SWIGTYPE_p_StringField swig_types[135]
-#define SWIGTYPE_p_TimeRange swig_types[136]
-#define SWIGTYPE_p_UtcDateField swig_types[137]
-#define SWIGTYPE_p_X509 swig_types[138]
-#define SWIGTYPE_p_allocator_type swig_types[139]
-#define SWIGTYPE_p_bool swig_types[140]
-#define SWIGTYPE_p_char swig_types[141]
-#define SWIGTYPE_p_const_iterator swig_types[142]
-#define SWIGTYPE_p_difference_type swig_types[143]
-#define SWIGTYPE_p_double swig_types[144]
-#define SWIGTYPE_p_g_const_iterator swig_types[145]
-#define SWIGTYPE_p_g_iterator swig_types[146]
-#define SWIGTYPE_p_g_value_type swig_types[147]
-#define SWIGTYPE_p_int swig_types[148]
-#define SWIGTYPE_p_iterator swig_types[149]
-#define SWIGTYPE_p_key_type swig_types[150]
-#define SWIGTYPE_p_long_long swig_types[151]
-#define SWIGTYPE_p_message_order swig_types[152]
-#define SWIGTYPE_p_p_FIX__DataDictionary swig_types[153]
-#define SWIGTYPE_p_p_PyObject swig_types[154]
-#define SWIGTYPE_p_short swig_types[155]
-#define SWIGTYPE_p_signed_char swig_types[156]
-#define SWIGTYPE_p_size_type swig_types[157]
-#define SWIGTYPE_p_ssize_t swig_types[158]
-#define SWIGTYPE_p_std__allocatorT_std__string_t swig_types[159]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t swig_types[160]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__const_iterator swig_types[161]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__iterator swig_types[162]
-#define SWIGTYPE_p_std__invalid_argument swig_types[163]
-#define SWIGTYPE_p_std__istream swig_types[164]
-#define SWIGTYPE_p_std__lessT_FIX__SessionID_t swig_types[165]
-#define SWIGTYPE_p_std__logic_error swig_types[166]
-#define SWIGTYPE_p_std__mapT_FIX__SessionID_unsigned_short_t swig_types[167]
-#define SWIGTYPE_p_std__mapT_std__string_std__string_t__const_iterator swig_types[168]
-#define SWIGTYPE_p_std__ostream swig_types[169]
-#define SWIGTYPE_p_std__setT_FIX__SessionID_t swig_types[170]
-#define SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t swig_types[171]
-#define SWIGTYPE_p_std__string swig_types[172]
-#define SWIGTYPE_p_std__string__size_type swig_types[173]
-#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t_t swig_types[174]
-#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t_t swig_types[175]
-#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__const_iterator swig_types[176]
-#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__iterator swig_types[177]
-#define SWIGTYPE_p_std__vectorT_std__string_t swig_types[178]
-#define SWIGTYPE_p_swig__SwigPyIterator swig_types[179]
-#define SWIGTYPE_p_time_t swig_types[180]
-#define SWIGTYPE_p_tm swig_types[181]
-#define SWIGTYPE_p_unsigned_char swig_types[182]
-#define SWIGTYPE_p_unsigned_int swig_types[183]
-#define SWIGTYPE_p_unsigned_long_long swig_types[184]
-#define SWIGTYPE_p_unsigned_short swig_types[185]
-#define SWIGTYPE_p_value_type swig_types[186]
-#define SWIGTYPE_p_void swig_types[187]
-static swig_type_info *swig_types[189];
-static swig_module_info swig_module = {swig_types, 188, 0, 0, 0, 0};
+#define SWIGTYPE_p_FIX__BufferedFileLog swig_types[12]
+#define SWIGTYPE_p_FIX__CharField swig_types[13]
+#define SWIGTYPE_p_FIX__CheckSumField swig_types[14]
+#define SWIGTYPE_p_FIX__ConfigError swig_types[15]
+#define SWIGTYPE_p_FIX__DataDictionary swig_types[16]
+#define SWIGTYPE_p_FIX__DataDictionaryNotFound swig_types[17]
+#define SWIGTYPE_p_FIX__DatabaseConnectionID swig_types[18]
+#define SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t swig_types[19]
+#define SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t swig_types[20]
+#define SWIGTYPE_p_FIX__DateTime swig_types[21]
+#define SWIGTYPE_p_FIX__Dictionary swig_types[22]
+#define SWIGTYPE_p_FIX__DoNotSend swig_types[23]
+#define SWIGTYPE_p_FIX__DoubleField swig_types[24]
+#define SWIGTYPE_p_FIX__DuplicateFieldNumber swig_types[25]
+#define SWIGTYPE_p_FIX__EmbeddedSOH swig_types[26]
+#define SWIGTYPE_p_FIX__Exception swig_types[27]
+#define SWIGTYPE_p_FIX__FieldBase swig_types[28]
+#define SWIGTYPE_p_FIX__FieldConvertError swig_types[29]
+#define SWIGTYPE_p_FIX__FieldMap swig_types[30]
+#define SWIGTYPE_p_FIX__FieldNotFound swig_types[31]
+#define SWIGTYPE_p_FIX__FileLog swig_types[32]
+#define SWIGTYPE_p_FIX__FileLogFactory swig_types[33]
+#define SWIGTYPE_p_FIX__FileStore swig_types[34]
+#define SWIGTYPE_p_FIX__FileStoreFactory swig_types[35]
+#define SWIGTYPE_p_FIX__Group swig_types[36]
+#define SWIGTYPE_p_FIX__GroupArena swig_types[37]
+#define SWIGTYPE_p_FIX__Header swig_types[38]
+#define SWIGTYPE_p_FIX__IOException swig_types[39]
+#define SWIGTYPE_p_FIX__IncorrectDataFormat swig_types[40]
+#define SWIGTYPE_p_FIX__IncorrectMessageStructure swig_types[41]
+#define SWIGTYPE_p_FIX__IncorrectTagValue swig_types[42]
+#define SWIGTYPE_p_FIX__Initiator swig_types[43]
+#define SWIGTYPE_p_FIX__Int64Field swig_types[44]
+#define SWIGTYPE_p_FIX__IntField swig_types[45]
+#define SWIGTYPE_p_FIX__InvalidMessage swig_types[46]
+#define SWIGTYPE_p_FIX__InvalidMessageType swig_types[47]
+#define SWIGTYPE_p_FIX__InvalidTagNumber swig_types[48]
+#define SWIGTYPE_p_FIX__LocalDate swig_types[49]
+#define SWIGTYPE_p_FIX__LocalTimeOnly swig_types[50]
+#define SWIGTYPE_p_FIX__LocalTimeStamp swig_types[51]
+#define SWIGTYPE_p_FIX__Log swig_types[52]
+#define SWIGTYPE_p_FIX__LogFactory swig_types[53]
+#define SWIGTYPE_p_FIX__MemoryStore swig_types[54]
+#define SWIGTYPE_p_FIX__MemoryStoreFactory swig_types[55]
+#define SWIGTYPE_p_FIX__Message swig_types[56]
+#define SWIGTYPE_p_FIX__MessageParseError swig_types[57]
+#define SWIGTYPE_p_FIX__MessageStore swig_types[58]
+#define SWIGTYPE_p_FIX__MessageStoreExceptionWrapper swig_types[59]
+#define SWIGTYPE_p_FIX__MessageStoreFactory swig_types[60]
+#define SWIGTYPE_p_FIX__MessageStoreFactoryExceptionWrapper swig_types[61]
+#define SWIGTYPE_p_FIX__MySQLConnection swig_types[62]
+#define SWIGTYPE_p_FIX__MySQLLog swig_types[63]
+#define SWIGTYPE_p_FIX__MySQLLogFactory swig_types[64]
+#define SWIGTYPE_p_FIX__MySQLQuery swig_types[65]
+#define SWIGTYPE_p_FIX__MySQLStore swig_types[66]
+#define SWIGTYPE_p_FIX__MySQLStoreFactory swig_types[67]
+#define SWIGTYPE_p_FIX__NoTagValue swig_types[68]
+#define SWIGTYPE_p_FIX__NullApplication swig_types[69]
+#define SWIGTYPE_p_FIX__NullLog swig_types[70]
+#define SWIGTYPE_p_FIX__NullStore swig_types[71]
+#define SWIGTYPE_p_FIX__NullStoreFactory swig_types[72]
+#define SWIGTYPE_p_FIX__OutOfOrderGroupMembers swig_types[73]
+#define SWIGTYPE_p_FIX__PostgreSQLConnection swig_types[74]
+#define SWIGTYPE_p_FIX__PostgreSQLLog swig_types[75]
+#define SWIGTYPE_p_FIX__PostgreSQLLogFactory swig_types[76]
+#define SWIGTYPE_p_FIX__PostgreSQLQuery swig_types[77]
+#define SWIGTYPE_p_FIX__PostgreSQLStore swig_types[78]
+#define SWIGTYPE_p_FIX__PostgreSQLStoreFactory swig_types[79]
+#define SWIGTYPE_p_FIX__RejectLogon swig_types[80]
+#define SWIGTYPE_p_FIX__RepeatedTag swig_types[81]
+#define SWIGTYPE_p_FIX__RepeatingGroupCountMismatch swig_types[82]
+#define SWIGTYPE_p_FIX__RequiredTagMissing swig_types[83]
+#define SWIGTYPE_p_FIX__RuntimeError swig_types[84]
+#define SWIGTYPE_p_FIX__SSLSocketAcceptor swig_types[85]
+#define SWIGTYPE_p_FIX__SSLSocketInitiator swig_types[86]
+#define SWIGTYPE_p_FIX__ScreenLog swig_types[87]
+#define SWIGTYPE_p_FIX__ScreenLogFactory swig_types[88]
+#define SWIGTYPE_p_FIX__SenderCompID swig_types[89]
+#define SWIGTYPE_p_FIX__Session swig_types[90]
+#define SWIGTYPE_p_FIX__SessionID swig_types[91]
+#define SWIGTYPE_p_FIX__SessionNotFound swig_types[92]
+#define SWIGTYPE_p_FIX__SessionSettings swig_types[93]
+#define SWIGTYPE_p_FIX__SocketAcceptor swig_types[94]
+#define SWIGTYPE_p_FIX__SocketCloseFailed swig_types[95]
+#define SWIGTYPE_p_FIX__SocketException swig_types[96]
+#define SWIGTYPE_p_FIX__SocketInitiator swig_types[97]
+#define SWIGTYPE_p_FIX__SocketRecvFailed swig_types[98]
+#define SWIGTYPE_p_FIX__SocketSendFailed swig_types[99]
+#define SWIGTYPE_p_FIX__StringField swig_types[100]
+#define SWIGTYPE_p_FIX__SyncFileStore swig_types[101]
+#define SWIGTYPE_p_FIX__SynchronizedApplication swig_types[102]
+#define SWIGTYPE_p_FIX__TYPE__Type swig_types[103]
+#define SWIGTYPE_p_FIX__TagNotDefinedForMessage swig_types[104]
+#define SWIGTYPE_p_FIX__TagOutOfOrder swig_types[105]
+#define SWIGTYPE_p_FIX__TargetCompID swig_types[106]
+#define SWIGTYPE_p_FIX__ThreadedSSLSocketAcceptor swig_types[107]
+#define SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator swig_types[108]
+#define SWIGTYPE_p_FIX__ThreadedSocketAcceptor swig_types[109]
+#define SWIGTYPE_p_FIX__ThreadedSocketInitiator swig_types[110]
+#define SWIGTYPE_p_FIX__Trailer swig_types[111]
+#define SWIGTYPE_p_FIX__UInt64Field swig_types[112]
+#define SWIGTYPE_p_FIX__UnsupportedMessageType swig_types[113]
+#define SWIGTYPE_p_FIX__UnsupportedVersion swig_types[114]
+#define SWIGTYPE_p_FIX__UtcDate swig_types[115]
+#define SWIGTYPE_p_FIX__UtcDateField swig_types[116]
+#define SWIGTYPE_p_FIX__UtcTimeOnly swig_types[117]
+#define SWIGTYPE_p_FIX__UtcTimeOnlyField swig_types[118]
+#define SWIGTYPE_p_FIX__UtcTimeStamp swig_types[119]
+#define SWIGTYPE_p_FIX__UtcTimeStampField swig_types[120]
+#define SWIGTYPE_p_Fields swig_types[121]
+#define SWIGTYPE_p_Group swig_types[122]
+#define SWIGTYPE_p_Groups swig_types[123]
+#define SWIGTYPE_p_IntArray swig_types[124]
+#define SWIGTYPE_p_IntField swig_types[125]
+#define SWIGTYPE_p_Log swig_types[126]
+#define SWIGTYPE_p_MYSQL swig_types[127]
+#define SWIGTYPE_p_MessageStore swig_types[128]
+#define SWIGTYPE_p_MsgType swig_types[129]
+#define SWIGTYPE_p_Mutex swig_types[130]
+#define SWIGTYPE_p_PGconn swig_types[131]
+#define SWIGTYPE_p_RSA swig_types[132]
+#define SWIGTYPE_p_Responder swig_types[133]
+#define SWIGTYPE_p_SessionID swig_types[134]
+#define SWIGTYPE_p_SessionToPort swig_types[135]
+#define SWIGTYPE_p_StringField swig_types[136]
+#define SWIGTYPE_p_TimeRange swig_types[137]
+#define SWIGTYPE_p_UtcDateField swig_types[138]
+#define SWIGTYPE_p_X509 swig_types[139]
+#define SWIGTYPE_p_allocator_type swig_types[140]
+#define SWIGTYPE_p_bool swig_types[141]
+#define SWIGTYPE_p_char swig_types[142]
+#define SWIGTYPE_p_const_iterator swig_types[143]
+#define SWIGTYPE_p_difference_type swig_types[144]
+#define SWIGTYPE_p_double swig_types[145]
+#define SWIGTYPE_p_g_const_iterator swig_types[146]
+#define SWIGTYPE_p_g_iterator swig_types[147]
+#define SWIGTYPE_p_g_value_type swig_types[148]
+#define SWIGTYPE_p_int swig_types[149]
+#define SWIGTYPE_p_iterator swig_types[150]
+#define SWIGTYPE_p_key_type swig_types[151]
+#define SWIGTYPE_p_long_long swig_types[152]
+#define SWIGTYPE_p_message_order swig_types[153]
+#define SWIGTYPE_p_p_FIX__DataDictionary swig_types[154]
+#define SWIGTYPE_p_p_PyObject swig_types[155]
+#define SWIGTYPE_p_short swig_types[156]
+#define SWIGTYPE_p_signed_char swig_types[157]
+#define SWIGTYPE_p_size_type swig_types[158]
+#define SWIGTYPE_p_ssize_t swig_types[159]
+#define SWIGTYPE_p_std__allocatorT_std__string_t swig_types[160]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t swig_types[161]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__const_iterator swig_types[162]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__iterator swig_types[163]
+#define SWIGTYPE_p_std__invalid_argument swig_types[164]
+#define SWIGTYPE_p_std__istream swig_types[165]
+#define SWIGTYPE_p_std__lessT_FIX__SessionID_t swig_types[166]
+#define SWIGTYPE_p_std__logic_error swig_types[167]
+#define SWIGTYPE_p_std__mapT_FIX__SessionID_unsigned_short_t swig_types[168]
+#define SWIGTYPE_p_std__mapT_std__string_std__string_t__const_iterator swig_types[169]
+#define SWIGTYPE_p_std__ostream swig_types[170]
+#define SWIGTYPE_p_std__setT_FIX__SessionID_t swig_types[171]
+#define SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t swig_types[172]
+#define SWIGTYPE_p_std__string swig_types[173]
+#define SWIGTYPE_p_std__string__size_type swig_types[174]
+#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t_t swig_types[175]
+#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t_t swig_types[176]
+#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__const_iterator swig_types[177]
+#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__iterator swig_types[178]
+#define SWIGTYPE_p_std__vectorT_std__string_t swig_types[179]
+#define SWIGTYPE_p_swig__SwigPyIterator swig_types[180]
+#define SWIGTYPE_p_time_t swig_types[181]
+#define SWIGTYPE_p_tm swig_types[182]
+#define SWIGTYPE_p_unsigned_char swig_types[183]
+#define SWIGTYPE_p_unsigned_int swig_types[184]
+#define SWIGTYPE_p_unsigned_long_long swig_types[185]
+#define SWIGTYPE_p_unsigned_short swig_types[186]
+#define SWIGTYPE_p_value_type swig_types[187]
+#define SWIGTYPE_p_void swig_types[188]
+static swig_type_info *swig_types[190];
+static swig_module_info swig_module = {swig_types, 189, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -131901,6 +131902,20 @@ SWIGINTERN PyObject *Swig_var_FILE_LOG_BACKUP_PATH_get(void) {
 }
 
 
+SWIGINTERN int Swig_var_FILE_LOG_FLUSH_set(PyObject *) {
+  SWIG_Error(SWIG_AttributeError,"Variable FILE_LOG_FLUSH is read-only.");
+  return 1;
+}
+
+
+SWIGINTERN PyObject *Swig_var_FILE_LOG_FLUSH_get(void) {
+  PyObject *pyobj = 0;
+  
+  pyobj = SWIG_FromCharPtr(FIX::FILE_LOG_FLUSH);
+  return pyobj;
+}
+
+
 SWIGINTERN int Swig_var_SCREEN_LOG_SHOW_INCOMING_set(PyObject *) {
   SWIG_Error(SWIG_AttributeError,"Variable SCREEN_LOG_SHOW_INCOMING is read-only.");
   return 1;
@@ -141505,6 +141520,294 @@ SWIGINTERN PyObject *FileLog_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObje
 }
 
 SWIGINTERN PyObject *FileLog_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  return SWIG_Python_InitShadowInstance(args);
+}
+
+SWIGINTERN PyObject *_wrap_new_BufferedFileLog(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  std::string *arg1 = 0 ;
+  std::string *arg2 = 0 ;
+  FIX::SessionID *arg3 = 0 ;
+  int res1 = SWIG_OLDOBJ ;
+  int res2 = SWIG_OLDOBJ ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject *swig_obj[3] ;
+  FIX::BufferedFileLog *result = 0 ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "new_BufferedFileLog", 3, 3, swig_obj)) SWIG_fail;
+  {
+    std::string *ptr = (std::string *)0;
+    res1 = SWIG_AsPtr_std_string(swig_obj[0], &ptr);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_BufferedFileLog" "', argument " "1"" of type '" "std::string const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_BufferedFileLog" "', argument " "1"" of type '" "std::string const &""'"); 
+    }
+    arg1 = ptr;
+  }
+  {
+    std::string *ptr = (std::string *)0;
+    res2 = SWIG_AsPtr_std_string(swig_obj[1], &ptr);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_BufferedFileLog" "', argument " "2"" of type '" "std::string const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_BufferedFileLog" "', argument " "2"" of type '" "std::string const &""'"); 
+    }
+    arg2 = ptr;
+  }
+  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3, SWIGTYPE_p_FIX__SessionID,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_BufferedFileLog" "', argument " "3"" of type '" "FIX::SessionID const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_BufferedFileLog" "', argument " "3"" of type '" "FIX::SessionID const &""'"); 
+  }
+  arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (FIX::BufferedFileLog *)new FIX::BufferedFileLog((std::string const &)*arg1,(std::string const &)*arg2,(FIX::SessionID const &)*arg3);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__BufferedFileLog, SWIG_POINTER_NEW |  0 );
+  {
+    if( std::string("std::string const &") == "std::string &" )
+    {
+      if( !PyDict_Check(resultobj) )
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg1->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
+    }
+  }
+  {
+    if( std::string("std::string const &") == "std::string &" )
+    {
+      if( !PyDict_Check(resultobj) )
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
+    }
+  }
+  if (SWIG_IsNewObj(res1)) delete arg1;
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res1)) delete arg1;
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_BufferedFileLog_onIncoming(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::BufferedFileLog *arg1 = (FIX::BufferedFileLog *) 0 ;
+  std::string *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 = SWIG_OLDOBJ ;
+  PyObject *swig_obj[2] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "BufferedFileLog_onIncoming", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BufferedFileLog, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BufferedFileLog_onIncoming" "', argument " "1"" of type '" "FIX::BufferedFileLog *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::BufferedFileLog * >(argp1);
+  {
+    std::string *ptr = (std::string *)0;
+    res2 = SWIG_AsPtr_std_string(swig_obj[1], &ptr);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "BufferedFileLog_onIncoming" "', argument " "2"" of type '" "std::string const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "BufferedFileLog_onIncoming" "', argument " "2"" of type '" "std::string const &""'"); 
+    }
+    arg2 = ptr;
+  }
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            (arg1)->onIncoming((std::string const &)*arg2);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  {
+    if( std::string("std::string const &") == "std::string &" )
+    {
+      if( !PyDict_Check(resultobj) )
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
+    }
+  }
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_BufferedFileLog_onOutgoing(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::BufferedFileLog *arg1 = (FIX::BufferedFileLog *) 0 ;
+  std::string *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 = SWIG_OLDOBJ ;
+  PyObject *swig_obj[2] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "BufferedFileLog_onOutgoing", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BufferedFileLog, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BufferedFileLog_onOutgoing" "', argument " "1"" of type '" "FIX::BufferedFileLog *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::BufferedFileLog * >(argp1);
+  {
+    std::string *ptr = (std::string *)0;
+    res2 = SWIG_AsPtr_std_string(swig_obj[1], &ptr);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "BufferedFileLog_onOutgoing" "', argument " "2"" of type '" "std::string const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "BufferedFileLog_onOutgoing" "', argument " "2"" of type '" "std::string const &""'"); 
+    }
+    arg2 = ptr;
+  }
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            (arg1)->onOutgoing((std::string const &)*arg2);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  {
+    if( std::string("std::string const &") == "std::string &" )
+    {
+      if( !PyDict_Check(resultobj) )
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg2->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
+    }
+  }
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_BufferedFileLog(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::BufferedFileLog *arg1 = (FIX::BufferedFileLog *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BufferedFileLog, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_BufferedFileLog" "', argument " "1"" of type '" "FIX::BufferedFileLog *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::BufferedFileLog * >(argp1);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            delete arg1;
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *BufferedFileLog_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj = NULL;
+  if (!SWIG_Python_UnpackTuple(args, "swigregister", 1, 1, &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_FIX__BufferedFileLog, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *BufferedFileLog_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   return SWIG_Python_InitShadowInstance(args);
 }
 
@@ -164916,6 +165219,12 @@ static PyMethodDef SwigMethods[] = {
 	 { "FileLog_onEvent", _wrap_FileLog_onEvent, METH_VARARGS, NULL},
 	 { "FileLog_swigregister", FileLog_swigregister, METH_O, NULL},
 	 { "FileLog_swiginit", FileLog_swiginit, METH_VARARGS, NULL},
+	 { "new_BufferedFileLog", _wrap_new_BufferedFileLog, METH_VARARGS, NULL},
+	 { "BufferedFileLog_onIncoming", _wrap_BufferedFileLog_onIncoming, METH_VARARGS, NULL},
+	 { "BufferedFileLog_onOutgoing", _wrap_BufferedFileLog_onOutgoing, METH_VARARGS, NULL},
+	 { "delete_BufferedFileLog", _wrap_delete_BufferedFileLog, METH_O, NULL},
+	 { "BufferedFileLog_swigregister", BufferedFileLog_swigregister, METH_O, NULL},
+	 { "BufferedFileLog_swiginit", BufferedFileLog_swiginit, METH_VARARGS, NULL},
 	 { "delete_MessageStoreFactory", _wrap_delete_MessageStoreFactory, METH_O, NULL},
 	 { "MessageStoreFactory_create", _wrap_MessageStoreFactory_create, METH_VARARGS, NULL},
 	 { "MessageStoreFactory_destroy", _wrap_MessageStoreFactory_destroy, METH_VARARGS, NULL},
@@ -165505,6 +165814,9 @@ static void *_p_FIX__MessageTo_p_FIX__FieldMap(void *x, int *SWIGUNUSEDPARM(newm
 static void *_p_FIX__TrailerTo_p_FIX__FieldMap(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::FieldMap *)  ((FIX::Trailer *) x));
 }
+static void *_p_FIX__BufferedFileLogTo_p_FIX__FileLog(void *x, int *SWIGUNUSEDPARM(newmemory)) {
+    return (void *)((FIX::FileLog *)  ((FIX::BufferedFileLog *) x));
+}
 static void *_p_FIX__SyncFileStoreTo_p_FIX__FileStore(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::FileStore *)  ((FIX::SyncFileStore *) x));
 }
@@ -165519,6 +165831,9 @@ static void *_p_FIX__ThreadedSSLSocketInitiatorTo_p_FIX__Initiator(void *x, int 
 }
 static void *_p_FIX__ThreadedSocketInitiatorTo_p_FIX__Initiator(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::Initiator *)  ((FIX::ThreadedSocketInitiator *) x));
+}
+static void *_p_FIX__BufferedFileLogTo_p_FIX__Log(void *x, int *SWIGUNUSEDPARM(newmemory)) {
+    return (void *)((FIX::Log *) (FIX::FileLog *) ((FIX::BufferedFileLog *) x));
 }
 static void *_p_FIX__FileLogTo_p_FIX__Log(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::Log *)  ((FIX::FileLog *) x));
@@ -165706,6 +166021,7 @@ static swig_type_info _swigt__p_FIX__Acceptor = {"_p_FIX__Acceptor", "FIX::Accep
 static swig_type_info _swigt__p_FIX__Application = {"_p_FIX__Application", "FIX::Application *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__BeginString = {"_p_FIX__BeginString", "FIX::BeginString *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__BoolField = {"_p_FIX__BoolField", "FIX::BoolField *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_FIX__BufferedFileLog = {"_p_FIX__BufferedFileLog", "FIX::BufferedFileLog *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__CharField = {"_p_FIX__CharField", "FIX::CharField *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__CheckSumField = {"_p_FIX__CheckSumField", "FIX::CheckSumField *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__ConfigError = {"_p_FIX__ConfigError", "FIX::ConfigError *", 0, 0, (void*)0, 0};
@@ -165896,6 +166212,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_FIX__Application,
   &_swigt__p_FIX__BeginString,
   &_swigt__p_FIX__BoolField,
+  &_swigt__p_FIX__BufferedFileLog,
   &_swigt__p_FIX__CharField,
   &_swigt__p_FIX__CheckSumField,
   &_swigt__p_FIX__ConfigError,
@@ -166086,6 +166403,7 @@ static swig_cast_info _swigc__p_FIX__Acceptor[] = {  {&_swigt__p_FIX__Acceptor, 
 static swig_cast_info _swigc__p_FIX__Application[] = {  {&_swigt__p_FIX__Application, 0, 0, 0},  {&_swigt__p_FIX__NullApplication, _p_FIX__NullApplicationTo_p_FIX__Application, 0, 0},  {&_swigt__p_FIX__SynchronizedApplication, _p_FIX__SynchronizedApplicationTo_p_FIX__Application, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__BeginString[] = {  {&_swigt__p_FIX__BeginString, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__BoolField[] = {  {&_swigt__p_FIX__BoolField, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_FIX__BufferedFileLog[] = {  {&_swigt__p_FIX__BufferedFileLog, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__CharField[] = {  {&_swigt__p_FIX__CharField, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__CheckSumField[] = {  {&_swigt__p_FIX__CheckSumField, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__ConfigError[] = {  {&_swigt__p_FIX__ConfigError, 0, 0, 0},{0, 0, 0, 0}};
@@ -166105,7 +166423,7 @@ static swig_cast_info _swigc__p_FIX__FieldBase[] = {  {&_swigt__p_FIX__FieldBase
 static swig_cast_info _swigc__p_FIX__FieldConvertError[] = {  {&_swigt__p_FIX__FieldConvertError, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FieldMap[] = {  {&_swigt__p_FIX__FieldMap, 0, 0, 0},  {&_swigt__p_FIX__Group, _p_FIX__GroupTo_p_FIX__FieldMap, 0, 0},  {&_swigt__p_FIX__Header, _p_FIX__HeaderTo_p_FIX__FieldMap, 0, 0},  {&_swigt__p_FIX__Message, _p_FIX__MessageTo_p_FIX__FieldMap, 0, 0},  {&_swigt__p_FIX__Trailer, _p_FIX__TrailerTo_p_FIX__FieldMap, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FieldNotFound[] = {  {&_swigt__p_FIX__FieldNotFound, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_FIX__FileLog[] = {  {&_swigt__p_FIX__FileLog, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_FIX__FileLog[] = {  {&_swigt__p_FIX__FileLog, 0, 0, 0},  {&_swigt__p_FIX__BufferedFileLog, _p_FIX__BufferedFileLogTo_p_FIX__FileLog, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FileLogFactory[] = {  {&_swigt__p_FIX__FileLogFactory, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FileStore[] = {  {&_swigt__p_FIX__FileStore, 0, 0, 0},  {&_swigt__p_FIX__SyncFileStore, _p_FIX__SyncFileStoreTo_p_FIX__FileStore, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FileStoreFactory[] = {  {&_swigt__p_FIX__FileStoreFactory, 0, 0, 0},{0, 0, 0, 0}};
@@ -166125,7 +166443,7 @@ static swig_cast_info _swigc__p_FIX__InvalidTagNumber[] = {  {&_swigt__p_FIX__In
 static swig_cast_info _swigc__p_FIX__LocalDate[] = {  {&_swigt__p_FIX__LocalDate, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__LocalTimeOnly[] = {  {&_swigt__p_FIX__LocalTimeOnly, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__LocalTimeStamp[] = {  {&_swigt__p_FIX__LocalTimeStamp, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_FIX__Log[] = {  {&_swigt__p_FIX__Log, 0, 0, 0},  {&_swigt__p_FIX__FileLog, _p_FIX__FileLogTo_p_FIX__Log, 0, 0},  {&_swigt__p_FIX__MySQLLog, _p_FIX__MySQLLogTo_p_FIX__Log, 0, 0},  {&_swigt__p_FIX__NullLog, _p_FIX__NullLogTo_p_FIX__Log, 0, 0},  {&_swigt__p_FIX__PostgreSQLLog, _p_FIX__PostgreSQLLogTo_p_FIX__Log, 0, 0},  {&_swigt__p_FIX__ScreenLog, _p_FIX__ScreenLogTo_p_FIX__Log, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_FIX__Log[] = {  {&_swigt__p_FIX__Log, 0, 0, 0},  {&_swigt__p_FIX__BufferedFileLog, _p_FIX__BufferedFileLogTo_p_FIX__Log, 0, 0},  {&_swigt__p_FIX__FileLog, _p_FIX__FileLogTo_p_FIX__Log, 0, 0},  {&_swigt__p_FIX__MySQLLog, _p_FIX__MySQLLogTo_p_FIX__Log, 0, 0},  {&_swigt__p_FIX__NullLog, _p_FIX__NullLogTo_p_FIX__Log, 0, 0},  {&_swigt__p_FIX__PostgreSQLLog, _p_FIX__PostgreSQLLogTo_p_FIX__Log, 0, 0},  {&_swigt__p_FIX__ScreenLog, _p_FIX__ScreenLogTo_p_FIX__Log, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__LogFactory[] = {  {&_swigt__p_FIX__LogFactory, 0, 0, 0},  {&_swigt__p_FIX__FileLogFactory, _p_FIX__FileLogFactoryTo_p_FIX__LogFactory, 0, 0},  {&_swigt__p_FIX__MySQLLogFactory, _p_FIX__MySQLLogFactoryTo_p_FIX__LogFactory, 0, 0},  {&_swigt__p_FIX__PostgreSQLLogFactory, _p_FIX__PostgreSQLLogFactoryTo_p_FIX__LogFactory, 0, 0},  {&_swigt__p_FIX__ScreenLogFactory, _p_FIX__ScreenLogFactoryTo_p_FIX__LogFactory, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__MemoryStore[] = {  {&_swigt__p_FIX__MemoryStore, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__MemoryStoreFactory[] = {  {&_swigt__p_FIX__MemoryStoreFactory, 0, 0, 0},{0, 0, 0, 0}};
@@ -166276,6 +166594,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_FIX__Application,
   _swigc__p_FIX__BeginString,
   _swigc__p_FIX__BoolField,
+  _swigc__p_FIX__BufferedFileLog,
   _swigc__p_FIX__CharField,
   _swigc__p_FIX__CheckSumField,
   _swigc__p_FIX__ConfigError,
@@ -172868,6 +173187,7 @@ SWIG_init(void) {
   SWIG_addvarlink(globals, "ODBC_STORE_CONNECTION_STRING", Swig_var_ODBC_STORE_CONNECTION_STRING_get, Swig_var_ODBC_STORE_CONNECTION_STRING_set);
   SWIG_addvarlink(globals, "FILE_LOG_PATH", Swig_var_FILE_LOG_PATH_get, Swig_var_FILE_LOG_PATH_set);
   SWIG_addvarlink(globals, "FILE_LOG_BACKUP_PATH", Swig_var_FILE_LOG_BACKUP_PATH_get, Swig_var_FILE_LOG_BACKUP_PATH_set);
+  SWIG_addvarlink(globals, "FILE_LOG_FLUSH", Swig_var_FILE_LOG_FLUSH_get, Swig_var_FILE_LOG_FLUSH_set);
   SWIG_addvarlink(globals, "SCREEN_LOG_SHOW_INCOMING", Swig_var_SCREEN_LOG_SHOW_INCOMING_get, Swig_var_SCREEN_LOG_SHOW_INCOMING_set);
   SWIG_addvarlink(globals, "SCREEN_LOG_SHOW_OUTGOING", Swig_var_SCREEN_LOG_SHOW_OUTGOING_get, Swig_var_SCREEN_LOG_SHOW_OUTGOING_set);
   SWIG_addvarlink(globals, "SCREEN_LOG_SHOW_EVENTS", Swig_var_SCREEN_LOG_SHOW_EVENTS_get, Swig_var_SCREEN_LOG_SHOW_EVENTS_set);

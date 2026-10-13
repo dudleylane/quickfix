@@ -7615,6 +7615,7 @@ ODBC_STORE_PASSWORD = cvar.ODBC_STORE_PASSWORD
 ODBC_STORE_CONNECTION_STRING = cvar.ODBC_STORE_CONNECTION_STRING
 FILE_LOG_PATH = cvar.FILE_LOG_PATH
 FILE_LOG_BACKUP_PATH = cvar.FILE_LOG_BACKUP_PATH
+FILE_LOG_FLUSH = cvar.FILE_LOG_FLUSH
 SCREEN_LOG_SHOW_INCOMING = cvar.SCREEN_LOG_SHOW_INCOMING
 SCREEN_LOG_SHOW_OUTGOING = cvar.SCREEN_LOG_SHOW_OUTGOING
 SCREEN_LOG_SHOW_EVENTS = cvar.SCREEN_LOG_SHOW_EVENTS
@@ -8086,6 +8087,22 @@ class FileLog(Log):
 
 # Register FileLog in _quickfix:
 _quickfix.FileLog_swigregister(FileLog)
+class BufferedFileLog(FileLog):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, path, backupPath, sessionID):
+        _quickfix.BufferedFileLog_swiginit(self, _quickfix.new_BufferedFileLog(path, backupPath, sessionID))
+
+    def onIncoming(self, value):
+        return _quickfix.BufferedFileLog_onIncoming(self, value)
+
+    def onOutgoing(self, value):
+        return _quickfix.BufferedFileLog_onOutgoing(self, value)
+    __swig_destroy__ = _quickfix.delete_BufferedFileLog
+
+# Register BufferedFileLog in _quickfix:
+_quickfix.BufferedFileLog_swigregister(BufferedFileLog)
 class MessageStoreFactory(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
 

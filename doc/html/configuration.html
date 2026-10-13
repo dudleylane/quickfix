@@ -1279,6 +1279,21 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           <td></td>
         </tr>
 
+        <tr align="left" valign="middle">
+          <td><b>FileLogFlush</b></td>
+
+          <td>Whether each message line is written to the file at
+          once. With N, message lines are buffered and written in
+          blocks, which saves a write per message on the session's
+          send and receive paths; the last lines before a crash can
+          be lost. Event lines are always written at once.</td>
+
+          <td>Y<br>
+          N</td>
+
+          <td>Y</td>
+        </tr>
+
         <tr align="center" valign="middle">
           <td colspan="4" bgcolor="#BBBBBB"><h3>SCREEN</h3></td>
         </tr>

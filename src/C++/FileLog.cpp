@@ -77,6 +77,10 @@ Log *FileLogFactory::create(const SessionID &s)
         backupPath = settings.getString(FILE_LOG_BACKUP_PATH);
     }
 
+    if (settings.has(FILE_LOG_FLUSH) && !settings.getBool(FILE_LOG_FLUSH))
+    {
+        return new BufferedFileLog(path, backupPath, s);
+    }
     return new FileLog(path, backupPath, s);
 }
 

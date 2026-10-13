@@ -90,6 +90,9 @@ public:
         m_event << UtcTimeStampConvertor::convert(UtcTimeStamp::now(), 9) << " : " << value << std::endl;
     }
 
+protected:
+    std::ofstream &messages() { return m_messages; }
+
 private:
     std::string generatePrefix(const SessionID &sessionID);
     void init(std::string path, std::string backupPath, const std::string &prefix);
@@ -100,6 +103,32 @@ private:
     std::string m_eventFileName;
     std::string m_fullPrefix;
     std::string m_fullBackupPrefix;
+};
+
+/**
+ * A FileLog that buffers its message lines, made by FileLogFactory when a session sets FileLogFlush=N
+ * (#153).
+ *
+ * FileLog flushes every message line, a write() per message under the session's lock. This one lets
+ * the stream write message lines in blocks, so the last lines before a crash can be lost. Events are
+ * still flushed line by line.
+ */
+class BufferedFileLog : public FileLog
+{
+public:
+    BufferedFileLog(const std::string &path, const std::string &backupPath, const SessionID &sessionID)
+        : FileLog(path, backupPath, sessionID)
+    {
+    }
+
+    void onIncoming(const std::string &value)
+    {
+        messages() << UtcTimeStampConvertor::convert(UtcTimeStamp::now(), 9) << " : " << value << '\n';
+    }
+    void onOutgoing(const std::string &value)
+    {
+        messages() << UtcTimeStampConvertor::convert(UtcTimeStamp::now(), 9) << " : " << value << '\n';
+    }
 };
 } // namespace FIX
 

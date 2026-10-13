@@ -184,8 +184,7 @@ public:
         Locker l(s_mutex);
         m_time.setCurrent();
         std::cout << "<" << UtcTimeStampConvertor::convert(m_time, 9) << ", " << m_prefix << ", " << "incoming>"
-                  << std::endl
-                  << "  (" << replaceSOHWithPipe(value) << ")" << std::endl;
+                  << "\n  (" << replaceSOHWithPipe(value) << ")" << std::endl; // one flush per message (#153)
     }
 
     /**
@@ -209,8 +208,7 @@ public:
         Locker l(s_mutex);
         m_time.setCurrent();
         std::cout << "<" << UtcTimeStampConvertor::convert(m_time, 9) << ", " << m_prefix << ", " << "outgoing>"
-                  << std::endl
-                  << "  (" << replaceSOHWithPipe(value) << ")" << std::endl;
+                  << "\n  (" << replaceSOHWithPipe(value) << ")" << std::endl; // one flush per message (#153)
     }
 
     /**
@@ -233,8 +231,7 @@ public:
         Locker l(s_mutex);
         m_time.setCurrent();
         std::cout << "<" << UtcTimeStampConvertor::convert(m_time, 9) << ", " << m_prefix << ", " << "event>"
-                  << std::endl
-                  << "  (" << replaceSOHWithPipe(value) << ")" << std::endl;
+                  << "\n  (" << replaceSOHWithPipe(value) << ")" << std::endl; // one flush per message (#153)
     }
 
 private:
