@@ -81,6 +81,7 @@ const char PRESERVE_MESSAGE_FIELDS_ORDER[] = "PreserveMessageFieldsOrder";
 const char LOGON_TIMEOUT[] = "LogonTimeout";
 const char LOGOUT_TIMEOUT[] = "LogoutTimeout";
 const char FILE_STORE_PATH[] = "FileStorePath";
+const char FILE_STORE_SYNC[] = "FileStoreSync";
 const char MYSQL_STORE_USECONNECTIONPOOL[] = "MySQLStoreUseConnectionPool";
 const char MYSQL_STORE_DATABASE[] = "MySQLStoreDatabase";
 const char MYSQL_STORE_USER[] = "MySQLStoreUser";

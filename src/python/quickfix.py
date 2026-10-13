@@ -7597,6 +7597,7 @@ PRESERVE_MESSAGE_FIELDS_ORDER = cvar.PRESERVE_MESSAGE_FIELDS_ORDER
 LOGON_TIMEOUT = cvar.LOGON_TIMEOUT
 LOGOUT_TIMEOUT = cvar.LOGOUT_TIMEOUT
 FILE_STORE_PATH = cvar.FILE_STORE_PATH
+FILE_STORE_SYNC = cvar.FILE_STORE_SYNC
 MYSQL_STORE_USECONNECTIONPOOL = cvar.MYSQL_STORE_USECONNECTIONPOOL
 MYSQL_STORE_DATABASE = cvar.MYSQL_STORE_DATABASE
 MYSQL_STORE_USER = cvar.MYSQL_STORE_USER
@@ -8324,6 +8325,34 @@ class FileStore(MessageStore):
 
 # Register FileStore in _quickfix:
 _quickfix.FileStore_swigregister(FileStore)
+class SyncFileStore(FileStore):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, now, path, sessionID):
+        _quickfix.SyncFileStore_swiginit(self, _quickfix.new_SyncFileStore(now, path, sessionID))
+
+    def set(self, arg2, arg3):
+        return _quickfix.SyncFileStore_set(self, arg2, arg3)
+
+    def setNextSenderMsgSeqNum(self, value):
+        return _quickfix.SyncFileStore_setNextSenderMsgSeqNum(self, value)
+
+    def setNextTargetMsgSeqNum(self, value):
+        return _quickfix.SyncFileStore_setNextTargetMsgSeqNum(self, value)
+
+    def incrNextSenderMsgSeqNum(self):
+        return _quickfix.SyncFileStore_incrNextSenderMsgSeqNum(self)
+
+    def incrNextTargetMsgSeqNum(self):
+        return _quickfix.SyncFileStore_incrNextTargetMsgSeqNum(self)
+
+    def reset(self, now):
+        return _quickfix.SyncFileStore_reset(self, now)
+    __swig_destroy__ = _quickfix.delete_SyncFileStore
+
+# Register SyncFileStore in _quickfix:
+_quickfix.SyncFileStore_swigregister(SyncFileStore)
 class Application(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr

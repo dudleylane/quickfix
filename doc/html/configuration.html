@@ -1043,6 +1043,22 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           <td></td>
         </tr>
 
+        <tr align="left" valign="middle">
+          <td><b>FileStoreSync</b></td>
+
+          <td>Wait for each stored message and sequence number to
+          reach the disk (fdatasync) before going on. Without it,
+          stored data survives the process crashing but can be lost
+          if the operating system crashes or the power fails. Each
+          sent message then waits for three device writes, about
+          5 ms on an ordinary disk, under the session's lock.</td>
+
+          <td>Y<br>
+          N</td>
+
+          <td>N</td>
+        </tr>
+
         <tr align="center" valign="middle">
           <td colspan="4" bgcolor="#BBBBBB"><h3>MYSQL</h3></td>
         </tr>

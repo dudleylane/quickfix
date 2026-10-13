@@ -22,6 +22,7 @@
 #include "MessageStoreTestCase.h"
 #include "TestHelper.h"
 #include <FileStore.h>
+#include <sstream>
 #include <vector>
 
 #include "catch_amalgamated.hpp"
@@ -284,5 +285,39 @@ TEST_CASE("FileStoreInterleavedTests")
     CHECK(messages == std::vector<std::string>{"first", "second message", "third"});
     CHECK(reopened.getNextSenderMsgSeqNum() == 12345678901ULL);
     CHECK(reopened.getNextTargetMsgSeqNum() == 3);
+    reopened.reset(UtcTimeStamp::now());
+}
+
+// FileStoreSync=Y makes FileStoreFactory create a store that syncs every write to disk (#152).
+TEST_CASE("FileStoreSyncTests")
+{
+    SessionID sessionID(BeginString("FIX.4.2"), SenderCompID("SYNC"), TargetCompID("TEST"));
+    auto factoryFor = [](const std::string &sync)
+    {
+        std::stringstream config("[DEFAULT]\nConnectionType=acceptor\nFileStorePath=store\n" + sync +
+                                 "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=SYNC\nTargetCompID=TEST\n");
+        return FileStoreFactory(SessionSettings(config));
+    };
+
+    FileStoreFactory plainFactory = factoryFor("");
+    MessageStore *plain = plainFactory.create(UtcTimeStamp::now(), sessionID);
+    CHECK(dynamic_cast<SyncFileStore *>(plain) == nullptr);
+    plainFactory.destroy(plain);
+
+    FileStoreFactory syncFactory = factoryFor("FileStoreSync=Y\n");
+    MessageStore *store = syncFactory.create(UtcTimeStamp::now(), sessionID);
+    REQUIRE(dynamic_cast<SyncFileStore *>(store) != nullptr);
+    store->reset(UtcTimeStamp::now());
+    CHECK(store->set(1, "synced"));
+    store->incrNextSenderMsgSeqNum();
+    store->incrNextTargetMsgSeqNum();
+    syncFactory.destroy(store);
+
+    FileStore reopened(UtcTimeStamp::now(), "store", sessionID);
+    std::vector<std::string> messages;
+    reopened.get(1, 1, messages);
+    CHECK(messages == std::vector<std::string>{"synced"});
+    CHECK(reopened.getNextSenderMsgSeqNum() == 2);
+    CHECK(reopened.getNextTargetMsgSeqNum() == 2);
     reopened.reset(UtcTimeStamp::now());
 }

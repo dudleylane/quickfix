@@ -312,6 +312,10 @@ MessageStore *FileStoreFactory::create(const UtcTimeStamp &now, const SessionID 
     std::string path;
     Dictionary settings = m_settings.get(sessionID);
     path = settings.getString(FILE_STORE_PATH);
+    if (settings.has(FILE_STORE_SYNC) && settings.getBool(FILE_STORE_SYNC))
+    {
+        return new SyncFileStore(now, path, sessionID);
+    }
     return new FileStore(now, path, sessionID);
 }
 
@@ -466,4 +470,52 @@ bool FileStore::get(SEQNUM msgSeqNum, std::string &msg) const EXCEPT(IOException
     return true;
 }
 
+void FileStore::syncToDisk(bool messages, bool seqNums) EXCEPT(IOException)
+{
+    if (messages && (::fdatasync(fileno(m_msgFile)) != 0 || ::fdatasync(fileno(m_headerFile)) != 0))
+    {
+        throw IOException("Unable to sync " + m_msgFileName + " or " + m_headerFileName + " to disk");
+    }
+    if (seqNums && ::fdatasync(fileno(m_seqNumsFile)) != 0)
+    {
+        throw IOException("Unable to sync " + m_seqNumsFileName + " to disk");
+    }
+}
+
+bool SyncFileStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException)
+{
+    const bool result = FileStore::set(msgSeqNum, msg);
+    syncToDisk(true, false);
+    return result;
+}
+
+void SyncFileStore::setNextSenderMsgSeqNum(SEQNUM value) EXCEPT(IOException)
+{
+    FileStore::setNextSenderMsgSeqNum(value);
+    syncToDisk(false, true);
+}
+
+void SyncFileStore::setNextTargetMsgSeqNum(SEQNUM value) EXCEPT(IOException)
+{
+    FileStore::setNextTargetMsgSeqNum(value);
+    syncToDisk(false, true);
+}
+
+void SyncFileStore::incrNextSenderMsgSeqNum() EXCEPT(IOException)
+{
+    FileStore::incrNextSenderMsgSeqNum();
+    syncToDisk(false, true);
+}
+
+void SyncFileStore::incrNextTargetMsgSeqNum() EXCEPT(IOException)
+{
+    FileStore::incrNextTargetMsgSeqNum();
+    syncToDisk(false, true);
+}
+
+void SyncFileStore::reset(const UtcTimeStamp &now) EXCEPT(IOException)
+{
+    FileStore::reset(now);
+    syncToDisk(true, true);
+}
 } // namespace FIX

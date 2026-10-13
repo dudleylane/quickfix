@@ -3862,95 +3862,96 @@ namespace Swig {
 #define SWIGTYPE_p_FIX__SocketRecvFailed swig_types[97]
 #define SWIGTYPE_p_FIX__SocketSendFailed swig_types[98]
 #define SWIGTYPE_p_FIX__StringField swig_types[99]
-#define SWIGTYPE_p_FIX__SynchronizedApplication swig_types[100]
-#define SWIGTYPE_p_FIX__TYPE__Type swig_types[101]
-#define SWIGTYPE_p_FIX__TagNotDefinedForMessage swig_types[102]
-#define SWIGTYPE_p_FIX__TagOutOfOrder swig_types[103]
-#define SWIGTYPE_p_FIX__TargetCompID swig_types[104]
-#define SWIGTYPE_p_FIX__ThreadedSSLSocketAcceptor swig_types[105]
-#define SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator swig_types[106]
-#define SWIGTYPE_p_FIX__ThreadedSocketAcceptor swig_types[107]
-#define SWIGTYPE_p_FIX__ThreadedSocketInitiator swig_types[108]
-#define SWIGTYPE_p_FIX__Trailer swig_types[109]
-#define SWIGTYPE_p_FIX__UInt64Field swig_types[110]
-#define SWIGTYPE_p_FIX__UnsupportedMessageType swig_types[111]
-#define SWIGTYPE_p_FIX__UnsupportedVersion swig_types[112]
-#define SWIGTYPE_p_FIX__UtcDate swig_types[113]
-#define SWIGTYPE_p_FIX__UtcDateField swig_types[114]
-#define SWIGTYPE_p_FIX__UtcTimeOnly swig_types[115]
-#define SWIGTYPE_p_FIX__UtcTimeOnlyField swig_types[116]
-#define SWIGTYPE_p_FIX__UtcTimeStamp swig_types[117]
-#define SWIGTYPE_p_FIX__UtcTimeStampField swig_types[118]
-#define SWIGTYPE_p_Fields swig_types[119]
-#define SWIGTYPE_p_Group swig_types[120]
-#define SWIGTYPE_p_Groups swig_types[121]
-#define SWIGTYPE_p_IntArray swig_types[122]
-#define SWIGTYPE_p_IntField swig_types[123]
-#define SWIGTYPE_p_Log swig_types[124]
-#define SWIGTYPE_p_MYSQL swig_types[125]
-#define SWIGTYPE_p_MessageStore swig_types[126]
-#define SWIGTYPE_p_MsgType swig_types[127]
-#define SWIGTYPE_p_Mutex swig_types[128]
-#define SWIGTYPE_p_PGconn swig_types[129]
-#define SWIGTYPE_p_RSA swig_types[130]
-#define SWIGTYPE_p_Responder swig_types[131]
-#define SWIGTYPE_p_SessionID swig_types[132]
-#define SWIGTYPE_p_SessionToPort swig_types[133]
-#define SWIGTYPE_p_StringField swig_types[134]
-#define SWIGTYPE_p_TimeRange swig_types[135]
-#define SWIGTYPE_p_UtcDateField swig_types[136]
-#define SWIGTYPE_p_X509 swig_types[137]
-#define SWIGTYPE_p_allocator_type swig_types[138]
-#define SWIGTYPE_p_bool swig_types[139]
-#define SWIGTYPE_p_char swig_types[140]
-#define SWIGTYPE_p_const_iterator swig_types[141]
-#define SWIGTYPE_p_difference_type swig_types[142]
-#define SWIGTYPE_p_double swig_types[143]
-#define SWIGTYPE_p_g_const_iterator swig_types[144]
-#define SWIGTYPE_p_g_iterator swig_types[145]
-#define SWIGTYPE_p_g_value_type swig_types[146]
-#define SWIGTYPE_p_int swig_types[147]
-#define SWIGTYPE_p_iterator swig_types[148]
-#define SWIGTYPE_p_key_type swig_types[149]
-#define SWIGTYPE_p_long_long swig_types[150]
-#define SWIGTYPE_p_message_order swig_types[151]
-#define SWIGTYPE_p_p_FIX__DataDictionary swig_types[152]
-#define SWIGTYPE_p_p_PyObject swig_types[153]
-#define SWIGTYPE_p_short swig_types[154]
-#define SWIGTYPE_p_signed_char swig_types[155]
-#define SWIGTYPE_p_size_type swig_types[156]
-#define SWIGTYPE_p_ssize_t swig_types[157]
-#define SWIGTYPE_p_std__allocatorT_std__string_t swig_types[158]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t swig_types[159]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__const_iterator swig_types[160]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__iterator swig_types[161]
-#define SWIGTYPE_p_std__invalid_argument swig_types[162]
-#define SWIGTYPE_p_std__istream swig_types[163]
-#define SWIGTYPE_p_std__lessT_FIX__SessionID_t swig_types[164]
-#define SWIGTYPE_p_std__logic_error swig_types[165]
-#define SWIGTYPE_p_std__mapT_FIX__SessionID_unsigned_short_t swig_types[166]
-#define SWIGTYPE_p_std__mapT_std__string_std__string_t__const_iterator swig_types[167]
-#define SWIGTYPE_p_std__ostream swig_types[168]
-#define SWIGTYPE_p_std__setT_FIX__SessionID_t swig_types[169]
-#define SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t swig_types[170]
-#define SWIGTYPE_p_std__string swig_types[171]
-#define SWIGTYPE_p_std__string__size_type swig_types[172]
-#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t_t swig_types[173]
-#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t_t swig_types[174]
-#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__const_iterator swig_types[175]
-#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__iterator swig_types[176]
-#define SWIGTYPE_p_std__vectorT_std__string_t swig_types[177]
-#define SWIGTYPE_p_swig__SwigPyIterator swig_types[178]
-#define SWIGTYPE_p_time_t swig_types[179]
-#define SWIGTYPE_p_tm swig_types[180]
-#define SWIGTYPE_p_unsigned_char swig_types[181]
-#define SWIGTYPE_p_unsigned_int swig_types[182]
-#define SWIGTYPE_p_unsigned_long_long swig_types[183]
-#define SWIGTYPE_p_unsigned_short swig_types[184]
-#define SWIGTYPE_p_value_type swig_types[185]
-#define SWIGTYPE_p_void swig_types[186]
-static swig_type_info *swig_types[188];
-static swig_module_info swig_module = {swig_types, 187, 0, 0, 0, 0};
+#define SWIGTYPE_p_FIX__SyncFileStore swig_types[100]
+#define SWIGTYPE_p_FIX__SynchronizedApplication swig_types[101]
+#define SWIGTYPE_p_FIX__TYPE__Type swig_types[102]
+#define SWIGTYPE_p_FIX__TagNotDefinedForMessage swig_types[103]
+#define SWIGTYPE_p_FIX__TagOutOfOrder swig_types[104]
+#define SWIGTYPE_p_FIX__TargetCompID swig_types[105]
+#define SWIGTYPE_p_FIX__ThreadedSSLSocketAcceptor swig_types[106]
+#define SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator swig_types[107]
+#define SWIGTYPE_p_FIX__ThreadedSocketAcceptor swig_types[108]
+#define SWIGTYPE_p_FIX__ThreadedSocketInitiator swig_types[109]
+#define SWIGTYPE_p_FIX__Trailer swig_types[110]
+#define SWIGTYPE_p_FIX__UInt64Field swig_types[111]
+#define SWIGTYPE_p_FIX__UnsupportedMessageType swig_types[112]
+#define SWIGTYPE_p_FIX__UnsupportedVersion swig_types[113]
+#define SWIGTYPE_p_FIX__UtcDate swig_types[114]
+#define SWIGTYPE_p_FIX__UtcDateField swig_types[115]
+#define SWIGTYPE_p_FIX__UtcTimeOnly swig_types[116]
+#define SWIGTYPE_p_FIX__UtcTimeOnlyField swig_types[117]
+#define SWIGTYPE_p_FIX__UtcTimeStamp swig_types[118]
+#define SWIGTYPE_p_FIX__UtcTimeStampField swig_types[119]
+#define SWIGTYPE_p_Fields swig_types[120]
+#define SWIGTYPE_p_Group swig_types[121]
+#define SWIGTYPE_p_Groups swig_types[122]
+#define SWIGTYPE_p_IntArray swig_types[123]
+#define SWIGTYPE_p_IntField swig_types[124]
+#define SWIGTYPE_p_Log swig_types[125]
+#define SWIGTYPE_p_MYSQL swig_types[126]
+#define SWIGTYPE_p_MessageStore swig_types[127]
+#define SWIGTYPE_p_MsgType swig_types[128]
+#define SWIGTYPE_p_Mutex swig_types[129]
+#define SWIGTYPE_p_PGconn swig_types[130]
+#define SWIGTYPE_p_RSA swig_types[131]
+#define SWIGTYPE_p_Responder swig_types[132]
+#define SWIGTYPE_p_SessionID swig_types[133]
+#define SWIGTYPE_p_SessionToPort swig_types[134]
+#define SWIGTYPE_p_StringField swig_types[135]
+#define SWIGTYPE_p_TimeRange swig_types[136]
+#define SWIGTYPE_p_UtcDateField swig_types[137]
+#define SWIGTYPE_p_X509 swig_types[138]
+#define SWIGTYPE_p_allocator_type swig_types[139]
+#define SWIGTYPE_p_bool swig_types[140]
+#define SWIGTYPE_p_char swig_types[141]
+#define SWIGTYPE_p_const_iterator swig_types[142]
+#define SWIGTYPE_p_difference_type swig_types[143]
+#define SWIGTYPE_p_double swig_types[144]
+#define SWIGTYPE_p_g_const_iterator swig_types[145]
+#define SWIGTYPE_p_g_iterator swig_types[146]
+#define SWIGTYPE_p_g_value_type swig_types[147]
+#define SWIGTYPE_p_int swig_types[148]
+#define SWIGTYPE_p_iterator swig_types[149]
+#define SWIGTYPE_p_key_type swig_types[150]
+#define SWIGTYPE_p_long_long swig_types[151]
+#define SWIGTYPE_p_message_order swig_types[152]
+#define SWIGTYPE_p_p_FIX__DataDictionary swig_types[153]
+#define SWIGTYPE_p_p_PyObject swig_types[154]
+#define SWIGTYPE_p_short swig_types[155]
+#define SWIGTYPE_p_signed_char swig_types[156]
+#define SWIGTYPE_p_size_type swig_types[157]
+#define SWIGTYPE_p_ssize_t swig_types[158]
+#define SWIGTYPE_p_std__allocatorT_std__string_t swig_types[159]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t swig_types[160]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__const_iterator swig_types[161]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__iterator swig_types[162]
+#define SWIGTYPE_p_std__invalid_argument swig_types[163]
+#define SWIGTYPE_p_std__istream swig_types[164]
+#define SWIGTYPE_p_std__lessT_FIX__SessionID_t swig_types[165]
+#define SWIGTYPE_p_std__logic_error swig_types[166]
+#define SWIGTYPE_p_std__mapT_FIX__SessionID_unsigned_short_t swig_types[167]
+#define SWIGTYPE_p_std__mapT_std__string_std__string_t__const_iterator swig_types[168]
+#define SWIGTYPE_p_std__ostream swig_types[169]
+#define SWIGTYPE_p_std__setT_FIX__SessionID_t swig_types[170]
+#define SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t swig_types[171]
+#define SWIGTYPE_p_std__string swig_types[172]
+#define SWIGTYPE_p_std__string__size_type swig_types[173]
+#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t_t swig_types[174]
+#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t_t swig_types[175]
+#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__const_iterator swig_types[176]
+#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__iterator swig_types[177]
+#define SWIGTYPE_p_std__vectorT_std__string_t swig_types[178]
+#define SWIGTYPE_p_swig__SwigPyIterator swig_types[179]
+#define SWIGTYPE_p_time_t swig_types[180]
+#define SWIGTYPE_p_tm swig_types[181]
+#define SWIGTYPE_p_unsigned_char swig_types[182]
+#define SWIGTYPE_p_unsigned_int swig_types[183]
+#define SWIGTYPE_p_unsigned_long_long swig_types[184]
+#define SWIGTYPE_p_unsigned_short swig_types[185]
+#define SWIGTYPE_p_value_type swig_types[186]
+#define SWIGTYPE_p_void swig_types[187]
+static swig_type_info *swig_types[189];
+static swig_module_info swig_module = {swig_types, 188, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -131648,6 +131649,20 @@ SWIGINTERN PyObject *Swig_var_FILE_STORE_PATH_get(void) {
 }
 
 
+SWIGINTERN int Swig_var_FILE_STORE_SYNC_set(PyObject *) {
+  SWIG_Error(SWIG_AttributeError,"Variable FILE_STORE_SYNC is read-only.");
+  return 1;
+}
+
+
+SWIGINTERN PyObject *Swig_var_FILE_STORE_SYNC_get(void) {
+  PyObject *pyobj = 0;
+  
+  pyobj = SWIG_FromCharPtr(FIX::FILE_STORE_SYNC);
+  return pyobj;
+}
+
+
 SWIGINTERN int Swig_var_MYSQL_STORE_USECONNECTIONPOOL_set(PyObject *) {
   SWIG_Error(SWIG_AttributeError,"Variable MYSQL_STORE_USECONNECTIONPOOL is read-only.");
   return 1;
@@ -144985,6 +145000,408 @@ SWIGINTERN PyObject *FileStore_swigregister(PyObject *SWIGUNUSEDPARM(self), PyOb
 }
 
 SWIGINTERN PyObject *FileStore_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  return SWIG_Python_InitShadowInstance(args);
+}
+
+SWIGINTERN PyObject *_wrap_new_SyncFileStore(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::UtcTimeStamp *arg1 = 0 ;
+  std::string arg2 ;
+  FIX::SessionID *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject *swig_obj[3] ;
+  FIX::SyncFileStore *result = 0 ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "new_SyncFileStore", 3, 3, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_SyncFileStore" "', argument " "1"" of type '" "FIX::UtcTimeStamp const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_SyncFileStore" "', argument " "1"" of type '" "FIX::UtcTimeStamp const &""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::UtcTimeStamp * >(argp1);
+  {
+    std::string *ptr = (std::string *)0;
+    int res = SWIG_AsPtr_std_string(swig_obj[1], &ptr);
+    if (!SWIG_IsOK(res) || !ptr) {
+      SWIG_exception_fail(SWIG_ArgError((ptr ? res : SWIG_TypeError)), "in method '" "new_SyncFileStore" "', argument " "2"" of type '" "std::string""'"); 
+    }
+    arg2 = *ptr;
+    if (SWIG_IsNewObj(res)) delete ptr;
+  }
+  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3, SWIGTYPE_p_FIX__SessionID,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_SyncFileStore" "', argument " "3"" of type '" "FIX::SessionID const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_SyncFileStore" "', argument " "3"" of type '" "FIX::SessionID const &""'"); 
+  }
+  arg3 = reinterpret_cast< FIX::SessionID * >(argp3);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (FIX::SyncFileStore *)new FIX::SyncFileStore((FIX::UtcTimeStamp const &)*arg1,SWIG_STD_MOVE(arg2),(FIX::SessionID const &)*arg3);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__SyncFileStore, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SyncFileStore_set(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::SyncFileStore *arg1 = (FIX::SyncFileStore *) 0 ;
+  FIX::SEQNUM arg2 ;
+  std::string *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  unsigned long long val2 ;
+  int ecode2 = 0 ;
+  int res3 = SWIG_OLDOBJ ;
+  PyObject *swig_obj[3] ;
+  bool result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SyncFileStore_set", 3, 3, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_set" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
+  ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SyncFileStore_set" "', argument " "2"" of type '" "FIX::SEQNUM""'");
+  } 
+  arg2 = static_cast< FIX::SEQNUM >(val2);
+  {
+    std::string *ptr = (std::string *)0;
+    res3 = SWIG_AsPtr_std_string(swig_obj[2], &ptr);
+    if (!SWIG_IsOK(res3)) {
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "SyncFileStore_set" "', argument " "3"" of type '" "std::string const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "SyncFileStore_set" "', argument " "3"" of type '" "std::string const &""'"); 
+    }
+    arg3 = ptr;
+  }
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (bool)(arg1)->set(arg2,(std::string const &)*arg3);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  {
+    if( std::string("std::string const &") == "std::string &" )
+    {
+      if( !PyDict_Check(resultobj) )
+      {
+        Py_XDECREF(resultobj);
+        resultobj = PyDict_New();
+      }
+      // PyDict_SetItem takes its own references to both.
+      PyObject *key = PyLong_FromSsize_t(PyDict_Size(resultobj));
+      PyObject *value = PyUnicode_FromString(arg3->c_str());
+      PyDict_SetItem( resultobj, key, value );
+      Py_XDECREF(key);
+      Py_XDECREF(value);
+    }
+  }
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SyncFileStore_setNextSenderMsgSeqNum(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::SyncFileStore *arg1 = (FIX::SyncFileStore *) 0 ;
+  FIX::SEQNUM arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  unsigned long long val2 ;
+  int ecode2 = 0 ;
+  PyObject *swig_obj[2] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SyncFileStore_setNextSenderMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
+  ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SyncFileStore_setNextSenderMsgSeqNum" "', argument " "2"" of type '" "FIX::SEQNUM""'");
+  } 
+  arg2 = static_cast< FIX::SEQNUM >(val2);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            (arg1)->setNextSenderMsgSeqNum(arg2);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SyncFileStore_setNextTargetMsgSeqNum(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::SyncFileStore *arg1 = (FIX::SyncFileStore *) 0 ;
+  FIX::SEQNUM arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  unsigned long long val2 ;
+  int ecode2 = 0 ;
+  PyObject *swig_obj[2] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SyncFileStore_setNextTargetMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
+  ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SyncFileStore_setNextTargetMsgSeqNum" "', argument " "2"" of type '" "FIX::SEQNUM""'");
+  } 
+  arg2 = static_cast< FIX::SEQNUM >(val2);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            (arg1)->setNextTargetMsgSeqNum(arg2);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SyncFileStore_incrNextSenderMsgSeqNum(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::SyncFileStore *arg1 = (FIX::SyncFileStore *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            (arg1)->incrNextSenderMsgSeqNum();
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SyncFileStore_incrNextTargetMsgSeqNum(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::SyncFileStore *arg1 = (FIX::SyncFileStore *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            (arg1)->incrNextTargetMsgSeqNum();
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SyncFileStore_reset(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::SyncFileStore *arg1 = (FIX::SyncFileStore *) 0 ;
+  FIX::UtcTimeStamp *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject *swig_obj[2] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SyncFileStore_reset", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_reset" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SyncFileStore_reset" "', argument " "2"" of type '" "FIX::UtcTimeStamp const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "SyncFileStore_reset" "', argument " "2"" of type '" "FIX::UtcTimeStamp const &""'"); 
+  }
+  arg2 = reinterpret_cast< FIX::UtcTimeStamp * >(argp2);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            (arg1)->reset((FIX::UtcTimeStamp const &)*arg2);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SyncFileStore(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::SyncFileStore *arg1 = (FIX::SyncFileStore *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SyncFileStore" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            delete arg1;
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SyncFileStore_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj = NULL;
+  if (!SWIG_Python_UnpackTuple(args, "swigregister", 1, 1, &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_FIX__SyncFileStore, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *SyncFileStore_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   return SWIG_Python_InitShadowInstance(args);
 }
 
@@ -164580,6 +164997,16 @@ static PyMethodDef SwigMethods[] = {
 	 { "FileStore_refresh", _wrap_FileStore_refresh, METH_O, NULL},
 	 { "FileStore_swigregister", FileStore_swigregister, METH_O, NULL},
 	 { "FileStore_swiginit", FileStore_swiginit, METH_VARARGS, NULL},
+	 { "new_SyncFileStore", _wrap_new_SyncFileStore, METH_VARARGS, NULL},
+	 { "SyncFileStore_set", _wrap_SyncFileStore_set, METH_VARARGS, NULL},
+	 { "SyncFileStore_setNextSenderMsgSeqNum", _wrap_SyncFileStore_setNextSenderMsgSeqNum, METH_VARARGS, NULL},
+	 { "SyncFileStore_setNextTargetMsgSeqNum", _wrap_SyncFileStore_setNextTargetMsgSeqNum, METH_VARARGS, NULL},
+	 { "SyncFileStore_incrNextSenderMsgSeqNum", _wrap_SyncFileStore_incrNextSenderMsgSeqNum, METH_O, NULL},
+	 { "SyncFileStore_incrNextTargetMsgSeqNum", _wrap_SyncFileStore_incrNextTargetMsgSeqNum, METH_O, NULL},
+	 { "SyncFileStore_reset", _wrap_SyncFileStore_reset, METH_VARARGS, NULL},
+	 { "delete_SyncFileStore", _wrap_delete_SyncFileStore, METH_O, NULL},
+	 { "SyncFileStore_swigregister", SyncFileStore_swigregister, METH_O, NULL},
+	 { "SyncFileStore_swiginit", SyncFileStore_swiginit, METH_VARARGS, NULL},
 	 { "delete_Application", _wrap_delete_Application, METH_O, NULL},
 	 { "Application_onCreate", _wrap_Application_onCreate, METH_VARARGS, NULL},
 	 { "Application_onLogon", _wrap_Application_onLogon, METH_VARARGS, NULL},
@@ -165078,6 +165505,9 @@ static void *_p_FIX__MessageTo_p_FIX__FieldMap(void *x, int *SWIGUNUSEDPARM(newm
 static void *_p_FIX__TrailerTo_p_FIX__FieldMap(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::FieldMap *)  ((FIX::Trailer *) x));
 }
+static void *_p_FIX__SyncFileStoreTo_p_FIX__FileStore(void *x, int *SWIGUNUSEDPARM(newmemory)) {
+    return (void *)((FIX::FileStore *)  ((FIX::SyncFileStore *) x));
+}
 static void *_p_FIX__SSLSocketInitiatorTo_p_FIX__Initiator(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::Initiator *)  ((FIX::SSLSocketInitiator *) x));
 }
@@ -165131,6 +165561,9 @@ static void *_p_FIX__NullStoreTo_p_FIX__MessageStore(void *x, int *SWIGUNUSEDPAR
 }
 static void *_p_FIX__PostgreSQLStoreTo_p_FIX__MessageStore(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::MessageStore *)  ((FIX::PostgreSQLStore *) x));
+}
+static void *_p_FIX__SyncFileStoreTo_p_FIX__MessageStore(void *x, int *SWIGUNUSEDPARM(newmemory)) {
+    return (void *)((FIX::MessageStore *) (FIX::FileStore *) ((FIX::SyncFileStore *) x));
 }
 static void *_p_FIX__FileStoreFactoryTo_p_FIX__MessageStoreFactory(void *x, int *SWIGUNUSEDPARM(newmemory)) {
     return (void *)((FIX::MessageStoreFactory *)  ((FIX::FileStoreFactory *) x));
@@ -165361,6 +165794,7 @@ static swig_type_info _swigt__p_FIX__SocketInitiator = {"_p_FIX__SocketInitiator
 static swig_type_info _swigt__p_FIX__SocketRecvFailed = {"_p_FIX__SocketRecvFailed", "FIX::SocketRecvFailed *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__SocketSendFailed = {"_p_FIX__SocketSendFailed", "FIX::SocketSendFailed *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__StringField = {"_p_FIX__StringField", "FIX::CountryField *|FIX::CurrencyField *|FIX::DataField *|FIX::DayOfMonthField *|FIX::ExchangeField *|FIX::LocalMktDateField *|FIX::MonthField *|FIX::MonthYearField *|FIX::MultipleCharValueField *|FIX::MultipleStringValueField *|FIX::MultipleValueStringField *|FIX::TzTimeOnlyField *|FIX::TzTimeStampField *|FIX::StringField *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_FIX__SyncFileStore = {"_p_FIX__SyncFileStore", "FIX::SyncFileStore *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__SynchronizedApplication = {"_p_FIX__SynchronizedApplication", "FIX::SynchronizedApplication *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__TYPE__Type = {"_p_FIX__TYPE__Type", "FIX::TYPE::Type *|enum FIX::TYPE::Type *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_FIX__TagNotDefinedForMessage = {"_p_FIX__TagNotDefinedForMessage", "FIX::TagNotDefinedForMessage *", 0, 0, (void*)0, 0};
@@ -165550,6 +165984,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_FIX__SocketRecvFailed,
   &_swigt__p_FIX__SocketSendFailed,
   &_swigt__p_FIX__StringField,
+  &_swigt__p_FIX__SyncFileStore,
   &_swigt__p_FIX__SynchronizedApplication,
   &_swigt__p_FIX__TYPE__Type,
   &_swigt__p_FIX__TagNotDefinedForMessage,
@@ -165672,7 +166107,7 @@ static swig_cast_info _swigc__p_FIX__FieldMap[] = {  {&_swigt__p_FIX__FieldMap, 
 static swig_cast_info _swigc__p_FIX__FieldNotFound[] = {  {&_swigt__p_FIX__FieldNotFound, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FileLog[] = {  {&_swigt__p_FIX__FileLog, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FileLogFactory[] = {  {&_swigt__p_FIX__FileLogFactory, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_FIX__FileStore[] = {  {&_swigt__p_FIX__FileStore, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_FIX__FileStore[] = {  {&_swigt__p_FIX__FileStore, 0, 0, 0},  {&_swigt__p_FIX__SyncFileStore, _p_FIX__SyncFileStoreTo_p_FIX__FileStore, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__FileStoreFactory[] = {  {&_swigt__p_FIX__FileStoreFactory, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__Group[] = {  {&_swigt__p_FIX__Group, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__GroupArena[] = {  {&_swigt__p_FIX__GroupArena, 0, 0, 0},{0, 0, 0, 0}};
@@ -165696,7 +166131,7 @@ static swig_cast_info _swigc__p_FIX__MemoryStore[] = {  {&_swigt__p_FIX__MemoryS
 static swig_cast_info _swigc__p_FIX__MemoryStoreFactory[] = {  {&_swigt__p_FIX__MemoryStoreFactory, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__Message[] = {  {&_swigt__p_FIX__Message, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__MessageParseError[] = {  {&_swigt__p_FIX__MessageParseError, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_FIX__MessageStore[] = {  {&_swigt__p_FIX__MessageStore, 0, 0, 0},  {&_swigt__p_FIX__FileStore, _p_FIX__FileStoreTo_p_FIX__MessageStore, 0, 0},  {&_swigt__p_FIX__MemoryStore, _p_FIX__MemoryStoreTo_p_FIX__MessageStore, 0, 0},  {&_swigt__p_FIX__MySQLStore, _p_FIX__MySQLStoreTo_p_FIX__MessageStore, 0, 0},  {&_swigt__p_FIX__NullStore, _p_FIX__NullStoreTo_p_FIX__MessageStore, 0, 0},  {&_swigt__p_FIX__PostgreSQLStore, _p_FIX__PostgreSQLStoreTo_p_FIX__MessageStore, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_FIX__MessageStore[] = {  {&_swigt__p_FIX__MessageStore, 0, 0, 0},  {&_swigt__p_FIX__FileStore, _p_FIX__FileStoreTo_p_FIX__MessageStore, 0, 0},  {&_swigt__p_FIX__MemoryStore, _p_FIX__MemoryStoreTo_p_FIX__MessageStore, 0, 0},  {&_swigt__p_FIX__MySQLStore, _p_FIX__MySQLStoreTo_p_FIX__MessageStore, 0, 0},  {&_swigt__p_FIX__NullStore, _p_FIX__NullStoreTo_p_FIX__MessageStore, 0, 0},  {&_swigt__p_FIX__PostgreSQLStore, _p_FIX__PostgreSQLStoreTo_p_FIX__MessageStore, 0, 0},  {&_swigt__p_FIX__SyncFileStore, _p_FIX__SyncFileStoreTo_p_FIX__MessageStore, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__MessageStoreExceptionWrapper[] = {  {&_swigt__p_FIX__MessageStoreExceptionWrapper, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__MessageStoreFactory[] = {  {&_swigt__p_FIX__MessageStoreFactory, 0, 0, 0},  {&_swigt__p_FIX__FileStoreFactory, _p_FIX__FileStoreFactoryTo_p_FIX__MessageStoreFactory, 0, 0},  {&_swigt__p_FIX__MemoryStoreFactory, _p_FIX__MemoryStoreFactoryTo_p_FIX__MessageStoreFactory, 0, 0},  {&_swigt__p_FIX__MySQLStoreFactory, _p_FIX__MySQLStoreFactoryTo_p_FIX__MessageStoreFactory, 0, 0},  {&_swigt__p_FIX__NullStoreFactory, _p_FIX__NullStoreFactoryTo_p_FIX__MessageStoreFactory, 0, 0},  {&_swigt__p_FIX__PostgreSQLStoreFactory, _p_FIX__PostgreSQLStoreFactoryTo_p_FIX__MessageStoreFactory, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__MessageStoreFactoryExceptionWrapper[] = {  {&_swigt__p_FIX__MessageStoreFactoryExceptionWrapper, 0, 0, 0},{0, 0, 0, 0}};
@@ -165739,6 +166174,7 @@ static swig_cast_info _swigc__p_FIX__SocketInitiator[] = {  {&_swigt__p_FIX__Soc
 static swig_cast_info _swigc__p_FIX__SocketRecvFailed[] = {  {&_swigt__p_FIX__SocketRecvFailed, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__SocketSendFailed[] = {  {&_swigt__p_FIX__SocketSendFailed, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__StringField[] = {  {&_swigt__p_FIX__StringField, 0, 0, 0},  {&_swigt__p_FIX__BeginString, _p_FIX__BeginStringTo_p_FIX__StringField, 0, 0},  {&_swigt__p_FIX__SenderCompID, _p_FIX__SenderCompIDTo_p_FIX__StringField, 0, 0},  {&_swigt__p_FIX__TargetCompID, _p_FIX__TargetCompIDTo_p_FIX__StringField, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_FIX__SyncFileStore[] = {  {&_swigt__p_FIX__SyncFileStore, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__SynchronizedApplication[] = {  {&_swigt__p_FIX__SynchronizedApplication, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__TYPE__Type[] = {  {&_swigt__p_FIX__TYPE__Type, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_FIX__TagNotDefinedForMessage[] = {  {&_swigt__p_FIX__TagNotDefinedForMessage, 0, 0, 0},{0, 0, 0, 0}};
@@ -165928,6 +166364,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_FIX__SocketRecvFailed,
   _swigc__p_FIX__SocketSendFailed,
   _swigc__p_FIX__StringField,
+  _swigc__p_FIX__SyncFileStore,
   _swigc__p_FIX__SynchronizedApplication,
   _swigc__p_FIX__TYPE__Type,
   _swigc__p_FIX__TagNotDefinedForMessage,
@@ -172413,6 +172850,7 @@ SWIG_init(void) {
   SWIG_addvarlink(globals, "LOGON_TIMEOUT", Swig_var_LOGON_TIMEOUT_get, Swig_var_LOGON_TIMEOUT_set);
   SWIG_addvarlink(globals, "LOGOUT_TIMEOUT", Swig_var_LOGOUT_TIMEOUT_get, Swig_var_LOGOUT_TIMEOUT_set);
   SWIG_addvarlink(globals, "FILE_STORE_PATH", Swig_var_FILE_STORE_PATH_get, Swig_var_FILE_STORE_PATH_set);
+  SWIG_addvarlink(globals, "FILE_STORE_SYNC", Swig_var_FILE_STORE_SYNC_get, Swig_var_FILE_STORE_SYNC_set);
   SWIG_addvarlink(globals, "MYSQL_STORE_USECONNECTIONPOOL", Swig_var_MYSQL_STORE_USECONNECTIONPOOL_get, Swig_var_MYSQL_STORE_USECONNECTIONPOOL_set);
   SWIG_addvarlink(globals, "MYSQL_STORE_DATABASE", Swig_var_MYSQL_STORE_DATABASE_get, Swig_var_MYSQL_STORE_DATABASE_set);
   SWIG_addvarlink(globals, "MYSQL_STORE_USER", Swig_var_MYSQL_STORE_USER_get, Swig_var_MYSQL_STORE_USER_set);

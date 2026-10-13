@@ -99,6 +99,10 @@ public:
     void reset(const UtcTimeStamp &now) EXCEPT(IOException);
     void refresh() EXCEPT(IOException);
 
+protected:
+    /// fdatasync()s the body and header files, the sequence-number file, or both (#152).
+    void syncToDisk(bool messages, bool seqNums) EXCEPT(IOException);
+
 private:
     typedef std::pair<int64_t, std::size_t> OffsetSize;
     typedef std::map<SEQNUM, OffsetSize> NumToOffset;
@@ -123,6 +127,30 @@ private:
     FILE *m_headerFile;
     FILE *m_seqNumsFile;
     FILE *m_sessionFile;
+};
+
+/**
+ * A FileStore that waits for each write to reach the disk, made by FileStoreFactory when a session sets
+ * FileStoreSync=Y (#152).
+ *
+ * FileStore's writes reach the operating system at once, so they survive the process crashing, but not
+ * the host: an operating system crash or a power loss can lose stored messages and sequence numbers.
+ * This one fdatasync()s after every write, at the cost of the device's write latency on each message.
+ */
+class SyncFileStore : public FileStore
+{
+public:
+    SyncFileStore(const UtcTimeStamp &now, std::string path, const SessionID &sessionID)
+        : FileStore(now, path, sessionID)
+    {
+    }
+
+    bool set(SEQNUM, const std::string &) EXCEPT(IOException);
+    void setNextSenderMsgSeqNum(SEQNUM value) EXCEPT(IOException);
+    void setNextTargetMsgSeqNum(SEQNUM value) EXCEPT(IOException);
+    void incrNextSenderMsgSeqNum() EXCEPT(IOException);
+    void incrNextTargetMsgSeqNum() EXCEPT(IOException);
+    void reset(const UtcTimeStamp &now) EXCEPT(IOException);
 };
 } // namespace FIX
 
