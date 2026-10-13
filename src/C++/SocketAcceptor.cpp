@@ -296,7 +296,9 @@ void SocketAcceptor::onConnect(SocketServer &server, socket_handle a, socket_han
         server.getMonitor().drop(s);
         return;
     }
-    uint16_t port = server.socketToPort(a);
+    // onInitialize filed the sessions under the listener's bound port, which differs from the configured
+    // one when that is 0, "any" (#171).
+    const uint16_t port = socket_hostport(a);
     Sessions sessions = m_portToSessions[port];
     m_connections[s] = new SocketConnection(s, sessions, &server.getMonitor());
 

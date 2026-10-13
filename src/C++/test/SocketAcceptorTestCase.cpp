@@ -166,3 +166,47 @@ TEST_CASE("SocketAcceptorHeartbeatTests")
     destroySocket(other);
     destroySocket(socket);
 }
+
+// SocketAcceptPort=0 lets the kernel choose; a Logon to that port must find its session (#171).
+TEST_CASE("SocketAcceptorAnyPortTests")
+{
+    std::stringstream input("[DEFAULT]\nConnectionType=acceptor\nSocketAcceptPort=0\nStartTime=00:00:00\n"
+                            "EndTime=00:00:00\nUseDataDictionary=N\nCheckLatency=N\n"
+                            "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=ISLD\nTargetCompID=TW\n");
+    SessionSettings settings(input);
+    TestApplication application;
+    MemoryStoreFactory factory;
+    SocketAcceptor object(application, factory, settings);
+    object.poll();
+    const uint16_t port = object.sessionToPort().find(SessionID("FIX.4.2", "ISLD", "TW"))->second;
+    REQUIRE(port != 0);
+    socket_handle socket = createSocket(port, "127.0.0.1");
+    REQUIRE(socket != INVALID_SOCKET_HANDLE);
+    object.poll();
+
+    FIX42::Logon logon;
+    logon.getHeader().set(SenderCompID("TW"));
+    logon.getHeader().set(TargetCompID("ISLD"));
+    logon.getHeader().set(MsgSeqNum(1));
+    logon.getHeader().set(SendingTime::now());
+    logon.set(HeartBtInt(30));
+    const std::string logonString = logon.toString();
+    CHECK(socket_send(socket, logonString.c_str(), (int)logonString.size()));
+
+    std::string received;
+    char buffer[4096];
+    for (int attempt = 0; attempt < 100 && received.find("\00135=A\001") == std::string::npos; ++attempt)
+    {
+        object.poll();
+        ssize_t size;
+        while ((size = ::recv(socket, buffer, sizeof(buffer), MSG_DONTWAIT)) > 0)
+        {
+            received.append(buffer, size);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    CHECK(received.find("\00135=A\001") != std::string::npos);
+
+    object.stop(true);
+    destroySocket(socket);
+}
