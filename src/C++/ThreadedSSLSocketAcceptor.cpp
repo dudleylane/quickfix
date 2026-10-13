@@ -172,7 +172,7 @@ void ThreadedSSLSocketAcceptor::onConfigure(const SessionSettings &s) EXCEPT(Con
             settings.getBool(SOCKET_REUSE_ADDRESS);
         }
     }
-    checkSocketNoDelayPerPort(s);
+    checkSocketOptionsPerPort(s);
 }
 
 void ThreadedSSLSocketAcceptor::onInitialize(const SessionSettings &s) EXCEPT(RuntimeError)
@@ -236,10 +236,9 @@ void ThreadedSSLSocketAcceptor::onInitialize(const SessionSettings &s) EXCEPT(Ru
 
         const bool noDelay = getSocketNoDelay(settings);
 
-        const int sendBufSize = settings.has(SOCKET_SEND_BUFFER_SIZE) ? settings.getInt(SOCKET_SEND_BUFFER_SIZE) : 0;
+        const int sendBufSize = getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
 
-        const int rcvBufSize =
-            settings.has(SOCKET_RECEIVE_BUFFER_SIZE) ? settings.getInt(SOCKET_RECEIVE_BUFFER_SIZE) : 0;
+        const int rcvBufSize = getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
 
         socket_handle socket = socket_createAcceptor(port, reuseAddress);
         if (socket == INVALID_SOCKET_HANDLE)
@@ -384,13 +383,10 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketAcceptorThread(void *p)
     int port = info->m_port;
     delete info;
 
-    int noDelay = 0;
-    int sendBufSize = 0;
-    int rcvBufSize = 0;
-    socket_getsockopt(s, TCP_NODELAY, noDelay);
-    socket_getsockopt(s, SO_SNDBUF, sendBufSize);
-    socket_getsockopt(s, SO_RCVBUF, rcvBufSize);
-
+    // An accepted socket inherits TCP_NODELAY and the buffer sizes from the listener, which
+    // onInitialize set. Copying them on with getsockopt and setsockopt doubled each buffer -- Linux
+    // reports twice the size set -- and, with no size configured, fixed the kernel's default size,
+    // which turns off its buffer autotuning (#170).
     while (!pAcceptor->isStopped())
     {
         socket_handle socket = socket_accept(s);
@@ -427,19 +423,6 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketAcceptorThread(void *p)
             }
             socket_close(socket);
             continue;
-        }
-
-        if (noDelay)
-        {
-            socket_setsockopt(socket, TCP_NODELAY);
-        }
-        if (sendBufSize)
-        {
-            socket_setsockopt(socket, SO_SNDBUF, sendBufSize);
-        }
-        if (rcvBufSize)
-        {
-            socket_setsockopt(socket, SO_RCVBUF, rcvBufSize);
         }
 
         Sessions sessions = pAcceptor->m_portToSessions[port];

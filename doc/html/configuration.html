@@ -865,8 +865,9 @@ AppDataDictionary.FIX.4.4=FIX44.xml
         <tr align="left" valign="middle">
           <td><b>SocketSendBufferSize</b></td>
 
-          <td>Indicates the size of SO_SNDBUF. Currently, this must be defined in the
-          [DEFAULT] section.</td>
+          <td>Indicates the size of SO_SNDBUF, in bytes. 0 leaves the kernel's
+          size, which it tunes to the connection. Read from each
+          session's settings; set it in [DEFAULT] to apply it to all.</td>
 
           <td>positive integer</td>
 
@@ -876,8 +877,9 @@ AppDataDictionary.FIX.4.4=FIX44.xml
         <tr align="left" valign="middle">
           <td><b>SocketReceiveBufferSize</b></td>
 
-          <td>Indicates the size of SO_RCVBUF. Currently, this must be defined in the
-          [DEFAULT] section.</td>
+          <td>Indicates the size of SO_RCVBUF, in bytes. 0 leaves the kernel's
+          size, which it tunes to the connection. Read from each
+          session's settings; set it in [DEFAULT] to apply it to all.</td>
 
           <td>positive integer</td>
 
@@ -952,6 +954,34 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           N</td>
 
           <td>Y</td>
+        </tr>
+
+        <tr align="left" valign="middle">
+          <td><b>SocketSendBufferSize</b></td>
+
+          <td>Indicates the size of SO_SNDBUF, in bytes. 0 leaves the kernel's
+          size, which it tunes to the connection. It is set on the
+          listening socket, so every session sharing a
+          SocketAcceptPort must have the same value; sessions that
+          disagree are a configuration error.</td>
+
+          <td>positive integer</td>
+
+          <td>0</td>
+        </tr>
+
+        <tr align="left" valign="middle">
+          <td><b>SocketReceiveBufferSize</b></td>
+
+          <td>Indicates the size of SO_RCVBUF, in bytes. 0 leaves the kernel's
+          size, which it tunes to the connection. It is set on the
+          listening socket, so every session sharing a
+          SocketAcceptPort must have the same value; sessions that
+          disagree are a configuration error.</td>
+
+          <td>positive integer</td>
+
+          <td>0</td>
         </tr>
 
         <tr align="left" valign="middle">

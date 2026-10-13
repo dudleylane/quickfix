@@ -180,20 +180,14 @@ SSLSocketInitiator::~SSLSocketInitiator()
 
 void SSLSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(ConfigError)
 {
-    const Dictionary &dict = s.get();
-
-    // SocketNodelay is read from each session's settings when it connects (#150); check every value now.
+    // The socket options are read from each session's settings when it connects (#150, #170); check
+    // every value now.
     for (const SessionID &sessionID : s.getSessions())
     {
-        getSocketNoDelay(s.get(sessionID));
-    }
-    if (dict.has(SOCKET_SEND_BUFFER_SIZE))
-    {
-        m_sendBufSize = dict.getInt(SOCKET_SEND_BUFFER_SIZE);
-    }
-    if (dict.has(SOCKET_RECEIVE_BUFFER_SIZE))
-    {
-        m_rcvBufSize = dict.getInt(SOCKET_RECEIVE_BUFFER_SIZE);
+        const Dictionary &settings = s.get(sessionID);
+        getSocketNoDelay(settings);
+        getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
+        getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
     }
 }
 
@@ -313,8 +307,10 @@ void SSLSocketInitiator::doConnect(const SessionID &sessionID, const Dictionary 
         log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert(host.port) + " (Source " +
                      host.sourceAddress + ":" + IntConvertor::convert(host.sourcePort) +
                      ") ReconnectInterval=" + IntConvertor::convert(reconnectInterval(dictionary)));
-        socket_handle result = m_connector.connect(host.address, host.port, getSocketNoDelay(dictionary), m_sendBufSize,
-                                                   m_rcvBufSize, host.sourceAddress, host.sourcePort);
+        socket_handle result = m_connector.connect(host.address, host.port, getSocketNoDelay(dictionary),
+                                                   getSocketBufferSize(dictionary, SOCKET_SEND_BUFFER_SIZE),
+                                                   getSocketBufferSize(dictionary, SOCKET_RECEIVE_BUFFER_SIZE),
+                                                   host.sourceAddress, host.sourcePort);
 
         log->onEvent("Socket created with handle:" + std::to_string(result));
 

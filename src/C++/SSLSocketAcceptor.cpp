@@ -180,7 +180,7 @@ void SSLSocketAcceptor::onConfigure(const SessionSettings &sessionSettings) EXCE
             settings.getBool(SOCKET_REUSE_ADDRESS);
         }
     }
-    checkSocketNoDelayPerPort(sessionSettings);
+    checkSocketOptionsPerPort(sessionSettings);
 }
 
 void SSLSocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXCEPT(RuntimeError)
@@ -237,11 +237,9 @@ void SSLSocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXC
 
             const bool noDelay = getSocketNoDelay(settings);
 
-            const int sendBufSize =
-                settings.has(SOCKET_SEND_BUFFER_SIZE) ? settings.getInt(SOCKET_SEND_BUFFER_SIZE) : 0;
+            const int sendBufSize = getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
 
-            const int rcvBufSize =
-                settings.has(SOCKET_RECEIVE_BUFFER_SIZE) ? settings.getInt(SOCKET_RECEIVE_BUFFER_SIZE) : 0;
+            const int rcvBufSize = getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
 
             m_portToSessions[port].insert(sessionID);
             m_pServer->add(port, reuseAddress, noDelay, sendBufSize, rcvBufSize);

@@ -64,7 +64,7 @@ void SocketAcceptor::onConfigure(const SessionSettings &sessionSettings) EXCEPT(
             settings.getBool(SOCKET_REUSE_ADDRESS);
         }
     }
-    checkSocketNoDelayPerPort(sessionSettings);
+    checkSocketOptionsPerPort(sessionSettings);
 }
 
 void SocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXCEPT(RuntimeError)
@@ -85,11 +85,9 @@ void SocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXCEPT
 
             const bool noDelay = getSocketNoDelay(settings);
 
-            const int sendBufSize =
-                settings.has(SOCKET_SEND_BUFFER_SIZE) ? settings.getInt(SOCKET_SEND_BUFFER_SIZE) : 0;
+            const int sendBufSize = getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
 
-            const int rcvBufSize =
-                settings.has(SOCKET_RECEIVE_BUFFER_SIZE) ? settings.getInt(SOCKET_RECEIVE_BUFFER_SIZE) : 0;
+            const int rcvBufSize = getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
 
             socket_handle acceptSocket = m_pServer->add(port, reuseAddress, noDelay, sendBufSize, rcvBufSize);
             m_portToSessions[socket_hostport(acceptSocket)].insert(sessionID);

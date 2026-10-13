@@ -1411,12 +1411,23 @@ int findConnectedSocket(int localPort, int peerPort, int exclude)
     return -1;
 }
 
-bool hasNoDelay(int fd)
+struct SocketOptions
 {
-    int value = 0;
-    socklen_t length = sizeof(value);
-    ::getsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &value, &length);
-    return value != 0;
+    bool noDelay;
+    int sendBuffer;
+    int receiveBuffer;
+};
+
+SocketOptions optionsOf(int fd)
+{
+    auto get = [fd](int level, int option)
+    {
+        int value = 0;
+        socklen_t length = sizeof(value);
+        ::getsockopt(fd, level, option, &value, &length);
+        return value;
+    };
+    return {get(IPPROTO_TCP, TCP_NODELAY) != 0, get(SOL_SOCKET, SO_SNDBUF), get(SOL_SOCKET, SO_RCVBUF)};
 }
 
 std::string acceptorConfig(int port, const std::string &first, const std::string &second, int secondPort = 0)
@@ -1434,7 +1445,7 @@ std::string acceptorConfig(int port, const std::string &first, const std::string
     return config.str();
 }
 
-template <typename Acceptor> bool acceptedSocketHasNoDelay(const std::string &sessionSetting)
+template <typename Acceptor> SocketOptions acceptedSocketOptions(const std::string &sessionSetting)
 {
     NullApplication application;
     MemoryStoreFactory factory;
@@ -1447,14 +1458,14 @@ template <typename Acceptor> bool acceptedSocketHasNoDelay(const std::string &se
     REQUIRE(client >= 0);
     const int accepted = findConnectedSocket(port, portOf(client, false), client);
     REQUIRE(accepted >= 0);
-    const bool noDelay = hasNoDelay(accepted);
+    const SocketOptions options = optionsOf(accepted);
     ::close(client);
     acceptor.stop();
-    return noDelay;
+    return options;
 }
 
 template <typename Initiator>
-bool connectedSocketHasNoDelay(const std::string &defaultSetting, const std::string &sessionSetting)
+SocketOptions connectedSocketOptions(const std::string &defaultSetting, const std::string &sessionSetting)
 {
     const int listener = ::socket(AF_INET, SOCK_STREAM, 0);
     sockaddr_in address{};
@@ -1477,10 +1488,10 @@ bool connectedSocketHasNoDelay(const std::string &defaultSetting, const std::str
     initiator.start();
     const int connected = findConnectedSocket(-1, port, listener);
     REQUIRE(connected >= 0);
-    const bool noDelay = hasNoDelay(connected);
+    const SocketOptions options = optionsOf(connected);
     initiator.stop(true);
     ::close(listener);
-    return noDelay;
+    return options;
 }
 } // namespace
 
@@ -1526,20 +1537,83 @@ TEST_CASE("SocketNoDelayTests")
 
     SECTION("acceptedSockets")
     {
-        CHECK(acceptedSocketHasNoDelay<SocketAcceptor>(""));
-        CHECK(acceptedSocketHasNoDelay<ThreadedSocketAcceptor>(""));
-        CHECK_FALSE(acceptedSocketHasNoDelay<SocketAcceptor>("SocketNodelay=N\n"));
-        CHECK_FALSE(acceptedSocketHasNoDelay<ThreadedSocketAcceptor>("SocketNodelay=N\n"));
+        CHECK(acceptedSocketOptions<SocketAcceptor>("").noDelay);
+        CHECK(acceptedSocketOptions<ThreadedSocketAcceptor>("").noDelay);
+        CHECK_FALSE(acceptedSocketOptions<SocketAcceptor>("SocketNodelay=N\n").noDelay);
+        CHECK_FALSE(acceptedSocketOptions<ThreadedSocketAcceptor>("SocketNodelay=N\n").noDelay);
     }
 
     SECTION("initiatorsReadTheSessionsSetting")
     {
-        CHECK(connectedSocketHasNoDelay<SocketInitiator>("", ""));
-        CHECK(connectedSocketHasNoDelay<ThreadedSocketInitiator>("", ""));
+        CHECK(connectedSocketOptions<SocketInitiator>("", "").noDelay);
+        CHECK(connectedSocketOptions<ThreadedSocketInitiator>("", "").noDelay);
         // Set in the session only: initiators used to read [DEFAULT] alone and ignore this.
-        CHECK_FALSE(connectedSocketHasNoDelay<SocketInitiator>("", "SocketNodelay=N\n"));
-        CHECK_FALSE(connectedSocketHasNoDelay<ThreadedSocketInitiator>("", "SocketNodelay=N\n"));
+        CHECK_FALSE(connectedSocketOptions<SocketInitiator>("", "SocketNodelay=N\n").noDelay);
+        CHECK_FALSE(connectedSocketOptions<ThreadedSocketInitiator>("", "SocketNodelay=N\n").noDelay);
         // And a session overrides [DEFAULT].
-        CHECK(connectedSocketHasNoDelay<ThreadedSocketInitiator>("SocketNodelay=N\n", "SocketNodelay=Y\n"));
+        CHECK(connectedSocketOptions<ThreadedSocketInitiator>("SocketNodelay=N\n", "SocketNodelay=Y\n").noDelay);
+    }
+}
+
+// SocketSendBufferSize and SocketReceiveBufferSize had SocketNodelay's scope defect: initiators read
+// them from [DEFAULT] only, and an acceptor's first session on a port decided for the rest (#170).
+// Linux reports twice the size set, for its bookkeeping.
+TEST_CASE("SocketBufferSizeTests")
+{
+    SECTION("acceptorsRejectDisagreementOnAPort")
+    {
+        NullApplication application;
+        MemoryStoreFactory factory;
+        const int port = freePort();
+        for (const std::string &key : {"SocketSendBufferSize", "SocketReceiveBufferSize"})
+        {
+            INFO(key);
+            std::stringstream disagree(acceptorConfig(port, key + "=32768\n", ""));
+            SessionSettings conflicting(disagree);
+            {
+                SocketAcceptor acceptor(application, factory, conflicting);
+                CHECK_THROWS_AS(acceptor.start(), ConfigError);
+            }
+            {
+                ThreadedSocketAcceptor acceptor(application, factory, conflicting);
+                CHECK_THROWS_AS(acceptor.start(), ConfigError);
+            }
+        }
+
+        // Agreement on one port is fine.
+        std::stringstream agree(acceptorConfig(port, "SocketSendBufferSize=32768\n", "SocketSendBufferSize=32768\n"));
+        SessionSettings same(agree);
+        ThreadedSocketAcceptor acceptor(application, factory, same);
+        CHECK_NOTHROW(acceptor.start());
+        acceptor.stop();
+    }
+
+    SECTION("initiatorsReadTheSessionsSetting")
+    {
+        const std::string sizes = "SocketSendBufferSize=32768\nSocketReceiveBufferSize=49152\n";
+        for (const SocketOptions &options : {connectedSocketOptions<SocketInitiator>("", sizes),
+                                             connectedSocketOptions<ThreadedSocketInitiator>("", sizes)})
+        {
+            CHECK(options.sendBuffer == 2 * 32768);
+            CHECK(options.receiveBuffer == 2 * 49152);
+        }
+        // A session overrides [DEFAULT].
+        const SocketOptions overridden = connectedSocketOptions<ThreadedSocketInitiator>(
+            "SocketSendBufferSize=16384\n", "SocketSendBufferSize=32768\n");
+        CHECK(overridden.sendBuffer == 2 * 32768);
+    }
+
+    SECTION("acceptedSockets")
+    {
+        CHECK(acceptedSocketOptions<SocketAcceptor>("SocketSendBufferSize=32768\n").sendBuffer == 2 * 32768);
+        CHECK(acceptedSocketOptions<ThreadedSocketAcceptor>("SocketSendBufferSize=32768\n").sendBuffer == 2 * 32768);
+
+        // With no size set, an accepted socket is left to the kernel, which autotunes it. The threaded
+        // acceptors copied the listener's reported size on, which fixed the buffers at that size; the
+        // reactor never did, so the two now match.
+        const SocketOptions reactor = acceptedSocketOptions<SocketAcceptor>("");
+        const SocketOptions threaded = acceptedSocketOptions<ThreadedSocketAcceptor>("");
+        CHECK(threaded.sendBuffer == reactor.sendBuffer);
+        CHECK(threaded.receiveBuffer == reactor.receiveBuffer);
     }
 }

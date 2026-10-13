@@ -56,20 +56,14 @@ SocketInitiator::~SocketInitiator()
 
 void SocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(ConfigError)
 {
-    const Dictionary &dict = s.get();
-
-    // SocketNodelay is read from each session's settings when it connects (#150); check every value now.
+    // The socket options are read from each session's settings when it connects (#150, #170); check
+    // every value now.
     for (const SessionID &sessionID : s.getSessions())
     {
-        getSocketNoDelay(s.get(sessionID));
-    }
-    if (dict.has(SOCKET_SEND_BUFFER_SIZE))
-    {
-        m_sendBufSize = dict.getInt(SOCKET_SEND_BUFFER_SIZE);
-    }
-    if (dict.has(SOCKET_RECEIVE_BUFFER_SIZE))
-    {
-        m_rcvBufSize = dict.getInt(SOCKET_RECEIVE_BUFFER_SIZE);
+        const Dictionary &settings = s.get(sessionID);
+        getSocketNoDelay(settings);
+        getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
+        getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
     }
 }
 
@@ -144,8 +138,9 @@ void SocketInitiator::doConnect(const SessionID &s, const Dictionary &d)
         log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert(host.port) + " (Source " +
                      host.sourceAddress + ":" + IntConvertor::convert(host.sourcePort) +
                      ") ReconnectInterval=" + IntConvertor::convert(reconnectInterval(d)));
-        socket_handle result = m_connector.connect(host.address, host.port, getSocketNoDelay(d), m_sendBufSize,
-                                                   m_rcvBufSize, host.sourceAddress, host.sourcePort);
+        socket_handle result = m_connector.connect(
+            host.address, host.port, getSocketNoDelay(d), getSocketBufferSize(d, SOCKET_SEND_BUFFER_SIZE),
+            getSocketBufferSize(d, SOCKET_RECEIVE_BUFFER_SIZE), host.sourceAddress, host.sourcePort);
         setPending(s);
 
         m_pendingConnections[result] = new SocketConnection(*this, s, result, &m_connector.getMonitor());

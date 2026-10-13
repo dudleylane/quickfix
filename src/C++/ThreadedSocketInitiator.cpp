@@ -47,20 +47,14 @@ ThreadedSocketInitiator::~ThreadedSocketInitiator() { socket_term(); }
 
 void ThreadedSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(ConfigError)
 {
-    const Dictionary &dict = s.get();
-
-    // SocketNodelay is read from each session's settings when it connects (#150); check every value now.
+    // The socket options are read from each session's settings when it connects (#150, #170); check
+    // every value now.
     for (const SessionID &sessionID : s.getSessions())
     {
-        getSocketNoDelay(s.get(sessionID));
-    }
-    if (dict.has(SOCKET_SEND_BUFFER_SIZE))
-    {
-        m_sendBufSize = dict.getInt(SOCKET_SEND_BUFFER_SIZE);
-    }
-    if (dict.has(SOCKET_RECEIVE_BUFFER_SIZE))
-    {
-        m_rcvBufSize = dict.getInt(SOCKET_RECEIVE_BUFFER_SIZE);
+        const Dictionary &settings = s.get(sessionID);
+        getSocketNoDelay(settings);
+        getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
+        getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
     }
 }
 
@@ -149,13 +143,13 @@ void ThreadedSocketInitiator::doConnect(const SessionID &s, const Dictionary &d)
         {
             socket_setsockopt(socket, TCP_NODELAY);
         }
-        if (m_sendBufSize)
+        if (const int size = getSocketBufferSize(d, SOCKET_SEND_BUFFER_SIZE))
         {
-            socket_setsockopt(socket, SO_SNDBUF, m_sendBufSize);
+            socket_setsockopt(socket, SO_SNDBUF, size);
         }
-        if (m_rcvBufSize)
+        if (const int size = getSocketBufferSize(d, SOCKET_RECEIVE_BUFFER_SIZE))
         {
-            socket_setsockopt(socket, SO_RCVBUF, m_rcvBufSize);
+            socket_setsockopt(socket, SO_RCVBUF, size);
         }
 
         setPending(s);

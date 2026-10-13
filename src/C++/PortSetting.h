@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <tuple>
 #include <utility>
 
 namespace FIX
@@ -35,24 +36,51 @@ inline bool getSocketNoDelay(const Dictionary &settings)
     return settings.has(SOCKET_NODELAY) ? settings.getBool(SOCKET_NODELAY) : true;
 }
 
-/// An acceptor sets TCP_NODELAY on the listening socket of each SocketAcceptPort, and every connection
-/// accepted there inherits it, so the sessions sharing a port cannot differ. Reject a disagreement
-/// rather than let the first session on the port decide for the rest without a word (#150).
-inline void checkSocketNoDelayPerPort(const SessionSettings &sessionSettings)
+/// Reads SocketSendBufferSize or SocketReceiveBufferSize: 0, the default, leaves the kernel's size.
+inline int getSocketBufferSize(const Dictionary &settings, const std::string &key)
 {
-    std::map<std::uint16_t, std::pair<bool, SessionID>> byPort;
+    return settings.has(key) ? settings.getInt(key) : 0;
+}
+
+/// An acceptor sets TCP_NODELAY and the buffer sizes on the listening socket of each SocketAcceptPort,
+/// and every connection accepted there inherits them, so the sessions sharing a port cannot differ.
+/// Reject a disagreement rather than let the first session on the port decide for the rest without a
+/// word (#150, #170).
+inline void checkSocketOptionsPerPort(const SessionSettings &sessionSettings)
+{
+    struct PortOptions
+    {
+        SessionID first;
+        std::string noDelay;
+        std::string sendBufferSize;
+        std::string receiveBufferSize;
+    };
+    std::map<std::uint16_t, PortOptions> byPort;
     for (const SessionID &sessionID : sessionSettings.getSessions())
     {
         const Dictionary &settings = sessionSettings.get(sessionID);
         const std::uint16_t port = getPortSetting(settings, SOCKET_ACCEPT_PORT, true);
-        const bool noDelay = getSocketNoDelay(settings);
-        const auto [it, inserted] = byPort.try_emplace(port, noDelay, sessionID);
-        if (!inserted && it->second.first != noDelay)
+        const PortOptions options{sessionID, getSocketNoDelay(settings) ? "Y" : "N",
+                                  std::to_string(getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE)),
+                                  std::to_string(getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE))};
+        const auto [it, inserted] = byPort.try_emplace(port, options);
+        if (inserted)
         {
-            throw ConfigError(std::string(SOCKET_NODELAY) + " must be the same for every session on port " +
-                              std::to_string(port) + ": " + it->second.second.toString() + " has " +
-                              (it->second.first ? "Y" : "N") + ", " + sessionID.toString() + " has " +
-                              (noDelay ? "Y" : "N"));
+            continue;
+        }
+        const PortOptions &first = it->second;
+        for (const auto &[key, mine, theirs] :
+             {std::tuple<const char *, const std::string &, const std::string &>{SOCKET_NODELAY, options.noDelay,
+                                                                                 first.noDelay},
+              {SOCKET_SEND_BUFFER_SIZE, options.sendBufferSize, first.sendBufferSize},
+              {SOCKET_RECEIVE_BUFFER_SIZE, options.receiveBufferSize, first.receiveBufferSize}})
+        {
+            if (mine != theirs)
+            {
+                throw ConfigError(std::string(key) + " must be the same for every session on port " +
+                                  std::to_string(port) + ": " + first.first.toString() + " has " + theirs + ", " +
+                                  sessionID.toString() + " has " + mine);
+            }
         }
     }
 }

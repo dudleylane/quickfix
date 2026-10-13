@@ -68,9 +68,9 @@ private:
     // so the layout does not change before the next soname bump.
     time_t m_lastConnect;
     int m_reconnectInterval;
-    bool m_noDelay; // unused since #150, which reads SocketNodelay per session; kept for the class layout
-    int m_sendBufSize;
-    int m_rcvBufSize;
+    bool m_noDelay;    // unused since #150, which reads SocketNodelay per session; kept for the class layout
+    int m_sendBufSize; // unused since #170, which reads it per session; kept for the class layout
+    int m_rcvBufSize;  // unused since #170, which reads it per session; kept for the class layout
 };
 /*! @} */
 } // namespace FIX
