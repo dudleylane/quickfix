@@ -1,3 +1,65 @@
+22.3.0
+------
+
+The soname stays libquickfix.so.22: no exported class changed layout (a sizeof/alignof probe of
+39 classes against 22.2.0's headers is identical) and no symbol was removed. A program built
+against 22.x needs nothing; one built against 22.3.0's headers needs a 22.3.0 library. Rebuild
+the Python and Ruby modules from this release: it carries a security fix for the Ruby binding.
+
+Security, in the Ruby binding (GHSA-9vhj-6q2g-9mj3, high): the second exception the engine
+expects from toApp, fromAdmin or fromApp -- RejectLogon, DoNotSend, FieldNotFound,
+IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType -- unwound through the engine's C++
+frames, killing the transport's thread or crashing the process. A Ruby acceptor that refuses Logons
+with RejectLogon could be stopped by any peer that reached its port. Inherited from upstream; every
+earlier release is affected. C++ and Python applications are not.
+
+INCOMPATIBLE, TLS: the default SSLProtocol is now TLS 1.2 and later; it was every protocol but
+SSLv2. A counterparty that only speaks TLS 1.0 or 1.1 can no longer connect unless the session sets
+SSLProtocol=all (or names the protocols it needs) (#143).
+
+INCOMPATIBLE, Python binding: DataDictionary.getFieldName, getFieldTag, getValueName,
+getNameValue and getGroup return None for a miss where they returned False, and an out-parameter
+of the wrong type raises TypeError where it aborted the interpreter; reference leaks in the
+string and int out-parameters are fixed (#124).
+
+INCOMPATIBLE, packaging and API: PUGIXML_DOMDocument.h is no longer installed -- it needs
+pugixml.hpp, which never was (#136). strptime.h, the FindSharedPtr and FindUniquePtr CMake modules,
+the HAVE_CXX17, HAVE_STD_SHARED_PTR and STATIC_RUNTIME options and the unused SEND_RESETSEQNUMFLAG
+setting constant are removed (#138, #143). Installed database headers no longer need HAVE_MYSQL,
+HAVE_POSTGRESQL or HAVE_ODBC defined by hand: QuickFIXBuildConfig.h records them, and a mismatch
+is a clear #error (#137).
+
+Fixed, in the engine: SSLSocketAcceptor and SSLSocketInitiator could not use a port above 32767
+since 22.0.0 -- SocketServer kept the port in a short (#119). ReconnectInterval set the interval
+for every session of an initiator, where each session's own value now applies; a non-numeric value
+is a ConfigError when the initiator is made, and the interval runs on a steady clock (#125). A
+threaded initiator's connection thread could use the initiator after stop() had let it be destroyed
+(38f77954). FileStore read an over-long or corrupt .session file onto the stack; it now reports a
+ConfigError naming the file (#126). A FieldMap or Group copy that failed part way leaked the groups
+it had already cloned (#131). ut builds again with HAVE_SSL=OFF (#120).
+
+Fixed, in the bindings: DataDictionary.getGroup for a group that does not exist crashed both
+bindings, and leaked otherwise (#121). An exception escaping a Python callback crashed the reactor
+transports; it now prints and exits with status 1, honouring SystemExit's code (#122). The
+threaded SSL transports are wrapped in both bindings, and Ruby has the plain class names Python has
+(#139). Ruby: a transport whose start failed crashed the program at exit (#123), and Thread#kill
+landing on a transport's thread while it ran a callback ended the process with status 1, where it
+now stops the transport and ends the thread (#147). src/python/swig.sh accepts a SWIG whose mutex
+is already correct (#117).
+
+Packaging: -DHAVE_RUBY=ON builds the Ruby module with CMake into lib/ruby and installs it into
+Ruby's site directories under the prefix; make_ruby.sh and install.sh remain (#118).
+
+Tests and tools: src/at.py and src/at.rb match at.cpp and pass all 470 acceptance definitions;
+runat.sh takes AT and DEFINITIONS, at -i runs an initiator against the client definitions
+(runat_client.sh), and test/runexamples.sh drives tradeclient against every acceptor example (#114,
+#127, #146). New tests cover AllowedRemoteAddresses, the SSL initiators' hostname check, the TLS
+setup deadline, failed accepts, slow first messages and the session settings (#128-#131). CI now
+also builds without SSL and with the TBB allocator, checks the generated code against spec/, builds
+C++ consumers against the staged install, runs the binding suites under ASan + UBSan, the harness's
+own tests and the examples, and calls a noisy pt comparison inconclusive (#114-#116, #132-#136).
+The README, building, dependencies, configuration and CONTRIBUTING pages were corrected (#140-#145).
+
 22.2.0
 ------
 
