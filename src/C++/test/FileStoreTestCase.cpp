@@ -22,6 +22,7 @@
 #include "MessageStoreTestCase.h"
 #include "TestHelper.h"
 #include <FileStore.h>
+#include <vector>
 
 #include "catch_amalgamated.hpp"
 
@@ -251,4 +252,37 @@ TEST_CASE("FileStoreCorruptionTests")
     }
 
     deleteSession("CORRUPT", "TEST");
+}
+
+// set() writes through the files' descriptors and get() reads through their streams (#151): writes
+// after reads must still append, reads must see them, and a reopened store must find everything.
+TEST_CASE("FileStoreInterleavedTests")
+{
+    SessionID sessionID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST"));
+    {
+        FileStore store(UtcTimeStamp::now(), "store", sessionID);
+        store.reset(UtcTimeStamp::now());
+        auto one = [&store](SEQNUM seqNum)
+        {
+            std::vector<std::string> messages;
+            store.get(seqNum, seqNum, messages);
+            return messages.size() == 1 ? messages.front() : std::string("<missing>");
+        };
+        CHECK(store.set(1, "first"));
+        CHECK(store.set(2, "second message"));
+        CHECK(one(1) == "first");
+        CHECK(store.set(3, "third"));
+        CHECK(one(3) == "third");
+        CHECK(one(2) == "second message");
+        store.setNextSenderMsgSeqNum(12345678901ULL);
+        store.incrNextTargetMsgSeqNum();
+        store.incrNextTargetMsgSeqNum();
+    }
+    FileStore reopened(UtcTimeStamp::now(), "store", sessionID);
+    std::vector<std::string> messages;
+    reopened.get(1, 3, messages);
+    CHECK(messages == std::vector<std::string>{"first", "second message", "third"});
+    CHECK(reopened.getNextSenderMsgSeqNum() == 12345678901ULL);
+    CHECK(reopened.getNextTargetMsgSeqNum() == 3);
+    reopened.reset(UtcTimeStamp::now());
 }

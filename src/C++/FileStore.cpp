@@ -23,10 +23,13 @@
 #include "Parser.h"
 #include "SessionID.h"
 #include "Utility.h"
+#include <cerrno>
 #include <cstdint>
+#include <fcntl.h>
 #include <fstream>
 #include <inttypes.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #ifdef _MSC_VER
 #define FILE_SEEK _fseeki64
@@ -44,6 +47,31 @@ auto const seqNumFileFormat = "%" + std::to_string(std::numeric_limits<uint64_t>
 auto const seqNumPairFileFormat = (seqNumFileFormat + " : " + seqNumFileFormat);
 
 auto constexpr sizeOf64BitSeqNumFile = 43;
+
+void writeAll(int fd, const char *data, std::size_t size, const std::string &fileName)
+{
+    while (size > 0)
+    {
+        const ssize_t written = ::write(fd, data, size);
+        if (written < 0 && errno == EINTR)
+        {
+            continue;
+        }
+        if (written <= 0)
+        {
+            throw FIX::IOException("Unable to write to file " + fileName);
+        }
+        data += written;
+        size -= static_cast<std::size_t>(written);
+    }
+}
+
+// Writes to the body and header files go to the end whatever the stream's read position.
+void appendOnly(FILE *file)
+{
+    const int fd = fileno(file);
+    ::fcntl(fd, F_SETFL, ::fcntl(fd, F_GETFL) | O_APPEND);
+}
 } // namespace
 namespace FIX
 {
@@ -156,6 +184,8 @@ void FileStore::open(bool deleteFile)
     {
         throw ConfigError("Could not open header file: " + m_headerFileName + " " + error_strerror());
     }
+    appendOnly(m_msgFile);
+    appendOnly(m_headerFile);
 
     m_seqNumsFile = file_fopen(m_seqNumsFileName.c_str(), "r+");
     if (!m_seqNumsFile)
@@ -289,44 +319,26 @@ void FileStoreFactory::destroy(MessageStore *pStore) { delete pStore; }
 
 bool FileStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException)
 {
-    if (FILE_SEEK(m_msgFile, 0, SEEK_END))
+    // The body and header files are written through their descriptors, in append mode, and the stdio
+    // streams are kept for reading. Seeking both streams to the end, telling, printing and flushing each
+    // took about five syscalls per message; this takes three (#151).
+    const off_t offset = ::lseek(fileno(m_msgFile), 0, SEEK_END);
+    if (offset < 0)
     {
         throw IOException("Cannot seek to end of " + m_msgFileName);
     }
-    if (FILE_SEEK(m_headerFile, 0, SEEK_END))
-    {
-        throw IOException("Cannot seek to end of " + m_headerFileName);
-    }
+    writeAll(fileno(m_msgFile), msg.data(), msg.size(), m_msgFileName);
 
-    int64_t offset = FILE_TELL(m_msgFile);
-    if (offset < 0)
-    {
-        throw IOException("Unable to get file pointer position from " + m_msgFileName);
-    }
-    std::size_t size = msg.size();
+    char header[96];
+    const int length = snprintf(header, sizeof(header), "%" SCNu64 ",%" PRId64 ",%zu ", msgSeqNum,
+                                static_cast<int64_t>(offset), msg.size());
+    writeAll(fileno(m_headerFile), header, static_cast<std::size_t>(length), m_headerFileName);
 
-    if (fprintf(m_headerFile, "%" SCNu64 ",%" PRId64 ",%zu ", msgSeqNum, offset, size) < 0)
-    {
-        throw IOException("Unable to write to file " + m_headerFileName);
-    }
     std::pair<NumToOffset::iterator, bool> it =
-        m_offsets.insert(NumToOffset::value_type(msgSeqNum, std::make_pair(offset, size)));
+        m_offsets.insert(NumToOffset::value_type(msgSeqNum, std::make_pair(offset, msg.size())));
     if (it.second == false)
     {
-        it.first->second = std::make_pair(offset, size);
-    }
-    fwrite(msg.c_str(), sizeof(char), msg.size(), m_msgFile);
-    if (ferror(m_msgFile))
-    {
-        throw IOException("Unable to write to file " + m_msgFileName);
-    }
-    if (fflush(m_msgFile) == EOF)
-    {
-        throw IOException("Unable to flush file " + m_msgFileName);
-    }
-    if (fflush(m_headerFile) == EOF)
-    {
-        throw IOException("Unable to flush file " + m_headerFileName);
+        it.first->second = std::make_pair(offset, msg.size());
     }
     return true;
 }
@@ -405,15 +417,13 @@ void FileStore::refresh() EXCEPT(IOException)
 
 void FileStore::setSeqNum()
 {
-    rewind(m_seqNumsFile);
-    fprintf(m_seqNumsFile, seqNumPairFileFormat.c_str(), getNextSenderMsgSeqNum(), getNextTargetMsgSeqNum());
-    if (ferror(m_seqNumsFile))
+    // Fixed width, so one positioned write replaces the record in place (#151).
+    char record[64];
+    const int length = snprintf(record, sizeof(record), seqNumPairFileFormat.c_str(), getNextSenderMsgSeqNum(),
+                                getNextTargetMsgSeqNum());
+    if (::pwrite(fileno(m_seqNumsFile), record, static_cast<std::size_t>(length), 0) != length)
     {
         throw IOException("Unable to write to file " + m_seqNumsFileName);
-    }
-    if (fflush(m_seqNumsFile))
-    {
-        throw IOException("Unable to flush file " + m_seqNumsFileName);
     }
 }
 
