@@ -64,8 +64,8 @@ private:
     SocketConnector m_connector;
     SocketConnections m_pendingConnections;
     SocketConnections m_connections;
-    // Unused since #125: each session's reconnect timing is in Initiator. Kept
-    // so the layout does not change before the next soname bump.
+    // The second of the last timer sweep (#157). Named for its use before #125, which moved each
+    // session's reconnect timing to Initiator; renaming it would change nothing but the name.
     time_t m_lastConnect;
     int m_reconnectInterval;
     bool m_noDelay;    // unused since #150, which reads SocketNodelay per session; kept for the class layout

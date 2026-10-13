@@ -76,7 +76,15 @@ void SocketInitiator::onStart()
     while (!isStopped())
     {
         m_connector.block(*this, false, 1.0);
-        onTimeout(m_connector);
+        // Reconnects and session timers have one-second resolution, so sweep once a wall-clock
+        // second rather than after every wakeup (#157). block() also sweeps when it waits a full
+        // second with nothing ready.
+        const time_t now = ::time(0);
+        if (now != m_lastConnect)
+        {
+            m_lastConnect = now;
+            onTimeout(m_connector);
+        }
     }
 
     time_t start = 0;
