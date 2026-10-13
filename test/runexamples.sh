@@ -8,8 +8,9 @@
 #   test/runexamples.sh [CASE...]     (default: every case; run from anywhere)
 #
 # Needs a build with the examples, -DHAVE_SSL=ON, -DHAVE_PYTHON3=ON for the
-# Python case and src/ruby/make_ruby.sh for the Ruby one. Each case runs in a
-# fresh copy of bin/cfg, so no store survives from an earlier run.
+# Python case and -DHAVE_RUBY=ON (lib/ruby, preferred) or src/ruby/make_ruby.sh
+# for the Ruby one. Each case runs in a fresh copy of bin/cfg, so no store
+# survives from an earlier run.
 root=$(cd "$(dirname "$0")/.." && pwd)
 lib=$root/lib
 cases=${*:-executor executor-ssl executor-ssl-st executor-python executor-ruby ordermatch}
@@ -31,7 +32,7 @@ for case in $cases; do
         executor-ssl)    acceptor=("$lib/executor" cfg/executor.cfg SSL); clientssl=SSL ;;
         executor-ssl-st) acceptor=("$lib/executor" cfg/executor.cfg SSL-ST); clientssl=SSL-ST ;;
         executor-python) acceptor=(env PYTHONPATH="$lib:$root/src/python" python3 "$root/examples/executor/python/executor.py" cfg/executor.cfg) ;;
-        executor-ruby)   acceptor=(ruby -I "$root/src/ruby" "$root/examples/executor/ruby/executor.rb" cfg/executor.cfg) ;;
+        executor-ruby)   acceptor=(ruby -I "$root/lib/ruby" -I "$root/src/ruby" "$root/examples/executor/ruby/executor.rb" cfg/executor.cfg) ;;
         ordermatch)      acceptor=("$lib/ordermatch" cfg/ordermatch.cfg); port=5002 target=ORDERMATCH versions=3 ;;  # orders are FIX 4.2 only (Application.h)
         *) echo "unknown case: $case"; failed=1; continue ;;
     esac
