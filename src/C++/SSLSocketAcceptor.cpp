@@ -524,6 +524,9 @@ void SSLSocketAcceptor::expireSetup()
     }
     m_lastSetupSweep = now;
 
+    // Every connection's session timer runs here, once a wall-clock second.
+    onTimeout(*m_pServer);
+
     for (PendingHandshakes::iterator i = m_pendingHandshakes.begin(); i != m_pendingHandshakes.end();)
     {
         PendingHandshakes::iterator pending = i++;

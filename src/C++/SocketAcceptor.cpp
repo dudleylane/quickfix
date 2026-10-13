@@ -222,6 +222,9 @@ void SocketAcceptor::expirePendingReads()
     }
     m_lastPreSessionSweep = now;
 
+    // Every connection's session timer runs here, once a wall-clock second.
+    onTimeout(*m_pServer);
+
     for (const SocketConnections::value_type &entry : m_connections)
     {
         // A connection is past setup once its session has received a logon. One

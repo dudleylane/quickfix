@@ -24,12 +24,23 @@
 #include "SocketMonitor.h"
 #include "Utility.h"
 #include <algorithm>
+#include <chrono>
 #include <exception>
 #include <iostream>
 #include <set>
 
 namespace FIX
 {
+namespace
+{
+clock_t monotonicMillis()
+{
+    return static_cast<clock_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
+            .count());
+}
+} // namespace
+
 SocketMonitor::SocketMonitor(int timeout) : m_timeout(timeout)
 {
     socket_init();
@@ -41,7 +52,7 @@ SocketMonitor::SocketMonitor(int timeout) : m_timeout(timeout)
     socket_setnonblock(m_interrupt);
     m_readSockets.insert(m_interrupt);
 
-    m_ticks = clock();
+    m_ticks = monotonicMillis();
 }
 
 SocketMonitor::~SocketMonitor()
@@ -168,17 +179,16 @@ inline int SocketMonitor::getTimeval(bool poll, double timeout)
         return 0;
     }
 
-    double elapsed = (double)(clock() - m_ticks) / (double)CLOCKS_PER_SEC;
-    if (elapsed >= timeout || elapsed == 0.0)
+    // m_ticks holds milliseconds on a monotonic clock.
+    const clock_t now = monotonicMillis();
+    const clock_t period = static_cast<clock_t>(timeout * 1000);
+    const clock_t elapsed = now - m_ticks;
+    if (elapsed >= period || elapsed < 0)
     {
-        m_ticks = clock();
-        return (timeout * 1000);
+        m_ticks = now;
+        return static_cast<int>(period);
     }
-    else
-    {
-        return ((timeout - elapsed) * 1000);
-    }
-    return (timeout * 1000);
+    return static_cast<int>(period - elapsed);
 }
 
 bool SocketMonitor::sleepIfEmpty(bool poll)
