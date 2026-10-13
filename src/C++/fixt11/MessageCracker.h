@@ -25,6 +25,7 @@
 
 #include "../SessionID.h"
 #include "../Exceptions.h"
+#include <string_view>
 
 #include "../fixt11/Message.h"
 
@@ -73,36 +74,42 @@ namespace FIXT11
  virtual void onMessage( XMLnonFIX&, const FIX::SessionID& ) {} 
 
 public:
+  // Dispatch switches on the MsgType's characters; every standard MsgType has one or two. A longer one
+  // from a custom dictionary is compared as a string after the switch (#159).
+  static constexpr unsigned msgTypeKey( std::string_view value )
+  {
+    return value.size() == 1 ? static_cast<unsigned char>( value[0] )
+         : value.size() == 2 ? static_cast<unsigned char>( value[0] ) | ( static_cast<unsigned char>( value[1] ) << 8 )
+         : 0;
+  }
+
   void crack( const Message& message, 
               const FIX::SessionID& sessionID )
   {
     const std::string & msgTypeValue 
       = message.getHeader().getField( FIX::FIELD::MsgType );
     
-    
-    if( msgTypeValue == "0" )
+    switch( msgTypeKey( msgTypeValue ) )
+    {
+    case msgTypeKey( "0" ):
       return onMessage( (const Heartbeat&)message, sessionID );
-    
-    if( msgTypeValue == "1" )
+    case msgTypeKey( "1" ):
       return onMessage( (const TestRequest&)message, sessionID );
-    
-    if( msgTypeValue == "2" )
+    case msgTypeKey( "2" ):
       return onMessage( (const ResendRequest&)message, sessionID );
-    
-    if( msgTypeValue == "3" )
+    case msgTypeKey( "3" ):
       return onMessage( (const Reject&)message, sessionID );
-    
-    if( msgTypeValue == "4" )
+    case msgTypeKey( "4" ):
       return onMessage( (const SequenceReset&)message, sessionID );
-    
-    if( msgTypeValue == "5" )
+    case msgTypeKey( "5" ):
       return onMessage( (const Logout&)message, sessionID );
-    
-    if( msgTypeValue == "A" )
+    case msgTypeKey( "A" ):
       return onMessage( (const Logon&)message, sessionID );
-    
-    if( msgTypeValue == "n" )
+    case msgTypeKey( "n" ):
       return onMessage( (const XMLnonFIX&)message, sessionID );
+    default:
+      break;
+    }
     
     return onMessage( message, sessionID );
   }
@@ -113,30 +120,27 @@ void crack( Message& message,
     const std::string & msgTypeValue 
       = message.getHeader().getField( FIX::FIELD::MsgType );
     
-    
-    if( msgTypeValue == "0" )
+    switch( msgTypeKey( msgTypeValue ) )
+    {
+    case msgTypeKey( "0" ):
       return onMessage( (Heartbeat&)message, sessionID );
-    
-    if( msgTypeValue == "1" )
+    case msgTypeKey( "1" ):
       return onMessage( (TestRequest&)message, sessionID );
-    
-    if( msgTypeValue == "2" )
+    case msgTypeKey( "2" ):
       return onMessage( (ResendRequest&)message, sessionID );
-    
-    if( msgTypeValue == "3" )
+    case msgTypeKey( "3" ):
       return onMessage( (Reject&)message, sessionID );
-    
-    if( msgTypeValue == "4" )
+    case msgTypeKey( "4" ):
       return onMessage( (SequenceReset&)message, sessionID );
-    
-    if( msgTypeValue == "5" )
+    case msgTypeKey( "5" ):
       return onMessage( (Logout&)message, sessionID );
-    
-    if( msgTypeValue == "A" )
+    case msgTypeKey( "A" ):
       return onMessage( (Logon&)message, sessionID );
-    
-    if( msgTypeValue == "n" )
+    case msgTypeKey( "n" ):
       return onMessage( (XMLnonFIX&)message, sessionID );
+    default:
+      break;
+    }
     
     return onMessage( message, sessionID );
   }

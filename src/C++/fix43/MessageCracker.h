@@ -25,6 +25,7 @@
 
 #include "../SessionID.h"
 #include "../Exceptions.h"
+#include <string_view>
 
 #include "../fix43/Message.h"
 
@@ -313,216 +314,162 @@ namespace FIX43
  virtual void onMessage( QuoteStatusReport&, const FIX::SessionID& ) {} 
 
 public:
+  // Dispatch switches on the MsgType's characters; every standard MsgType has one or two. A longer one
+  // from a custom dictionary is compared as a string after the switch (#159).
+  static constexpr unsigned msgTypeKey( std::string_view value )
+  {
+    return value.size() == 1 ? static_cast<unsigned char>( value[0] )
+         : value.size() == 2 ? static_cast<unsigned char>( value[0] ) | ( static_cast<unsigned char>( value[1] ) << 8 )
+         : 0;
+  }
+
   void crack( const Message& message, 
               const FIX::SessionID& sessionID )
   {
     const std::string & msgTypeValue 
       = message.getHeader().getField( FIX::FIELD::MsgType );
     
-    
-    if( msgTypeValue == "0" )
+    switch( msgTypeKey( msgTypeValue ) )
+    {
+    case msgTypeKey( "0" ):
       return onMessage( (const Heartbeat&)message, sessionID );
-    
-    if( msgTypeValue == "1" )
+    case msgTypeKey( "1" ):
       return onMessage( (const TestRequest&)message, sessionID );
-    
-    if( msgTypeValue == "2" )
+    case msgTypeKey( "2" ):
       return onMessage( (const ResendRequest&)message, sessionID );
-    
-    if( msgTypeValue == "3" )
+    case msgTypeKey( "3" ):
       return onMessage( (const Reject&)message, sessionID );
-    
-    if( msgTypeValue == "4" )
+    case msgTypeKey( "4" ):
       return onMessage( (const SequenceReset&)message, sessionID );
-    
-    if( msgTypeValue == "5" )
+    case msgTypeKey( "5" ):
       return onMessage( (const Logout&)message, sessionID );
-    
-    if( msgTypeValue == "6" )
+    case msgTypeKey( "6" ):
       return onMessage( (const IOI&)message, sessionID );
-    
-    if( msgTypeValue == "7" )
+    case msgTypeKey( "7" ):
       return onMessage( (const Advertisement&)message, sessionID );
-    
-    if( msgTypeValue == "8" )
+    case msgTypeKey( "8" ):
       return onMessage( (const ExecutionReport&)message, sessionID );
-    
-    if( msgTypeValue == "9" )
+    case msgTypeKey( "9" ):
       return onMessage( (const OrderCancelReject&)message, sessionID );
-    
-    if( msgTypeValue == "A" )
+    case msgTypeKey( "A" ):
       return onMessage( (const Logon&)message, sessionID );
-    
-    if( msgTypeValue == "B" )
+    case msgTypeKey( "B" ):
       return onMessage( (const News&)message, sessionID );
-    
-    if( msgTypeValue == "C" )
+    case msgTypeKey( "C" ):
       return onMessage( (const Email&)message, sessionID );
-    
-    if( msgTypeValue == "D" )
+    case msgTypeKey( "D" ):
       return onMessage( (const NewOrderSingle&)message, sessionID );
-    
-    if( msgTypeValue == "E" )
+    case msgTypeKey( "E" ):
       return onMessage( (const NewOrderList&)message, sessionID );
-    
-    if( msgTypeValue == "F" )
+    case msgTypeKey( "F" ):
       return onMessage( (const OrderCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "G" )
+    case msgTypeKey( "G" ):
       return onMessage( (const OrderCancelReplaceRequest&)message, sessionID );
-    
-    if( msgTypeValue == "H" )
+    case msgTypeKey( "H" ):
       return onMessage( (const OrderStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "J" )
+    case msgTypeKey( "J" ):
       return onMessage( (const Allocation&)message, sessionID );
-    
-    if( msgTypeValue == "K" )
+    case msgTypeKey( "K" ):
       return onMessage( (const ListCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "L" )
+    case msgTypeKey( "L" ):
       return onMessage( (const ListExecute&)message, sessionID );
-    
-    if( msgTypeValue == "M" )
+    case msgTypeKey( "M" ):
       return onMessage( (const ListStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "N" )
+    case msgTypeKey( "N" ):
       return onMessage( (const ListStatus&)message, sessionID );
-    
-    if( msgTypeValue == "P" )
+    case msgTypeKey( "P" ):
       return onMessage( (const AllocationAck&)message, sessionID );
-    
-    if( msgTypeValue == "Q" )
+    case msgTypeKey( "Q" ):
       return onMessage( (const DontKnowTrade&)message, sessionID );
-    
-    if( msgTypeValue == "R" )
+    case msgTypeKey( "R" ):
       return onMessage( (const QuoteRequest&)message, sessionID );
-    
-    if( msgTypeValue == "S" )
+    case msgTypeKey( "S" ):
       return onMessage( (const Quote&)message, sessionID );
-    
-    if( msgTypeValue == "T" )
+    case msgTypeKey( "T" ):
       return onMessage( (const SettlementInstructions&)message, sessionID );
-    
-    if( msgTypeValue == "V" )
+    case msgTypeKey( "V" ):
       return onMessage( (const MarketDataRequest&)message, sessionID );
-    
-    if( msgTypeValue == "W" )
+    case msgTypeKey( "W" ):
       return onMessage( (const MarketDataSnapshotFullRefresh&)message, sessionID );
-    
-    if( msgTypeValue == "X" )
+    case msgTypeKey( "X" ):
       return onMessage( (const MarketDataIncrementalRefresh&)message, sessionID );
-    
-    if( msgTypeValue == "Y" )
+    case msgTypeKey( "Y" ):
       return onMessage( (const MarketDataRequestReject&)message, sessionID );
-    
-    if( msgTypeValue == "Z" )
+    case msgTypeKey( "Z" ):
       return onMessage( (const QuoteCancel&)message, sessionID );
-    
-    if( msgTypeValue == "a" )
+    case msgTypeKey( "a" ):
       return onMessage( (const QuoteStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "b" )
+    case msgTypeKey( "b" ):
       return onMessage( (const MassQuoteAcknowledgement&)message, sessionID );
-    
-    if( msgTypeValue == "c" )
+    case msgTypeKey( "c" ):
       return onMessage( (const SecurityDefinitionRequest&)message, sessionID );
-    
-    if( msgTypeValue == "d" )
+    case msgTypeKey( "d" ):
       return onMessage( (const SecurityDefinition&)message, sessionID );
-    
-    if( msgTypeValue == "e" )
+    case msgTypeKey( "e" ):
       return onMessage( (const SecurityStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "f" )
+    case msgTypeKey( "f" ):
       return onMessage( (const SecurityStatus&)message, sessionID );
-    
-    if( msgTypeValue == "g" )
+    case msgTypeKey( "g" ):
       return onMessage( (const TradingSessionStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "h" )
+    case msgTypeKey( "h" ):
       return onMessage( (const TradingSessionStatus&)message, sessionID );
-    
-    if( msgTypeValue == "i" )
+    case msgTypeKey( "i" ):
       return onMessage( (const MassQuote&)message, sessionID );
-    
-    if( msgTypeValue == "j" )
+    case msgTypeKey( "j" ):
       return onMessage( (const BusinessMessageReject&)message, sessionID );
-    
-    if( msgTypeValue == "k" )
+    case msgTypeKey( "k" ):
       return onMessage( (const BidRequest&)message, sessionID );
-    
-    if( msgTypeValue == "l" )
+    case msgTypeKey( "l" ):
       return onMessage( (const BidResponse&)message, sessionID );
-    
-    if( msgTypeValue == "m" )
+    case msgTypeKey( "m" ):
       return onMessage( (const ListStrikePrice&)message, sessionID );
-    
-    if( msgTypeValue == "n" )
+    case msgTypeKey( "n" ):
       return onMessage( (const XMLnonFIX&)message, sessionID );
-    
-    if( msgTypeValue == "o" )
+    case msgTypeKey( "o" ):
       return onMessage( (const RegistrationInstructions&)message, sessionID );
-    
-    if( msgTypeValue == "p" )
+    case msgTypeKey( "p" ):
       return onMessage( (const RegistrationInstructionsResponse&)message, sessionID );
-    
-    if( msgTypeValue == "q" )
+    case msgTypeKey( "q" ):
       return onMessage( (const OrderMassCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "r" )
+    case msgTypeKey( "r" ):
       return onMessage( (const OrderMassCancelReport&)message, sessionID );
-    
-    if( msgTypeValue == "s" )
+    case msgTypeKey( "s" ):
       return onMessage( (const NewOrderCross&)message, sessionID );
-    
-    if( msgTypeValue == "t" )
+    case msgTypeKey( "t" ):
       return onMessage( (const CrossOrderCancelReplaceRequest&)message, sessionID );
-    
-    if( msgTypeValue == "u" )
+    case msgTypeKey( "u" ):
       return onMessage( (const CrossOrderCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "v" )
+    case msgTypeKey( "v" ):
       return onMessage( (const SecurityTypeRequest&)message, sessionID );
-    
-    if( msgTypeValue == "w" )
+    case msgTypeKey( "w" ):
       return onMessage( (const SecurityTypes&)message, sessionID );
-    
-    if( msgTypeValue == "x" )
+    case msgTypeKey( "x" ):
       return onMessage( (const SecurityListRequest&)message, sessionID );
-    
-    if( msgTypeValue == "y" )
+    case msgTypeKey( "y" ):
       return onMessage( (const SecurityList&)message, sessionID );
-    
-    if( msgTypeValue == "z" )
+    case msgTypeKey( "z" ):
       return onMessage( (const DerivativeSecurityListRequest&)message, sessionID );
-    
-    if( msgTypeValue == "AA" )
+    case msgTypeKey( "AA" ):
       return onMessage( (const DerivativeSecurityList&)message, sessionID );
-    
-    if( msgTypeValue == "AB" )
+    case msgTypeKey( "AB" ):
       return onMessage( (const NewOrderMultileg&)message, sessionID );
-    
-    if( msgTypeValue == "AC" )
+    case msgTypeKey( "AC" ):
       return onMessage( (const MultilegOrderCancelReplaceRequest&)message, sessionID );
-    
-    if( msgTypeValue == "AD" )
+    case msgTypeKey( "AD" ):
       return onMessage( (const TradeCaptureReportRequest&)message, sessionID );
-    
-    if( msgTypeValue == "AE" )
+    case msgTypeKey( "AE" ):
       return onMessage( (const TradeCaptureReport&)message, sessionID );
-    
-    if( msgTypeValue == "AF" )
+    case msgTypeKey( "AF" ):
       return onMessage( (const OrderMassStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "AG" )
+    case msgTypeKey( "AG" ):
       return onMessage( (const QuoteRequestReject&)message, sessionID );
-    
-    if( msgTypeValue == "AH" )
+    case msgTypeKey( "AH" ):
       return onMessage( (const RFQRequest&)message, sessionID );
-    
-    if( msgTypeValue == "AI" )
+    case msgTypeKey( "AI" ):
       return onMessage( (const QuoteStatusReport&)message, sessionID );
+    default:
+      break;
+    }
     
     return onMessage( message, sessionID );
   }
@@ -533,210 +480,147 @@ void crack( Message& message,
     const std::string & msgTypeValue 
       = message.getHeader().getField( FIX::FIELD::MsgType );
     
-    
-    if( msgTypeValue == "0" )
+    switch( msgTypeKey( msgTypeValue ) )
+    {
+    case msgTypeKey( "0" ):
       return onMessage( (Heartbeat&)message, sessionID );
-    
-    if( msgTypeValue == "1" )
+    case msgTypeKey( "1" ):
       return onMessage( (TestRequest&)message, sessionID );
-    
-    if( msgTypeValue == "2" )
+    case msgTypeKey( "2" ):
       return onMessage( (ResendRequest&)message, sessionID );
-    
-    if( msgTypeValue == "3" )
+    case msgTypeKey( "3" ):
       return onMessage( (Reject&)message, sessionID );
-    
-    if( msgTypeValue == "4" )
+    case msgTypeKey( "4" ):
       return onMessage( (SequenceReset&)message, sessionID );
-    
-    if( msgTypeValue == "5" )
+    case msgTypeKey( "5" ):
       return onMessage( (Logout&)message, sessionID );
-    
-    if( msgTypeValue == "6" )
+    case msgTypeKey( "6" ):
       return onMessage( (IOI&)message, sessionID );
-    
-    if( msgTypeValue == "7" )
+    case msgTypeKey( "7" ):
       return onMessage( (Advertisement&)message, sessionID );
-    
-    if( msgTypeValue == "8" )
+    case msgTypeKey( "8" ):
       return onMessage( (ExecutionReport&)message, sessionID );
-    
-    if( msgTypeValue == "9" )
+    case msgTypeKey( "9" ):
       return onMessage( (OrderCancelReject&)message, sessionID );
-    
-    if( msgTypeValue == "A" )
+    case msgTypeKey( "A" ):
       return onMessage( (Logon&)message, sessionID );
-    
-    if( msgTypeValue == "B" )
+    case msgTypeKey( "B" ):
       return onMessage( (News&)message, sessionID );
-    
-    if( msgTypeValue == "C" )
+    case msgTypeKey( "C" ):
       return onMessage( (Email&)message, sessionID );
-    
-    if( msgTypeValue == "D" )
+    case msgTypeKey( "D" ):
       return onMessage( (NewOrderSingle&)message, sessionID );
-    
-    if( msgTypeValue == "E" )
+    case msgTypeKey( "E" ):
       return onMessage( (NewOrderList&)message, sessionID );
-    
-    if( msgTypeValue == "F" )
+    case msgTypeKey( "F" ):
       return onMessage( (OrderCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "G" )
+    case msgTypeKey( "G" ):
       return onMessage( (OrderCancelReplaceRequest&)message, sessionID );
-    
-    if( msgTypeValue == "H" )
+    case msgTypeKey( "H" ):
       return onMessage( (OrderStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "J" )
+    case msgTypeKey( "J" ):
       return onMessage( (Allocation&)message, sessionID );
-    
-    if( msgTypeValue == "K" )
+    case msgTypeKey( "K" ):
       return onMessage( (ListCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "L" )
+    case msgTypeKey( "L" ):
       return onMessage( (ListExecute&)message, sessionID );
-    
-    if( msgTypeValue == "M" )
+    case msgTypeKey( "M" ):
       return onMessage( (ListStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "N" )
+    case msgTypeKey( "N" ):
       return onMessage( (ListStatus&)message, sessionID );
-    
-    if( msgTypeValue == "P" )
+    case msgTypeKey( "P" ):
       return onMessage( (AllocationAck&)message, sessionID );
-    
-    if( msgTypeValue == "Q" )
+    case msgTypeKey( "Q" ):
       return onMessage( (DontKnowTrade&)message, sessionID );
-    
-    if( msgTypeValue == "R" )
+    case msgTypeKey( "R" ):
       return onMessage( (QuoteRequest&)message, sessionID );
-    
-    if( msgTypeValue == "S" )
+    case msgTypeKey( "S" ):
       return onMessage( (Quote&)message, sessionID );
-    
-    if( msgTypeValue == "T" )
+    case msgTypeKey( "T" ):
       return onMessage( (SettlementInstructions&)message, sessionID );
-    
-    if( msgTypeValue == "V" )
+    case msgTypeKey( "V" ):
       return onMessage( (MarketDataRequest&)message, sessionID );
-    
-    if( msgTypeValue == "W" )
+    case msgTypeKey( "W" ):
       return onMessage( (MarketDataSnapshotFullRefresh&)message, sessionID );
-    
-    if( msgTypeValue == "X" )
+    case msgTypeKey( "X" ):
       return onMessage( (MarketDataIncrementalRefresh&)message, sessionID );
-    
-    if( msgTypeValue == "Y" )
+    case msgTypeKey( "Y" ):
       return onMessage( (MarketDataRequestReject&)message, sessionID );
-    
-    if( msgTypeValue == "Z" )
+    case msgTypeKey( "Z" ):
       return onMessage( (QuoteCancel&)message, sessionID );
-    
-    if( msgTypeValue == "a" )
+    case msgTypeKey( "a" ):
       return onMessage( (QuoteStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "b" )
+    case msgTypeKey( "b" ):
       return onMessage( (MassQuoteAcknowledgement&)message, sessionID );
-    
-    if( msgTypeValue == "c" )
+    case msgTypeKey( "c" ):
       return onMessage( (SecurityDefinitionRequest&)message, sessionID );
-    
-    if( msgTypeValue == "d" )
+    case msgTypeKey( "d" ):
       return onMessage( (SecurityDefinition&)message, sessionID );
-    
-    if( msgTypeValue == "e" )
+    case msgTypeKey( "e" ):
       return onMessage( (SecurityStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "f" )
+    case msgTypeKey( "f" ):
       return onMessage( (SecurityStatus&)message, sessionID );
-    
-    if( msgTypeValue == "g" )
+    case msgTypeKey( "g" ):
       return onMessage( (TradingSessionStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "h" )
+    case msgTypeKey( "h" ):
       return onMessage( (TradingSessionStatus&)message, sessionID );
-    
-    if( msgTypeValue == "i" )
+    case msgTypeKey( "i" ):
       return onMessage( (MassQuote&)message, sessionID );
-    
-    if( msgTypeValue == "j" )
+    case msgTypeKey( "j" ):
       return onMessage( (BusinessMessageReject&)message, sessionID );
-    
-    if( msgTypeValue == "k" )
+    case msgTypeKey( "k" ):
       return onMessage( (BidRequest&)message, sessionID );
-    
-    if( msgTypeValue == "l" )
+    case msgTypeKey( "l" ):
       return onMessage( (BidResponse&)message, sessionID );
-    
-    if( msgTypeValue == "m" )
+    case msgTypeKey( "m" ):
       return onMessage( (ListStrikePrice&)message, sessionID );
-    
-    if( msgTypeValue == "n" )
+    case msgTypeKey( "n" ):
       return onMessage( (XMLnonFIX&)message, sessionID );
-    
-    if( msgTypeValue == "o" )
+    case msgTypeKey( "o" ):
       return onMessage( (RegistrationInstructions&)message, sessionID );
-    
-    if( msgTypeValue == "p" )
+    case msgTypeKey( "p" ):
       return onMessage( (RegistrationInstructionsResponse&)message, sessionID );
-    
-    if( msgTypeValue == "q" )
+    case msgTypeKey( "q" ):
       return onMessage( (OrderMassCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "r" )
+    case msgTypeKey( "r" ):
       return onMessage( (OrderMassCancelReport&)message, sessionID );
-    
-    if( msgTypeValue == "s" )
+    case msgTypeKey( "s" ):
       return onMessage( (NewOrderCross&)message, sessionID );
-    
-    if( msgTypeValue == "t" )
+    case msgTypeKey( "t" ):
       return onMessage( (CrossOrderCancelReplaceRequest&)message, sessionID );
-    
-    if( msgTypeValue == "u" )
+    case msgTypeKey( "u" ):
       return onMessage( (CrossOrderCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "v" )
+    case msgTypeKey( "v" ):
       return onMessage( (SecurityTypeRequest&)message, sessionID );
-    
-    if( msgTypeValue == "w" )
+    case msgTypeKey( "w" ):
       return onMessage( (SecurityTypes&)message, sessionID );
-    
-    if( msgTypeValue == "x" )
+    case msgTypeKey( "x" ):
       return onMessage( (SecurityListRequest&)message, sessionID );
-    
-    if( msgTypeValue == "y" )
+    case msgTypeKey( "y" ):
       return onMessage( (SecurityList&)message, sessionID );
-    
-    if( msgTypeValue == "z" )
+    case msgTypeKey( "z" ):
       return onMessage( (DerivativeSecurityListRequest&)message, sessionID );
-    
-    if( msgTypeValue == "AA" )
+    case msgTypeKey( "AA" ):
       return onMessage( (DerivativeSecurityList&)message, sessionID );
-    
-    if( msgTypeValue == "AB" )
+    case msgTypeKey( "AB" ):
       return onMessage( (NewOrderMultileg&)message, sessionID );
-    
-    if( msgTypeValue == "AC" )
+    case msgTypeKey( "AC" ):
       return onMessage( (MultilegOrderCancelReplaceRequest&)message, sessionID );
-    
-    if( msgTypeValue == "AD" )
+    case msgTypeKey( "AD" ):
       return onMessage( (TradeCaptureReportRequest&)message, sessionID );
-    
-    if( msgTypeValue == "AE" )
+    case msgTypeKey( "AE" ):
       return onMessage( (TradeCaptureReport&)message, sessionID );
-    
-    if( msgTypeValue == "AF" )
+    case msgTypeKey( "AF" ):
       return onMessage( (OrderMassStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "AG" )
+    case msgTypeKey( "AG" ):
       return onMessage( (QuoteRequestReject&)message, sessionID );
-    
-    if( msgTypeValue == "AH" )
+    case msgTypeKey( "AH" ):
       return onMessage( (RFQRequest&)message, sessionID );
-    
-    if( msgTypeValue == "AI" )
+    case msgTypeKey( "AI" ):
       return onMessage( (QuoteStatusReport&)message, sessionID );
+    default:
+      break;
+    }
     
     return onMessage( message, sessionID );
   }

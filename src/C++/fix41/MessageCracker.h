@@ -25,6 +25,7 @@
 
 #include "../SessionID.h"
 #include "../Exceptions.h"
+#include <string_view>
 
 #include "../fix41/Message.h"
 
@@ -153,96 +154,82 @@ namespace FIX41
  virtual void onMessage( SettlementInstructions&, const FIX::SessionID& ) {} 
 
 public:
+  // Dispatch switches on the MsgType's characters; every standard MsgType has one or two. A longer one
+  // from a custom dictionary is compared as a string after the switch (#159).
+  static constexpr unsigned msgTypeKey( std::string_view value )
+  {
+    return value.size() == 1 ? static_cast<unsigned char>( value[0] )
+         : value.size() == 2 ? static_cast<unsigned char>( value[0] ) | ( static_cast<unsigned char>( value[1] ) << 8 )
+         : 0;
+  }
+
   void crack( const Message& message, 
               const FIX::SessionID& sessionID )
   {
     const std::string & msgTypeValue 
       = message.getHeader().getField( FIX::FIELD::MsgType );
     
-    
-    if( msgTypeValue == "0" )
+    switch( msgTypeKey( msgTypeValue ) )
+    {
+    case msgTypeKey( "0" ):
       return onMessage( (const Heartbeat&)message, sessionID );
-    
-    if( msgTypeValue == "1" )
+    case msgTypeKey( "1" ):
       return onMessage( (const TestRequest&)message, sessionID );
-    
-    if( msgTypeValue == "2" )
+    case msgTypeKey( "2" ):
       return onMessage( (const ResendRequest&)message, sessionID );
-    
-    if( msgTypeValue == "3" )
+    case msgTypeKey( "3" ):
       return onMessage( (const Reject&)message, sessionID );
-    
-    if( msgTypeValue == "4" )
+    case msgTypeKey( "4" ):
       return onMessage( (const SequenceReset&)message, sessionID );
-    
-    if( msgTypeValue == "5" )
+    case msgTypeKey( "5" ):
       return onMessage( (const Logout&)message, sessionID );
-    
-    if( msgTypeValue == "6" )
+    case msgTypeKey( "6" ):
       return onMessage( (const IOI&)message, sessionID );
-    
-    if( msgTypeValue == "7" )
+    case msgTypeKey( "7" ):
       return onMessage( (const Advertisement&)message, sessionID );
-    
-    if( msgTypeValue == "8" )
+    case msgTypeKey( "8" ):
       return onMessage( (const ExecutionReport&)message, sessionID );
-    
-    if( msgTypeValue == "9" )
+    case msgTypeKey( "9" ):
       return onMessage( (const OrderCancelReject&)message, sessionID );
-    
-    if( msgTypeValue == "A" )
+    case msgTypeKey( "A" ):
       return onMessage( (const Logon&)message, sessionID );
-    
-    if( msgTypeValue == "B" )
+    case msgTypeKey( "B" ):
       return onMessage( (const News&)message, sessionID );
-    
-    if( msgTypeValue == "C" )
+    case msgTypeKey( "C" ):
       return onMessage( (const Email&)message, sessionID );
-    
-    if( msgTypeValue == "D" )
+    case msgTypeKey( "D" ):
       return onMessage( (const NewOrderSingle&)message, sessionID );
-    
-    if( msgTypeValue == "E" )
+    case msgTypeKey( "E" ):
       return onMessage( (const NewOrderList&)message, sessionID );
-    
-    if( msgTypeValue == "F" )
+    case msgTypeKey( "F" ):
       return onMessage( (const OrderCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "G" )
+    case msgTypeKey( "G" ):
       return onMessage( (const OrderCancelReplaceRequest&)message, sessionID );
-    
-    if( msgTypeValue == "H" )
+    case msgTypeKey( "H" ):
       return onMessage( (const OrderStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "J" )
+    case msgTypeKey( "J" ):
       return onMessage( (const Allocation&)message, sessionID );
-    
-    if( msgTypeValue == "K" )
+    case msgTypeKey( "K" ):
       return onMessage( (const ListCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "L" )
+    case msgTypeKey( "L" ):
       return onMessage( (const ListExecute&)message, sessionID );
-    
-    if( msgTypeValue == "M" )
+    case msgTypeKey( "M" ):
       return onMessage( (const ListStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "N" )
+    case msgTypeKey( "N" ):
       return onMessage( (const ListStatus&)message, sessionID );
-    
-    if( msgTypeValue == "P" )
+    case msgTypeKey( "P" ):
       return onMessage( (const AllocationInstructionAck&)message, sessionID );
-    
-    if( msgTypeValue == "Q" )
+    case msgTypeKey( "Q" ):
       return onMessage( (const DontKnowTrade&)message, sessionID );
-    
-    if( msgTypeValue == "R" )
+    case msgTypeKey( "R" ):
       return onMessage( (const QuoteRequest&)message, sessionID );
-    
-    if( msgTypeValue == "S" )
+    case msgTypeKey( "S" ):
       return onMessage( (const Quote&)message, sessionID );
-    
-    if( msgTypeValue == "T" )
+    case msgTypeKey( "T" ):
       return onMessage( (const SettlementInstructions&)message, sessionID );
+    default:
+      break;
+    }
     
     return onMessage( message, sessionID );
   }
@@ -253,90 +240,67 @@ void crack( Message& message,
     const std::string & msgTypeValue 
       = message.getHeader().getField( FIX::FIELD::MsgType );
     
-    
-    if( msgTypeValue == "0" )
+    switch( msgTypeKey( msgTypeValue ) )
+    {
+    case msgTypeKey( "0" ):
       return onMessage( (Heartbeat&)message, sessionID );
-    
-    if( msgTypeValue == "1" )
+    case msgTypeKey( "1" ):
       return onMessage( (TestRequest&)message, sessionID );
-    
-    if( msgTypeValue == "2" )
+    case msgTypeKey( "2" ):
       return onMessage( (ResendRequest&)message, sessionID );
-    
-    if( msgTypeValue == "3" )
+    case msgTypeKey( "3" ):
       return onMessage( (Reject&)message, sessionID );
-    
-    if( msgTypeValue == "4" )
+    case msgTypeKey( "4" ):
       return onMessage( (SequenceReset&)message, sessionID );
-    
-    if( msgTypeValue == "5" )
+    case msgTypeKey( "5" ):
       return onMessage( (Logout&)message, sessionID );
-    
-    if( msgTypeValue == "6" )
+    case msgTypeKey( "6" ):
       return onMessage( (IOI&)message, sessionID );
-    
-    if( msgTypeValue == "7" )
+    case msgTypeKey( "7" ):
       return onMessage( (Advertisement&)message, sessionID );
-    
-    if( msgTypeValue == "8" )
+    case msgTypeKey( "8" ):
       return onMessage( (ExecutionReport&)message, sessionID );
-    
-    if( msgTypeValue == "9" )
+    case msgTypeKey( "9" ):
       return onMessage( (OrderCancelReject&)message, sessionID );
-    
-    if( msgTypeValue == "A" )
+    case msgTypeKey( "A" ):
       return onMessage( (Logon&)message, sessionID );
-    
-    if( msgTypeValue == "B" )
+    case msgTypeKey( "B" ):
       return onMessage( (News&)message, sessionID );
-    
-    if( msgTypeValue == "C" )
+    case msgTypeKey( "C" ):
       return onMessage( (Email&)message, sessionID );
-    
-    if( msgTypeValue == "D" )
+    case msgTypeKey( "D" ):
       return onMessage( (NewOrderSingle&)message, sessionID );
-    
-    if( msgTypeValue == "E" )
+    case msgTypeKey( "E" ):
       return onMessage( (NewOrderList&)message, sessionID );
-    
-    if( msgTypeValue == "F" )
+    case msgTypeKey( "F" ):
       return onMessage( (OrderCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "G" )
+    case msgTypeKey( "G" ):
       return onMessage( (OrderCancelReplaceRequest&)message, sessionID );
-    
-    if( msgTypeValue == "H" )
+    case msgTypeKey( "H" ):
       return onMessage( (OrderStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "J" )
+    case msgTypeKey( "J" ):
       return onMessage( (Allocation&)message, sessionID );
-    
-    if( msgTypeValue == "K" )
+    case msgTypeKey( "K" ):
       return onMessage( (ListCancelRequest&)message, sessionID );
-    
-    if( msgTypeValue == "L" )
+    case msgTypeKey( "L" ):
       return onMessage( (ListExecute&)message, sessionID );
-    
-    if( msgTypeValue == "M" )
+    case msgTypeKey( "M" ):
       return onMessage( (ListStatusRequest&)message, sessionID );
-    
-    if( msgTypeValue == "N" )
+    case msgTypeKey( "N" ):
       return onMessage( (ListStatus&)message, sessionID );
-    
-    if( msgTypeValue == "P" )
+    case msgTypeKey( "P" ):
       return onMessage( (AllocationInstructionAck&)message, sessionID );
-    
-    if( msgTypeValue == "Q" )
+    case msgTypeKey( "Q" ):
       return onMessage( (DontKnowTrade&)message, sessionID );
-    
-    if( msgTypeValue == "R" )
+    case msgTypeKey( "R" ):
       return onMessage( (QuoteRequest&)message, sessionID );
-    
-    if( msgTypeValue == "S" )
+    case msgTypeKey( "S" ):
       return onMessage( (Quote&)message, sessionID );
-    
-    if( msgTypeValue == "T" )
+    case msgTypeKey( "T" ):
       return onMessage( (SettlementInstructions&)message, sessionID );
+    default:
+      break;
+    }
     
     return onMessage( message, sessionID );
   }
