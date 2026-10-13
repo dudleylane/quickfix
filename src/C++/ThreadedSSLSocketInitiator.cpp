@@ -115,6 +115,7 @@
 
 #if (HAVE_SSL > 0)
 
+#include "PortSetting.h"
 #include "Session.h"
 #include "Settings.h"
 #include "ThreadedSSLSocketInitiator.h"
@@ -161,9 +162,10 @@ void ThreadedSSLSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(Co
 {
     const Dictionary &dict = s.get();
 
-    if (dict.has(SOCKET_NODELAY))
+    // SocketNodelay is read from each session's settings when it connects (#150); check every value now.
+    for (const SessionID &sessionID : s.getSessions())
     {
-        m_noDelay = dict.getBool(SOCKET_NODELAY);
+        getSocketNoDelay(s.get(sessionID));
     }
     if (dict.has(SOCKET_SEND_BUFFER_SIZE))
     {
@@ -306,7 +308,7 @@ void ThreadedSSLSocketInitiator::doConnect(const SessionID &s, const Dictionary 
         HostDetails host = m_hostDetailsProvider.getHost(s, d);
 
         socket_handle socket = socket_createConnector();
-        if (m_noDelay)
+        if (getSocketNoDelay(d))
         {
             socket_setsockopt(socket, TCP_NODELAY);
         }

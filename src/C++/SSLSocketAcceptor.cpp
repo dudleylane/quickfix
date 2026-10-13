@@ -179,11 +179,8 @@ void SSLSocketAcceptor::onConfigure(const SessionSettings &sessionSettings) EXCE
         {
             settings.getBool(SOCKET_REUSE_ADDRESS);
         }
-        if (settings.has(SOCKET_NODELAY))
-        {
-            settings.getBool(SOCKET_NODELAY);
-        }
     }
+    checkSocketNoDelayPerPort(sessionSettings);
 }
 
 void SSLSocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXCEPT(RuntimeError)
@@ -238,7 +235,7 @@ void SSLSocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXC
             const bool reuseAddress =
                 settings.has(SOCKET_REUSE_ADDRESS) ? settings.getBool(SOCKET_REUSE_ADDRESS) : true;
 
-            const bool noDelay = settings.has(SOCKET_NODELAY) ? settings.getBool(SOCKET_NODELAY) : false;
+            const bool noDelay = getSocketNoDelay(settings);
 
             const int sendBufSize =
                 settings.has(SOCKET_SEND_BUFFER_SIZE) ? settings.getInt(SOCKET_SEND_BUFFER_SIZE) : 0;

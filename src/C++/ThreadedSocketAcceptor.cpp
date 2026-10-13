@@ -54,11 +54,8 @@ void ThreadedSocketAcceptor::onConfigure(const SessionSettings &sessionSettings)
         {
             settings.getBool(SOCKET_REUSE_ADDRESS);
         }
-        if (settings.has(SOCKET_NODELAY))
-        {
-            settings.getBool(SOCKET_NODELAY);
-        }
     }
+    checkSocketNoDelayPerPort(sessionSettings);
 }
 
 void ThreadedSocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXCEPT(RuntimeError)
@@ -81,7 +78,7 @@ void ThreadedSocketAcceptor::onInitialize(const SessionSettings &sessionSettings
 
         const bool reuseAddress = settings.has(SOCKET_REUSE_ADDRESS) ? settings.getBool(SOCKET_REUSE_ADDRESS) : true;
 
-        const bool noDelay = settings.has(SOCKET_NODELAY) ? settings.getBool(SOCKET_NODELAY) : false;
+        const bool noDelay = getSocketNoDelay(settings);
 
         const int sendBufSize = settings.has(SOCKET_SEND_BUFFER_SIZE) ? settings.getInt(SOCKET_SEND_BUFFER_SIZE) : 0;
 

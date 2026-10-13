@@ -116,6 +116,7 @@
 
 #if (HAVE_SSL > 0)
 
+#include "PortSetting.h"
 #include "SSLSocketInitiator.h"
 #include "Session.h"
 #include "Settings.h"
@@ -181,9 +182,10 @@ void SSLSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(ConfigErro
 {
     const Dictionary &dict = s.get();
 
-    if (dict.has(SOCKET_NODELAY))
+    // SocketNodelay is read from each session's settings when it connects (#150); check every value now.
+    for (const SessionID &sessionID : s.getSessions())
     {
-        m_noDelay = dict.getBool(SOCKET_NODELAY);
+        getSocketNoDelay(s.get(sessionID));
     }
     if (dict.has(SOCKET_SEND_BUFFER_SIZE))
     {
@@ -311,8 +313,8 @@ void SSLSocketInitiator::doConnect(const SessionID &sessionID, const Dictionary 
         log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert(host.port) + " (Source " +
                      host.sourceAddress + ":" + IntConvertor::convert(host.sourcePort) +
                      ") ReconnectInterval=" + IntConvertor::convert(reconnectInterval(dictionary)));
-        socket_handle result = m_connector.connect(host.address, host.port, m_noDelay, m_sendBufSize, m_rcvBufSize,
-                                                   host.sourceAddress, host.sourcePort);
+        socket_handle result = m_connector.connect(host.address, host.port, getSocketNoDelay(dictionary), m_sendBufSize,
+                                                   m_rcvBufSize, host.sourceAddress, host.sourcePort);
 
         log->onEvent("Socket created with handle:" + std::to_string(result));
 

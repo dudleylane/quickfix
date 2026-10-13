@@ -4,9 +4,11 @@
 #include <DataDictionaryProvider.h>
 #include <MessageStore.h>
 #include <Parser.h>
+#include <PortSetting.h>
 #include <Session.h>
 #include <SessionSettings.h>
 #include <SocketAcceptor.h>
+#include <SocketInitiator.h>
 #include <ThreadedSocketAcceptor.h>
 #include <ThreadedSocketConnection.h>
 #include <ThreadedSocketInitiator.h>
@@ -26,11 +28,13 @@
 #include <cerrno>
 #include <chrono>
 #include <csignal>
+#include <cstdlib>
 #include <dirent.h>
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <memory>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <poll.h>
 #include <pthread.h>
 #include <sstream>
@@ -1363,4 +1367,179 @@ TEST_CASE("AcceptedWhileStoppingTests")
         checkConnectionAcceptedWhileStopping<ThreadedSSLSocketAcceptor>("STOPPING2");
     }
 #endif
+}
+
+namespace
+{
+int portOf(int fd, bool peer)
+{
+    sockaddr_in address{};
+    socklen_t length = sizeof(address);
+    const int result = peer ? ::getpeername(fd, reinterpret_cast<sockaddr *>(&address), &length)
+                            : ::getsockname(fd, reinterpret_cast<sockaddr *>(&address), &length);
+    return (result == 0 && address.sin_family == AF_INET) ? ntohs(address.sin_port) : -1;
+}
+
+// This process's connected socket whose local port is localPort (or any, for -1) and whose peer port
+// is peerPort, other than exclude: the engine's end of a connection the test made or accepted.
+// The engine creates it on its own thread, so wait for it.
+int findConnectedSocket(int localPort, int peerPort, int exclude)
+{
+    for (int attempt = 0; attempt < 150; ++attempt)
+    {
+        DIR *dir = ::opendir("/proc/self/fd");
+        int found = -1;
+        while (dirent *entry = ::readdir(dir))
+        {
+            const int fd = std::atoi(entry->d_name);
+            if (entry->d_name[0] == '.' || fd == exclude || fd == ::dirfd(dir))
+            {
+                continue;
+            }
+            if (portOf(fd, true) == peerPort && (localPort < 0 || portOf(fd, false) == localPort))
+            {
+                found = fd;
+            }
+        }
+        ::closedir(dir);
+        if (found >= 0)
+        {
+            return found;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    return -1;
+}
+
+bool hasNoDelay(int fd)
+{
+    int value = 0;
+    socklen_t length = sizeof(value);
+    ::getsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &value, &length);
+    return value != 0;
+}
+
+std::string acceptorConfig(int port, const std::string &first, const std::string &second, int secondPort = 0)
+{
+    std::stringstream config;
+    config << "[DEFAULT]\nConnectionType=acceptor\nSocketAcceptPort=" << port
+           << "\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n"
+           << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=NODELAY1\nTargetCompID=TW\n"
+           << first << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=NODELAY2\nTargetCompID=TW\n"
+           << second;
+    if (secondPort)
+    {
+        config << "SocketAcceptPort=" << secondPort << "\n";
+    }
+    return config.str();
+}
+
+template <typename Acceptor> bool acceptedSocketHasNoDelay(const std::string &sessionSetting)
+{
+    NullApplication application;
+    MemoryStoreFactory factory;
+    const int port = freePort();
+    std::stringstream config(acceptorConfig(port, sessionSetting, sessionSetting));
+    SessionSettings settings(config);
+    Acceptor acceptor(application, factory, settings);
+    acceptor.start();
+    const int client = connectTo(port);
+    REQUIRE(client >= 0);
+    const int accepted = findConnectedSocket(port, portOf(client, false), client);
+    REQUIRE(accepted >= 0);
+    const bool noDelay = hasNoDelay(accepted);
+    ::close(client);
+    acceptor.stop();
+    return noDelay;
+}
+
+template <typename Initiator>
+bool connectedSocketHasNoDelay(const std::string &defaultSetting, const std::string &sessionSetting)
+{
+    const int listener = ::socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    REQUIRE(::bind(listener, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0);
+    REQUIRE(::listen(listener, 4) == 0);
+    const int port = portOf(listener, false);
+
+    std::stringstream config;
+    config << "[DEFAULT]\nConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
+           << "\nReconnectInterval=1\nHeartBtInt=30\nStartTime=00:00:00\nEndTime=00:00:00\n"
+           << "UseDataDictionary=N\n"
+           << defaultSetting << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=TW\nTargetCompID=NODELAY\n"
+           << sessionSetting;
+    SessionSettings settings(config);
+    NullApplication application;
+    MemoryStoreFactory factory;
+    Initiator initiator(application, factory, settings);
+    initiator.start();
+    const int connected = findConnectedSocket(-1, port, listener);
+    REQUIRE(connected >= 0);
+    const bool noDelay = hasNoDelay(connected);
+    initiator.stop(true);
+    ::close(listener);
+    return noDelay;
+}
+} // namespace
+
+// SocketNodelay defaulted to N, so Nagle's algorithm could hold a small message for the peer's delayed
+// ACK; initiators read it from [DEFAULT] only, and an acceptor's first session on a port decided for
+// the rest (#150). The SSL transports share the helpers but are not driven here: their onConfigure
+// validates certificates too, so a ConfigError would not show which check fired.
+TEST_CASE("SocketNoDelayTests")
+{
+    SECTION("defaultsToOn")
+    {
+        Dictionary settings;
+        CHECK(getSocketNoDelay(settings));
+        settings.setString(SOCKET_NODELAY, "N");
+        CHECK_FALSE(getSocketNoDelay(settings));
+        settings.setString(SOCKET_NODELAY, "Y");
+        CHECK(getSocketNoDelay(settings));
+    }
+
+    SECTION("acceptorsRejectDisagreementOnAPort")
+    {
+        NullApplication application;
+        MemoryStoreFactory factory;
+        const int port = freePort();
+        std::stringstream disagree(acceptorConfig(port, "SocketNodelay=N\n", ""));
+        SessionSettings conflicting(disagree);
+        {
+            SocketAcceptor acceptor(application, factory, conflicting);
+            CHECK_THROWS_AS(acceptor.start(), ConfigError);
+        }
+        {
+            ThreadedSocketAcceptor acceptor(application, factory, conflicting);
+            CHECK_THROWS_AS(acceptor.start(), ConfigError);
+        }
+
+        // The same disagreement on separate ports is fine: each port has its own listener.
+        std::stringstream separate(acceptorConfig(port, "SocketNodelay=N\n", "", freePort()));
+        SessionSettings apart(separate);
+        ThreadedSocketAcceptor acceptor(application, factory, apart);
+        CHECK_NOTHROW(acceptor.start());
+        acceptor.stop();
+    }
+
+    SECTION("acceptedSockets")
+    {
+        CHECK(acceptedSocketHasNoDelay<SocketAcceptor>(""));
+        CHECK(acceptedSocketHasNoDelay<ThreadedSocketAcceptor>(""));
+        CHECK_FALSE(acceptedSocketHasNoDelay<SocketAcceptor>("SocketNodelay=N\n"));
+        CHECK_FALSE(acceptedSocketHasNoDelay<ThreadedSocketAcceptor>("SocketNodelay=N\n"));
+    }
+
+    SECTION("initiatorsReadTheSessionsSetting")
+    {
+        CHECK(connectedSocketHasNoDelay<SocketInitiator>("", ""));
+        CHECK(connectedSocketHasNoDelay<ThreadedSocketInitiator>("", ""));
+        // Set in the session only: initiators used to read [DEFAULT] alone and ignore this.
+        CHECK_FALSE(connectedSocketHasNoDelay<SocketInitiator>("", "SocketNodelay=N\n"));
+        CHECK_FALSE(connectedSocketHasNoDelay<ThreadedSocketInitiator>("", "SocketNodelay=N\n"));
+        // And a session overrides [DEFAULT].
+        CHECK(connectedSocketHasNoDelay<ThreadedSocketInitiator>("SocketNodelay=N\n", "SocketNodelay=Y\n"));
+    }
 }

@@ -851,13 +851,15 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           <td><b>SocketNodelay</b></td>
 
           <td>Indicates a socket should be created with
-          TCP_NODELAY. Currently, this must be defined in the
-          [DEFAULT] section.</td>
+          TCP_NODELAY, which sends each message at once instead of
+          letting Nagle's algorithm hold a small one for the peer's
+          delayed ACK (up to ~40 ms on Linux). Read from each
+          session's settings; set it in [DEFAULT] to apply it to all.</td>
 
           <td>Y<br>
           N</td>
 
-          <td>N</td>
+          <td>Y</td>
         </tr>
 
         <tr align="left" valign="middle">
@@ -939,13 +941,17 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           <td><b>SocketNodelay</b></td>
 
           <td>Indicates a socket should be created with
-          TCP_NODELAY. Currently, this must be defined in the
-          [DEFAULT] section.</td>
+          TCP_NODELAY, which sends each message at once instead of
+          letting Nagle's algorithm hold a small one for the peer's
+          delayed ACK (up to ~40 ms on Linux). It is set on the
+          listening socket, so every session sharing a
+          SocketAcceptPort must have the same value; sessions that
+          disagree are a configuration error.</td>
 
           <td>Y<br>
           N</td>
 
-          <td>N</td>
+          <td>Y</td>
         </tr>
 
         <tr align="left" valign="middle">

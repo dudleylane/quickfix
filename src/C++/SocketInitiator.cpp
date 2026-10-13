@@ -19,6 +19,7 @@
 
 #include "config.h"
 
+#include "PortSetting.h"
 #include "Session.h"
 #include "Settings.h"
 #include "SocketInitiator.h"
@@ -57,9 +58,10 @@ void SocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(ConfigError)
 {
     const Dictionary &dict = s.get();
 
-    if (dict.has(SOCKET_NODELAY))
+    // SocketNodelay is read from each session's settings when it connects (#150); check every value now.
+    for (const SessionID &sessionID : s.getSessions())
     {
-        m_noDelay = dict.getBool(SOCKET_NODELAY);
+        getSocketNoDelay(s.get(sessionID));
     }
     if (dict.has(SOCKET_SEND_BUFFER_SIZE))
     {
@@ -142,8 +144,8 @@ void SocketInitiator::doConnect(const SessionID &s, const Dictionary &d)
         log->onEvent("Connecting to " + host.address + " on port " + IntConvertor::convert(host.port) + " (Source " +
                      host.sourceAddress + ":" + IntConvertor::convert(host.sourcePort) +
                      ") ReconnectInterval=" + IntConvertor::convert(reconnectInterval(d)));
-        socket_handle result = m_connector.connect(host.address, host.port, m_noDelay, m_sendBufSize, m_rcvBufSize,
-                                                   host.sourceAddress, host.sourcePort);
+        socket_handle result = m_connector.connect(host.address, host.port, getSocketNoDelay(d), m_sendBufSize,
+                                                   m_rcvBufSize, host.sourceAddress, host.sourcePort);
         setPending(s);
 
         m_pendingConnections[result] = new SocketConnection(*this, s, result, &m_connector.getMonitor());
