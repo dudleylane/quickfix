@@ -296,19 +296,23 @@ application can avoid today, without changing the engine:
   session->send(order);                                          // per message
   ```
 
-- **No log on the hot path.** `FileLog` and `ScreenLog` format a timestamp and flush once per
-  message, and the outbound line is written under the session's lock just before the send
-  (#153). With no `LogFactory`, a session skips logging without taking its state lock.
-- **Choose the store deliberately.** `FileStore` makes about seven syscalls for each message sent
-  and two for each received (#151); `MemoryStoreFactory` makes none, and `NullStoreFactory` keeps
-  nothing. `PersistMessages=N` keeps FileStore but stops it storing message bodies. Its
+- **No log on the hot path, or a buffered one.** `FileLog` formats a timestamp and writes each
+  message line at once, and the outbound line is written under the session's lock just before the
+  send. `FileLogFlush=N` buffers message lines instead (#153): about one write per 30 messages
+  rather than one each, at the price of losing the last lines in a crash. `ScreenLog` flushes once
+  per message. With no `LogFactory`, a session skips logging without taking its state lock.
+- **Choose the store deliberately.** `FileStore` makes four syscalls for each message sent and one
+  for each received (#151); `MemoryStoreFactory` makes none, and `NullStoreFactory` keeps nothing.
+  `FileStoreSync=Y` adds an `fdatasync` per file written, so stored data survives a host crash, at
+  the device's write latency per message (#152). `PersistMessages=N` keeps FileStore but stops it storing message bodies. Its
   sequence-number write per message remains. What is not stored cannot be resent, so a resend
   request is answered with a gap fill.
 - **`SocketNodelay`** is on by default since #150. With it off, Nagle's algorithm can hold a small
   message for the peer's delayed ACK, up to ~40 ms on Linux.
-- **The threaded transports** (`ThreadedSocketAcceptor`, `ThreadedSocketInitiator`) round-trip
-  faster than the reactor ones in `pt` (3.4 µs against 4.7 µs above). Each connection gets its own
-  thread.
+- **Compare the transports on your hardware.** The threaded ones (`ThreadedSocketAcceptor`,
+  `ThreadedSocketInitiator`) give each connection its own thread and send synchronously. Since
+  #156 the reactor ones send straight from the caller's buffer without a `poll()` first, which made
+  the reactor round trip in `pt` about 28% faster; which is faster now depends on the machine.
 - **Pin the process's threads** with `taskset` or a cpuset. The engine has no affinity or
   busy-poll setting (#165), so every inbound message pays a scheduler wakeup, and on a busy machine
   that dominates the tail.
