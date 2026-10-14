@@ -105,8 +105,7 @@ TEST_CASE("SocketAcceptorTests")
     destroySocket(socket);
 }
 
-// A logged-on session that is sent nothing still gets its heartbeat on schedule, whatever the
-// reactor's other connections are doing.
+// A logged-on session that is sent nothing still gets its heartbeat on schedule.
 TEST_CASE("SocketAcceptorHeartbeatTests")
 {
     int probe = ::socket(AF_INET, SOCK_STREAM, 0);

@@ -1620,7 +1620,7 @@ TEST_CASE("SocketBufferSizeTests")
 }
 
 // SocketInitiator sweeps its sessions' timers once a second rather than after every wakeup (#157). A
-// logged-on session still gets its heartbeat on schedule while bytes keep arriving.
+// logged-on session still gets its heartbeat on schedule.
 TEST_CASE("SocketInitiatorTimerTests")
 {
     const int listener = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -1678,6 +1678,81 @@ TEST_CASE("SocketInitiatorTimerTests")
     {
         ::send(peer, "x", 1, MSG_NOSIGNAL);
         readAvailable();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    INFO(received);
+    CHECK(received.find("\00135=0\001") != std::string::npos);
+
+    initiator.stop(true);
+    ::close(peer);
+    ::close(listener);
+}
+
+// An initiator driven by poll() runs its sessions' timers too.
+TEST_CASE("SocketInitiatorPollTests")
+{
+    const int listener = ::socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    REQUIRE(::bind(listener, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0);
+    REQUIRE(::listen(listener, 1) == 0);
+    const int port = portOf(listener, false);
+
+    std::stringstream config;
+    config << "[DEFAULT]\nConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
+           << "\nReconnectInterval=30\nHeartBtInt=1\nStartTime=00:00:00\nEndTime=00:00:00\n"
+           << "UseDataDictionary=N\nCheckLatency=N\n"
+           << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=TW\nTargetCompID=ISLD\n";
+    SessionSettings settings(config);
+    NullApplication application;
+    MemoryStoreFactory factory;
+    SocketInitiator initiator(application, factory, settings);
+    initiator.poll();
+
+    int peer = -1;
+    for (int attempt = 0; attempt < 100 && peer < 0; ++attempt)
+    {
+        initiator.poll();
+        peer = ::accept4(listener, nullptr, nullptr, SOCK_NONBLOCK);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    REQUIRE(peer >= 0);
+    std::string received;
+    char buffer[4096];
+    auto pump = [&]
+    {
+        initiator.poll();
+        ssize_t size;
+        while ((size = ::recv(peer, buffer, sizeof(buffer), MSG_DONTWAIT)) > 0)
+        {
+            received.append(buffer, size);
+        }
+    };
+    for (int attempt = 0; attempt < 200 && received.find("\00135=A\001") == std::string::npos; ++attempt)
+    {
+        pump();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    REQUIRE(received.find("\00135=A\001") != std::string::npos);
+
+    FIX42::Logon logon;
+    logon.getHeader().set(SenderCompID("ISLD"));
+    logon.getHeader().set(TargetCompID("TW"));
+    logon.getHeader().set(MsgSeqNum(1));
+    logon.getHeader().set(SendingTime::now());
+    logon.set(EncryptMethod(0));
+    logon.set(HeartBtInt(1));
+    const std::string reply = logon.toString();
+    REQUIRE(::send(peer, reply.c_str(), reply.size(), MSG_NOSIGNAL) == static_cast<ssize_t>(reply.size()));
+    received.clear();
+
+    const auto start = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - start < std::chrono::seconds(4) &&
+           received.find("\00135=0\001") == std::string::npos)
+    {
+        ::send(peer, "x", 1, MSG_NOSIGNAL);
+        pump();
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     INFO(received);

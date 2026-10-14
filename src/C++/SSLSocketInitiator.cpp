@@ -292,6 +292,13 @@ bool SSLSocketInitiator::onPoll()
     }
 
     m_connector.block(*this, true);
+    // Sweep once a wall-clock second here too, as onStart() does.
+    const time_t second = ::time(0);
+    if (second != m_lastConnect)
+    {
+        m_lastConnect = second;
+        onTimeout(m_connector);
+    }
     return true;
 }
 
