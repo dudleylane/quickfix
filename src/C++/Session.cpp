@@ -1565,16 +1565,25 @@ void Session::next(const std::string &msg, const UtcTimeStamp &now, bool queued)
         m_state.onIncoming(msg);
         const DataDictionary &sessionDD =
             m_dataDictionaryProvider.getSessionDataDictionary(m_sessionID.getBeginString());
-        if (m_sessionID.isFIXT())
+        const DataDictionary &applicationDD =
+            m_sessionID.isFIXT() ? m_dataDictionaryProvider.getApplicationDataDictionary(m_senderDefaultApplVerID)
+                                 : sessionDD;
+
+        // Parse into a Message this thread keeps: setString() clears it and keeps its field storage, where
+        // a new Message per inbound message allocated and freed its field vectors every time (#167). The
+        // Message handed on lives only for this call, as the temporary did; the inbound queue copies.
+        // A nested call on this thread, which nothing makes today, gets its own.
+        static thread_local Message threadMessage;
+        static thread_local bool threadMessageInUse = false;
+        if (threadMessageInUse)
         {
-            const DataDictionary &applicationDD =
-                m_dataDictionaryProvider.getApplicationDataDictionary(m_senderDefaultApplVerID);
             next(Message(msg, sessionDD, applicationDD, m_validateLengthAndChecksum), now, queued);
+            return;
         }
-        else
-        {
-            next(Message(msg, sessionDD, m_validateLengthAndChecksum), now, queued);
-        }
+        threadMessageInUse = true;
+        auto release = sg::make_scope_guard([]() { threadMessageInUse = false; });
+        threadMessage.setString(msg, m_validateLengthAndChecksum, &sessionDD, &applicationDD);
+        next(threadMessage, now, queued);
     }
     catch (InvalidMessage &e)
     {
