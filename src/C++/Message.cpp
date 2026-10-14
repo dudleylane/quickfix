@@ -416,6 +416,8 @@ void Message::setGroup(const std::string &msg, const FieldBase &field, const std
         std::string::size_type oldPos = pos;
         FieldBase field = extractField(string, pos, &dataDictionary, &dataDictionary, pGroup.get(), precedingTag);
         precedingTag = field.getTag();
+        // One lookup per member: this asked the dictionary up to three times for the same tag (#168).
+        const bool groupField = pDD->isField(field.getTag());
 
         if (firstMember)
         {
@@ -431,7 +433,7 @@ void Message::setGroup(const std::string &msg, const FieldBase &field, const std
             // DataDictionaryTests/checkGroupRequiredFields, which sends a
             // NoOrders group with no ClOrdID at all and rightly expects
             // RequiredTagMissing.
-            if (field.getTag() != delim && pDD->isField(field.getTag()))
+            if (field.getTag() != delim && groupField)
             {
                 outOfOrderCandidate = field.getTag();
             }
@@ -455,7 +457,7 @@ void Message::setGroup(const std::string &msg, const FieldBase &field, const std
         if ( // found delimiter
             (field.getTag() == delim) ||
             // no delimiter, but field belongs to group OR field already processed
-            (pDD->isField(field.getTag()) && (pGroup.get() == 0 || pGroup->isSetField(field.getTag()))))
+            (groupField && (pGroup.get() == 0 || pGroup->isSetField(field.getTag()))))
         {
             if (pGroup.get())
             {
@@ -463,7 +465,7 @@ void Message::setGroup(const std::string &msg, const FieldBase &field, const std
             }
             pGroup.reset(new Group(field.getTag(), delim, pDD->getOrderedFields()));
         }
-        else if (!pDD->isField(field.getTag()))
+        else if (!groupField)
         {
             if (pGroup.get())
             {
