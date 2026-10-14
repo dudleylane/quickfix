@@ -21,6 +21,7 @@
 
 #include "Session.h"
 #include "Values.h"
+#include "scope_guard.hpp"
 #include <algorithm>
 #include <iostream>
 #include <mutex>
@@ -779,7 +780,27 @@ bool Session::sendSequenced(Message &message, SEQNUM num, bool admin)
 
         MsgType msgType;
         header.getFieldIfSet(msgType);
-        std::string messageString;
+        // Serialise into a buffer this thread keeps, so a send does not allocate the message's size each
+        // time (#162). Nothing holds the string past send(): the transports copy or write it, and the
+        // stores copy or write it. A nested send on this thread, which nothing makes today, gets its own.
+        static thread_local std::string threadBuffer;
+        static thread_local bool threadBufferInUse = false;
+        std::string localBuffer;
+        const bool useThreadBuffer = !threadBufferInUse;
+        std::string &messageString = useThreadBuffer ? threadBuffer : localBuffer;
+        if (useThreadBuffer)
+        {
+            threadBufferInUse = true;
+        }
+        auto release = sg::make_scope_guard(
+            [useThreadBuffer]()
+            {
+                if (useThreadBuffer)
+                {
+                    threadBufferInUse = false;
+                }
+            });
+        messageString.clear();
 
         if (admin)
         {
