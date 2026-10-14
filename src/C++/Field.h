@@ -89,6 +89,23 @@ public:
         return *this;
     }
 
+    // The copy operations above suppressed the implicit moves, so every Fields insert, reallocation and
+    // sort, and appendField(std::move(...)), copied the string (#154). Hidden from SWIG: wrapped, the
+    // move constructor is an overload that takes ownership of a binding's argument.
+#ifndef SWIG
+    FieldBase(FieldBase &&rhs) noexcept : m_tag(rhs.m_tag), m_string(std::move(rhs.m_string)), m_metrics(rhs.m_metrics)
+    {
+    }
+
+    FieldBase &operator=(FieldBase &&rhs) noexcept
+    {
+        m_tag = rhs.m_tag;
+        m_string = std::move(rhs.m_string);
+        m_metrics = rhs.m_metrics;
+        return *this;
+    }
+#endif
+
     void swap(FieldBase &rhs)
     {
         std::swap(m_tag, rhs.m_tag);
