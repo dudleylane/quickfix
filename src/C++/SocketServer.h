@@ -74,6 +74,7 @@ public:
     SocketMonitor &getMonitor() { return m_monitor; }
 
     int socketToPort(socket_handle socket);
+    bool isListener(socket_handle socket) const;
     socket_handle portToSocket(int port);
 
 private:

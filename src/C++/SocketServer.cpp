@@ -36,17 +36,14 @@ namespace FIX
 class ServerWrapper : public SocketMonitor::Strategy
 {
 public:
-    ServerWrapper(std::set<socket_handle> sockets, SocketServer &server, SocketServer::Strategy &strategy)
-        : m_sockets(sockets), m_server(server), m_strategy(strategy)
-    {
-    }
+    ServerWrapper(SocketServer &server, SocketServer::Strategy &strategy) : m_server(server), m_strategy(strategy) {}
 
 private:
     void onConnect(SocketMonitor &, socket_handle socket) {}
 
     void onEvent(SocketMonitor &monitor, socket_handle socket)
     {
-        if (m_sockets.find(socket) != m_sockets.end())
+        if (m_server.isListener(socket))
         {
             m_strategy.onConnect(m_server, socket, m_server.accept(socket));
         }
@@ -71,9 +68,6 @@ private:
 
     void onTimeout(SocketMonitor &) { m_strategy.onTimeout(m_server); };
 
-    typedef std::set<socket_handle> Sockets;
-
-    Sockets m_sockets;
     SocketServer &m_server;
     SocketServer::Strategy &m_strategy;
 };
@@ -174,19 +168,24 @@ void SocketServer::close()
 
 bool SocketServer::block(Strategy &strategy, bool poll, double timeout)
 {
-    std::set<socket_handle> sockets;
     for (const SocketToInfo::value_type &socketWithInfo : m_socketToInfo)
     {
         if (!socket_isValid(socketWithInfo.first))
         {
             return false;
         }
-        sockets.insert(socketWithInfo.first);
     }
 
-    ServerWrapper wrapper(sockets, *this, strategy);
+    // The wrapper asks this server which sockets are listeners. It used to be handed a std::set of them,
+    // built and copied on every wakeup (#161).
+    ServerWrapper wrapper(*this, strategy);
     m_monitor.block(wrapper, poll, timeout);
     return true;
+}
+
+bool SocketServer::isListener(socket_handle socket) const
+{
+    return m_socketToInfo.find(socket) != m_socketToInfo.end();
 }
 
 int SocketServer::socketToPort(socket_handle socket)
