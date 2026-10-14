@@ -20,6 +20,8 @@
 #include "config.h"
 
 #include <FieldTypes.h>
+#include <ctime>
+#include <vector>
 
 #include "catch_amalgamated.hpp"
 
@@ -96,3 +98,46 @@ TEST_CASE("UtcTimeStampTests")
 // {
 
 // }
+
+// fromUtcTimeT works out the Julian day and time of day by arithmetic rather than gmtime_r (#158). It
+// must agree with gmtime_r everywhere: before and at the epoch, at day boundaries, leap days, and
+// beyond 2038.
+TEST_CASE("UtcTimeStampArithmeticTests")
+{
+    auto viaGmtime = [](time_t t, int fraction, int precision)
+    {
+        tm parts{};
+        gmtime_r(&t, &parts);
+        return DateTime::fromTm(parts, fraction, precision);
+    };
+    std::vector<time_t> times = {0,
+                                 -1,
+                                 1,
+                                 86399,
+                                 86400,
+                                 -86400,
+                                 -86401,
+                                 951782400 /* 2000-02-29 */,
+                                 951868799,
+                                 4107542400 /* 2100-03-01 */,
+                                 2147483647,
+                                 2147483648LL,
+                                 -2208988800LL /* 1900-01-01 */,
+                                 253402300799LL /* 9999-12-31 23:59:59 */};
+    for (time_t t = -5000000000LL; t < 10000000000LL; t += 7777777)
+    {
+        times.push_back(t);
+    }
+    for (time_t t : times)
+    {
+        INFO("t=" << t);
+        const DateTime arithmetic = DateTime::fromUtcTimeT(t, 123456789, 9);
+        const DateTime expected = viaGmtime(t, 123456789, 9);
+        CHECK(arithmetic.getJulianDate() == expected.getJulianDate());
+        CHECK(arithmetic.getNanosecond() == expected.getNanosecond());
+        CHECK(arithmetic.getTimeT() == t);
+        const DateTime millis = DateTime::fromUtcTimeT(t, 42);
+        CHECK(millis.getJulianDate() == expected.getJulianDate());
+        CHECK(millis.getMillisecond() == 42);
+    }
+}

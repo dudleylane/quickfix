@@ -438,11 +438,7 @@ struct DateTime
     static DateTime nowLocal();
 
     /// Convert a time_t and optional milliseconds to a DateTime
-    static DateTime fromUtcTimeT(time_t t, int millis = 0)
-    {
-        struct tm tm = time_gmtime(&t);
-        return fromTm(tm, millis);
-    }
+    static DateTime fromUtcTimeT(time_t t, int millis = 0) { return fromUtcSeconds(t, millis * PRECISION_FACTOR[3]); }
 
     static DateTime fromLocalTimeT(time_t t, int millis = 0)
     {
@@ -452,8 +448,7 @@ struct DateTime
 
     static DateTime fromUtcTimeT(time_t t, int fraction, int precision)
     {
-        struct tm tm = time_gmtime(&t);
-        return fromTm(tm, fraction, precision);
+        return fromUtcSeconds(t, convertToNanos(fraction, precision));
     }
 
     static DateTime fromLocalTimeT(time_t t, int fraction, int precision)
@@ -500,6 +495,21 @@ struct DateTime
         day = e - int((153 * m + 2) / 5) + 1;
         month = m + 3 - 12 * int(m / 10);
         year = b * 100 + d - 4800 + int(m / 10);
+    }
+
+private:
+    /// The Julian day and time of day of a UTC time_t, by arithmetic: UTC has no zone or leap seconds to
+    /// look up, and gmtime_r takes glibc's process-wide tzset lock on every timestamp (#158).
+    static DateTime fromUtcSeconds(time_t t, int nanos)
+    {
+        int64_t days = static_cast<int64_t>(t) / SECONDS_PER_DAY;
+        int64_t seconds = static_cast<int64_t>(t) % SECONDS_PER_DAY;
+        if (seconds < 0)
+        {
+            seconds += SECONDS_PER_DAY;
+            --days;
+        }
+        return DateTime(static_cast<int>(JULIAN_19700101 + days), NANOS_PER_SEC * seconds + nanos);
     }
 };
 
