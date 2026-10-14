@@ -177,71 +177,58 @@ bool SSLSocketConnection::processQueue()
 
     m_processQueueNeedsToReadData = false;
 
-    if (m_sendQueue.empty())
+    // The socket is non-blocking (SocketMonitor sets it when it adds the socket), so SSL_write reports a
+    // full socket as SSL_ERROR_WANT_WRITE; no poll() is needed first. Drain until the socket stops taking
+    // data rather than one message per wakeup (#156).
+    while (!m_sendQueue.empty())
     {
-        return true;
-    }
+        const std::string &message = m_sendQueue.front();
 
-#ifdef _MSC_VER
-    struct timeval timeout = {0, 0};
-    fd_set writeset = m_fds;
-    if (select(1 + m_socket, 0, &writeset, 0, &timeout) <= 0)
-    {
-        return false;
-    }
-#else
-    struct pollfd pfd = {m_socket, POLLOUT, 0};
-    if (poll(&pfd, 1, 0) <= 0)
-    {
-        return false;
-    }
-#endif
+        errno = 0;
+        int errCodeSSL = 0;
+        int sent = 0;
+        ERR_clear_error();
 
-    const std::string &message = m_sendQueue.front();
+        sent = SSL_write(m_ssl, message.c_str() + m_sendLength, message.length() - m_sendLength);
 
-    errno = 0;
-    int errCodeSSL = 0;
-    int sent = 0;
-    ERR_clear_error();
-
-    sent = SSL_write(m_ssl, message.c_str() + m_sendLength, message.length() - m_sendLength);
-
-    if (sent > 0)
-    {
-        m_sendLength += sent;
-
-        if (m_sendLength == message.length())
+        if (sent > 0)
         {
-            m_sendLength = 0;
-            m_sendQueue.pop_front();
+            m_sendLength += sent;
+
+            if (m_sendLength == message.length())
+            {
+                m_sendLength = 0;
+                m_sendQueue.pop_front();
+            }
+            continue;
         }
-        return m_sendQueue.empty();
-    }
 
-    errCodeSSL = SSL_get_error(m_ssl, sent);
+        errCodeSSL = SSL_get_error(m_ssl, sent);
 
-    if ((errCodeSSL == SSL_ERROR_WANT_READ) || (errCodeSSL == SSL_ERROR_WANT_WRITE))
-    {
-        errno = EINTR;
-        sent = 0;
-
-        if (errCodeSSL == SSL_ERROR_WANT_WRITE)
+        if ((errCodeSSL == SSL_ERROR_WANT_READ) || (errCodeSSL == SSL_ERROR_WANT_WRITE))
         {
-            return false;
+            errno = EINTR;
+            sent = 0;
+
+            if (errCodeSSL == SSL_ERROR_WANT_WRITE)
+            {
+                return false;
+            }
+            else
+            {
+                m_processQueueNeedsToReadData = true;
+                return true; // we may have more to write but we want to read first, so unsignal for now
+            }
         }
         else
         {
-            m_processQueueNeedsToReadData = true;
-            return true; // we may have more to write but we want to read first, so unsignal for now
+            std::string error = socket_error();
+            m_pSession->getLog()->onEvent("SSL send error <" + IntConvertor::convert(errCodeSSL) + "> " + error);
+
+            return false;
         }
     }
-    else
-    {
-        std::string error = socket_error();
-        m_pSession->getLog()->onEvent("SSL send error <" + IntConvertor::convert(errCodeSSL) + "> " + error);
-
-        return false;
-    }
+    return true;
 }
 
 bool SSLSocketConnection::didProcessQueueRequestToRead() const

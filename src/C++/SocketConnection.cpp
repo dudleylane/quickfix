@@ -63,6 +63,22 @@ bool SocketConnection::send(const std::string &message)
 {
     Locker l(m_mutex);
 
+    // With nothing queued, send straight from the caller's buffer and queue only what the socket did
+    // not take: copying every message into the queue first cost an allocation per send (#156).
+    if (m_sendQueue.empty())
+    {
+        const ssize_t result = socket_send(m_socket, message.c_str(), message.length());
+        const std::size_t sent = result > 0 ? static_cast<std::size_t>(result) : 0;
+        if (sent == message.length())
+        {
+            return true;
+        }
+        m_sendQueue.push_back(message.substr(sent));
+        m_sendLength = 0;
+        signal();
+        return true;
+    }
+
     m_sendQueue.push_back(message);
     processQueue();
     signal();
@@ -73,42 +89,26 @@ bool SocketConnection::processQueue()
 {
     Locker l(m_mutex);
 
-    if (!m_sendQueue.size())
+    // The socket is non-blocking (SocketMonitor sets it when it adds the socket), so a full socket shows
+    // as a short or failed send; no poll() is needed first. Drain until the socket stops taking data
+    // rather than one message per wakeup, which drained a backlog of n over n reactor passes (#156).
+    while (!m_sendQueue.empty())
     {
-        return true;
-    }
-
-#ifdef _MSC_VER
-    struct timeval timeout = {0, 0};
-    fd_set writeset = m_fds;
-    if (select(0, 0, &writeset, 0, &timeout) <= 0)
-    {
-        return false;
-    }
-#else
-    struct pollfd pfd = {m_socket, POLLOUT, 0};
-    if (poll(&pfd, 1, 0) <= 0)
-    {
-        return false;
-    }
-#endif
-
-    const std::string &msg = m_sendQueue.front();
-
-    ssize_t result = socket_send(m_socket, msg.c_str() + m_sendLength, msg.length() - m_sendLength);
-
-    if (result > 0)
-    {
+        const std::string &msg = m_sendQueue.front();
+        const ssize_t result = socket_send(m_socket, msg.c_str() + m_sendLength, msg.length() - m_sendLength);
+        if (result <= 0)
+        {
+            return false;
+        }
         m_sendLength += result;
-    }
-
-    if (m_sendLength == msg.length())
-    {
+        if (m_sendLength < msg.length())
+        {
+            return false;
+        }
         m_sendLength = 0;
         m_sendQueue.pop_front();
     }
-
-    return !m_sendQueue.size();
+    return true;
 }
 
 void SocketConnection::disconnect()

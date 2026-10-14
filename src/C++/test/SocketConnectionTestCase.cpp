@@ -34,6 +34,11 @@
 #include <set>
 
 #include "catch_amalgamated.hpp"
+#include <chrono>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <thread>
+#include <unistd.h>
 
 using namespace FIX;
 
@@ -255,4 +260,65 @@ TEST_CASE("SocketConnectionTests")
         SocketConnector connector;
         CHECK(!connection.pSocketConnection->read(connector));
     }
+}
+
+// send() writes straight from the caller's buffer when nothing is queued and queues only what the
+// socket did not take; processQueue() drains until the socket is full (#156). Through a small send
+// buffer and a slow reader, every byte must still arrive, in order.
+TEST_CASE("SocketConnectionPartialSendTests")
+{
+    const int listener = ::socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    REQUIRE(::bind(listener, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0);
+    REQUIRE(::listen(listener, 1) == 0);
+    socklen_t length = sizeof(address);
+    ::getsockname(listener, reinterpret_cast<sockaddr *>(&address), &length);
+    const int peer = ::socket(AF_INET, SOCK_STREAM, 0);
+    REQUIRE(::connect(peer, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0);
+    const int accepted = ::accept(listener, nullptr, nullptr);
+    REQUIRE(accepted >= 0);
+    int small = 4096;
+    ::setsockopt(accepted, SOL_SOCKET, SO_SNDBUF, &small, sizeof(small));
+
+    SocketMonitor monitor;
+    monitor.addRead(accepted); // makes the socket non-blocking, as the transports do
+    SocketConnection::Sessions sessions;
+    {
+        SocketConnection connection(accepted, sessions, &monitor);
+        // Responder is a private base, reached here the way a Session reaches it; a C-style cast may
+        // convert to an inaccessible base.
+        Responder &responder = (Responder &)connection;
+
+        std::string expected;
+        for (int i = 0; i < 200; ++i)
+        {
+            std::string message(10000, static_cast<char>('a' + i % 26));
+            message += std::to_string(i);
+            expected += message;
+            CHECK(responder.send(message));
+        }
+
+        std::string received;
+        char buffer[8192];
+        const auto start = std::chrono::steady_clock::now();
+        while (received.size() < expected.size() && std::chrono::steady_clock::now() - start < std::chrono::seconds(20))
+        {
+            const ssize_t size = ::recv(peer, buffer, sizeof(buffer), MSG_DONTWAIT);
+            if (size > 0)
+            {
+                received.append(buffer, size);
+            }
+            else
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            connection.processQueue();
+        }
+        CHECK(received.size() == expected.size());
+        CHECK(received == expected);
+    }
+    ::close(peer);
+    ::close(listener);
 }
