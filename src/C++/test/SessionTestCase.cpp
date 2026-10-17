@@ -3451,22 +3451,27 @@ TEST_CASE_METHOD(acceptorFixture, "SessionConcurrencyTests")
     SECTION("sendWhileTheResponderIsReplaced")
     {
         CountingResponder first, second;
+        object->setResponder(&first);
+        // The replacer swaps until every send is done, so each send overlaps a swap and goes to first
+        // or second. A fixed count of swaps could all finish before the first send, leaving both at 0.
+        std::atomic<bool> sending{true};
         std::thread replacer(
             [&]
             {
-                for (int i = 0; i < 2000; ++i)
+                for (int i = 0; sending.load(); ++i)
                 {
                     object->setResponder(i % 2 ? static_cast<Responder *>(&first) : &second);
                 }
-                object->setResponder(this);
             });
         for (int i = 0; i < 2000; ++i)
         {
             FIX::Message heartbeat = createHeartbeat("TW", "ISLD", 0);
             object->send(heartbeat);
         }
+        sending = false;
         replacer.join();
-        CHECK(first.sent + second.sent > 0);
+        object->setResponder(this);
+        CHECK(first.sent + second.sent == 2000);
     }
 
     SECTION("settingsAndStateChangedWhileTheSessionWorks")
