@@ -41,12 +41,15 @@
 #include "fix50sp2/NewOrderSingle.h"
 #include "getopt-repl.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
+#include <thread>
 #include <vector>
 #include <x86intrin.h>
 
@@ -82,6 +85,7 @@ long testDeserializeNewOrderSingleWithParties50SP2(int);
 long testDeserializeAndValidateNewOrderSingleWithParties50SP2(int);
 long testSendOnSocket(int, short);
 long testSendOnThreadedSocket(int, short);
+template <typename Acceptor, typename Initiator> long testRoundTrip(int, short);
 
 #ifndef _MSC_VER
 #include <ctime>
@@ -423,6 +427,14 @@ int main(int argc, char **argv)
         run(
             "Sending/Receiving NewOrderSingle/ExecutionReports on ThreadedSocket",
             [&](int n) { return testSendOnThreadedSocket(n, port); }, count);
+
+        run(
+            "Round trip NewOrderSingle, one in flight, on Socket",
+            [&](int n) { return testRoundTrip<FIX::SocketAcceptor, FIX::SocketInitiator>(n, port); }, count);
+
+        run(
+            "Round trip NewOrderSingle, one in flight, on ThreadedSocket", [&](int n)
+            { return testRoundTrip<FIX::ThreadedSocketAcceptor, FIX::ThreadedSocketInitiator>(n, port); }, count);
     }
     catch (std::exception const &e)
     {
@@ -941,7 +953,33 @@ public:
     int getCount() { return m_count; }
 
 private:
-    int m_count;
+    // Incremented on a transport thread, read on the main one.
+    std::atomic<int> m_count;
+};
+
+// For the round-trip benchmarks: the server echoes each application message back, and the client counts
+// the echoes.
+class EchoApplication : public FIX::NullApplication
+{
+public:
+    void fromApp(const FIX::Message &message, const FIX::SessionID &sessionID)
+        EXCEPT(FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::UnsupportedMessageType)
+    {
+        if (sessionID.getSenderCompID() == "SERVER")
+        {
+            FIX::Message echo(message);
+            FIX::Session::sendToTarget(echo, sessionID);
+        }
+        else
+        {
+            m_echoes.fetch_add(1, std::memory_order_release);
+        }
+    }
+
+    long echoes() const { return m_echoes.load(std::memory_order_acquire); }
+
+private:
+    std::atomic<long> m_echoes{0};
 };
 
 // A FIX 5.0 SP2 NewOrderSingle with three parties, complete enough to validate.
@@ -1021,7 +1059,13 @@ long testSendOnSocket(int count, short port)
            << "EndTime=00:00:00" << std::endl
            << "UseDataDictionary=N" << std::endl
            << "BeginString=FIX.4.2" << std::endl
-           << "PersistMessages=N" << std::endl
+           << "PersistMessages=N"
+           << std::endl
+           // These send every message before waiting for any: a streaming throughput benchmark, which
+           // Nagle's algorithm helps by packing a burst into few segments. Pinned to N so the figure
+           // stays comparable across releases; SocketNodelay defaults to Y since #150, and the
+           // one-at-a-time round trip below measures what that is for.
+           << "SocketNodelay=N" << std::endl
            << "[SESSION]" << std::endl
            << "ConnectionType=acceptor" << std::endl
            << "SenderCompID=SERVER" << std::endl
@@ -1087,7 +1131,13 @@ long testSendOnThreadedSocket(int count, short port)
            << "EndTime=00:00:00" << std::endl
            << "UseDataDictionary=N" << std::endl
            << "BeginString=FIX.4.2" << std::endl
-           << "PersistMessages=N" << std::endl
+           << "PersistMessages=N"
+           << std::endl
+           // These send every message before waiting for any: a streaming throughput benchmark, which
+           // Nagle's algorithm helps by packing a burst into few segments. Pinned to N so the figure
+           // stays comparable across releases; SocketNodelay defaults to Y since #150, and the
+           // one-at-a-time round trip below measures what that is for.
+           << "SocketNodelay=N" << std::endl
            << "[SESSION]" << std::endl
            << "ConnectionType=acceptor" << std::endl
            << "SenderCompID=SERVER" << std::endl
@@ -1136,5 +1186,76 @@ long testSendOnThreadedSocket(int count, short port)
     initiator.stop();
     acceptor.stop();
 
+    return ticks;
+}
+
+// One NewOrderSingle in flight at a time: send it, wait for the server's echo, send the next. This is the
+// latency a single order sees end to end, with SocketNodelay at its default, Y. The client sends through
+// a cached Session*, as README's low-latency notes advise.
+template <typename Acceptor, typename Initiator> long testRoundTrip(int count, short port)
+{
+    std::stringstream stream;
+    stream << "[DEFAULT]" << std::endl
+           << "SocketConnectHost=localhost" << std::endl
+           << "SocketConnectPort=" << (unsigned short)port << std::endl
+           << "SocketAcceptPort=" << (unsigned short)port << std::endl
+           << "SocketReuseAddress=Y" << std::endl
+           << "StartTime=00:00:00" << std::endl
+           << "EndTime=00:00:00" << std::endl
+           << "UseDataDictionary=N" << std::endl
+           << "BeginString=FIX.4.2" << std::endl
+           << "PersistMessages=N" << std::endl
+           << "[SESSION]" << std::endl
+           << "ConnectionType=acceptor" << std::endl
+           << "SenderCompID=SERVER" << std::endl
+           << "TargetCompID=CLIENT" << std::endl
+           << "[SESSION]" << std::endl
+           << "ConnectionType=initiator" << std::endl
+           << "SenderCompID=CLIENT" << std::endl
+           << "TargetCompID=SERVER" << std::endl
+           << "HeartBtInt=30" << std::endl;
+
+    FIX::ClOrdID clOrdID("ORDERID");
+    FIX::HandlInst handlInst('1');
+    FIX::Symbol symbol("LNUX");
+    FIX::Side side(FIX::Side_BUY);
+    FIX::TransactTime transactTime = FIX::TransactTime::now();
+    FIX::OrdType ordType(FIX::OrdType_MARKET);
+    FIX42::NewOrderSingle message(clOrdID, handlInst, symbol, side, transactTime, ordType);
+
+    EchoApplication application;
+    FIX::MemoryStoreFactory factory;
+    FIX::SessionSettings settings(stream);
+
+    Acceptor acceptor(application, factory, settings);
+    acceptor.start();
+    Initiator initiator(application, factory, settings);
+    initiator.start();
+
+    FIX::Session *client = nullptr;
+    for (int i = 0; i < 1000 && !(client && client->isLoggedOn()); ++i)
+    {
+        client = FIX::Session::lookupSession(FIX::SessionID("FIX.4.2", "CLIENT", "SERVER"));
+        FIX::process_sleep(0.01);
+    }
+    if (!client || !client->isLoggedOn())
+    {
+        throw std::runtime_error("round trip: the session did not log on");
+    }
+
+    long expected = application.echoes();
+    const long ticks = sampleLoop(count,
+                                  [&]
+                                  {
+                                      client->send(message);
+                                      ++expected;
+                                      while (application.echoes() < expected)
+                                      {
+                                          std::this_thread::yield();
+                                      }
+                                  });
+
+    initiator.stop();
+    acceptor.stop();
     return ticks;
 }
