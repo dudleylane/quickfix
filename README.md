@@ -76,58 +76,68 @@ build: it builds the base's `pt` in a temporary worktree, runs the two alternate
 and `ptcompare.py` fails if a benchmark of 0.2 µs or more is over 10% slower in both pairs. CI runs
 it on pull requests and manual runs (#93).
 
-Captured at `2c9ed23a` with `./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c 1,2,3` on an
-Intel i7-6820HQ (4C/8T, `performance` governor), Release build, GCC 15. Median of nine runs after a
-discarded warm-up; **cv** is the coefficient of variation across those runs. The run waits for the
-1-minute load average to fall below 0.20 before starting: a fixed settle is not enough after a
-parallel build, and starting warm inflates every number in the run by several percent.
+Captured at `a81b1ba8` (2026-10-22) with `./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c
+1,2,3` on an Intel i7-6820HQ (4C/8T, `performance` governor), Release build, GCC 15. Each capture is
+the median of nine runs after a discarded warm-up, and started once the 1-minute load average was
+below 0.20 (0.02 and 0.17): a fixed settle is not enough after a parallel build, and starting warm
+inflates every number in a run by several percent. **cv** is the larger of the two captures'
+coefficients of variation across their nine runs. Two captures were taken three minutes apart
+because one is not enough. Most rows agree within a few percent, but the group-heavy parse rows
+moved by 9–12% between them (Deserialize QuoteRequest 6.104 then 5.346 μs) while each capture's own
+cv was about 2%. A difference between captures smaller than that is not resolvable on this machine.
 
-| Operation | Median (μs) | cv | vs `63c5c066` |
-|---|---|---|---|
-| Deserialize Heartbeat | 0.205 | 2.7% | +0.2% |
-| Deserialize NewOrderSingle | 0.553 | 1.5% | +2.9% |
-| Deserialize QuoteRequest (10 groups) | 5.241 | 0.6% | −0.5% |
-| Serialize QuoteRequest | 1.349 | 1.5% | −1.1% |
-| Read fields from QuoteRequest | 2.058 | 4.7% | −0.5% |
-| Socket round-trip NOS | 4.668 | 0.9% | −2.9% |
-| ThreadedSocket round-trip NOS | 3.407 | 1.1% | −5.4% |
+| Operation | Capture 1 (μs) | Capture 2 (μs) | cv | vs `2c9ed23a` |
+|---|---|---|---|---|
+| Deserialize Heartbeat | 0.222 | 0.237 | 5.4% | +12.0% |
+| Deserialize NewOrderSingle | 0.608 | 0.603 | 3.8% | +9.5% |
+| Deserialize QuoteRequest (10 groups) | 6.104 | 5.346 | 2.5% | +9.2% |
+| Serialize QuoteRequest | 1.401 | 1.393 | 7.4% | +3.6% |
+| Read fields from QuoteRequest | 2.230 | 2.254 | 2.4% | +8.9% |
+| Create NewOrderSingle | 0.411 | 0.399 | 12.9% | new |
+| Store NewOrderSingle | 2.244 | 2.275 | 2.4% | new |
+| Socket streaming NOS | 3.445 | 3.441 | 4.9% | −26.2% |
+| ThreadedSocket streaming NOS | 3.420 | 3.417 | 2.0% | +0.3% |
+| Socket round trip, one in flight | 36.964 | 35.873 | 2.8% | new |
+| ThreadedSocket round trip, one in flight | 35.950 | 34.734 | 1.2% | new |
 
-The last column spans four commits — `41415ed7`, `f4c9c0c3`, `26aa506c`, `74fe9320` — and two
-separately captured runs, so no single row is attributable to one change. Read it as drift, not
-as a measurement of anything.
+**The streaming rows** are `pt`'s "Sending/Receiving NewOrderSingle/ExecutionReports" benchmarks. They
+send every message before waiting for any, so they measure throughput, and run with `SocketNodelay=N`
+so they compare across releases; the default has been `Y` since #150, which costs a stream like this
+one its Nagle coalescing. **The round-trip rows** keep one order in flight: send, wait for the
+server's echo, send the next, with `SocketNodelay` at its default. Most of their ~35 μs is two
+blocking-socket wakeups per trip on this machine; `pt` also prints their p99, about 70–80 μs.
 
-Two rows are worth a word. **Deserialize NewOrderSingle** is up because `26aa506c` put an
-embedded-SOH check on the parse path; a controlled same-session A/B of that commit alone measured
-~+3% median across the nine parse benchmarks, which is consistent with this row and with the other
-two parse rows being flat. That cost is real and was accepted deliberately — see "Known baseline"
-for what it buys. The **round-trip rows moving down** is not explained by anything in those four
-commits and is most likely cross-session variation; treat it as noise rather than an improvement.
+**The last column is drift, not a measurement.** It compares the mean of the two captures with a
+single capture taken at `2c9ed23a`, in another session. It spans many changes; the parse rows' rise
+cannot be attributed to any of them, and `pt` built at `2c9ed23a` exits non-zero partway through its
+run here, so the two cannot be alternated now. The controlled comparison for the #149 latency work is
+CI run 39733737504, `ptgate` against 22.3.0 (`41ec3246`) on a quiet machine, two alternating pairs:
+Store NewOrderSingle −65.8% and −65.8%, Socket streaming −37.6% and −38.2%, ThreadedSocket streaming
+−11.9% and −11.1%, Create NewOrderSingle −15.2% and −19.7%, Deserialize QuoteRequest −5.3% and −5.1%,
+and nothing slower by over 10% in both pairs.
 
 **Serialize QuoteRequest rose from 0.945 μs** when `63c5c066` removed `FieldBase`'s cache of the
 encoded field. That benchmark calls `toString()` in a loop over one unmodified message, so it used
 to measure a cache hit after the first iteration. The engine has no such path — `Session::sendRaw`
-serialises each message once and hands that one string to both `persist()` and `send()` — which is
-why the round-trip rows did not move and the parse rows improved.
+serialises each message once and hands that one string to both `persist()` and `send()`.
 
 Message pooling, measured in the same process as reusing one `Message` across `setString()` calls
 versus constructing a new one each time. Both sides parse with the FIX 4.2 data dictionary; before
 `ed9178c6` the unpooled rows had no dictionary, built no repeating groups, and so credited pooling
-with the cost of group construction (#52). Captured at `ed9178c6` the same way as the table above:
-`./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c 1,2,3`, Release build, started once the
-1-minute load average was below 0.20.
+with the cost of group construction (#52). From the two captures above (capture 1 / capture 2). Since
+#167 the engine itself parses inbound messages into a reused `Message`.
 
-| Operation | Unpooled (μs) | Pooled (μs) | Delta |
+| Operation | Unpooled (μs) | Pooled (μs) | Delta (means) |
 |---|---|---|---|
-| Heartbeat | 0.334 (cv 5.7%) | 0.221 (cv 5.7%) | −34% |
-| NewOrderSingle | 0.675 (cv 2.7%) | 0.597 (cv 16.7%) | −12% |
-| QuoteRequest (10 groups) | 5.636 (cv 0.8%) | 5.344 (cv 1.2%) | −5% |
+| Heartbeat | 0.343 / 0.337 | 0.222 / 0.237 | −32% |
+| NewOrderSingle | 0.717 / 0.738 | 0.608 / 0.603 | −17% |
+| QuoteRequest (10 groups) | 6.262 / 5.590 | 6.104 / 5.346 | −3% |
 
 Read these as indicative, not as guarantees. What reuse saves is constructing the `Message` and
-regrowing its field vectors on every parse: 0.11 μs on Heartbeat, a third of its parse, and 0.29 μs
-on QuoteRequest, about 5%. Repeating groups are allocated afresh on every parse either way, so
-pooling saves nothing per group. NewOrderSingle's −12% is inside twice its pooled cv, which one slow
-repetition inflated, and resolves nothing. A difference smaller than roughly twice the cv is not
-resolvable on this hardware.
+regrowing its field vectors on every parse: about 0.11 μs on Heartbeat, a third of its parse, and
+0.12 μs on NewOrderSingle. Repeating groups are allocated afresh on every parse either way, so pooling
+saves nothing per group. QuoteRequest's −3% is well inside the 12% its two captures differ by, and
+resolves nothing.
 
 These figures are absolute, not a comparison against upstream: the previous table's upstream column
 was measured on different hardware with unrecorded methodology and could not be reproduced here. It
@@ -312,7 +322,7 @@ application can avoid today, without changing the engine:
 - **Compare the transports on your hardware.** The threaded ones (`ThreadedSocketAcceptor`,
   `ThreadedSocketInitiator`) give each connection its own thread and send synchronously. Since
   #156 the reactor ones send straight from the caller's buffer without a `poll()` first, which made
-  the reactor round trip in `pt` about 28% faster; which is faster now depends on the machine.
+  `pt`'s reactor streaming benchmark about 28% faster; which is faster now depends on the machine.
 - **Pin the process's threads** with `taskset` or a cpuset. The engine has no affinity or
   busy-poll setting (#165), so every inbound message pays a scheduler wakeup, and on a busy machine
   that dominates the tail.
