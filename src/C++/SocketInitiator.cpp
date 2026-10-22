@@ -64,6 +64,7 @@ void SocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(ConfigError)
         getSocketNoDelay(settings);
         getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
         getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
+        getSocketThreadAffinity(settings);
     }
 }
 

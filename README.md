@@ -323,9 +323,10 @@ application can avoid today, without changing the engine:
   `ThreadedSocketInitiator`) give each connection its own thread and send synchronously. Since
   #156 the reactor ones send straight from the caller's buffer without a `poll()` first, which made
   `pt`'s reactor streaming benchmark about 28% faster; which is faster now depends on the machine.
-- **Pin the process's threads** with `taskset` or a cpuset. The engine has no affinity or
-  busy-poll setting (#165), so every inbound message pays a scheduler wakeup, and on a busy machine
-  that dominates the tail.
+- **Pin the connection threads.** With the threaded transports, `SocketThreadAffinity=<cpu list>`
+  pins each session's connection thread to the CPUs given (#165). Pin the rest of the process with
+  `taskset` or a cpuset. The engine has no busy-poll setting, so every inbound message still pays a
+  scheduler wakeup, and on a busy machine that dominates the tail.
 
 ### Sanitizer verification
 

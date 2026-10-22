@@ -99303,6 +99303,15 @@ _wrap_SOCKET_NODELAY_get(VALUE self) {
 
 
 SWIGINTERN VALUE
+_wrap_SOCKET_THREAD_AFFINITY_get(VALUE self) {
+  VALUE _val;
+  
+  _val = SWIG_FromCharPtr(FIX::SOCKET_THREAD_AFFINITY);
+  return _val;
+}
+
+
+SWIGINTERN VALUE
 _wrap_SOCKET_SEND_BUFFER_SIZE_get(VALUE self) {
   VALUE _val;
   
@@ -136319,6 +136328,7 @@ SWIGEXPORT void Init_quickfix(void) {
   rb_define_singleton_method(mQuickfix, "SOCKET_CONNECT_SOURCE_HOST", VALUEFUNC(_wrap_SOCKET_CONNECT_SOURCE_HOST_get), 0);
   rb_define_singleton_method(mQuickfix, "SOCKET_CONNECT_SOURCE_PORT", VALUEFUNC(_wrap_SOCKET_CONNECT_SOURCE_PORT_get), 0);
   rb_define_singleton_method(mQuickfix, "SOCKET_NODELAY", VALUEFUNC(_wrap_SOCKET_NODELAY_get), 0);
+  rb_define_singleton_method(mQuickfix, "SOCKET_THREAD_AFFINITY", VALUEFUNC(_wrap_SOCKET_THREAD_AFFINITY_get), 0);
   rb_define_singleton_method(mQuickfix, "SOCKET_SEND_BUFFER_SIZE", VALUEFUNC(_wrap_SOCKET_SEND_BUFFER_SIZE_get), 0);
   rb_define_singleton_method(mQuickfix, "SOCKET_RECEIVE_BUFFER_SIZE", VALUEFUNC(_wrap_SOCKET_RECEIVE_BUFFER_SIZE_get), 0);
   rb_define_singleton_method(mQuickfix, "HOST_SELECTION_POLICY", VALUEFUNC(_wrap_HOST_SELECTION_POLICY_get), 0);

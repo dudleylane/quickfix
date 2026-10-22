@@ -514,8 +514,18 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketConnectionThread(void *p)
     }
 
     bool pending = true;
+    bool pinned = false;
     while (pConnection->read())
     {
+        // The session, and so its SocketThreadAffinity, is known once the first message has bound one.
+        if (!pinned && pConnection->getSession())
+        {
+            pinned = true;
+            if (const Dictionary *settings = pAcceptor->getSessionSettings(pConnection->getSession()->getSessionID()))
+            {
+                pinThisThread(*settings, pConnection->getSession()->getLog());
+            }
+        }
         if (pending && pConnection->getSession() && pConnection->getSession()->receivedLogon())
         {
             pending = false;

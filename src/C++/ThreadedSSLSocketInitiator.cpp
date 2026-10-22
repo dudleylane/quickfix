@@ -168,6 +168,7 @@ void ThreadedSSLSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(Co
         getSocketNoDelay(settings);
         getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
         getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
+        getSocketThreadAffinity(settings);
     }
 }
 
@@ -427,6 +428,11 @@ THREAD_PROC ThreadedSSLSocketInitiator::socketThread(void *p)
 
     pInitiator->setConnected(sessionID);
     pInitiator->getLog()->onEvent("Connection succeeded");
+
+    if (const Dictionary *settings = pInitiator->getSessionSettings(sessionID))
+    {
+        pinThisThread(*settings, pSession->getLog());
+    }
 
     pSession->next(UtcTimeStamp::now());
 

@@ -14,6 +14,7 @@
 #include <ThreadedSocketInitiator.h>
 #include <TimeRange.h>
 #include <fix42/Logon.h>
+#include <fix42/TestRequest.h>
 #if (HAVE_SSL > 0)
 #include <SSLSocketAcceptor.h>
 #include <ThreadedSSLSocketAcceptor.h>
@@ -33,11 +34,14 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <map>
 #include <memory>
+#include <mutex>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <poll.h>
 #include <pthread.h>
+#include <sched.h>
 #include <sstream>
 #include <sys/resource.h>
 #include <sys/select.h>
@@ -1761,4 +1765,109 @@ TEST_CASE("SocketInitiatorPollTests")
     initiator.stop(true);
     ::close(peer);
     ::close(listener);
+}
+
+// SocketThreadAffinity pins a threaded transport's connection thread (#165): an initiator's once it
+// connects, an acceptor's once its first message binds a session.
+TEST_CASE("SocketThreadAffinityTests")
+{
+    SECTION("parsesCpuLists")
+    {
+        Dictionary settings;
+        CHECK(getSocketThreadAffinity(settings).empty());
+        settings.setString(SOCKET_THREAD_AFFINITY, "2");
+        CHECK(getSocketThreadAffinity(settings) == std::vector<int>{2});
+        settings.setString(SOCKET_THREAD_AFFINITY, "1,4-6");
+        CHECK(getSocketThreadAffinity(settings) == std::vector<int>{1, 4, 5, 6});
+        for (const char *bad : {"x", "3-1", "", "1,,2", "-2", "1-", "99999", "2 3"})
+        {
+            INFO(bad);
+            settings.setString(SOCKET_THREAD_AFFINITY, bad);
+            CHECK_THROWS_AS(getSocketThreadAffinity(settings), ConfigError);
+        }
+    }
+
+    SECTION("pinsConnectionThreads")
+    {
+        cpu_set_t allowed;
+        REQUIRE(sched_getaffinity(0, sizeof(allowed), &allowed) == 0);
+        std::vector<int> cpus;
+        for (int cpu = 0; cpu < CPU_SETSIZE && cpus.size() < 2; ++cpu)
+        {
+            if (CPU_ISSET(cpu, &allowed))
+            {
+                cpus.push_back(cpu);
+            }
+        }
+        if (cpus.size() < 2)
+        {
+            SKIP("needs two CPUs");
+        }
+
+        // Records the CPU set of the thread each admin message arrives on.
+        struct AffinityApplication : NullApplication
+        {
+            void fromAdmin(const Message &, const SessionID &sessionID)
+                EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon) override
+            {
+                cpu_set_t set;
+                sched_getaffinity(0, sizeof(set), &set);
+                std::lock_guard<std::mutex> lock(mutex);
+                seen[sessionID.getSenderCompID()] = set;
+            }
+            std::mutex mutex;
+            std::map<std::string, cpu_set_t> seen;
+        };
+
+        const int port = freePort();
+        auto settingsFor = [&](const std::string &type, const std::string &sender, const std::string &target, int cpu)
+        {
+            std::stringstream config;
+            config << "[DEFAULT]\nConnectionType=" << type << "\nSocketAcceptPort=" << port
+                   << "\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
+                   << "\nReconnectInterval=1\nHeartBtInt=30\nStartTime=00:00:00\nEndTime=00:00:00\n"
+                   << "UseDataDictionary=N\n[SESSION]\nBeginString=FIX.4.2\nSenderCompID=" << sender
+                   << "\nTargetCompID=" << target << "\nSocketThreadAffinity=" << cpu << "\n";
+            return SessionSettings(config);
+        };
+        AffinityApplication application;
+        MemoryStoreFactory factory;
+        SessionSettings acceptorSettings = settingsFor("acceptor", "PINA", "PINI", cpus[0]);
+        SessionSettings initiatorSettings = settingsFor("initiator", "PINI", "PINA", cpus[1]);
+        ThreadedSocketAcceptor acceptor(application, factory, acceptorSettings);
+        acceptor.start();
+        ThreadedSocketInitiator initiator(application, factory, initiatorSettings);
+        initiator.start();
+
+        const SessionID initiatorID("FIX.4.2", "PINI", "PINA");
+        Session *session = nullptr;
+        for (int i = 0; i < 300 && !(session && session->isLoggedOn()); ++i)
+        {
+            session = Session::lookupSession(initiatorID);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        REQUIRE(session);
+        REQUIRE(session->isLoggedOn());
+        // The acceptor's thread pins after its first read; this arrives on it once pinned.
+        FIX42::TestRequest testRequest(TestReqID("PIN"));
+        Session::sendToTarget(testRequest, initiatorID);
+        bool both = false;
+        for (int i = 0; i < 300 && !both; ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            std::lock_guard<std::mutex> lock(application.mutex);
+            both = application.seen.count("PINA") && application.seen.count("PINI") &&
+                   CPU_COUNT(&application.seen["PINA"]) == 1;
+        }
+        initiator.stop(true);
+        acceptor.stop(true);
+
+        std::lock_guard<std::mutex> lock(application.mutex);
+        REQUIRE(application.seen.count("PINA"));
+        REQUIRE(application.seen.count("PINI"));
+        CHECK(CPU_COUNT(&application.seen["PINA"]) == 1);
+        CHECK(CPU_ISSET(cpus[0], &application.seen["PINA"]));
+        CHECK(CPU_COUNT(&application.seen["PINI"]) == 1);
+        CHECK(CPU_ISSET(cpus[1], &application.seen["PINI"]));
+    }
 }

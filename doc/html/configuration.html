@@ -886,6 +886,20 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           <td>0</td>
         </tr>
 
+        <tr align="left" valign="middle">
+          <td><b>SocketThreadAffinity</b></td>
+
+          <td>CPUs to pin this session's connection thread to: CPU
+          numbers and ranges, such as 2, 2,3 or 1,4-6. Only the
+          threaded transports have a thread per connection; the
+          others ignore it. The thread is pinned once it has connected. An unavailable CPU is logged as an
+          event and the thread runs unpinned.</td>
+
+          <td>CPU list</td>
+
+          <td></td>
+        </tr>
+
         <tr align="center" valign="middle">
           <td colspan="4" bgcolor="#DDDDDD"><h2>Acceptor</h2></td>
         </tr>
@@ -982,6 +996,20 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           <td>positive integer</td>
 
           <td>0</td>
+        </tr>
+
+        <tr align="left" valign="middle">
+          <td><b>SocketThreadAffinity</b></td>
+
+          <td>CPUs to pin this session's connection thread to: CPU
+          numbers and ranges, such as 2, 2,3 or 1,4-6. Only the
+          threaded transports have a thread per connection; the
+          others ignore it. An accepted connection's thread is pinned once its first message has bound it to a session. An unavailable CPU is logged as an
+          event and the thread runs unpinned.</td>
+
+          <td>CPU list</td>
+
+          <td></td>
         </tr>
 
         <tr align="left" valign="middle">

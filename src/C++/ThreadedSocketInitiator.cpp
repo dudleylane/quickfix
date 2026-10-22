@@ -55,6 +55,7 @@ void ThreadedSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(Confi
         getSocketNoDelay(settings);
         getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
         getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
+        getSocketThreadAffinity(settings);
     }
 }
 
@@ -235,6 +236,11 @@ THREAD_PROC ThreadedSocketInitiator::socketThread(void *p)
 
     pInitiator->setConnected(sessionID);
     pInitiator->getLog()->onEvent("Connection succeeded");
+
+    if (const Dictionary *settings = pInitiator->getSessionSettings(sessionID))
+    {
+        pinThisThread(*settings, pSession->getLog());
+    }
 
     pSession->next(UtcTimeStamp::now());
 
