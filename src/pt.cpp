@@ -947,14 +947,24 @@ public:
     void fromApp(const FIX::Message &m, const FIX::SessionID &)
         EXCEPT(FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue, FIX::UnsupportedMessageType)
     {
-        m_count++;
+        if (++m_count == m_target.load())
+        {
+            m_doneAt.store(GetTickCount());
+        }
     }
 
     int getCount() { return m_count; }
 
+    /// Records the tick at which the target-th message arrives, so a benchmark's clock stops then, not when
+    /// its waiting loop next looks. It looked every 100 ms, which added up to that much to each run.
+    void expect(int target) { m_target.store(target); }
+    long doneAt() const { return m_doneAt.load(); }
+
 private:
     // Incremented on a transport thread, read on the main one.
     std::atomic<int> m_count;
+    std::atomic<int> m_target{-1};
+    std::atomic<long> m_doneAt{0};
 };
 
 // For the round-trip benchmarks: the server echoes each application message back, and the client counts
@@ -1099,6 +1109,7 @@ long testSendOnSocket(int count, short port)
 
     FIX::process_sleep(1);
 
+    application.expect(count);
     long start = GetTickCount();
 
     for (int i = 0; i <= count; ++i)
@@ -1108,10 +1119,10 @@ long testSendOnSocket(int count, short port)
 
     while (application.getCount() < count)
     {
-        FIX::process_sleep(0.1);
+        FIX::process_sleep(0.01);
     }
 
-    long ticks = GetTickCount() - start;
+    long ticks = application.doneAt() - start;
 
     initiator.stop();
     acceptor.stop();
@@ -1170,7 +1181,9 @@ long testSendOnThreadedSocket(int count, short port)
 
     FIX::process_sleep(1);
 
+    application.expect(count);
     long start = GetTickCount();
+
     for (int i = 0; i <= count; ++i)
     {
         FIX::Session::sendToTarget(message, sessionID);
@@ -1178,10 +1191,10 @@ long testSendOnThreadedSocket(int count, short port)
 
     while (application.getCount() < count)
     {
-        FIX::process_sleep(0.1);
+        FIX::process_sleep(0.01);
     }
 
-    long ticks = GetTickCount() - start;
+    long ticks = application.doneAt() - start;
 
     initiator.stop();
     acceptor.stop();
