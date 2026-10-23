@@ -248,8 +248,14 @@ template <typename Fn> void run(const char *name, Fn fn, int count)
     micros.reserve(s_reps);
     for (int r = 0; r < s_reps; ++r)
     {
-        g_sampling = wantLatency && (r == s_reps - 1); // sample the last run only
         micros.push_back(static_cast<double>(fn(count)) / count);
+    }
+    if (wantLatency)
+    {
+        // A separate run, kept out of the throughput figures: bracketing every iteration with rdtscp and
+        // storing the sample slows the run it is taken in.
+        g_sampling = true;
+        fn(count);
         g_sampling = false;
     }
     std::sort(micros.begin(), micros.end());
@@ -479,7 +485,7 @@ long testCreateHeartbeat(int count)
 {
     count = count - 1;
 
-    return sampleLoop(count, [&] { FIX42::Heartbeat(); });
+    return sampleLoop(count, [&] { sink(FIX42::Heartbeat()); });
 }
 
 long testIdentifyType(int count)
@@ -489,7 +495,7 @@ long testIdentifyType(int count)
 
     count = count - 1;
 
-    return sampleLoop(count, [&] { FIX::identifyType(messageString); });
+    return sampleLoop(count, [&] { sink(FIX::identifyType(messageString)); });
 }
 
 long testSerializeHeartbeat(int count)
@@ -497,7 +503,7 @@ long testSerializeHeartbeat(int count)
     FIX42::Heartbeat message;
     count = count - 1;
 
-    return sampleLoop(count, [&] { message.toString(); });
+    return sampleLoop(count, [&] { sink(message.toString()); });
 }
 
 long testDeserializeHeartbeat(int count)
@@ -520,6 +526,8 @@ long testDeserializeAndValidateHeartbeat(int count)
 
 long testCreateNewOrderSingle(int count)
 {
+    count = count - 1;
+
     return sampleLoop(count,
                       [&]
                       {
@@ -529,7 +537,7 @@ long testCreateNewOrderSingle(int count)
                           FIX::Side side(FIX::Side_BUY);
                           FIX::TransactTime transactTime = FIX::TransactTime::now();
                           FIX::OrdType ordType(FIX::OrdType_MARKET);
-                          FIX42::NewOrderSingle(clOrdID, handlInst, symbol, side, transactTime, ordType);
+                          sink(FIX42::NewOrderSingle(clOrdID, handlInst, symbol, side, transactTime, ordType));
                       });
 }
 
@@ -545,7 +553,7 @@ long testSerializeNewOrderSingle(int count)
 
     count = count - 1;
 
-    return sampleLoop(count, [&] { message.toString(); });
+    return sampleLoop(count, [&] { sink(message.toString()); });
 }
 
 long testDeserializeNewOrderSingle(int count)
@@ -645,7 +653,7 @@ long testSerializeQuoteRequest(int count)
 
     count = count - 1;
 
-    return sampleLoop(count, [&] { message.toString(); });
+    return sampleLoop(count, [&] { sink(message.toString()); });
 }
 
 long testDeserializeQuoteRequest(int count)
@@ -779,7 +787,7 @@ long testFileStoreNewOrderSingle(int count)
     long start = GetTickCount();
     for (int i = 0; i <= count; ++i)
     {
-        store.set(++i, messageString);
+        store.set(i + 1, messageString); // once per iteration: ++i here as well halved the stores
     }
     long end = GetTickCount();
     store.reset(FIX::UtcTimeStamp::now());
@@ -805,7 +813,12 @@ long testValidateNewOrderSingle(int count)
     FIX::DataDictionary dataDictionary;
     count = count - 1;
 
-    return sampleLoop(count, [&] { dataDictionary.validate(message); });
+    return sampleLoop(count,
+                      [&]
+                      {
+                          dataDictionary.validate(message);
+                          sink(message);
+                      });
 }
 
 long testValidateDictNewOrderSingle(int count)
@@ -826,7 +839,12 @@ long testValidateDictNewOrderSingle(int count)
 
     count = count - 1;
 
-    return sampleLoop(count, [&] { s_dataDictionary->validate(message); });
+    return sampleLoop(count,
+                      [&]
+                      {
+                          s_dataDictionary->validate(message);
+                          sink(message);
+                      });
 }
 
 long testValidateQuoteRequest(int count)
@@ -857,7 +875,12 @@ long testValidateQuoteRequest(int count)
     FIX::DataDictionary dataDictionary;
     count = count - 1;
 
-    return sampleLoop(count, [&] { dataDictionary.validate(message); });
+    return sampleLoop(count,
+                      [&]
+                      {
+                          dataDictionary.validate(message);
+                          sink(message);
+                      });
 }
 
 long testValidateDictQuoteRequest(int count)
@@ -887,7 +910,12 @@ long testValidateDictQuoteRequest(int count)
 
     count = count - 1;
 
-    return sampleLoop(count, [&] { s_dataDictionary->validate(message); });
+    return sampleLoop(count,
+                      [&]
+                      {
+                          s_dataDictionary->validate(message);
+                          sink(message);
+                      });
 }
 
 // The unpooled rows parse with the same data dictionary as the pooled ones, so the two differ only in
@@ -937,6 +965,23 @@ long testNoPoolQuoteRequest(int count)
     count = count - 1;
 
     return sampleLoop(count, [&] { FIX::Message message(str, *s_dataDictionary, DONT_VALIDATE); });
+}
+
+// Waits for a benchmark's client session to log on. A fixed second was not always enough: on a busy machine
+// or a sanitizer build the first messages then went out before the logon and were dropped, and the
+// benchmark's wait for them never ended.
+void waitForLogon(const FIX::SessionID &sessionID)
+{
+    for (int i = 0; i < 3000; ++i)
+    {
+        FIX::Session *session = FIX::Session::lookupSession(sessionID);
+        if (session && session->isLoggedOn())
+        {
+            return;
+        }
+        FIX::process_sleep(0.01);
+    }
+    throw std::runtime_error("benchmark session " + sessionID.toString() + " did not log on in 30 s");
 }
 
 class TestApplication : public FIX::NullApplication
@@ -1032,7 +1077,7 @@ long testSerializeNewOrderSingleWithParties50SP2(int count)
 
     count = count - 1;
 
-    return sampleLoop(count, [&] { message.toString(); });
+    return sampleLoop(count, [&] { sink(message.toString()); });
 }
 
 long testDeserializeNewOrderSingleWithParties50SP2(int count)
@@ -1107,7 +1152,7 @@ long testSendOnSocket(int count, short port)
     FIX::SocketInitiator initiator(application, factory, settings);
     initiator.start();
 
-    FIX::process_sleep(1);
+    waitForLogon(sessionID);
 
     application.expect(count);
     long start = GetTickCount();
@@ -1179,7 +1224,7 @@ long testSendOnThreadedSocket(int count, short port)
     FIX::ThreadedSocketInitiator initiator(application, factory, settings);
     initiator.start();
 
-    FIX::process_sleep(1);
+    waitForLogon(sessionID);
 
     application.expect(count);
     long start = GetTickCount();
