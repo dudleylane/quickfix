@@ -58,6 +58,7 @@ void SocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(ConfigError)
 {
     // The socket options are read from each session's settings when it connects (#150, #170); check
     // every value now.
+    rejectSocketQueuedWrites(s, "SocketInitiator");
     for (const SessionID &sessionID : s.getSessions())
     {
         const Dictionary &settings = s.get(sessionID);

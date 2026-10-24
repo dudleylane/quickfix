@@ -1061,6 +1061,121 @@ TEST_CASE("ThreadedSendTests")
         ::close(pair[0]);
         ::close(pair[1]);
     }
+
+    SECTION("aShortQueuedWriteResumesWithTheRemainingBytes")
+    {
+        // The same with SocketQueuedWrites=Y, where the connection's thread writes without blocking: a
+        // write a signal interrupts, or the socket fills, must resume where it stopped.
+        int pair[2];
+        REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
+        const int small = 4096;
+        ::setsockopt(pair[0], SOL_SOCKET, SO_SNDBUF, &small, sizeof(small));
+        ::setsockopt(pair[1], SOL_SOCKET, SO_RCVBUF, &small, sizeof(small));
+
+        struct sigaction action{};
+        struct sigaction previous{};
+        action.sa_handler = ignoreSignal; // no SA_RESTART: an interrupted send() returns
+        ::sigemptyset(&action.sa_mask);
+        REQUIRE(::sigaction(SIGUSR1, &action, &previous) == 0);
+
+        NullApplication application;
+        MemoryStoreFactory factory;
+        const SessionID sessionID(BeginString("FIX.4.2"), SenderCompID("SHORTSEND"), TargetCompID("TW"));
+        DataDictionaryProvider provider;
+        TimeRange always(UtcTimeOnly(0, 0, 0), UtcTimeOnly(0, 0, 0));
+        {
+            Session session([] { return UtcTimeStamp::now(); }, application, factory, sessionID, provider, always, 30,
+                            nullptr);
+            ThreadedSocketConnection connection(sessionID, pair[0], "", 0, nullptr, "", 0,
+                                                true); // SocketQueuedWrites=Y
+
+            Message logout;
+            logout.getHeader().setField(MsgType(MsgType_Logout));
+            logout.setField(Text(std::string(1024 * 1024, 'T'))); // far larger than the socket buffers
+
+            // With SocketQueuedWrites=Y the connection's own thread writes what send() queues (#166), so run
+            // it as the transports do, and interrupt it mid-write; the write must resume with exactly the
+            // remaining bytes.
+            std::atomic<bool> done{false};
+            connection.startQueuedWrites();
+            std::thread writer(
+                [&]
+                {
+                    while (!done && connection.read())
+                    {
+                    }
+                });
+            session.send(logout);
+
+            // Drain slowly at first so the writer finds the buffers full, until one whole message is in.
+            std::string received;
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+            char buffer[65536];
+            int round = 0;
+            for (;;)
+            {
+                Parser probe;
+                probe.addToStream(received);
+                std::string whole;
+                if (probe.readFixMessage(whole) || std::chrono::steady_clock::now() > deadline)
+                {
+                    break;
+                }
+                struct pollfd pfd = {pair[1], POLLIN, 0};
+                if (::poll(&pfd, 1, 50) <= 0)
+                {
+                    continue;
+                }
+                const ssize_t n = ::recv(pair[1], buffer, received.size() < 64 * 1024 ? 512 : sizeof(buffer), 0);
+                if (n <= 0)
+                {
+                    break;
+                }
+                received.append(buffer, static_cast<size_t>(n));
+                if (received.size() < 64 * 1024)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                    if (round++ < 5)
+                    {
+                        ::pthread_kill(writer.native_handle(), SIGUSR1);
+                    }
+                }
+            }
+            // Nothing more may follow the one message.
+            struct pollfd pfd = {pair[1], POLLIN, 0};
+            if (::poll(&pfd, 1, 200) > 0)
+            {
+                const ssize_t n = ::recv(pair[1], buffer, sizeof(buffer), MSG_DONTWAIT);
+                if (n > 0)
+                {
+                    received.append(buffer, static_cast<size_t>(n));
+                }
+            }
+            done = true;
+            writer.join();
+
+            // The Logout arrives whole and well framed, and every byte after it belongs to another whole
+            // message (the session's own timer may send a Logon meanwhile): a resumed write that repeated or
+            // skipped bytes would leave a malformed tail.
+            Parser parser;
+            parser.addToStream(received);
+            std::string message;
+            REQUIRE(parser.readFixMessage(message));
+            CHECK(message.find("\00135=5\001") != std::string::npos);
+            CHECK(message.size() > 1024 * 1024);
+            CHECK_NOTHROW(Message(message, true)); // BodyLength and CheckSum match the bytes
+            std::size_t framed = message.size();
+            while (parser.readFixMessage(message))
+            {
+                CHECK_NOTHROW(Message(message, true));
+                framed += message.size();
+            }
+            CHECK(framed == received.size());
+        }
+        ::sigaction(SIGUSR1, &previous, nullptr);
+        ::close(pair[0]);
+        ::close(pair[1]);
+    }
 }
 
 TEST_CASE("ReactorTeardownTests")
@@ -1869,5 +1984,358 @@ TEST_CASE("SocketThreadAffinityTests")
         CHECK(CPU_ISSET(cpus[0], &application.seen["PINA"]));
         CHECK(CPU_COUNT(&application.seen["PINI"]) == 1);
         CHECK(CPU_ISSET(cpus[1], &application.seen["PINI"]));
+    }
+}
+
+// ThreadedSocketConnection's queued writer, SocketQueuedWrites=Y (#166): send() queues and wakes the
+// connection's thread, which writes the queue while it reads. Driven here as the transports drive it, over a socket
+// pair.
+TEST_CASE("ThreadedQueuedWriteTests")
+{
+    int pair[2];
+    REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
+    NullApplication application;
+    MemoryStoreFactory factory;
+    const SessionID sessionID(BeginString("FIX.4.2"), SenderCompID("QUEUED"), TargetCompID("TW"));
+    DataDictionaryProvider provider;
+    TimeRange always(UtcTimeOnly(0, 0, 0), UtcTimeOnly(0, 0, 0));
+    Session session([] { return UtcTimeStamp::now(); }, application, factory, sessionID, provider, always, 30, nullptr);
+    std::unique_ptr<ThreadedSocketConnection> connection(
+        new ThreadedSocketConnection(sessionID, pair[0], "", 0, nullptr, "", 0, true));
+    connection->startQueuedWrites();
+
+    std::atomic<bool> stop{false};
+    std::thread writer; // the connection's thread, started by each section when it wants writing
+    auto startWriter = [&]
+    {
+        writer = std::thread(
+            [&]
+            {
+                while (!stop && connection->read())
+                {
+                }
+            });
+    };
+    // Logouts: a session not logged on still sends them, and each is numbered under the session's lock.
+    auto logout = [](std::size_t text)
+    {
+        Message message;
+        message.getHeader().setField(MsgType(MsgType_Logout));
+        if (text)
+        {
+            message.setField(Text(std::string(text, 'L')));
+        }
+        return message;
+    };
+    // Everything that reaches the other end, framed into messages.
+    std::mutex readMutex;
+    std::string received;
+    std::atomic<bool> reading{true};
+    std::atomic<bool> paused{false}; // a peer that stops reading
+    std::thread reader(
+        [&]
+        {
+            char buffer[65536];
+            while (reading)
+            {
+                if (paused)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                    continue;
+                }
+                struct pollfd pfd = {pair[1], POLLIN, 0};
+                if (::poll(&pfd, 1, 20) > 0)
+                {
+                    const ssize_t n = ::recv(pair[1], buffer, sizeof(buffer), 0);
+                    if (n <= 0)
+                    {
+                        return;
+                    }
+                    std::lock_guard<std::mutex> lock(readMutex);
+                    received.append(buffer, static_cast<size_t>(n));
+                }
+            }
+        });
+    auto logouts = [&]
+    {
+        std::lock_guard<std::mutex> lock(readMutex);
+        Parser parser;
+        parser.addToStream(received);
+        std::vector<int> seqNums;
+        std::string message;
+        while (parser.readFixMessage(message))
+        {
+            if (message.find("\00135=5\001") != std::string::npos)
+            {
+                const std::string::size_type start = message.find("\00134=") + 4;
+                seqNums.push_back(std::stoi(message.substr(start, message.find('\001', start) - start)));
+            }
+        }
+        return seqNums;
+    };
+    auto waitFor = [&](std::size_t count)
+    {
+        for (int i = 0; i < 500 && logouts().size() < count; ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        return logouts().size();
+    };
+    auto finish = [&]
+    {
+        stop = true;
+        connection->disconnect();
+        if (writer.joinable())
+        {
+            writer.join();
+        }
+        reading = false;
+        reader.join();
+    };
+
+    SECTION("wireOrderIsSequenceOrderAcrossThreads")
+    {
+        startWriter();
+        std::vector<std::thread> senders;
+        for (int t = 0; t < 4; ++t)
+        {
+            senders.emplace_back(
+                [&]
+                {
+                    for (int i = 0; i < 500; ++i)
+                    {
+                        Message message = logout(0);
+                        session.send(message);
+                    }
+                });
+        }
+        for (std::thread &sender : senders)
+        {
+            sender.join();
+        }
+        CHECK(waitFor(2000) == 2000);
+        const std::vector<int> seqNums = logouts();
+        finish();
+        for (std::size_t i = 1; i < seqNums.size(); ++i)
+        {
+            INFO("message " << i);
+            CHECK(seqNums[i] > seqNums[i - 1]);
+        }
+    }
+
+    SECTION("noMessageIsLeftQueuedWhenTheWriterGoesIdle")
+    {
+        startWriter();
+        for (int round = 1; round <= 200; ++round)
+        {
+            auto sendOne = [&]
+            {
+                Message message = logout(0);
+                session.send(message);
+            };
+            std::thread a(sendOne), b(sendOne);
+            a.join();
+            b.join();
+            INFO("round " << round);
+            REQUIRE(waitFor(static_cast<std::size_t>(2 * round)) == static_cast<std::size_t>(2 * round));
+        }
+        finish();
+    }
+
+    SECTION("aFullQueueMakesItsSendersWait")
+    {
+        // Past the bound a sender writes the queue itself, so a peer that stops reading holds it there:
+        // the backpressure a blocking write gave.
+        paused = true;
+        startWriter();
+        std::atomic<bool> finished{false};
+        std::thread bulk(
+            [&]
+            {
+                for (int i = 0; i < 6; ++i) // 6 MiB against a 4 MiB bound
+                {
+                    Message message = logout(1024 * 1024);
+                    session.send(message);
+                }
+                finished = true;
+            });
+        // Long enough for the connection's thread to run the session's timer, which needs the session lock
+        // the waiting sender holds: that must not deadlock.
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+        CHECK_FALSE(finished.load());
+        paused = false;
+        bulk.join();
+        CHECK(finished.load());
+        CHECK(waitFor(6) == 6);
+        finish();
+    }
+
+    SECTION("aDisconnectWritesWhatWasSentBeforeIt")
+    {
+        // The session sends a Logout's reply and disconnects at once; the reply must still go out, as it
+        // did when every send wrote straight away. No connection thread runs here, so only the flush in
+        // disconnect() can write it.
+        Message message = logout(0);
+        session.send(message);
+        connection->disconnect();
+        CHECK(waitFor(1) == 1);
+        finish();
+    }
+
+    SECTION("aDisconnectWaitsForAWriterMidWrite")
+    {
+        // A sender past the bound holds the writer's role, blocked on a peer that has stopped reading, when
+        // another thread disconnects. The disconnect must wait for the role and then flush, not give the
+        // queue up: dropping it would lose the messages queued behind the one being written, and cut that
+        // one short on the wire.
+        paused = true;
+        std::thread bulk(
+            [&]
+            {
+                for (int i = 0; i < 4; ++i) // the fourth goes past the 4 MiB bound and blocks writing
+                {
+                    Message message = logout(1024 * 1024);
+                    session.send(message);
+                }
+            });
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        std::atomic<bool> disconnected{false};
+        std::thread disconnecter(
+            [&]
+            {
+                connection->disconnect();
+                disconnected = true;
+            });
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        CHECK_FALSE(disconnected.load()); // waiting for the writer
+        paused = false;
+        bulk.join();
+        disconnecter.join();
+        CHECK(waitFor(4) == 4);
+        {
+            std::lock_guard<std::mutex> lock(readMutex);
+            Parser parser;
+            parser.addToStream(received);
+            std::string message;
+            std::size_t framed = 0;
+            while (parser.readFixMessage(message))
+            {
+                framed += message.size();
+            }
+            CHECK(framed == received.size()); // nothing cut short
+        }
+        finish();
+    }
+
+    SECTION("aDisconnectReleasesWaitingSenders")
+    {
+        paused = true; // the peer never reads again
+        startWriter();
+        std::atomic<bool> finished{false};
+        std::thread bulk(
+            [&]
+            {
+                for (int i = 0; i < 6; ++i)
+                {
+                    Message message = logout(1024 * 1024);
+                    session.send(message);
+                }
+                finished = true;
+            });
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        CHECK_FALSE(finished.load()); // held at the bound
+        connection->disconnect();     // the sender must give up, not hang
+        bulk.join();
+        CHECK(finished.load());
+        finish();
+    }
+}
+
+// SocketQueuedWrites (#166): opt-in, threaded transports only.
+TEST_CASE("SocketQueuedWritesTests")
+{
+    auto settingsFor = [](const std::string &type, int port, const std::string &first, const std::string &second)
+    {
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=" << type << "\nSocketAcceptPort=" << port
+               << "\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
+               << "\nReconnectInterval=1\nHeartBtInt=30\nStartTime=00:00:00\nEndTime=00:00:00\n"
+               << "UseDataDictionary=N\n[SESSION]\nBeginString=FIX.4.2\nSenderCompID=QWA\nTargetCompID=QWI\n"
+               << "SocketQueuedWrites=" << first << "\n[SESSION]\nBeginString=FIX.4.4\nSenderCompID=QWA\n"
+               << "TargetCompID=QWI\nSocketQueuedWrites=" << second << "\n";
+        return SessionSettings(config);
+    };
+    NullApplication application;
+    MemoryStoreFactory factory;
+
+    SECTION("isOffByDefault")
+    {
+        Dictionary settings;
+        CHECK_FALSE(getSocketQueuedWrites(settings));
+        settings.setString(SOCKET_QUEUED_WRITES, "Y");
+        CHECK(getSocketQueuedWrites(settings));
+        settings.setString(SOCKET_QUEUED_WRITES, "maybe");
+        CHECK_THROWS_AS(getSocketQueuedWrites(settings), ConfigError);
+    }
+
+    SECTION("isRefusedByTransportsWithoutIt")
+    {
+        const int port = freePort();
+        {
+            SocketAcceptor acceptor(application, factory, settingsFor("acceptor", port, "Y", "Y"));
+            CHECK_THROWS_AS(acceptor.start(), ConfigError);
+        }
+        {
+            SocketInitiator initiator(application, factory, settingsFor("initiator", port, "Y", "Y"));
+            CHECK_THROWS_AS(initiator.start(), ConfigError);
+        }
+#if HAVE_SSL
+        {
+            ThreadedSSLSocketAcceptor acceptor(application, factory, settingsFor("acceptor", port, "Y", "Y"));
+            CHECK_THROWS_AS(acceptor.start(), ConfigError);
+        }
+#endif
+    }
+
+    SECTION("mustAgreeAcrossAPort")
+    {
+        ThreadedSocketAcceptor acceptor(application, factory, settingsFor("acceptor", freePort(), "Y", "N"));
+        CHECK_THROWS_AS(acceptor.start(), ConfigError);
+    }
+
+    SECTION("logsOnAndExchangesMessages")
+    {
+        const int port = freePort();
+        ThreadedSocketAcceptor acceptor(application, factory, settingsFor("acceptor", port, "Y", "Y"));
+        acceptor.start();
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
+               << "\nReconnectInterval=1\nHeartBtInt=30\nStartTime=00:00:00\nEndTime=00:00:00\n"
+               << "UseDataDictionary=N\nSocketQueuedWrites=Y\n[SESSION]\nBeginString=FIX.4.2\nSenderCompID=QWI\n"
+               << "TargetCompID=QWA\n";
+        SessionSettings initiatorSettings(config);
+        ThreadedSocketInitiator initiator(application, factory, initiatorSettings);
+        initiator.start();
+
+        const SessionID initiatorID("FIX.4.2", "QWI", "QWA");
+        Session *session = nullptr;
+        for (int i = 0; i < 300 && !(session && session->isLoggedOn()); ++i)
+        {
+            session = Session::lookupSession(initiatorID);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        REQUIRE(session);
+        REQUIRE(session->isLoggedOn());
+        // A TestRequest is answered by a Heartbeat: both directions written by the connections' threads.
+        const SEQNUM expected = session->getExpectedTargetNum() + 1;
+        FIX42::TestRequest testRequest(TestReqID("QUEUED"));
+        Session::sendToTarget(testRequest, initiatorID);
+        for (int i = 0; i < 300 && session->getExpectedTargetNum() < expected; ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        CHECK(session->getExpectedTargetNum() >= expected);
+        initiator.stop();
+        acceptor.stop();
     }
 }

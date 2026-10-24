@@ -180,6 +180,7 @@ void SSLSocketAcceptor::onConfigure(const SessionSettings &sessionSettings) EXCE
             settings.getBool(SOCKET_REUSE_ADDRESS);
         }
     }
+    rejectSocketQueuedWrites(sessionSettings, "SSLSocketAcceptor");
     checkSocketOptionsPerPort(sessionSettings);
 }
 

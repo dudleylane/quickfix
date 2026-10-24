@@ -162,6 +162,7 @@ void ThreadedSSLSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(Co
 {
     // The socket options are read from each session's settings when it connects (#150, #170); check
     // every value now.
+    rejectSocketQueuedWrites(s, "ThreadedSSLSocketInitiator");
     for (const SessionID &sessionID : s.getSessions())
     {
         const Dictionary &settings = s.get(sessionID);

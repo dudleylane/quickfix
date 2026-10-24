@@ -900,6 +900,29 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           <td></td>
         </tr>
 
+        <tr align="left" valign="middle">
+          <td><b>SocketQueuedWrites</b></td>
+
+          <td>Threaded transports only (ThreadedSocketInitiator); any other
+          transport refuses Y at start. With N, whichever thread sends a
+          message writes it to the socket itself, blocking while the peer's
+          window is full and holding the session's lock, so threads sending
+          on one session wait on each other's writes. With Y, sending queues
+          the message and the connection's own thread writes it, so a sender
+          returns without waiting for the socket. That suits several threads
+          sending on one session. It costs every message a thread wake-up,
+          which a single sender with one message in flight pays in full:
+          about 18 microseconds a round trip where it was measured. Past 4 MiB
+          queued, a sender writes the queue itself, which keeps a slow peer's
+          backpressure. A disconnect first writes what is queued, for at most
+          5 seconds. README's performance notes have the measurements.</td>
+
+          <td>Y<br>
+          N</td>
+
+          <td>N</td>
+        </tr>
+
         <tr align="center" valign="middle">
           <td colspan="4" bgcolor="#DDDDDD"><h2>Acceptor</h2></td>
         </tr>
@@ -1010,6 +1033,20 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           <td>CPU list</td>
 
           <td></td>
+        </tr>
+
+        <tr align="left" valign="middle">
+          <td><b>SocketQueuedWrites</b></td>
+
+          <td>As for the initiator, on ThreadedSocketAcceptor; any other
+          transport refuses Y at start. Like the other socket options it is
+          per port: every session on a SocketAcceptPort must have the same
+          value.</td>
+
+          <td>Y<br>
+          N</td>
+
+          <td>N</td>
         </tr>
 
         <tr align="left" valign="middle">

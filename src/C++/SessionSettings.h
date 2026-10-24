@@ -68,6 +68,7 @@ const char SOCKET_CONNECT_SOURCE_HOST[] = "SocketConnectSourceHost";
 const char SOCKET_CONNECT_SOURCE_PORT[] = "SocketConnectSourcePort";
 const char SOCKET_NODELAY[] = "SocketNodelay";
 const char SOCKET_THREAD_AFFINITY[] = "SocketThreadAffinity";
+const char SOCKET_QUEUED_WRITES[] = "SocketQueuedWrites";
 const char SOCKET_SEND_BUFFER_SIZE[] = "SocketSendBufferSize";
 const char SOCKET_RECEIVE_BUFFER_SIZE[] = "SocketReceiveBufferSize";
 const char HOST_SELECTION_POLICY[] = "HostSelectionPolicy";

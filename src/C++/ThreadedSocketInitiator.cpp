@@ -55,6 +55,7 @@ void ThreadedSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(Confi
         getSocketNoDelay(settings);
         getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
         getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
+        getSocketQueuedWrites(settings);
         getSocketThreadAffinity(settings);
     }
 }
@@ -158,8 +159,9 @@ void ThreadedSocketInitiator::doConnect(const SessionID &s, const Dictionary &d)
                      host.sourceAddress + ":" + IntConvertor::convert(host.sourcePort) +
                      ") ReconnectInterval=" + IntConvertor::convert(reconnectInterval(d)));
 
-        ThreadedSocketConnection *pConnection = new ThreadedSocketConnection(
-            s, socket, host.address, host.port, getLog(), host.sourceAddress, host.sourcePort);
+        ThreadedSocketConnection *pConnection =
+            new ThreadedSocketConnection(s, socket, host.address, host.port, getLog(), host.sourceAddress,
+                                         host.sourcePort, getSocketQueuedWrites(d));
 
         ThreadPair *pair = new ThreadPair(this, pConnection);
 
@@ -236,6 +238,7 @@ THREAD_PROC ThreadedSocketInitiator::socketThread(void *p)
 
     pInitiator->setConnected(sessionID);
     pInitiator->getLog()->onEvent("Connection succeeded");
+    pConnection->startQueuedWrites();
 
     if (const Dictionary *settings = pInitiator->getSessionSettings(sessionID))
     {

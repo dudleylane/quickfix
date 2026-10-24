@@ -48,6 +48,30 @@ inline int getSocketBufferSize(const Dictionary &settings, const std::string &ke
     return settings.has(key) ? settings.getInt(key) : 0;
 }
 
+/// Reads SocketQueuedWrites (#166), for the threaded transports. N, the default: whichever thread sends
+/// writes the message to the socket itself, blocking while the peer's window is full, under the session's
+/// lock. Y: send() queues it and the connection's own thread writes it, so senders sharing a session do not
+/// wait on each other's writes. That costs each message a thread wake-up, which a single sender with one
+/// message in flight pays in full.
+inline bool getSocketQueuedWrites(const Dictionary &settings)
+{
+    return settings.has(SOCKET_QUEUED_WRITES) ? settings.getBool(SOCKET_QUEUED_WRITES) : false;
+}
+
+/// For the transports without queued writes: the reactor's already writes from its own loop, and the
+/// threaded SSL transports' would need a non-blocking SSL_write. Y is refused rather than ignored.
+inline void rejectSocketQueuedWrites(const SessionSettings &sessionSettings, const std::string &transport)
+{
+    for (const SessionID &sessionID : sessionSettings.getSessions())
+    {
+        if (getSocketQueuedWrites(sessionSettings.get(sessionID)))
+        {
+            throw ConfigError(std::string(SOCKET_QUEUED_WRITES) + "=Y is not supported by " + transport + ": " +
+                              sessionID.toString());
+        }
+    }
+}
+
 /// Reads SocketThreadAffinity, the CPUs a threaded transport's connection thread is pinned to: a
 /// comma-separated list of CPU numbers and ranges, such as "2", "2,3" or "1,4-6". Empty, the default,
 /// leaves the thread where the scheduler puts it (#165).
@@ -149,6 +173,7 @@ inline void checkSocketOptionsPerPort(const SessionSettings &sessionSettings)
         std::string noDelay;
         std::string sendBufferSize;
         std::string receiveBufferSize;
+        std::string queuedWrites;
     };
     std::map<std::uint16_t, PortOptions> byPort;
     for (const SessionID &sessionID : sessionSettings.getSessions())
@@ -158,7 +183,8 @@ inline void checkSocketOptionsPerPort(const SessionSettings &sessionSettings)
         getSocketThreadAffinity(settings); // per session, not per port: checked here so a bad list fails early
         const PortOptions options{sessionID, getSocketNoDelay(settings) ? "Y" : "N",
                                   std::to_string(getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE)),
-                                  std::to_string(getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE))};
+                                  std::to_string(getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE)),
+                                  getSocketQueuedWrites(settings) ? "Y" : "N"};
         const auto [it, inserted] = byPort.try_emplace(port, options);
         if (inserted)
         {
@@ -169,7 +195,8 @@ inline void checkSocketOptionsPerPort(const SessionSettings &sessionSettings)
              {std::tuple<const char *, const std::string &, const std::string &>{SOCKET_NODELAY, options.noDelay,
                                                                                  first.noDelay},
               {SOCKET_SEND_BUFFER_SIZE, options.sendBufferSize, first.sendBufferSize},
-              {SOCKET_RECEIVE_BUFFER_SIZE, options.receiveBufferSize, first.receiveBufferSize}})
+              {SOCKET_RECEIVE_BUFFER_SIZE, options.receiveBufferSize, first.receiveBufferSize},
+              {SOCKET_QUEUED_WRITES, options.queuedWrites, first.queuedWrites}})
         {
             if (mine != theirs)
             {

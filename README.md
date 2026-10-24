@@ -330,13 +330,23 @@ application can avoid today, without changing the engine:
 - **`SocketNodelay`** is on by default since #150. With it off, Nagle's algorithm can hold a small
   message for the peer's delayed ACK, up to ~40 ms on Linux.
 - **Compare the transports on your hardware.** The threaded ones (`ThreadedSocketAcceptor`,
-  `ThreadedSocketInitiator`) give each connection its own thread and send synchronously. Since
-  #156 the reactor ones send straight from the caller's buffer without a `poll()` first, which made
-  `pt`'s reactor streaming benchmark about 28% faster; which is faster now depends on the machine.
+  `ThreadedSocketInitiator`) give each connection its own thread and, unless `SocketQueuedWrites=Y`,
+  send synchronously. Since #156 the reactor ones send straight from the caller's buffer without a
+  `poll()` first, which made `pt`'s reactor streaming benchmark about 28% faster; which is faster now
+  depends on the machine.
 - **Pin the connection threads.** With the threaded transports, `SocketThreadAffinity=<cpu list>`
   pins each session's connection thread to the CPUs given (#165). Pin the rest of the process with
   `taskset` or a cpuset. The engine has no busy-poll setting, so every inbound message still pays a
   scheduler wakeup, and on a busy machine that dominates the tail.
+- **Queue the threaded transports' writes when several threads send on one session.** By default the
+  sending thread writes to the socket itself under the session's lock, so concurrent senders wait on
+  each other's writes. `SocketQueuedWrites=Y` hands the write to the connection's own thread (#166).
+  With four threads on one session, paced at 100 μs each, `send()` p50 fell from 16 to 5.5 μs and
+  p99.9 from 68 to 23–29 μs. Flat out, p99.9 fell from ~10 ms to 0.65–1.4 ms and delivery rose from
+  10.6 to 4.7–7.3 μs a message, but p99 rose from 29 to 150–300 μs: past 4 MiB queued, a sender
+  writes the queue itself. It costs every message a thread wake-up, which a single sender with one
+  message in flight pays in full: `pt`'s threaded round trip goes from 33 to 52 μs, p99 from ~60 to
+  ~127 μs. Other transports refuse it.
 
 ### Sanitizer verification
 

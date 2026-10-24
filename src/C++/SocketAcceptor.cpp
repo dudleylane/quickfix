@@ -64,6 +64,7 @@ void SocketAcceptor::onConfigure(const SessionSettings &sessionSettings) EXCEPT(
             settings.getBool(SOCKET_REUSE_ADDRESS);
         }
     }
+    rejectSocketQueuedWrites(sessionSettings, "SocketAcceptor");
     checkSocketOptionsPerPort(sessionSettings);
 }
 

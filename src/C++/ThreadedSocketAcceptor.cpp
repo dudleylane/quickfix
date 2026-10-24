@@ -266,7 +266,10 @@ THREAD_PROC ThreadedSocketAcceptor::socketAcceptorThread(void *p)
 
         Sessions sessions = pAcceptor->m_portToSessions[port];
 
-        ThreadedSocketConnection *pConnection = new ThreadedSocketConnection(socket, sessions, pAcceptor->getLog());
+        // SocketQueuedWrites is per port, like the other socket options: every session on it has the same.
+        const Dictionary *settings = sessions.empty() ? 0 : pAcceptor->getSessionSettings(*sessions.begin());
+        ThreadedSocketConnection *pConnection = new ThreadedSocketConnection(
+            socket, sessions, pAcceptor->getLog(), settings && getSocketQueuedWrites(*settings));
 
         ConnectionThreadInfo *info = new ConnectionThreadInfo(pAcceptor, pConnection);
 
@@ -326,6 +329,7 @@ THREAD_PROC ThreadedSocketAcceptor::socketConnectionThread(void *p)
     delete info;
 
     socket_handle socket = pConnection->getSocket();
+    pConnection->startQueuedWrites();
 
     bool pending = true;
     bool pinned = false;

@@ -172,6 +172,7 @@ void ThreadedSSLSocketAcceptor::onConfigure(const SessionSettings &s) EXCEPT(Con
             settings.getBool(SOCKET_REUSE_ADDRESS);
         }
     }
+    rejectSocketQueuedWrites(s, "ThreadedSSLSocketAcceptor");
     checkSocketOptionsPerPort(s);
 }
 

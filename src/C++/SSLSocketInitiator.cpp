@@ -182,6 +182,7 @@ void SSLSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(ConfigErro
 {
     // The socket options are read from each session's settings when it connects (#150, #170); check
     // every value now.
+    rejectSocketQueuedWrites(s, "SSLSocketInitiator");
     for (const SessionID &sessionID : s.getSessions())
     {
         const Dictionary &settings = s.get(sessionID);
