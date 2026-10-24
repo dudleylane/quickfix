@@ -322,7 +322,11 @@ public:
     {
     }
 
-    bool send(const std::string &) { return true; }
+    bool send(const std::string &message)
+    {
+        lastSent = message;
+        return true;
+    }
 
     virtual void toAdmin(FIX::Message &message, const SessionID &)
     {
@@ -430,6 +434,7 @@ public:
 
     void disconnect() { disconnected++; }
 
+    std::string lastSent; // the last message's bytes, as they went to the responder
     FIX::Message sentLogon;
     FIX::Message sentResendRequest;
     FIX::Message sentHeartbeat;
@@ -2640,6 +2645,65 @@ TEST_CASE_METHOD(acceptorFixture, "AcceptorSessionTestCase")
 
 TEST_CASE_METHOD(acceptorT11Fixture, "AcceptorT11TestCase")
 {
+    // A business reject names the rejected message's version in RefApplVerID (1130), never DefaultApplVerID
+    // (1137), and carries 1130 only when the BusinessMessageReject it goes out as defines it (#173). Each
+    // reject is checked against the dictionaries a validating counterparty would use: FIXT 1.1, and the
+    // application dictionary of our DefaultApplVerID.
+    auto rejectOf = [&](const char *senderDefault, const char *counterpartyDefault, bool withApplVerID)
+    {
+        object->setSenderDefaultApplVerID(senderDefault);
+        FIXT11::Logon logon = createT11Logon("ISLD", "TW", 1);
+        logon.set(DefaultApplVerID(counterpartyDefault));
+        logon.getHeader().setField(BodyLength(logon.bodyLength()));
+        logon.getTrailer().setField(CheckSum(logon.checkSum()));
+        object->next(logon, now);
+        REQUIRE(object->isLoggedOn());
+        // The application refuses ExecutionReports with UnsupportedMessageType: a business reject.
+        FIX::Message report = createT1142ExecutionReport("ISLD", "TW", 2);
+        if (!withApplVerID)
+        {
+            report.getHeader().removeField(FIELD::ApplVerID);
+            report.getHeader().setField(BodyLength(report.bodyLength()));
+            report.getTrailer().setField(CheckSum(report.checkSum()));
+        }
+        object->next(report, now);
+        REQUIRE(toBusinessMessageReject == 1);
+        REQUIRE(lastSent.find("\00135=j\001") != std::string::npos);
+        return lastSent;
+    };
+    auto validate = [](const std::string &reject, const char *spec)
+    {
+        DataDictionary transport(FIX::TestSettings::pathForSpec("FIXT11"));
+        DataDictionary application(FIX::TestSettings::pathForSpec(spec));
+        Message message(reject, transport, application, false);
+        CHECK_NOTHROW(DataDictionary::validate(message, &transport, &application));
+        return message;
+    };
+
+    SECTION("businessRejectAsFix50CarriesNoApplVerID")
+    {
+        // FIX 5.0's BusinessMessageReject defines neither 1137 nor 1130.
+        Message reject = validate(rejectOf(ApplVerID_FIX50, ApplVerID_FIX50, true), "FIX50");
+        CHECK_FALSE(reject.isSetField(FIELD::DefaultApplVerID));
+        CHECK_FALSE(reject.isSetField(FIELD::RefApplVerID));
+    }
+
+    SECTION("businessRejectAsFix50Sp1NamesTheRejectedMessagesApplVerID")
+    {
+        // The rejected message says FIX 4.2 (1128=4) while the counterparty's default is FIX 5.0.
+        Message reject = validate(rejectOf(ApplVerID_FIX50_SP1, ApplVerID_FIX50, true), "FIX50SP1");
+        CHECK_FALSE(reject.isSetField(FIELD::DefaultApplVerID));
+        CHECK(reject.getField(FIELD::RefApplVerID) == ApplVerID_FIX42);
+    }
+
+    SECTION("businessRejectAsFix50Sp2FallsBackToTheCounterpartysDefault")
+    {
+        // No 1128 on the rejected message: its version is the counterparty's DefaultApplVerID, not ours.
+        Message reject = validate(rejectOf(ApplVerID_FIX50_SP2, ApplVerID_FIX42, false), "FIX50SP2");
+        CHECK_FALSE(reject.isSetField(FIELD::DefaultApplVerID));
+        CHECK(reject.getField(FIELD::RefApplVerID) == ApplVerID_FIX42);
+    }
+
     SECTION("nextResendRequestT1142RepeatingGroup")
     {
         object->next(createT11Logon("ISLD", "TW", 1), now);

@@ -1227,14 +1227,32 @@ void Session::generateReject(const Message &message, const std::string &text, in
     m_state.onEvent("Message " + msgSeqNum.getString() + " Rejected: " + text);
 }
 
+namespace
+{
+// Whether a BusinessMessageReject in this ApplVerID defines RefApplVerID (1130): FIX 5.0 SP1 ("8") and
+// later do; FIX 5.0 and the FIX 4.x versions do not. A value that is not a number gets no 1130, which
+// keeps the reject valid under any dictionary.
+bool rejectDefinesRefApplVerID(const std::string &applVerID)
+{
+    int version = 0;
+    return IntConvertor::convert(applVerID, version) && version >= 8;
+}
+} // namespace
+
 void Session::generateBusinessReject(const Message &message, int err, int field)
 {
     Message reject = newMessage(MsgType(MsgType_BusinessMessageReject));
     auto const &msgSeqNum = message.getHeader().getField<MsgSeqNum>();
 
-    if (m_sessionID.isFIXT())
+    // On FIXT, name the rejected message's version, its ApplVerID or else the counterparty's default, in
+    // RefApplVerID (#173). DefaultApplVerID belongs to Logon alone, and a validating counterparty refused the
+    // reject that carried it. BusinessMessageReject defines RefApplVerID only from FIX 5.0 SP1, so it is set
+    // only when this reject goes out as SP1 or later: the counterparty reads it as our DefaultApplVerID.
+    if (m_sessionID.isFIXT() && rejectDefinesRefApplVerID(m_senderDefaultApplVerID))
     {
-        reject.setField(DefaultApplVerID(m_senderDefaultApplVerID));
+        ApplVerID applVerID(m_targetDefaultApplVerID);
+        message.getHeader().getFieldIfSet(applVerID);
+        reject.setField(RefApplVerID(applVerID.getValue()));
     }
     fill(reject.getHeader());
     reject.setField(RefMsgType(message.getHeader().getField<MsgType>()));

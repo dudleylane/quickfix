@@ -167,6 +167,7 @@ remains in git history.
 - **Logon reset after verification**: `ResetSeqNumFlag=Y` and `ResetOnLogon` reset the sequence numbers only once `verify()` — and the application's `fromAdmin` — has accepted the Logon, and a reset or `setNextTargetMsgSeqNum` also clears the inbound queue and resend range (GHSA-jg3m-mc7p-8mww, `389a9d38`)
 - **No reject before logon**: the string-reason `generateReject` refuses to send while not logged on, like the int-reason one, and formats Text the same way (GHSA-fgwx-rgmv-2fgh, `1ba01631`)
 - **Canonical field metrics**: a field parsed from a non-canonical tag carries the length and checksum of what `appendTo()` writes, so copies of it serialise consistently (GHSA-4459-9vwq-69r6, `1d9a6fcd`)
+- **FIXT business rejects**: a BusinessMessageReject names the rejected message's version in RefApplVerID (1130), sent only when the reject goes out as FIX 5.0 SP1 or later, which define it; upstream puts DefaultApplVerID (1137), a Logon field, in its body, and a validating counterparty refuses the reject (#173; upstream's #387 was closed as not planned)
 - **SQL stores**: `MySQLStore` and `PostgreSQLStore` escape the message in their UPDATE fallback as in the INSERT (GHSA-ghf2-fj46-jv6p, `4a9628ac`)
 
 ### Build system
