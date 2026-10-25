@@ -11,6 +11,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 final class Transports {
     private static final Set<Object> running = ConcurrentHashMap.newKeySet();
+    // Guarded by Transports.class. Once the hook has stopped the transports the JVM is exiting, and a transport
+    // freed then would be freed under the C++ runtime's own teardown: close() leaves it to the process.
+    private static boolean exiting;
 
     static {
         Runtime.getRuntime().addShutdownHook(new Thread(Transports::stopAll, "quickfix shutdown"));
@@ -26,6 +29,18 @@ final class Transports {
         running.remove(transport);
     }
 
+    /** Frees a stopped transport, unless the JVM is exiting. */
+    static synchronized void free(AutoCloseable transport) {
+        if (exiting) {
+            return;
+        }
+        if (transport instanceof Initiator initiator) {
+            initiator.delete();
+        } else if (transport instanceof Acceptor acceptor) {
+            acceptor.delete();
+        }
+    }
+
     private static void stopAll() {
         for (Object transport : running.toArray()) {
             if (transport instanceof Initiator initiator) {
@@ -35,5 +50,8 @@ final class Transports {
             }
         }
         running.clear();
+        synchronized (Transports.class) {
+            exiting = true;
+        }
     }
 }

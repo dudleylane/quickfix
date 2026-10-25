@@ -98,7 +98,7 @@ jobs:
           (cd spec && ./generate.sh)
           if ! git diff --exit-code --stat || [ -n "$(git status --porcelain --untracked-files=all -- src spec)" ]; then
             git status --short -- src spec
-            echo "::error::the generated code does not match spec/ -- run spec/generate.sh and commit the result"
+            echo "::error::the generated code does not match spec/ -- run spec/generate.sh and commit the result (src/java/spec is spec/GeneratorJava.rb's: thousands of its files deleted means the generator stopped part way)"
             exit 1
           fi
 
@@ -541,7 +541,8 @@ jobs:
             -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.link }}" \
             -DCMAKE_SHARED_LINKER_FLAGS="${{ matrix.link }}" \
             -DCMAKE_MODULE_LINKER_FLAGS="${{ matrix.link }}" \
-            -DHAVE_PYTHON3=${{ matrix.bindings }} -DHAVE_RUBY=${{ matrix.bindings }}
+            -DHAVE_PYTHON3=${{ matrix.bindings }} -DHAVE_RUBY=${{ matrix.bindings }} \
+            -DHAVE_JAVA=${{ matrix.bindings }}
 
       - name: Build
         shell: bash
@@ -554,7 +555,7 @@ jobs:
       - name: Run the binding suites under ASan + UBSan
         # The bindings' own lifetime and threading code (the Ruby GVL handling,
         # callback adapters and teardown; Python's director mutex and argument
-        # keeping) was checked only by tests that happened to crash (#116). Both
+        # keeping) was checked only by tests that happened to crash (#116). The
         # modules are built here with the sanitizer flags; the interpreters are
         # not, so the ASan runtime is preloaded into them. Leak detection is off
         # for them -- an interpreter keeps memory at exit by design -- and so is
@@ -570,6 +571,9 @@ jobs:
           (cd src/python && PYTHONPATH="${{ github.workspace }}/lib:$PWD" \
              python3 -m unittest discover -s test -p '*TestCase.py')
           (cd src/ruby && RUBYLIB="${{ github.workspace }}/lib/ruby:$PWD" ruby test/TestSuite.rb)
+          # The Java binding (#148): HotSpot runs under the same preload and options, and the suite's child
+          # JVMs inherit them; test-java.sh adds -Xcheck:jni.
+          (cd src/java && ./test-java.sh)
 
       - name: Run acceptance tests (reactor)
         if: github.event_name != 'push'

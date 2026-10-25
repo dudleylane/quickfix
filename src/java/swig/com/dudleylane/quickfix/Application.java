@@ -8,6 +8,24 @@
 
 package com.dudleylane.quickfix;
 
+
+/**
+ * FIX::Application: the engine calls these on its own threads -- a reactor's, or a threaded transport's
+ * connection thread -- as it would a C++ application's.
+ * <ul>
+ * <li>A {@link Message} passed in is the engine's, valid only until the callback returns: the engine reuses it
+ * for the next message. Read it there (a generated class's {@code view} does so without copying), or keep a
+ * copy, {@code new Message(message)}; never the argument itself.</li>
+ * <li>The FIX exceptions the engine expects of a callback -- {@link FieldNotFound}, {@link IncorrectTagValue}
+ * and {@link IncorrectDataFormat} from {@code fromApp} or {@code fromAdmin}, {@link UnsupportedMessageType} from
+ * {@code fromApp}, {@link RejectLogon} from {@code fromAdmin}, {@link DoNotSend} from {@code toApp} -- are
+ * answered as for a C++ application. Any other exception ends the process with status 1, its stack trace
+ * printed: the engine cannot continue a callback half done.</li>
+ * <li>Do not call {@code System.exit} from a callback, nor {@code stop()} or {@code close()} on the transport
+ * that is calling it: the shutdown hook, or whatever else is stopping the transport, waits for this very
+ * callback, and the callback for it. Stop a transport from another thread.</li>
+ * </ul>
+ */
 public class Application {
   private transient long swigCPtr;
   protected transient boolean swigCMemOwn;

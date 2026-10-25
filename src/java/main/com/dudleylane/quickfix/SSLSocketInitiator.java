@@ -29,8 +29,16 @@ public class SSLSocketInitiator extends SSLSocketInitiatorBase implements AutoCl
         this.logFactory = logFactory;
     }
 
+    // Guarded by this. The shutdown hook, the application's close() and the GC's finalizer can each reach a
+    // transport on their own thread; the engine's stop() returns at once to a second caller while the first is
+    // still waiting for the transport's threads, and freeing it then freed it under them.
+    private boolean closed;
+
     @Override
-    public void start() {
+    public synchronized void start() {
+        if (closed) {
+            throw new IllegalStateException("SSLSocketInitiator was closed");
+        }
         Transports.started(this);
         try {
             super.start();
@@ -42,7 +50,12 @@ public class SSLSocketInitiator extends SSLSocketInitiatorBase implements AutoCl
 
     @Override
     public void block() {
-        Transports.started(this);
+        synchronized (this) {
+            if (closed) {
+                throw new IllegalStateException("SSLSocketInitiator was closed");
+            }
+            Transports.started(this);
+        }
         try {
             super.block();
         } finally {
@@ -51,21 +64,38 @@ public class SSLSocketInitiator extends SSLSocketInitiatorBase implements AutoCl
     }
 
     @Override
-    public void stop() {
-        super.stop();
-        Transports.stopped(this);
+    public synchronized void stop() {
+        if (!closed) {
+            super.stop();
+            Transports.stopped(this);
+        }
     }
 
     @Override
-    public void stop(boolean force) {
-        super.stop(force);
-        Transports.stopped(this);
+    public synchronized void stop(boolean force) {
+        if (!closed) {
+            super.stop(force);
+            Transports.stopped(this);
+        }
     }
 
-    /** Stops the transport and frees it. */
+    /** Stops the transport and frees it; after that only close() and stop() may be called, and do nothing. */
     @Override
     public void close() {
-        stop();
-        delete();
+        synchronized (this) {
+            if (closed) {
+                return;
+            }
+            stop();
+        }
+        Transports.free(this);
+    }
+
+    /** Frees the transport, as close() does once it is stopped. */
+    @Override
+    public synchronized void delete() {
+        closed = true;
+        Transports.stopped(this);
+        super.delete();
     }
 }

@@ -29,7 +29,10 @@ public class CallbackErrorTests {
             process.destroyForcibly();
             throw new AssertionError(mode + ": the child did not exit within 60 s");
         }
-        return new Result(process.exitValue(), new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+        Result result = new Result(process.exitValue(), new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+        // Under the sanitizer job a report also exits 1, the status these children expect: look for one.
+        Check.isTrue(!result.output().contains("Sanitizer"), mode + ": a sanitizer report:\n" + result.output());
+        return result;
     }
 
     static void exitsWithTheException(String mode, String callback) throws Exception {

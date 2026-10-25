@@ -183,6 +183,7 @@ remains in git history.
 - **Removed**: Dead AIX/Solaris platform code, duplicate `configure_file` call
 - **Generated code**: `spec/generate.sh` reproduces the checked-in tree (`d0214a62`), and the generated `FixFields.h` and `FixFieldNumbers.h` restore a caller's `ReplaceText` macro instead of losing it (`52d7a4f7`)
 - **Bindings**: the Python and Ruby bindings build again from the current headers, and CI builds and tests both (`4cb3d655`, `68bb468f`, `d0ff75c7`, `96abec8a`) -- every transport, the threaded SSL ones since #139. An `Application`, `LogFactory` or `Log` can be written in Python or Ruby; a `MessageStore` or `MessageStoreFactory` cannot: only those three are SWIG directors, so subclassing a store fails (Python: the class is abstract; Ruby: no allocator). Use `FileStoreFactory`, `MemoryStoreFactory`, `NullStoreFactory` or a database factory (#140)
+- **Java binding** (#148): SWIG-generated, like the Python and Ruby ones, over the same `src/quickfix.i`, in package `com.dudleylane.quickfix`, plus a class per field and per message generated from `spec/` (`spec/GeneratorJava.rb`). Upstream's hand-written JNI binding was dropped in 1.13.0; this is not a revival of it, and is not compatible with QuickFIX/J, whose package names it avoids. See [The Java binding](#the-java-binding)
 - **Soname `libquickfix.so.22`**: the fork has changed the layout of exported classes (`FieldBase`, `Message`), so a binary built against upstream must not load this library. 19.0.0 changed the layout of `Parser`, `Session` and the connection classes again, 20.0.0 that of `Acceptor` and the threaded acceptors, and 21.0.0 changed no layout but the callback contract (`toApp` and `toAdmin` no longer see `MsgSeqNum`, #73), and 22.0.0 no layout but what `message_order` stores, which its inline comparison reads (#86), so a binary built against an earlier major must be rebuilt. Upstream's CMake build uses 17 and its autotools build `libquickfix.so.18`, which collided with this fork's 18.x where both were installed (#51); 19 and later no longer do. 18 also covered the untagged series before the first release, v18.0.0; from v18.0.0 on, any layout change to an exported class, or a change to the callback contract, bumps the major version in `project()` (top-level `CMakeLists.txt`), the one place the version is set — the soname, `QuickFIXVersion.h` and the Python module all take it from there
 
 ## Supported Platforms
@@ -225,6 +226,7 @@ choice (#63).
 | `HAVE_ODBC` | OFF | Enable ODBC message store/log |
 | `HAVE_PYTHON3` | OFF | Build Python 3 bindings |
 | `HAVE_RUBY` | OFF | Build the Ruby binding into `lib/ruby/`, and install it into Ruby's site directories (#118) |
+| `HAVE_JAVA` | OFF | Build the Java binding into `lib/java/` -- `libquickfixjava.so` and `quickfix.jar` -- and install them into `lib` and `share/java`; needs a JDK 21 (#148) |
 | `QUICKFIX_PYTHON3_INSTALL_DIR` | the interpreter's `site-packages` for the prefix | Where `cmake --install` puts the Python module, relative to the prefix; the Ruby module installs with `src/ruby/install.sh` (#108) |
 | `ENABLE_TBB_ALLOCATOR` | OFF | Use TBB scalable allocator for internal containers |
 | `QUICKFIX_SHARED_LIBS` | ON | Build shared libraries |
@@ -268,6 +270,64 @@ too; the target makes its headers available in the tree before anything that lin
 (#48). Keep `/usr/local/include` or another installed copy of quickfix off that project's include
 path ahead of it, or the compiler can take an installed header that does not match the library it
 links.
+
+### The Java binding
+
+`-DHAVE_JAVA=ON` builds `lib/java/libquickfixjava.so` and `lib/java/quickfix.jar` (Java 21, package
+`com.dudleylane.quickfix`). Put the jar on the class path and the library on `java.library.path`, or name
+the library file with `-Dcom.dudleylane.quickfix.library=<path>`. `src/java/test-java.sh` runs the suite;
+`src/java/examples/.../Executor.java` is `examples/executor` in Java.
+
+```java
+import com.dudleylane.quickfix.*;
+import com.dudleylane.quickfix.field.*;
+
+class Orders extends Application {
+    @Override public void fromApp(Message message, SessionID id) {
+        var order = com.dudleylane.quickfix.fix44.NewOrderSingle.view(message);  // no copy
+        if (Side.get(order) == Side.BUY && Price.get(order) > 100.0) { ... }
+    }
+    ...
+}
+
+try (var acceptor = new ThreadedSocketAcceptor(new Orders(), new MemoryStoreFactory(), settings)) {
+    acceptor.start();
+    ...
+}
+```
+
+- **Fields are plain values.** Each tag is a class in `com.dudleylane.quickfix.field` with its number
+  (`Side.FIELD`), its enum values as constants of its type (`Side.BUY` is `'1'`), and static `get`, `set`
+  and `isSet` over any `FieldMap` -- a message, its header, a group. They write and read the engine's
+  strings directly, converted in Java; there is no native object per field, which measured 2.3-2.7x
+  slower. A value that does not convert is `IncorrectDataFormat` naming the tag.
+- **Messages and groups** are generated per version (`com.dudleylane.quickfix.fix44.NewOrderSingle`). A
+  message's groups come from its factories, `NewOrderSingle.newNoPartyIDs()`, which return the right
+  class for that message: a version's groups are shared by its messages, in `<version>.group`.
+- **A callback's `Message` is the engine's, valid only until the callback returns.** The engine reuses
+  it for the next message (#167). `view` reads it in place; keep a copy (`new Message(message)`), never the
+  argument itself.
+- **Exceptions are unchecked**, `FIXException` and its subclasses, mirroring the engine's. The ones a
+  callback may throw to the engine -- `FieldNotFound`, `IncorrectTagValue` and `IncorrectDataFormat`
+  from `fromApp` or `fromAdmin`, `UnsupportedMessageType` from `fromApp`, `RejectLogon` from `fromAdmin`,
+  `DoNotSend` from `toApp` -- are answered as for a C++ application. Any other exception from a callback, a `Log` or a `LogFactory`
+  prints its stack trace and ends the process with status 1, as in the Python and Ruby bindings: the engine
+  cannot continue a callback half done.
+- **Transports keep what they were made with and are `AutoCloseable`.** `close()` stops the transport and
+  frees it, which unregisters its sessions; until then, another transport cannot take the same sessions. A
+  running transport is never collected, and a shutdown hook stops those still running when the JVM exits,
+  so a callback must not call `System.exit`: the hook would wait for the very callback that called it.
+  `stop()` and `close()` may be called from any threads, the hook's included: `close()` waits for a stop
+  already running, and calls after it do nothing. The engine's own `stop()` is not safe for concurrent
+  callers (#174); the Java classes serialise it. The one place not to call them is a callback of the same
+  transport: whatever is stopping it waits for that callback, and the callback would wait for it.
+  `stop()` from a threaded transport's own callback returns only after its wait for that callback times
+  out, about 15 s; stop it from another thread.
+- **Engine threads attach to the JVM once**, as daemons, on their first callback, and detach when they end.
+- **Strings cross JNI as modified UTF-8**: a data field whose bytes are not text does not survive the trip.
+- **What the JNI boundary costs**: a `setString` from Java is 1.7 μs against 0.56 μs in C++ for a
+  NewOrderSingle, almost all of it string conversion; building a 20-field message and `toString()` is
+  3.1 μs. A latency-critical path is better kept in C++, with Java on the control plane.
 
 ## Testing
 
