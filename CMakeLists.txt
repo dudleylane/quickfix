@@ -58,6 +58,7 @@ option(HAVE_POSTGRESQL "Build with PostgreSQL")
 option(HAVE_ODBC "Build with ODBC")
 option(HAVE_PYTHON3 "Build with default Python3 version")
 option(HAVE_RUBY "Build the Ruby binding")
+option(HAVE_JAVA "Build the Java binding")
 option(ENABLE_TBB_ALLOCATOR "Use TBB scalable allocator for internal containers")
 
 # add option to build shared or static
@@ -124,6 +125,13 @@ if (HAVE_RUBY)
   # The interpreter, to ask RbConfig where modules go, and the headers; the module links libruby, as
   # mkmf's does (#118).
   find_package(Ruby 3 REQUIRED)
+endif ()
+
+if (HAVE_JAVA)
+  # javac and jar for quickfix.jar (UseJava), and jni.h for the JNI library, which links no JVM library: the
+  # JVM that loads it provides the JNI functions (#148).
+  find_package(Java 21 REQUIRED COMPONENTS Development)
+  find_package(JNI REQUIRED)
 endif ()
 
 add_subdirectory(src)

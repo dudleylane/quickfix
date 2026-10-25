@@ -1,0 +1,2 @@
+# A JVM that crashes writes its report to the working directory, which test-java.sh makes this one.
+hs_err_pid*.log

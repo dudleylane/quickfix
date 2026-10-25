@@ -259,11 +259,13 @@ builds, and the `pt` regression gate, which compares this commit's `pt` with the
 The Debug leg also covers the checked-in SWIG output, which went 33 commits without compiling at
 all before anyone noticed. It configures with `-DHAVE_PYTHON3=ON`, so CMake compiles and links
 `src/python/QuickfixPython.cpp` into `_quickfix.so`, and with `-DHAVE_RUBY=ON`, so it builds
-`src/ruby/QuickfixRuby.cpp` into `lib/ruby/quickfix.so` too (#118). Before either, it
-regenerates both wrappers and fails if the result differs from what is checked in, so **a change
-to a header `src/quickfix.i` wraps must commit the regenerated output with it**: run
-`src/python/swig.sh` and `src/ruby/swig.sh` (from their own directories) and never hand-edit the
-output. The check needs the SWIG version the wrappers were generated with, 4.3.0 at present; a
+`src/ruby/QuickfixRuby.cpp` into `lib/ruby/quickfix.so` too (#118), and with `-DHAVE_JAVA=ON`, so it
+builds `src/java/QuickfixJava.cpp` into `lib/java/libquickfixjava.so` and the Java classes into
+`lib/java/quickfix.jar`, then runs `src/java/test-java.sh` (#148; needs a JDK 21). Before any of them,
+it regenerates all three wrappers and fails if the result differs from what is checked in, so **a
+change to a header `src/quickfix.i` wraps must commit the regenerated output with it**: run
+`src/python/swig.sh`, `src/ruby/swig.sh` and `src/java/swig.sh` (from their own directories) and
+never hand-edit the output. The check needs the SWIG version the wrappers were generated with, 4.3.0 at present; a
 SWIG upgrade means regenerating once and committing the result.
 
 The Debug leg additionally syntax-checks all six database backends, which no build configures — CI

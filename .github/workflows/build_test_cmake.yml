@@ -60,13 +60,20 @@ jobs:
           want=$(sed -n 's/^ \* Version \([0-9.]*\)$/\1/p' src/python/QuickfixPython.cpp)
           have=$(swig -version | sed -n 's/^SWIG Version \([0-9.]*\)$/\1/p')
           if [ "$want" != "$have" ]; then
-            echo "::error::the checked-in wrappers come from SWIG $want but the runner has SWIG $have -- regenerate with src/python/swig.sh and src/ruby/swig.sh and commit the result"
+            echo "::error::the checked-in wrappers come from SWIG $want but the runner has SWIG $have -- regenerate with src/python/swig.sh, src/ruby/swig.sh and src/java/swig.sh and commit the result"
             exit 1
           fi
           (cd src/python && sh swig.sh)
           (cd src/ruby && sh swig.sh)
-          git diff --exit-code --stat -- src/python src/ruby \
-            || { echo "::error::the SWIG wrappers are stale -- run src/python/swig.sh and src/ruby/swig.sh and commit the result"; exit 1; }
+          # The Java binding (#148): swig.sh rewrites src/java/swig/ whole, so a class SWIG has stopped
+          # generating shows as a deletion and a new one as an untracked file.
+          (cd src/java && sh swig.sh)
+          if ! git diff --exit-code --stat -- src/python src/ruby src/java \
+             || [ -n "$(git status --porcelain --untracked-files=all -- src/java)" ]; then
+            git status --short -- src/python src/ruby src/java
+            echo "::error::the SWIG wrappers are stale -- run src/python/swig.sh, src/ruby/swig.sh and src/java/swig.sh and commit the result"
+            exit 1
+          fi
 
       - name: Test the acceptance harness
         # Comparator.rb decides pass or fail for every acceptance definition, and
@@ -102,7 +109,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} \
             -DHAVE_SSL=ON \
             -DHAVE_PYTHON3=${{ matrix.configuration == 'Debug' && 'ON' || 'OFF' }} \
-            -DHAVE_RUBY=${{ matrix.configuration == 'Debug' && 'ON' || 'OFF' }}
+            -DHAVE_RUBY=${{ matrix.configuration == 'Debug' && 'ON' || 'OFF' }} \
+            -DHAVE_JAVA=${{ matrix.configuration == 'Debug' && 'ON' || 'OFF' }}
 
       - name: Build
         shell: bash
@@ -272,6 +280,17 @@ jobs:
         working-directory: ./src/python
         shell: bash
         run: ./test-python3.sh
+
+      - name: Run the Java binding tests
+        # The Java binding (#148): messages, fields and groups, settings, dictionaries and stores; logon and
+        # traffic over all four transports through a Java Application; a Java LogFactory; the FIX exceptions
+        # a callback may throw reaching the engine, and anything else ending the process (child JVMs); and
+        # inline arguments surviving the GC under a running engine. test-java.sh runs the JVM with
+        # -Xcheck:jni and fails on any JNI warning. Debug-only, like the Python tests: HAVE_JAVA is ON there.
+        if: matrix.configuration == 'Debug'
+        working-directory: ./src/java
+        shell: bash
+        run: ./test-java.sh
 
       - name: Install the bindings and load them from the install
         # The tests above load both bindings from the tree. Until #108 neither

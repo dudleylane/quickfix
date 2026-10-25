@@ -53,3 +53,7 @@ endif ()
 if (HAVE_RUBY)
 add_subdirectory(ruby)
 endif ()
+
+if (HAVE_JAVA)
+add_subdirectory(java)
+endif ()
