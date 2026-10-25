@@ -318,12 +318,12 @@ try (var acceptor = new ThreadedSocketAcceptor(new Orders(), new MemoryStoreFact
   frees it, which unregisters its sessions; until then, another transport cannot take the same sessions. A
   running transport is never collected, and a shutdown hook stops those still running when the JVM exits,
   so a callback must not call `System.exit`: the hook would wait for the very callback that called it.
-  `stop()` and `close()` may be called from any threads, the hook's included: `close()` waits for a stop
-  already running, and calls after it do nothing, as the engine's own `stop()` does since #174. The one
-  place not to call them is a callback of the same transport: whatever is stopping it waits for that
-  callback, and the callback would wait for it.
-  `stop()` from a threaded transport's own callback returns only after its wait for that callback times
-  out, about 15 s; stop it from another thread.
+  `stop()` and `close()` may be called from any threads, the hook's included: a `stop()` waits for one
+  already running (#174), `close()` frees the transport only once no other call is inside it, and calls
+  after `close()` do nothing. A callback may `stop()` its own transport: if another thread is stopping it,
+  the callback's stop returns at once; if not, a threaded transport's returns once its wait for that
+  callback times out, about 15 s. A callback must not `close()` its own transport, which would free it
+  under the callback's thread.
 - **Engine threads attach to the JVM once**, as daemons, on their first callback, and detach when they end.
 - **Strings cross JNI as modified UTF-8**: a data field whose bytes are not text does not survive the trip.
 - **What the JNI boundary costs**: a `setString` from Java is 1.7 μs against 0.56 μs in C++ for a

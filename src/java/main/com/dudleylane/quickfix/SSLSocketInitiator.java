@@ -29,66 +29,116 @@ public class SSLSocketInitiator extends SSLSocketInitiatorBase implements AutoCl
         this.logFactory = logFactory;
     }
 
-    // Guarded by this. The shutdown hook, the application's close() and the GC's finalizer can each reach a
-    // transport on their own thread; the engine's stop() returns at once to a second caller while the first is
-    // still waiting for the transport's threads, and freeing it then freed it under them.
+    // Guarded by this: the calls into the engine in flight (start, block, stop), and whether close() has
+    // begun. No lock is held across the engine call -- the engine's stop() takes concurrent callers since
+    // #174, and a callback that stops its own transport while another thread does returns at once -- but
+    // close() frees the transport only once nothing is inside it, and after close() a call does nothing.
+    private int inFlight;
     private boolean closed;
 
+    private boolean enter() {
+        synchronized (this) {
+            if (closed) {
+                return false;
+            }
+            ++inFlight;
+            return true;
+        }
+    }
+
+    private void leave() {
+        synchronized (this) {
+            if (--inFlight == 0) {
+                notifyAll();
+            }
+        }
+    }
+
     @Override
-    public synchronized void start() {
-        if (closed) {
+    public void start() {
+        if (!enter()) {
             throw new IllegalStateException("SSLSocketInitiator was closed");
         }
-        Transports.started(this);
         try {
-            super.start();
-        } catch (RuntimeException e) {
-            Transports.stopped(this);
-            throw e;
+            Transports.started(this);
+            try {
+                super.start();
+            } catch (RuntimeException e) {
+                Transports.stopped(this);
+                throw e;
+            }
+        } finally {
+            leave();
         }
     }
 
     @Override
     public void block() {
-        synchronized (this) {
-            if (closed) {
-                throw new IllegalStateException("SSLSocketInitiator was closed");
-            }
-            Transports.started(this);
+        if (!enter()) {
+            throw new IllegalStateException("SSLSocketInitiator was closed");
         }
         try {
-            super.block();
+            Transports.started(this);
+            try {
+                super.block();
+            } finally {
+                Transports.stopped(this);
+            }
         } finally {
-            Transports.stopped(this);
+            leave();
         }
     }
 
     @Override
-    public synchronized void stop() {
-        if (!closed) {
-            super.stop();
-            Transports.stopped(this);
+    public void stop() {
+        if (enter()) {
+            try {
+                super.stop();
+                Transports.stopped(this);
+            } finally {
+                leave();
+            }
         }
     }
 
     @Override
-    public synchronized void stop(boolean force) {
-        if (!closed) {
-            super.stop(force);
-            Transports.stopped(this);
+    public void stop(boolean force) {
+        if (enter()) {
+            try {
+                super.stop(force);
+                Transports.stopped(this);
+            } finally {
+                leave();
+            }
         }
     }
 
-    /** Stops the transport and frees it; after that only close() and stop() may be called, and do nothing. */
+    /**
+     * Stops the transport and frees it, once no other call is inside it; after that every call does nothing,
+     * or, for start() and block(), throws. Not from a callback of this transport, which would free it under
+     * the callback's own thread: stop() it there, and close() it elsewhere.
+     */
     @Override
     public void close() {
+        stop();
+        boolean interrupted = false;
         synchronized (this) {
             if (closed) {
                 return;
             }
-            stop();
+            closed = true;
+            while (inFlight > 0) {
+                try {
+                    wait();
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
         }
         Transports.free(this);
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /** Frees the transport, as close() does once it is stopped. */

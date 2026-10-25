@@ -65,4 +65,47 @@ public class LifetimeTests {
             }
         }
     }
+
+    /**
+     * A callback stopping its own transport while another thread stops it. The Java transports used to hold
+     * their monitor across stop(), so the callback waited for the monitor while the other stop joined the
+     * callback's thread: a deadlock. Since #174 the engine takes concurrent stops, and the callback's returns
+     * at once.
+     */
+    public void testACallbackStopsItsOwnTransport() throws Exception {
+        int port = Fixture.freePort();
+        java.util.concurrent.atomic.AtomicReference<ThreadedSocketAcceptor> self = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.CountDownLatch inCallback = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch callbackReturned = new java.util.concurrent.CountDownLatch(1);
+        Fixture.Recorder server = new Fixture.Recorder();
+        server.onFromApp = (message, id) -> {
+            inCallback.countDown();
+            try {
+                Thread.sleep(200); // the other stop starts meanwhile
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            self.get().stop();
+            callbackReturned.countDown();
+        };
+        ThreadedSocketAcceptor acceptor = new ThreadedSocketAcceptor(server, new MemoryStoreFactory(),
+                                                                     Fixture.acceptorSettings(port, "SERVER", "CLIENT", false));
+        self.set(acceptor);
+        try (SocketInitiator initiator = new SocketInitiator(new Fixture.Recorder(), new MemoryStoreFactory(),
+                                                             Fixture.initiatorSettings(port, "SERVER", "CLIENT", false))) {
+            acceptor.start();
+            initiator.start();
+            Check.isTrue(Fixture.loggedOn(TransportTests.CLIENT), "logged on");
+            Session.sendToTarget(Fixture.order("ID"), TransportTests.CLIENT);
+            Check.isTrue(inCallback.await(10, java.util.concurrent.TimeUnit.SECONDS), "in the callback");
+            Thread stopper = new Thread(acceptor::stop, "stopper");
+            stopper.setDaemon(true); // if it deadlocks, it must not hold the JVM open
+            stopper.start();
+            // stop's two waits, logout then onStop's, are 10 s and 5 s at most
+            Check.isTrue(callbackReturned.await(40, java.util.concurrent.TimeUnit.SECONDS), "the callback's stop() returned");
+            stopper.join(40000);
+            Check.isTrue(!stopper.isAlive(), "the other stop() returned");
+        }
+        acceptor.close();
+    }
 }

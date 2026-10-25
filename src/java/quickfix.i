@@ -328,9 +328,11 @@ QUICKFIX_JAVA_CALLBACK(FIX::LogFactory::destroy, )
  * {@code fromApp}, {@link RejectLogon} from {@code fromAdmin}, {@link DoNotSend} from {@code toApp} -- are
  * answered as for a C++ application. Any other exception ends the process with status 1, its stack trace
  * printed: the engine cannot continue a callback half done.</li>
- * <li>Do not call {@code System.exit} from a callback, nor {@code stop()} or {@code close()} on the transport
- * that is calling it: the shutdown hook, or whatever else is stopping the transport, waits for this very
- * callback, and the callback for it. Stop a transport from another thread.</li>
+ * <li>A callback may {@code stop()} the transport calling it: if another thread is stopping it already, the
+ * callback's stop returns at once; if not, a threaded transport's returns once its wait for this callback
+ * times out, about 15 s. It must not {@code close()} it, which would free the transport under the callback's
+ * own thread, nor call {@code System.exit}: the shutdown hook that stops the running transports would wait for
+ * this very callback.</li>
  * </ul>
  */
 public class%}
