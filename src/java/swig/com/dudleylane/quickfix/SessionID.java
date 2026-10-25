@@ -60,16 +60,16 @@ public class SessionID {
     this(quickfixJNI.new_SessionID__SWIG_2(beginString, senderCompID, targetCompID), true);
   }
 
-  public BeginString getBeginString() {
-    return new BeginString(quickfixJNI.SessionID_getBeginString(swigCPtr, this), false);
+  public BeginStringField getBeginString() {
+    return new BeginStringField(quickfixJNI.SessionID_getBeginString(swigCPtr, this), false);
   }
 
-  public SenderCompID getSenderCompID() {
-    return new SenderCompID(quickfixJNI.SessionID_getSenderCompID(swigCPtr, this), false);
+  public SenderCompIDField getSenderCompID() {
+    return new SenderCompIDField(quickfixJNI.SessionID_getSenderCompID(swigCPtr, this), false);
   }
 
-  public TargetCompID getTargetCompID() {
-    return new TargetCompID(quickfixJNI.SessionID_getTargetCompID(swigCPtr, this), false);
+  public TargetCompIDField getTargetCompID() {
+    return new TargetCompIDField(quickfixJNI.SessionID_getTargetCompID(swigCPtr, this), false);
   }
 
   public String getSessionQualifier() {

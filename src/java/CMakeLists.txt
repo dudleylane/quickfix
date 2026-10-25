@@ -1,5 +1,6 @@
 # The Java binding (#148): libquickfixjava, the JNI library compiled from the wrapper swig.sh generates, and
-# quickfix.jar, the classes it generates under swig/ and the hand-written ones under main/. Both are built
+# quickfix.jar: the classes swig.sh generates under swig/, those spec/GeneratorJava.rb generates under spec/
+# (a class per field and per message), and the hand-written ones under main/. Both are built
 # into ${QUICKFIX_LIB_OUTPUT_DIR}/java, where test-java.sh finds them.
 include(UseJava)
 
@@ -25,10 +26,10 @@ foreach(cfg ${CMAKE_CONFIGURATION_TYPES} ${CMAKE_BUILD_TYPE})
   set_target_properties(quickfix_java PROPERTIES "LIBRARY_OUTPUT_DIRECTORY_${cfg_up}" ${QUICKFIX_LIB_OUTPUT_DIR}/java)
 endforeach()
 
-# Every class under swig/ and main/: swig.sh adds and removes generated ones, so the list is globbed, and
-# re-globbed on each build.
+# Every class under swig/, spec/ and main/: swig.sh and spec/generate.sh add and remove generated ones, so
+# the list is globbed, and re-globbed on each build.
 file(GLOB_RECURSE quickfix_java_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/swig/*.java
-     ${CMAKE_CURRENT_SOURCE_DIR}/main/*.java)
+     ${CMAKE_CURRENT_SOURCE_DIR}/spec/*.java ${CMAKE_CURRENT_SOURCE_DIR}/main/*.java)
 # --release 21: the owner's choice (2026-10-25). No lint here: most of these classes are SWIG's, and its
 # finalize() (deprecated for removal) and this-escape are not ours to fix; a new javac lint category must not
 # fail a build nobody changed. test-java.sh compiles the hand-written tests with -Xlint:all -Werror.

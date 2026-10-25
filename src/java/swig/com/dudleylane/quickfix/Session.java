@@ -120,12 +120,12 @@ public class Session {
     return quickfixJNI.Session_sendToTarget__SWIG_2(Message.getCPtr(message), message, SessionID.getCPtr(sessionID), sessionID);
   }
 
-  public static boolean sendToTarget(Message arg0, SenderCompID senderCompID, TargetCompID targetCompID, String qualifier) {
-    return quickfixJNI.Session_sendToTarget__SWIG_3(Message.getCPtr(arg0), arg0, SenderCompID.getCPtr(senderCompID), senderCompID, TargetCompID.getCPtr(targetCompID), targetCompID, qualifier);
+  public static boolean sendToTarget(Message arg0, SenderCompIDField senderCompID, TargetCompIDField targetCompID, String qualifier) {
+    return quickfixJNI.Session_sendToTarget__SWIG_3(Message.getCPtr(arg0), arg0, SenderCompIDField.getCPtr(senderCompID), senderCompID, TargetCompIDField.getCPtr(targetCompID), targetCompID, qualifier);
   }
 
-  public static boolean sendToTarget(Message arg0, SenderCompID senderCompID, TargetCompID targetCompID) {
-    return quickfixJNI.Session_sendToTarget__SWIG_4(Message.getCPtr(arg0), arg0, SenderCompID.getCPtr(senderCompID), senderCompID, TargetCompID.getCPtr(targetCompID), targetCompID);
+  public static boolean sendToTarget(Message arg0, SenderCompIDField senderCompID, TargetCompIDField targetCompID) {
+    return quickfixJNI.Session_sendToTarget__SWIG_4(Message.getCPtr(arg0), arg0, SenderCompIDField.getCPtr(senderCompID), senderCompID, TargetCompIDField.getCPtr(targetCompID), targetCompID);
   }
 
   public static boolean sendToTarget(Message message, String senderCompID, String targetCompID, String qualifier) {

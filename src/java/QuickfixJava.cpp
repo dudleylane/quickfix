@@ -17736,7 +17736,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Group(J
 }
 
 
-SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_BeginString_1tag_1get(JNIEnv *jenv, jclass jcls) {
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_BeginStringField_1tag_1get(JNIEnv *jenv, jclass jcls) {
   jint jresult = 0 ;
   int result;
   
@@ -17748,7 +17748,7 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_BeginString_1ta
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1BeginString_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1BeginStringField_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
   jlong jresult = 0 ;
   FIX::BeginString *result = 0 ;
   
@@ -17780,7 +17780,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1BeginStri
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1BeginString_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1BeginStringField_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1) {
   jlong jresult = 0 ;
   FIX::STRING *arg1 = 0 ;
   FIX::BeginString *result = 0 ;
@@ -17822,7 +17822,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1BeginStri
 }
 
 
-SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1BeginString(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1BeginStringField(JNIEnv *jenv, jclass jcls, jlong jarg1) {
   FIX::BeginString *arg1 = (FIX::BeginString *) 0 ;
   
   (void)jenv;
@@ -17852,7 +17852,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1BeginSt
 }
 
 
-SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SenderCompID_1tag_1get(JNIEnv *jenv, jclass jcls) {
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SenderCompIDField_1tag_1get(JNIEnv *jenv, jclass jcls) {
   jint jresult = 0 ;
   int result;
   
@@ -17864,7 +17864,7 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SenderCompID_1t
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1SenderCompID_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1SenderCompIDField_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
   jlong jresult = 0 ;
   FIX::SenderCompID *result = 0 ;
   
@@ -17896,7 +17896,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1SenderCom
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1SenderCompID_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1SenderCompIDField_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1) {
   jlong jresult = 0 ;
   FIX::STRING *arg1 = 0 ;
   FIX::SenderCompID *result = 0 ;
@@ -17938,7 +17938,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1SenderCom
 }
 
 
-SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1SenderCompID(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1SenderCompIDField(JNIEnv *jenv, jclass jcls, jlong jarg1) {
   FIX::SenderCompID *arg1 = (FIX::SenderCompID *) 0 ;
   
   (void)jenv;
@@ -17968,7 +17968,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1SenderC
 }
 
 
-SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_TargetCompID_1tag_1get(JNIEnv *jenv, jclass jcls) {
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_TargetCompIDField_1tag_1get(JNIEnv *jenv, jclass jcls) {
   jint jresult = 0 ;
   int result;
   
@@ -17980,7 +17980,7 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_TargetCompID_1t
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1TargetCompID_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1TargetCompIDField_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
   jlong jresult = 0 ;
   FIX::TargetCompID *result = 0 ;
   
@@ -18012,7 +18012,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1TargetCom
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1TargetCompID_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1TargetCompIDField_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1) {
   jlong jresult = 0 ;
   FIX::STRING *arg1 = 0 ;
   FIX::TargetCompID *result = 0 ;
@@ -18054,7 +18054,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1TargetCom
 }
 
 
-SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1TargetCompID(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1TargetCompIDField(JNIEnv *jenv, jclass jcls, jlong jarg1) {
   FIX::TargetCompID *arg1 = (FIX::TargetCompID *) 0 ;
   
   (void)jenv;
@@ -111525,7 +111525,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1SWIGUpc
     return baseptr;
 }
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_BeginString_1SWIGUpcast(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_BeginStringField_1SWIGUpcast(JNIEnv *jenv, jclass jcls, jlong jarg1) {
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
@@ -111533,7 +111533,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_BeginString_1S
     return baseptr;
 }
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SenderCompID_1SWIGUpcast(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SenderCompIDField_1SWIGUpcast(JNIEnv *jenv, jclass jcls, jlong jarg1) {
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;
@@ -111541,7 +111541,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SenderCompID_1
     return baseptr;
 }
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_TargetCompID_1SWIGUpcast(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_TargetCompIDField_1SWIGUpcast(JNIEnv *jenv, jclass jcls, jlong jarg1) {
     jlong baseptr = 0;
     (void)jenv;
     (void)jcls;

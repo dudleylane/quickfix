@@ -326,6 +326,12 @@ QUICKFIX_JAVA_CALLBACK(FIX::LogFactory::destroy, )
 %javamethodmodifiers FIX::ThreadedSSLSocketInitiator::ThreadedSSLSocketInitiator "protected";
 %javamethodmodifiers FIX::ThreadedSSLSocketAcceptor::ThreadedSSLSocketAcceptor "protected";
 
+// FixCommonFields.h's field classes are SessionID's getters' types. Under their own names they would clash
+// with the generated com.dudleylane.quickfix.field classes in any code that imports both packages.
+%rename(BeginStringField) FIX::BeginString;
+%rename(SenderCompIDField) FIX::SenderCompID;
+%rename(TargetCompIDField) FIX::TargetCompID;
+
 // Sequence numbers are a Java long: SWIG's BigInteger for a uint64_t is awkward to use and calls into the JVM
 // without checking for an exception (-Xcheck:jni), and a sequence number never nears 2^63. UInt64Field keeps
 // BigInteger, whose values can exceed a long.
