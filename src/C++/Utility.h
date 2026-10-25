@@ -212,6 +212,24 @@ void thread_join(thread_id thread);
 void thread_detach(thread_id thread);
 thread_id thread_self();
 
+/// Marks the calling thread, while it lives, as one of a transport's own threads: its start() thread or a
+/// threaded transport's accept or connection thread. Acceptor::stop and Initiator::stop do not wait for a
+/// stop already running when called on such a thread, since that stop joins it (#174). transport is the
+/// Acceptor or Initiator, as a pointer to that base.
+class TransportThread
+{
+public:
+    explicit TransportThread(const void *transport);
+    ~TransportThread();
+    TransportThread(const TransportThread &) = delete;
+    TransportThread &operator=(const TransportThread &) = delete;
+
+    static bool isOwnedBy(const void *transport);
+
+private:
+    const void *m_previous;
+};
+
 void process_sleep(double s);
 
 std::string file_separator();

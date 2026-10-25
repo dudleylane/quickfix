@@ -2339,3 +2339,180 @@ TEST_CASE("SocketQueuedWritesTests")
         acceptor.stop();
     }
 }
+
+namespace
+{
+SessionSettings stopSettings(const std::string &type, int port, const std::string &sender, const std::string &target)
+{
+    std::stringstream config;
+    config << "[DEFAULT]\nConnectionType=" << type << "\nSocketAcceptPort=" << port
+           << "\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
+           << "\nReconnectInterval=1\nHeartBtInt=30\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n"
+           << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=" << sender << "\nTargetCompID=" << target << "\n";
+    return SessionSettings(config);
+}
+
+bool loggedOn(const SessionID &id)
+{
+    for (int i = 0; i < 500; ++i)
+    {
+        Session *session = Session::lookupSession(id);
+        if (session && session->isLoggedOn())
+        {
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    return false;
+}
+
+// Whether something still listens on port: a bind to it with SO_REUSEADDR fails only then.
+bool listening(int port)
+{
+    const int s = ::socket(AF_INET, SOCK_STREAM, 0);
+    const int on = 1;
+    ::setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(static_cast<uint16_t>(port));
+    address.sin_addr.s_addr = htonl(INADDR_ANY);
+    const bool bound = ::bind(s, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0;
+    ::close(s);
+    return !bound;
+}
+} // namespace
+
+// Acceptor::stop and Initiator::stop with more than one caller (#174): a second caller waits for the stop
+// running, so that when it returns the transport's threads are joined, except on the transport's own threads,
+// which that stop joins.
+TEST_CASE("ConcurrentStopTests")
+{
+    NullApplication application;
+    MemoryStoreFactory factory;
+
+    SECTION("aSecondStopReturnsOnlyWhenTheFirstHasFinished")
+    {
+        // The window: the first stop has set m_stop and is joining the reactor's thread, which closes the
+        // listener as it ends. A second stop() used to return there, with the listener still open and the
+        // thread still running in the acceptor its caller could now destroy.
+        for (int round = 0; round < 10; ++round)
+        {
+            INFO("round " << round);
+            const int port = freePort();
+            SocketAcceptor acceptor(application, factory, stopSettings("acceptor", port, "STOPA", "STOPI"));
+            acceptor.start();
+            SocketInitiator initiator(application, factory, stopSettings("initiator", port, "STOPI", "STOPA"));
+            initiator.start();
+            REQUIRE(loggedOn(SessionID("FIX.4.2", "STOPI", "STOPA")));
+            std::thread first([&]() { acceptor.stop(); });
+            while (!acceptor.isStopped())
+            {
+                std::this_thread::yield();
+            }
+            acceptor.stop();
+            CHECK_FALSE(listening(port));
+            first.join();
+            initiator.stop();
+        }
+    }
+
+    SECTION("stopsArrivingTogetherStopOnce")
+    {
+        for (int round = 0; round < 10; ++round)
+        {
+            INFO("round " << round);
+            const int port = freePort();
+            SocketAcceptor acceptor(application, factory, stopSettings("acceptor", port, "STOPA", "STOPI"));
+            acceptor.start();
+            SocketInitiator initiator(application, factory, stopSettings("initiator", port, "STOPI", "STOPA"));
+            initiator.start();
+            REQUIRE(loggedOn(SessionID("FIX.4.2", "STOPI", "STOPA")));
+            std::atomic<bool> go{false};
+            auto stopAcceptor = [&]()
+            {
+                while (!go)
+                {
+                }
+                acceptor.stop();
+            };
+            auto stopInitiator = [&]()
+            {
+                while (!go)
+                {
+                }
+                initiator.stop();
+            };
+            std::thread a1(stopAcceptor), a2(stopAcceptor), i1(stopInitiator), i2(stopInitiator);
+            go = true;
+            a1.join();
+            a2.join();
+            i1.join();
+            i2.join();
+            CHECK(acceptor.isStopped());
+            CHECK(initiator.isStopped());
+            CHECK_FALSE(listening(port));
+        }
+    }
+
+    SECTION("aCallbackStoppingItsOwnTransportDoesNotDeadlock")
+    {
+        // A threaded transport's stop joins its connection threads, so one of them calling stop() while
+        // another stop runs must not wait for it: it would wait for the stop that waits for it.
+        struct StoppingApplication : NullApplication
+        {
+            ThreadedSocketAcceptor *acceptor = nullptr;
+            std::atomic<bool> stopping{false};
+            std::atomic<bool> returned{false};
+            void fromApp(const Message &, const SessionID &)
+                EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType) override
+            {
+                stopping = true; // the test's thread starts its stop now
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                acceptor->stop();
+                returned = true;
+            }
+        };
+        StoppingApplication stopper;
+        const int port = freePort();
+        ThreadedSocketAcceptor acceptor(stopper, factory, stopSettings("acceptor", port, "STOPA", "STOPI"));
+        stopper.acceptor = &acceptor;
+        acceptor.start();
+        SocketInitiator initiator(application, factory, stopSettings("initiator", port, "STOPI", "STOPA"));
+        initiator.start();
+        const SessionID id("FIX.4.2", "STOPI", "STOPA");
+        REQUIRE(loggedOn(id));
+        Message order;
+        order.getHeader().setField(MsgType("D"));
+        order.setField(ClOrdID("ORDER"));
+        REQUIRE(Session::sendToTarget(order, id));
+        for (int i = 0; i < 500 && !stopper.stopping; ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        REQUIRE(stopper.stopping);
+        std::atomic<bool> stopped{false};
+        std::thread test(
+            [&]()
+            {
+                acceptor.stop();
+                stopped = true;
+            });
+        // The two waits in stop (logout, then onStop's isLoggedOn) are 10 s and 5 s at most.
+        for (int i = 0; i < 400 && !(stopped && stopper.returned); ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        CHECK(stopper.returned.load());
+        CHECK(stopped.load());
+        if (stopped)
+        {
+            test.join();
+        }
+        else
+        {
+            test.detach(); // deadlocked: never joined, so detaching it is safe for TSan (#113)
+            FAIL("the stops deadlocked");
+        }
+        initiator.stop();
+    }
+}

@@ -219,6 +219,7 @@ THREAD_PROC ThreadedSocketAcceptor::socketAcceptorThread(void *p)
 
     ThreadedSocketAcceptor *pAcceptor = info->m_pAcceptor;
     socket_handle s = info->m_socket;
+    TransportThread own(static_cast<const Acceptor *>(pAcceptor)); // stop() must not wait on this thread (#174)
     int port = info->m_port;
     delete info;
 
@@ -326,6 +327,7 @@ THREAD_PROC ThreadedSocketAcceptor::socketConnectionThread(void *p)
 
     ThreadedSocketAcceptor *pAcceptor = info->m_pAcceptor;
     ThreadedSocketConnection *pConnection = info->m_pConnection;
+    TransportThread own(static_cast<const Acceptor *>(pAcceptor)); // stop() must not wait on this thread (#174)
     delete info;
 
     socket_handle socket = pConnection->getSocket();

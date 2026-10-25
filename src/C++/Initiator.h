@@ -36,7 +36,9 @@
 #include "SessionSettings.h"
 
 #include <atomic>
+#include <condition_variable>
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
 
@@ -154,6 +156,11 @@ private:
     std::atomic<bool> m_processing;
     std::atomic<bool> m_firstPoll;
     std::atomic<bool> m_stop;
+    // A stop in progress, claimed under m_stopMutex: a second stop() waits on m_stopDone for it to finish
+    // rather than returning while the first still joins the transport's threads (#174).
+    std::mutex m_stopMutex;
+    std::condition_variable m_stopDone;
+    bool m_stopping = false;
     mutable Mutex m_mutex;
 };
 /*! @} */

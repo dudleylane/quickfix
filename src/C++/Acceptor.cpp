@@ -250,10 +250,35 @@ bool Acceptor::poll() EXCEPT(ConfigError, RuntimeError)
 
 void Acceptor::stop(bool force)
 {
-    if (isStopped())
+    // One stop at a time (#174). A caller that finds one running waits for it to finish, so that when stop()
+    // returns the transport's threads are joined and it may be destroyed; before, the second caller returned
+    // at once, and two that arrived together both logged out and both joined the same threads. A transport's
+    // own thread does not wait, since the stop running joins it: it returns at once, as every caller did.
     {
-        return;
+        std::unique_lock<std::mutex> lock(m_stopMutex);
+        if (m_stopping)
+        {
+            if (!TransportThread::isOwnedBy(this))
+            {
+                m_stopDone.wait(lock, [this]() { return !m_stopping; });
+            }
+            return;
+        }
+        if (isStopped())
+        {
+            return;
+        }
+        m_stopping = true;
     }
+    // Released on every way out, after the sessions are logged on again below: the last touch of this, so a
+    // waiter may destroy the transport as soon as it returns.
+    auto claim = sg::make_scope_guard(
+        [this]()
+        {
+            std::lock_guard<std::mutex> lock(m_stopMutex);
+            m_stopping = false;
+            m_stopDone.notify_all();
+        });
 
     HttpServer::stopGlobal(m_settings);
 
@@ -311,6 +336,7 @@ THREAD_PROC Acceptor::startThread(void *p)
 {
     Acceptor *pAcceptor = static_cast<Acceptor *>(p);
     auto guard = sg::make_scope_guard([pAcceptor]() { pAcceptor->m_processing = false; });
+    TransportThread own(pAcceptor);
     pAcceptor->onStart();
     return 0;
 }

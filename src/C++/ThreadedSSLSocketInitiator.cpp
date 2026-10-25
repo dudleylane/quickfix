@@ -390,6 +390,7 @@ THREAD_PROC ThreadedSSLSocketInitiator::socketThread(void *p)
     ThreadPair *pair = reinterpret_cast<ThreadPair *>(p);
 
     ThreadedSSLSocketInitiator *pInitiator = pair->first;
+    TransportThread own(static_cast<const Initiator *>(pInitiator)); // stop() must not wait on this thread (#174)
     ThreadedSSLSocketConnection *pConnection = pair->second;
     FIX::SessionID sessionID = pConnection->getSession()->getSessionID();
     FIX::Session *pSession = FIX::Session::lookupSession(sessionID);

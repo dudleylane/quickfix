@@ -678,6 +678,17 @@ thread_id thread_self()
 #endif
 }
 
+namespace
+{
+thread_local const void *t_transport = nullptr;
+}
+
+TransportThread::TransportThread(const void *transport) : m_previous(t_transport) { t_transport = transport; }
+
+TransportThread::~TransportThread() { t_transport = m_previous; }
+
+bool TransportThread::isOwnedBy(const void *transport) { return transport != nullptr && t_transport == transport; }
+
 void process_sleep(double s)
 {
 #ifdef _MSC_VER

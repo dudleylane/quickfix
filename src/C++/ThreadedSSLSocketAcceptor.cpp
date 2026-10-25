@@ -381,6 +381,7 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketAcceptorThread(void *p)
 
     ThreadedSSLSocketAcceptor *pAcceptor = info->m_pAcceptor;
     socket_handle s = info->m_socket;
+    TransportThread own(static_cast<const Acceptor *>(pAcceptor)); // stop() must not wait on this thread (#174)
     int port = info->m_port;
     delete info;
 
@@ -493,6 +494,7 @@ THREAD_PROC ThreadedSSLSocketAcceptor::socketConnectionThread(void *p)
 
     ThreadedSSLSocketAcceptor *pAcceptor = info->m_pAcceptor;
     ThreadedSSLSocketConnection *pConnection = info->m_pConnection;
+    TransportThread own(static_cast<const Acceptor *>(pAcceptor)); // stop() must not wait on this thread (#174)
     delete info;
 
     socket_handle socket = pConnection->getSocket();

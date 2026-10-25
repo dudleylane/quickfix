@@ -32,7 +32,9 @@
 #include "MessageStore.h"
 #include "Responder.h"
 #include "SessionSettings.h"
+#include <condition_variable>
 #include <map>
+#include <mutex>
 #include <string>
 
 namespace FIX
@@ -129,6 +131,11 @@ private:
     std::atomic<bool> m_processing;
     std::atomic<bool> m_firstPoll;
     std::atomic<bool> m_stop;
+    // A stop in progress, claimed under m_stopMutex: a second stop() waits on m_stopDone for it to finish
+    // rather than returning while the first still joins the transport's threads (#174).
+    std::mutex m_stopMutex;
+    std::condition_variable m_stopDone;
+    bool m_stopping = false;
     int m_maxPendingConnections = 0;
 };
 /*! @} */

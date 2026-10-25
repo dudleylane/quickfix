@@ -60,6 +60,7 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Pending-connection limit**: `MaxPendingConnections` bounds how many accepted connections that have not logged on each acceptor holds; a new one beyond it is closed at once. Off by default (#72, `8106631a`)
 - **Allow-list before the first message**: `AllowedRemoteAddresses` is checked on every acceptor before the first message reaches the session (GHSA-2ppv-6433-rfh2, `6347ee9d`)
 - **HTTP admin server restricted**: it listens on 127.0.0.1 unless `HttpAcceptAddress` says otherwise, changes state only on a POST, refuses a Host that is a DNS name other than `localhost` and a POST from another Origin, and closes each request's socket once; it still has no authentication (GHSA-7hm8-h6g7-8vf3, `da37aab8`)
+- **One stop at a time**: `Acceptor::stop` and `Initiator::stop` with more than one caller -- a signal handler's and an application's teardown, say -- let the second return while the first still joined the transport's threads, so destroying the transport then destroyed it under them, and two arriving together both ran the whole stop and joined the same threads. A second caller now waits for the first to finish, except on one of the transport's own threads, which that stop joins and which returns at once as before (#174)
 
 ### Latency
 - **GroupArena**: Per-message bump-pointer arena for the groups a message gets through `addGroup()` or a copy: building or copying a message with repeating groups takes each `Group` object from the arena instead of `new`/`delete` (its field vector still allocates). 32 slots of 128 bytes (4 KB), allocated on first use and bulk-reset on `clear()`. Parsing does not use it: `setString()` allocates each group with `new`, and moving those onto the arena measured at no more than about 4% of a QuoteRequest parse, which did not justify the risk (#52).
@@ -318,9 +319,9 @@ try (var acceptor = new ThreadedSocketAcceptor(new Orders(), new MemoryStoreFact
   running transport is never collected, and a shutdown hook stops those still running when the JVM exits,
   so a callback must not call `System.exit`: the hook would wait for the very callback that called it.
   `stop()` and `close()` may be called from any threads, the hook's included: `close()` waits for a stop
-  already running, and calls after it do nothing. The engine's own `stop()` is not safe for concurrent
-  callers (#174); the Java classes serialise it. The one place not to call them is a callback of the same
-  transport: whatever is stopping it waits for that callback, and the callback would wait for it.
+  already running, and calls after it do nothing, as the engine's own `stop()` does since #174. The one
+  place not to call them is a callback of the same transport: whatever is stopping it waits for that
+  callback, and the callback would wait for it.
   `stop()` from a threaded transport's own callback returns only after its wait for that callback times
   out, about 15 s; stop it from another thread.
 - **Engine threads attach to the JVM once**, as daemons, on their first callback, and detach when they end.
