@@ -231,4 +231,12 @@ public class FieldMap {
     return (cPtr == 0) ? null : new FieldMap(cPtr, false);
   }
 
+  public byte[] getFieldBytes(int tag) {
+    return quickfixJNI.FieldMap_getFieldBytes(swigCPtr, this, tag);
+  }
+
+  public void setFieldBytes(int tag, byte[] value) {
+    quickfixJNI.FieldMap_setFieldBytes(swigCPtr, this, tag, value);
+  }
+
 }

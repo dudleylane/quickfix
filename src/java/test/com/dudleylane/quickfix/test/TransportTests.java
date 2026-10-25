@@ -36,6 +36,10 @@ public class TransportTests {
             }
             Check.isTrue(Check.eventually(20, () -> server.fromApp.size() == 200),
                          transport + ": 200 orders arrived, got " + server.fromApp.size());
+            Session session = Session.lookupSession(CLIENT);
+            Check.isTrue(session.getStore().getNextSenderMsgSeqNum() > 200, transport + ": the session's store, typed");
+            session.getLog().onEvent("from the test");
+            Check.isTrue(session.getAllowedRemoteAddresses().isEmpty(), transport + ": a StringSet");
         });
     }
 

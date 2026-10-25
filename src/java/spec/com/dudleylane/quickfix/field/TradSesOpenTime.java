@@ -18,6 +18,15 @@ public final class TradSesOpenTime {
         FieldConvert.setString(map, FIELD, value);
     }
 
+    /** map's TradSesOpenTime as an Instant; IncorrectDataFormat if it does not read as one. */
+    public static java.time.Instant getInstant(FieldMap map) {
+        return FieldConvert.getUtcTimestamp(map, FIELD);
+    }
+
+    public static void set(FieldMap map, java.time.Instant value) {
+        FieldConvert.setUtcTimestamp(map, FIELD, value);
+    }
+
     public static boolean isSet(FieldMap map) {
         return map.isSetField(FIELD);
     }

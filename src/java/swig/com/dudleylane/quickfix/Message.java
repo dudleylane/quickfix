@@ -112,8 +112,8 @@ public class Message extends FieldMap {
     quickfixJNI.Message_replaceGroup(swigCPtr, this, num, Group.getCPtr(group), group);
   }
 
-  public SWIGTYPE_p_Group getGroup(long num, Group group) {
-    return new SWIGTYPE_p_Group(quickfixJNI.Message_getGroup(swigCPtr, this, num, Group.getCPtr(group), group), false);
+  public Group getGroup(long num, Group group) {
+    return new Group(quickfixJNI.Message_getGroup(swigCPtr, this, num, Group.getCPtr(group), group), false);
   }
 
   public void removeGroup(long num, Group group) {
@@ -192,8 +192,8 @@ public class Message extends FieldMap {
     quickfixJNI.Message_setString__SWIG_3(swigCPtr, this, string, validate, DataDictionary.getCPtr(pSessionDataDictionary), pSessionDataDictionary, DataDictionary.getCPtr(pApplicationDataDictionary), pApplicationDataDictionary);
   }
 
-  public void setGroup(String msg, FieldBase field, String string, SWIGTYPE_p_std__string__size_type pos, FieldMap map, SWIGTYPE_p_DataDictionary dataDictionary) {
-    quickfixJNI.Message_setGroup(swigCPtr, this, msg, FieldBase.getCPtr(field), field, string, SWIGTYPE_p_std__string__size_type.getCPtr(pos), FieldMap.getCPtr(map), map, SWIGTYPE_p_DataDictionary.getCPtr(dataDictionary));
+  public void setGroup(String msg, FieldBase field, String string, SWIGTYPE_p_std__string__size_type pos, FieldMap map, DataDictionary dataDictionary) {
+    quickfixJNI.Message_setGroup(swigCPtr, this, msg, FieldBase.getCPtr(field), field, string, SWIGTYPE_p_std__string__size_type.getCPtr(pos), FieldMap.getCPtr(map), map, DataDictionary.getCPtr(dataDictionary), dataDictionary);
   }
 
   public boolean setStringHeader(String string) {
@@ -276,44 +276,60 @@ public class Message extends FieldMap {
     return quickfixJNI.Message_isHeaderField__SWIG_0(field);
   }
 
-  public static boolean isHeaderField(FieldBase field, SWIGTYPE_p_DataDictionary pD) {
-    return quickfixJNI.Message_isHeaderField__SWIG_1(FieldBase.getCPtr(field), field, SWIGTYPE_p_DataDictionary.getCPtr(pD));
+  public static boolean isHeaderField(FieldBase field, DataDictionary pD) {
+    return quickfixJNI.Message_isHeaderField__SWIG_1(FieldBase.getCPtr(field), field, DataDictionary.getCPtr(pD), pD);
   }
 
   public static boolean isHeaderField(FieldBase field) {
     return quickfixJNI.Message_isHeaderField__SWIG_2(FieldBase.getCPtr(field), field);
   }
 
-  public static boolean isHeaderField(int field, SWIGTYPE_p_DataDictionary pD) {
-    return quickfixJNI.Message_isHeaderField__SWIG_3(field, SWIGTYPE_p_DataDictionary.getCPtr(pD));
+  public static boolean isHeaderField(int field, DataDictionary pD) {
+    return quickfixJNI.Message_isHeaderField__SWIG_3(field, DataDictionary.getCPtr(pD), pD);
   }
 
   public static boolean isTrailerField(int field) {
     return quickfixJNI.Message_isTrailerField__SWIG_0(field);
   }
 
-  public static boolean isTrailerField(FieldBase field, SWIGTYPE_p_DataDictionary pD) {
-    return quickfixJNI.Message_isTrailerField__SWIG_1(FieldBase.getCPtr(field), field, SWIGTYPE_p_DataDictionary.getCPtr(pD));
+  public static boolean isTrailerField(FieldBase field, DataDictionary pD) {
+    return quickfixJNI.Message_isTrailerField__SWIG_1(FieldBase.getCPtr(field), field, DataDictionary.getCPtr(pD), pD);
   }
 
   public static boolean isTrailerField(FieldBase field) {
     return quickfixJNI.Message_isTrailerField__SWIG_2(FieldBase.getCPtr(field), field);
   }
 
-  public static boolean isTrailerField(int field, SWIGTYPE_p_DataDictionary pD) {
-    return quickfixJNI.Message_isTrailerField__SWIG_3(field, SWIGTYPE_p_DataDictionary.getCPtr(pD));
+  public static boolean isTrailerField(int field, DataDictionary pD) {
+    return quickfixJNI.Message_isTrailerField__SWIG_3(field, DataDictionary.getCPtr(pD), pD);
   }
 
-  public SWIGTYPE_p_SessionID getSessionID(String qualifier) {
-    return new SWIGTYPE_p_SessionID(quickfixJNI.Message_getSessionID__SWIG_0(swigCPtr, this, qualifier), true);
+  public SessionID getSessionID(String qualifier) {
+    return new SessionID(quickfixJNI.Message_getSessionID__SWIG_0(swigCPtr, this, qualifier), true);
   }
 
-  public SWIGTYPE_p_SessionID getSessionID() {
-    return new SWIGTYPE_p_SessionID(quickfixJNI.Message_getSessionID__SWIG_1(swigCPtr, this), true);
+  public SessionID getSessionID() {
+    return new SessionID(quickfixJNI.Message_getSessionID__SWIG_1(swigCPtr, this), true);
   }
 
-  public void setSessionID(SWIGTYPE_p_SessionID sessionID) {
-    quickfixJNI.Message_setSessionID(swigCPtr, this, SWIGTYPE_p_SessionID.getCPtr(sessionID));
+  public void setSessionID(SessionID sessionID) {
+    quickfixJNI.Message_setSessionID(swigCPtr, this, SessionID.getCPtr(sessionID), sessionID);
+  }
+
+  public byte[] toBytes() {
+    return quickfixJNI.Message_toBytes(swigCPtr, this);
+  }
+
+  public void setBytes(byte[] message, boolean validate) {
+    quickfixJNI.Message_setBytes__SWIG_0(swigCPtr, this, message, validate);
+  }
+
+  public void setBytes(byte[] message) {
+    quickfixJNI.Message_setBytes__SWIG_1(swigCPtr, this, message);
+  }
+
+  public void setBytes(byte[] message, boolean validate, DataDictionary dictionary) {
+    quickfixJNI.Message_setBytes__SWIG_2(swigCPtr, this, message, validate, DataDictionary.getCPtr(dictionary), dictionary);
   }
 
   public String __str__() {

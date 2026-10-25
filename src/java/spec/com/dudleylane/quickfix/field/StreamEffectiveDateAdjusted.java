@@ -18,6 +18,15 @@ public final class StreamEffectiveDateAdjusted {
         FieldConvert.setString(map, FIELD, value);
     }
 
+    /** map's StreamEffectiveDateAdjusted as a LocalDate; IncorrectDataFormat if it does not read as one. */
+    public static java.time.LocalDate getDate(FieldMap map) {
+        return FieldConvert.getDate(map, FIELD);
+    }
+
+    public static void set(FieldMap map, java.time.LocalDate value) {
+        FieldConvert.setDate(map, FIELD, value);
+    }
+
     public static boolean isSet(FieldMap map) {
         return map.isSetField(FIELD);
     }

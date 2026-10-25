@@ -1042,6 +1042,58 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *)
 #include <string>
 
 
+#include <typeinfo>
+#include <stdexcept>
+
+
+#include <set>
+#include <stdexcept>
+
+SWIGINTERN void std_set_Sl_std_string_Sg__iterator_incrementUnchecked(std::set< std::string >::iterator *self){
+          ++(*self);
+        }
+SWIGINTERN std::string std_set_Sl_std_string_Sg__iterator_derefUnchecked(std::set< std::string >::iterator const *self){
+          return **self;
+        }
+SWIGINTERN bool std_set_Sl_std_string_Sg__iterator_isNot(std::set< std::string >::iterator const *self,std::set< std::string >::iterator other){
+          return (*self != other);
+        }
+
+/* Check for overflow converting to Java int (always signed 32-bit) from (unsigned variable-bit) size_t */
+SWIGINTERN jint SWIG_JavaIntFromSize_t(size_t size) {
+  static const jint JINT_MAX = 0x7FFFFFFF;
+  return (size > (size_t)JINT_MAX) ? -1 : (jint)size;
+}
+
+
+  SWIGINTERN jint SWIG_SetSize(size_t size) {
+    jint sz = SWIG_JavaIntFromSize_t(size);
+    if (sz == -1) {
+      throw std::out_of_range("set size is too large to fit into a Java int");
+    }
+
+    return sz;
+  }
+
+SWIGINTERN bool std_set_Sl_std_string_Sg__addImpl(std::set< std::string > *self,std::string const &key){
+        return self->insert(key).second;
+      }
+SWIGINTERN bool std_set_Sl_std_string_Sg__containsImpl(std::set< std::string > *self,std::string const &key){
+        return (self->count(key) > 0);
+      }
+SWIGINTERN bool std_set_Sl_std_string_Sg__removeImpl(std::set< std::string > *self,std::string const &key){
+        return (self->erase(key) > 0);
+      }
+SWIGINTERN jint std_set_Sl_std_string_Sg__sizeImpl(std::set< std::string > const *self){
+        return SWIG_SetSize(self->size());
+      }
+SWIGINTERN bool std_set_Sl_std_string_Sg__hasNextImpl(std::set< std::string > const *self,std::set< std::string >::iterator const &itr){
+        return (itr != self->end());
+      }
+
+typedef std::string QuickfixBytes;
+
+
 SWIGINTERN void SWIG_JavaException(JNIEnv *jenv, int code, const char *msg) {
   SWIG_JavaExceptionCodes exception_code = SWIG_JavaUnknownError;
   switch(code) {
@@ -1083,26 +1135,11 @@ SWIGINTERN void SWIG_JavaException(JNIEnv *jenv, int code, const char *msg) {
 #include <stdexcept>
 
 
-#include <typeinfo>
-#include <stdexcept>
-
-
-#include <set>
-#include <stdexcept>
-
-
 #include <vector>
 #include <stdexcept>
 
 
 #include <stdint.h>		// Use the C99 official header
-
-
-/* Check for overflow converting to Java int (always signed 32-bit) from (unsigned variable-bit) size_t */
-SWIGINTERN jint SWIG_JavaIntFromSize_t(size_t size) {
-  static const jint JINT_MAX = 0x7FFFFFFF;
-  return (size > (size_t)JINT_MAX) ? -1 : (jint)size;
-}
 
 
 SWIGINTERN jint SWIG_VectorSize(size_t size) {
@@ -1585,16 +1622,6 @@ SWIGINTERN FIX::SessionID std_set_Sl_FIX_SessionID_Sg__iterator_derefUnchecked(s
 SWIGINTERN bool std_set_Sl_FIX_SessionID_Sg__iterator_isNot(std::set< FIX::SessionID >::iterator const *self,std::set< FIX::SessionID >::iterator other){
           return (*self != other);
         }
-
-  SWIGINTERN jint SWIG_SetSize(size_t size) {
-    jint sz = SWIG_JavaIntFromSize_t(size);
-    if (sz == -1) {
-      throw std::out_of_range("set size is too large to fit into a Java int");
-    }
-
-    return sz;
-  }
-
 SWIGINTERN bool std_set_Sl_FIX_SessionID_Sg__addImpl(std::set< FIX::SessionID > *self,FIX::SessionID const &key){
         return self->insert(key).second;
       }
@@ -1616,6 +1643,13 @@ SWIGINTERN std::string FIX_FieldBase___str__(FIX::FieldBase *self){
 
 #include <memory>
 
+SWIGINTERN QuickfixBytes FIX_FieldMap_getFieldBytes(FIX::FieldMap const *self,int tag){ return self->getField(tag); }
+SWIGINTERN void FIX_FieldMap_setFieldBytes(FIX::FieldMap *self,int tag,QuickfixBytes const &value){ self->setField(tag, value); }
+SWIGINTERN QuickfixBytes FIX_Message_toBytes(FIX::Message const *self){ return self->toString(); }
+SWIGINTERN void FIX_Message_setBytes__SWIG_0(FIX::Message *self,QuickfixBytes const &message,bool validate=true){ self->setString(message, validate); }
+SWIGINTERN void FIX_Message_setBytes__SWIG_2(FIX::Message *self,QuickfixBytes const &message,bool validate,FIX::DataDictionary const *dictionary){
+    self->setString(message, validate, dictionary);
+  }
 SWIGINTERN std::string FIX_Message___str__(FIX::Message *self){
     return self->toString();
   }
@@ -1625,6 +1659,32 @@ SWIGINTERN std::string FIX_SessionID___str__(FIX::SessionID *self){
 SWIGINTERN void FIX_SessionSettings_setFromString(FIX::SessionSettings *self,std::string const &str){
         std::stringstream(str) >> (*self);
     }
+SWIGINTERN char const *FIX_DataDictionary_getFieldName(FIX::DataDictionary const *self,int field){
+    thread_local std::string result;
+    return self->getFieldName(field, result) ? result.c_str() : nullptr;
+  }
+SWIGINTERN int FIX_DataDictionary_getFieldTag(FIX::DataDictionary const *self,std::string const &name){
+    int field = 0;
+    return self->getFieldTag(name, field) ? field : 0;
+  }
+SWIGINTERN char const *FIX_DataDictionary_getValueName(FIX::DataDictionary const *self,int field,std::string const &value){
+    thread_local std::string result;
+    return self->getValueName(field, value, result) ? result.c_str() : nullptr;
+  }
+SWIGINTERN char const *FIX_DataDictionary_getNameValue(FIX::DataDictionary const *self,int field,std::string const &name){
+    thread_local std::string result;
+    return self->getNameValue(field, name, result) ? result.c_str() : nullptr;
+  }
+SWIGINTERN int FIX_DataDictionary_getGroupDelimiter(FIX::DataDictionary const *self,std::string const &msg,int field){
+    int delim = 0;
+    const FIX::DataDictionary *group = nullptr;
+    return self->getGroup(msg, field, delim, group) ? delim : 0;
+  }
+SWIGINTERN FIX::DataDictionary const *FIX_DataDictionary_getGroupDictionary(FIX::DataDictionary const *self,std::string const &msg,int field){
+    int delim = 0;
+    const FIX::DataDictionary *group = nullptr;
+    return self->getGroup(msg, field, delim, group) ? group : nullptr;
+  }
 
 
 /* ---------------------------------------------------
@@ -2228,6 +2288,600 @@ void SwigDirector_Application::swig_connect_director(JNIEnv *jenv, jobject jself
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1Iterator_1incrementUnchecked(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  std::set< std::string >::iterator *arg1 = (std::set< std::string >::iterator *) 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string >::iterator **)&jarg1; 
+  {
+    try
+    {
+      std_set_Sl_std_string_Sg__iterator_incrementUnchecked(arg1);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return ;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return ;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return ;
+    }
+  }
+}
+
+
+SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1Iterator_1derefUnchecked(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jstring jresult = 0 ;
+  std::set< std::string >::iterator *arg1 = (std::set< std::string >::iterator *) 0 ;
+  std::string result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string >::iterator **)&jarg1; 
+  {
+    try
+    {
+      result = std_set_Sl_std_string_Sg__iterator_derefUnchecked((std::set< std::string >::iterator const *)arg1);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = jenv->NewStringUTF((&result)->c_str()); 
+  return jresult;
+}
+
+
+SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1Iterator_1isNot(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
+  jboolean jresult = 0 ;
+  std::set< std::string >::iterator *arg1 = (std::set< std::string >::iterator *) 0 ;
+  std::set< std::string >::iterator arg2 ;
+  std::set< std::string >::iterator *argp2 ;
+  bool result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  (void)jarg2_;
+  arg1 = *(std::set< std::string >::iterator **)&jarg1; 
+  argp2 = *(std::set< std::string >::iterator **)&jarg2; 
+  if (!argp2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Attempt to dereference null std::set< std::string >::iterator");
+    return 0;
+  }
+  arg2 = *argp2; 
+  {
+    try
+    {
+      result = (bool)std_set_Sl_std_string_Sg__iterator_isNot((std::set< std::string >::iterator const *)arg1,SWIG_STD_MOVE(arg2));
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = (jboolean)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1StringSet_1Iterator(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+  std::set< std::string >::iterator *arg1 = (std::set< std::string >::iterator *) 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  arg1 = *(std::set< std::string >::iterator **)&jarg1; 
+  {
+    try
+    {
+      delete arg1;
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return ;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return ;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return ;
+    }
+  }
+}
+
+
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1StringSet_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
+  jlong jresult = 0 ;
+  std::set< std::string > *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  {
+    try
+    {
+      result = (std::set< std::string > *)new std::set< std::string >();
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  *(std::set< std::string > **)&jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1StringSet_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jlong jresult = 0 ;
+  std::set< std::string > *arg1 = 0 ;
+  std::set< std::string > *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string > **)&jarg1;
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::set< std::string > const & is null");
+    return 0;
+  } 
+  {
+    try
+    {
+      result = (std::set< std::string > *)new std::set< std::string >((std::set< std::string > const &)*arg1);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  *(std::set< std::string > **)&jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1isEmpty(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jboolean jresult = 0 ;
+  std::set< std::string > *arg1 = (std::set< std::string > *) 0 ;
+  bool result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string > **)&jarg1; 
+  {
+    try
+    {
+      result = (bool)((std::set< std::string > const *)arg1)->empty();
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = (jboolean)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1clear(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  std::set< std::string > *arg1 = (std::set< std::string > *) 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string > **)&jarg1; 
+  {
+    try
+    {
+      (arg1)->clear();
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return ;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return ;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return ;
+    }
+  }
+}
+
+
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1begin(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jlong jresult = 0 ;
+  std::set< std::string > *arg1 = (std::set< std::string > *) 0 ;
+  std::set< std::string >::iterator result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string > **)&jarg1; 
+  {
+    try
+    {
+      result = (arg1)->begin();
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  *(std::set< std::string >::iterator **)&jresult = new std::set< std::string >::iterator(result); 
+  return jresult;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1end(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jlong jresult = 0 ;
+  std::set< std::string > *arg1 = (std::set< std::string > *) 0 ;
+  std::set< std::string >::iterator result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string > **)&jarg1; 
+  {
+    try
+    {
+      result = (arg1)->end();
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  *(std::set< std::string >::iterator **)&jresult = new std::set< std::string >::iterator(result); 
+  return jresult;
+}
+
+
+SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1addImpl(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2) {
+  jboolean jresult = 0 ;
+  std::set< std::string > *arg1 = (std::set< std::string > *) 0 ;
+  std::string *arg2 = 0 ;
+  bool result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string > **)&jarg1; 
+  if(!jarg2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg2_pstr = (const char *)jenv->GetStringUTFChars(jarg2, 0); 
+  if (!arg2_pstr) return 0;
+  std::string arg2_str(arg2_pstr);
+  arg2 = &arg2_str;
+  jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  {
+    try
+    {
+      result = (bool)std_set_Sl_std_string_Sg__addImpl(arg1,(std::string const &)*arg2);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = (jboolean)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1containsImpl(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2) {
+  jboolean jresult = 0 ;
+  std::set< std::string > *arg1 = (std::set< std::string > *) 0 ;
+  std::string *arg2 = 0 ;
+  bool result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string > **)&jarg1; 
+  if(!jarg2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg2_pstr = (const char *)jenv->GetStringUTFChars(jarg2, 0); 
+  if (!arg2_pstr) return 0;
+  std::string arg2_str(arg2_pstr);
+  arg2 = &arg2_str;
+  jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  {
+    try
+    {
+      result = (bool)std_set_Sl_std_string_Sg__containsImpl(arg1,(std::string const &)*arg2);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = (jboolean)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1removeImpl(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2) {
+  jboolean jresult = 0 ;
+  std::set< std::string > *arg1 = (std::set< std::string > *) 0 ;
+  std::string *arg2 = 0 ;
+  bool result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string > **)&jarg1; 
+  if(!jarg2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg2_pstr = (const char *)jenv->GetStringUTFChars(jarg2, 0); 
+  if (!arg2_pstr) return 0;
+  std::string arg2_str(arg2_pstr);
+  arg2 = &arg2_str;
+  jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  {
+    try
+    {
+      result = (bool)std_set_Sl_std_string_Sg__removeImpl(arg1,(std::string const &)*arg2);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = (jboolean)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1sizeImpl(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jint jresult = 0 ;
+  std::set< std::string > *arg1 = (std::set< std::string > *) 0 ;
+  jint result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(std::set< std::string > **)&jarg1; 
+  {
+    try
+    {
+      try {
+        result = std_set_Sl_std_string_Sg__sizeImpl((std::set< std::string > const *)arg1);
+      } catch(std::out_of_range &_e) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, (&_e)->what());
+        return 0;
+      }
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringSet_1hasNextImpl(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
+  jboolean jresult = 0 ;
+  std::set< std::string > *arg1 = (std::set< std::string > *) 0 ;
+  std::set< std::string >::iterator *arg2 = 0 ;
+  bool result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  (void)jarg2_;
+  arg1 = *(std::set< std::string > **)&jarg1; 
+  arg2 = *(std::set< std::string >::iterator **)&jarg2;
+  if (!arg2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::set< std::string >::iterator const & is null");
+    return 0;
+  } 
+  {
+    try
+    {
+      result = (bool)std_set_Sl_std_string_Sg__hasNextImpl((std::set< std::string > const *)arg1,(std::set< std::string >::iterator const &)*arg2);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = (jboolean)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1StringSet(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+  std::set< std::string > *arg1 = (std::set< std::string > *) 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  arg1 = *(std::set< std::string > **)&jarg1; 
+  {
+    try
+    {
+      delete arg1;
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return ;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return ;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return ;
+    }
+  }
+}
+
 
 SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1VectorString_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
   jlong jresult = 0 ;
@@ -13403,6 +14057,93 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1clon
 }
 
 
+SWIGEXPORT jbyteArray JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getFieldBytes(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2) {
+  jbyteArray jresult = 0 ;
+  FIX::FieldMap *arg1 = (FIX::FieldMap *) 0 ;
+  int arg2 ;
+  QuickfixBytes result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::FieldMap **)&jarg1; 
+  arg2 = (int)jarg2; 
+  {
+    try
+    {
+      result = FIX_FieldMap_getFieldBytes((FIX::FieldMap const *)arg1,arg2);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  {
+    jresult = jenv->NewByteArray(static_cast<jsize>((&result)->size()));
+    if (jresult) {
+      jenv->SetByteArrayRegion(jresult, 0, static_cast<jsize>((&result)->size()), reinterpret_cast<const jbyte *>((&result)->data()));
+    }
+  }
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1setFieldBytes(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jbyteArray jarg3) {
+  FIX::FieldMap *arg1 = (FIX::FieldMap *) 0 ;
+  int arg2 ;
+  QuickfixBytes *arg3 = 0 ;
+  std::string temp3 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::FieldMap **)&jarg1; 
+  arg2 = (int)jarg2; 
+  {
+    if (!jarg3) {
+      SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null byte[]");
+      return ;
+    }
+    const jsize length = jenv->GetArrayLength(jarg3);
+    temp3.resize(static_cast<size_t>(length));
+    jenv->GetByteArrayRegion(jarg3, 0, length, reinterpret_cast<jbyte *>(temp3.data()));
+    arg3 = &temp3;
+  }
+  {
+    try
+    {
+      FIX_FieldMap_setFieldBytes(arg1,arg2,(std::string const &)*arg3);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return ;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return ;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return ;
+    }
+  }
+}
+
+
 SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1Header_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
   jlong jresult = 0 ;
   FIX::Header *result = 0 ;
@@ -13556,7 +14297,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1getGro
   FIX::Header *arg1 = (FIX::Header *) 0 ;
   unsigned int arg2 ;
   FIX::Group *arg3 = 0 ;
-  Group *result = 0 ;
+  FIX::Group *result = 0 ;
   
   (void)jenv;
   (void)jcls;
@@ -13572,7 +14313,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1getGro
   {
     try
     {
-      result = (Group *) &((FIX::Header const *)arg1)->getGroup(arg2,*arg3);
+      result = (FIX::Group *) &((FIX::Header const *)arg1)->getGroup(arg2,*arg3);
     }
     catch (const FIX::Exception &e)
     {
@@ -13590,7 +14331,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1getGro
       return 0;
     }
   }
-  *(Group **)&jresult = result; 
+  *(FIX::Group **)&jresult = result; 
   return jresult;
 }
 
@@ -13942,7 +14683,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1getGr
   FIX::Trailer *arg1 = (FIX::Trailer *) 0 ;
   unsigned int arg2 ;
   FIX::Group *arg3 = 0 ;
-  Group *result = 0 ;
+  FIX::Group *result = 0 ;
   
   (void)jenv;
   (void)jcls;
@@ -13958,7 +14699,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1getGr
   {
     try
     {
-      result = (Group *) &((FIX::Trailer const *)arg1)->getGroup(arg2,*arg3);
+      result = (FIX::Group *) &((FIX::Trailer const *)arg1)->getGroup(arg2,*arg3);
     }
     catch (const FIX::Exception &e)
     {
@@ -13976,7 +14717,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1getGr
       return 0;
     }
   }
-  *(Group **)&jresult = result; 
+  *(FIX::Group **)&jresult = result; 
   return jresult;
 }
 
@@ -15037,7 +15778,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getGr
   FIX::Message *arg1 = (FIX::Message *) 0 ;
   unsigned int arg2 ;
   FIX::Group *arg3 = 0 ;
-  Group *result = 0 ;
+  FIX::Group *result = 0 ;
   
   (void)jenv;
   (void)jcls;
@@ -15053,7 +15794,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getGr
   {
     try
     {
-      result = (Group *) &((FIX::Message const *)arg1)->getGroup(arg2,*arg3);
+      result = (FIX::Group *) &((FIX::Message const *)arg1)->getGroup(arg2,*arg3);
     }
     catch (const FIX::Exception &e)
     {
@@ -15071,7 +15812,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getGr
       return 0;
     }
   }
-  *(Group **)&jresult = result; 
+  *(FIX::Group **)&jresult = result; 
   return jresult;
 }
 
@@ -15861,20 +16602,21 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setStr
 }
 
 
-SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setGroup(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jlong jarg3, jobject jarg3_, jstring jarg4, jlong jarg5, jlong jarg6, jobject jarg6_, jlong jarg7) {
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setGroup(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jlong jarg3, jobject jarg3_, jstring jarg4, jlong jarg5, jlong jarg6, jobject jarg6_, jlong jarg7, jobject jarg7_) {
   FIX::Message *arg1 = (FIX::Message *) 0 ;
   std::string *arg2 = 0 ;
   FIX::FieldBase *arg3 = 0 ;
   std::string *arg4 = 0 ;
   std::string::size_type *arg5 = 0 ;
   FIX::FieldMap *arg6 = 0 ;
-  DataDictionary *arg7 = 0 ;
+  FIX::DataDictionary *arg7 = 0 ;
   
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
   (void)jarg3_;
   (void)jarg6_;
+  (void)jarg7_;
   arg1 = *(FIX::Message **)&jarg1; 
   if(!jarg2) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
@@ -15909,15 +16651,15 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setGro
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldMap & is null");
     return ;
   } 
-  arg7 = *(DataDictionary **)&jarg7;
+  arg7 = *(FIX::DataDictionary **)&jarg7;
   if (!arg7) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary const & is null");
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::DataDictionary const & is null");
     return ;
   } 
   {
     try
     {
-      (arg1)->setGroup((std::string const &)*arg2,(FIX::FieldBase const &)*arg3,(std::string const &)*arg4,*arg5,*arg6,(DataDictionary const &)*arg7);
+      (arg1)->setGroup((std::string const &)*arg2,(FIX::FieldBase const &)*arg3,(std::string const &)*arg4,*arg5,*arg6,(FIX::DataDictionary const &)*arg7);
     }
     catch (const FIX::Exception &e)
     {
@@ -16692,25 +17434,26 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1is
 }
 
 
-SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1isHeaderField_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2) {
+SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1isHeaderField_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
   jboolean jresult = 0 ;
   FIX::FieldBase *arg1 = 0 ;
-  DataDictionary *arg2 = (DataDictionary *) 0 ;
+  FIX::DataDictionary *arg2 = (FIX::DataDictionary *) 0 ;
   bool result;
   
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
+  (void)jarg2_;
   arg1 = *(FIX::FieldBase **)&jarg1;
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldBase const & is null");
     return 0;
   } 
-  arg2 = *(DataDictionary **)&jarg2; 
+  arg2 = *(FIX::DataDictionary **)&jarg2; 
   {
     try
     {
-      result = (bool)FIX::Message::isHeaderField((FIX::FieldBase const &)*arg1,(DataDictionary const *)arg2);
+      result = (bool)FIX::Message::isHeaderField((FIX::FieldBase const &)*arg1,(FIX::DataDictionary const *)arg2);
     }
     catch (const FIX::Exception &e)
     {
@@ -16772,20 +17515,21 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1is
 }
 
 
-SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1isHeaderField_1_1SWIG_13(JNIEnv *jenv, jclass jcls, jint jarg1, jlong jarg2) {
+SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1isHeaderField_1_1SWIG_13(JNIEnv *jenv, jclass jcls, jint jarg1, jlong jarg2, jobject jarg2_) {
   jboolean jresult = 0 ;
   int arg1 ;
-  DataDictionary *arg2 = (DataDictionary *) 0 ;
+  FIX::DataDictionary *arg2 = (FIX::DataDictionary *) 0 ;
   bool result;
   
   (void)jenv;
   (void)jcls;
+  (void)jarg2_;
   arg1 = (int)jarg1; 
-  arg2 = *(DataDictionary **)&jarg2; 
+  arg2 = *(FIX::DataDictionary **)&jarg2; 
   {
     try
     {
-      result = (bool)FIX::Message::isHeaderField(arg1,(DataDictionary const *)arg2);
+      result = (bool)FIX::Message::isHeaderField(arg1,(FIX::DataDictionary const *)arg2);
     }
     catch (const FIX::Exception &e)
     {
@@ -16842,25 +17586,26 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1is
 }
 
 
-SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1isTrailerField_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2) {
+SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1isTrailerField_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
   jboolean jresult = 0 ;
   FIX::FieldBase *arg1 = 0 ;
-  DataDictionary *arg2 = (DataDictionary *) 0 ;
+  FIX::DataDictionary *arg2 = (FIX::DataDictionary *) 0 ;
   bool result;
   
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
+  (void)jarg2_;
   arg1 = *(FIX::FieldBase **)&jarg1;
   if (!arg1) {
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldBase const & is null");
     return 0;
   } 
-  arg2 = *(DataDictionary **)&jarg2; 
+  arg2 = *(FIX::DataDictionary **)&jarg2; 
   {
     try
     {
-      result = (bool)FIX::Message::isTrailerField((FIX::FieldBase const &)*arg1,(DataDictionary const *)arg2);
+      result = (bool)FIX::Message::isTrailerField((FIX::FieldBase const &)*arg1,(FIX::DataDictionary const *)arg2);
     }
     catch (const FIX::Exception &e)
     {
@@ -16922,20 +17667,21 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1is
 }
 
 
-SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1isTrailerField_1_1SWIG_13(JNIEnv *jenv, jclass jcls, jint jarg1, jlong jarg2) {
+SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1isTrailerField_1_1SWIG_13(JNIEnv *jenv, jclass jcls, jint jarg1, jlong jarg2, jobject jarg2_) {
   jboolean jresult = 0 ;
   int arg1 ;
-  DataDictionary *arg2 = (DataDictionary *) 0 ;
+  FIX::DataDictionary *arg2 = (FIX::DataDictionary *) 0 ;
   bool result;
   
   (void)jenv;
   (void)jcls;
+  (void)jarg2_;
   arg1 = (int)jarg1; 
-  arg2 = *(DataDictionary **)&jarg2; 
+  arg2 = *(FIX::DataDictionary **)&jarg2; 
   {
     try
     {
-      result = (bool)FIX::Message::isTrailerField(arg1,(DataDictionary const *)arg2);
+      result = (bool)FIX::Message::isTrailerField(arg1,(FIX::DataDictionary const *)arg2);
     }
     catch (const FIX::Exception &e)
     {
@@ -16962,7 +17708,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getSe
   jlong jresult = 0 ;
   FIX::Message *arg1 = (FIX::Message *) 0 ;
   std::string *arg2 = 0 ;
-  SessionID result;
+  FIX::SessionID result;
   
   (void)jenv;
   (void)jcls;
@@ -16998,7 +17744,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getSe
       return 0;
     }
   }
-  *(SessionID **)&jresult = new SessionID(result); 
+  *(FIX::SessionID **)&jresult = new FIX::SessionID(result); 
   return jresult;
 }
 
@@ -17006,7 +17752,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getSe
 SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getSessionID_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
   jlong jresult = 0 ;
   FIX::Message *arg1 = (FIX::Message *) 0 ;
-  SessionID result;
+  FIX::SessionID result;
   
   (void)jenv;
   (void)jcls;
@@ -17033,28 +17779,205 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getSe
       return 0;
     }
   }
-  *(SessionID **)&jresult = new SessionID(result); 
+  *(FIX::SessionID **)&jresult = new FIX::SessionID(result); 
   return jresult;
 }
 
 
-SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setSessionID(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2) {
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setSessionID(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
   FIX::Message *arg1 = (FIX::Message *) 0 ;
-  SessionID *arg2 = 0 ;
+  FIX::SessionID *arg2 = 0 ;
   
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
+  (void)jarg2_;
   arg1 = *(FIX::Message **)&jarg1; 
-  arg2 = *(SessionID **)&jarg2;
+  arg2 = *(FIX::SessionID **)&jarg2;
   if (!arg2) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID const & is null");
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
   {
     try
     {
-      (arg1)->setSessionID((SessionID const &)*arg2);
+      (arg1)->setSessionID((FIX::SessionID const &)*arg2);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return ;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return ;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return ;
+    }
+  }
+}
+
+
+SWIGEXPORT jbyteArray JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toBytes(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jbyteArray jresult = 0 ;
+  FIX::Message *arg1 = (FIX::Message *) 0 ;
+  QuickfixBytes result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::Message **)&jarg1; 
+  {
+    try
+    {
+      result = FIX_Message_toBytes((FIX::Message const *)arg1);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  {
+    jresult = jenv->NewByteArray(static_cast<jsize>((&result)->size()));
+    if (jresult) {
+      jenv->SetByteArrayRegion(jresult, 0, static_cast<jsize>((&result)->size()), reinterpret_cast<const jbyte *>((&result)->data()));
+    }
+  }
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setBytes_1_1SWIG_10(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jbyteArray jarg2, jboolean jarg3) {
+  FIX::Message *arg1 = (FIX::Message *) 0 ;
+  QuickfixBytes *arg2 = 0 ;
+  bool arg3 ;
+  std::string temp2 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::Message **)&jarg1; 
+  {
+    if (!jarg2) {
+      SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null byte[]");
+      return ;
+    }
+    const jsize length = jenv->GetArrayLength(jarg2);
+    temp2.resize(static_cast<size_t>(length));
+    jenv->GetByteArrayRegion(jarg2, 0, length, reinterpret_cast<jbyte *>(temp2.data()));
+    arg2 = &temp2;
+  }
+  arg3 = jarg3 ? true : false; 
+  {
+    try
+    {
+      FIX_Message_setBytes__SWIG_0(arg1,(std::string const &)*arg2,arg3);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return ;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return ;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return ;
+    }
+  }
+}
+
+
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setBytes_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jbyteArray jarg2) {
+  FIX::Message *arg1 = (FIX::Message *) 0 ;
+  QuickfixBytes *arg2 = 0 ;
+  std::string temp2 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::Message **)&jarg1; 
+  {
+    if (!jarg2) {
+      SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null byte[]");
+      return ;
+    }
+    const jsize length = jenv->GetArrayLength(jarg2);
+    temp2.resize(static_cast<size_t>(length));
+    jenv->GetByteArrayRegion(jarg2, 0, length, reinterpret_cast<jbyte *>(temp2.data()));
+    arg2 = &temp2;
+  }
+  {
+    try
+    {
+      FIX_Message_setBytes__SWIG_0(arg1,(std::string const &)*arg2);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return ;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return ;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return ;
+    }
+  }
+}
+
+
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setBytes_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jbyteArray jarg2, jboolean jarg3, jlong jarg4, jobject jarg4_) {
+  FIX::Message *arg1 = (FIX::Message *) 0 ;
+  QuickfixBytes *arg2 = 0 ;
+  bool arg3 ;
+  FIX::DataDictionary *arg4 = (FIX::DataDictionary *) 0 ;
+  std::string temp2 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  (void)jarg4_;
+  arg1 = *(FIX::Message **)&jarg1; 
+  {
+    if (!jarg2) {
+      SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null byte[]");
+      return ;
+    }
+    const jsize length = jenv->GetArrayLength(jarg2);
+    temp2.resize(static_cast<size_t>(length));
+    jenv->GetByteArrayRegion(jarg2, 0, length, reinterpret_cast<jbyte *>(temp2.data()));
+    arg2 = &temp2;
+  }
+  arg3 = jarg3 ? true : false; 
+  arg4 = *(FIX::DataDictionary **)&jarg4; 
+  {
+    try
+    {
+      FIX_Message_setBytes__SWIG_2(arg1,(std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4);
     }
     catch (const FIX::Exception &e)
     {
@@ -93957,13 +94880,14 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getAl
 }
 
 
-SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setAllowedRemoteAddresses(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2) {
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setAllowedRemoteAddresses(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
   FIX::Session *arg1 = (FIX::Session *) 0 ;
   std::set< std::string > *arg2 = 0 ;
   
   (void)jenv;
   (void)jcls;
   (void)jarg1_;
+  (void)jarg2_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = *(std::set< std::string > **)&jarg2;
   if (!arg2) {
@@ -94446,7 +95370,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getEx
 SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getLog(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
   jlong jresult = 0 ;
   FIX::Session *arg1 = (FIX::Session *) 0 ;
-  Log *result = 0 ;
+  FIX::Log *result = 0 ;
   
   (void)jenv;
   (void)jcls;
@@ -94455,7 +95379,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getLo
   {
     try
     {
-      result = (Log *)(arg1)->getLog();
+      result = (FIX::Log *)(arg1)->getLog();
     }
     catch (const FIX::Exception &e)
     {
@@ -94473,7 +95397,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getLo
       return 0;
     }
   }
-  *(Log **)&jresult = result; 
+  *(FIX::Log **)&jresult = result; 
   return jresult;
 }
 
@@ -94481,7 +95405,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getLo
 SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getStore(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
   jlong jresult = 0 ;
   FIX::Session *arg1 = (FIX::Session *) 0 ;
-  MessageStore *result = 0 ;
+  FIX::MessageStore *result = 0 ;
   
   (void)jenv;
   (void)jcls;
@@ -94490,7 +95414,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getSt
   {
     try
     {
-      result = (MessageStore *)(arg1)->getStore();
+      result = (FIX::MessageStore *)(arg1)->getStore();
     }
     catch (const FIX::Exception &e)
     {
@@ -94508,7 +95432,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getSt
       return 0;
     }
   }
-  *(MessageStore **)&jresult = result; 
+  *(FIX::MessageStore **)&jresult = result; 
   return jresult;
 }
 
@@ -102581,100 +103505,6 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
 }
 
 
-SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getFieldName(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jlong jarg3) {
-  jboolean jresult = 0 ;
-  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
-  int arg2 ;
-  std::string *arg3 = 0 ;
-  bool result;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::DataDictionary **)&jarg1; 
-  arg2 = (int)jarg2; 
-  arg3 = *(std::string **)&jarg3;
-  if (!arg3) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::string & is null");
-    return 0;
-  } 
-  {
-    try
-    {
-      result = (bool)((FIX::DataDictionary const *)arg1)->getFieldName(arg2,*arg3);
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  jresult = (jboolean)result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getFieldTag(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jlong jarg3) {
-  jboolean jresult = 0 ;
-  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
-  std::string *arg2 = 0 ;
-  int *arg3 = 0 ;
-  bool result;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::DataDictionary **)&jarg1; 
-  if(!jarg2) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
-    return 0;
-  }
-  const char *arg2_pstr = (const char *)jenv->GetStringUTFChars(jarg2, 0); 
-  if (!arg2_pstr) return 0;
-  std::string arg2_str(arg2_pstr);
-  arg2 = &arg2_str;
-  jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
-  arg3 = *(int **)&jarg3;
-  if (!arg3) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "int & is null");
-    return 0;
-  } 
-  {
-    try
-    {
-      result = (bool)((FIX::DataDictionary const *)arg1)->getFieldTag((std::string const &)*arg2,*arg3);
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  jresult = (jboolean)result; 
-  return jresult;
-}
-
-
 SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1addValueName(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jstring jarg3, jstring jarg4) {
   FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
   int arg2 ;
@@ -102725,112 +103555,6 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
       return ;
     }
   }
-}
-
-
-SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getValueName(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jstring jarg3, jlong jarg4) {
-  jboolean jresult = 0 ;
-  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
-  int arg2 ;
-  std::string *arg3 = 0 ;
-  std::string *arg4 = 0 ;
-  bool result;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::DataDictionary **)&jarg1; 
-  arg2 = (int)jarg2; 
-  if(!jarg3) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
-    return 0;
-  }
-  const char *arg3_pstr = (const char *)jenv->GetStringUTFChars(jarg3, 0); 
-  if (!arg3_pstr) return 0;
-  std::string arg3_str(arg3_pstr);
-  arg3 = &arg3_str;
-  jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
-  arg4 = *(std::string **)&jarg4;
-  if (!arg4) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::string & is null");
-    return 0;
-  } 
-  {
-    try
-    {
-      result = (bool)((FIX::DataDictionary const *)arg1)->getValueName(arg2,(std::string const &)*arg3,*arg4);
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  jresult = (jboolean)result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getNameValue(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jstring jarg3, jlong jarg4) {
-  jboolean jresult = 0 ;
-  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
-  int arg2 ;
-  std::string *arg3 = 0 ;
-  std::string *arg4 = 0 ;
-  bool result;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::DataDictionary **)&jarg1; 
-  arg2 = (int)jarg2; 
-  if(!jarg3) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
-    return 0;
-  }
-  const char *arg3_pstr = (const char *)jenv->GetStringUTFChars(jarg3, 0); 
-  if (!arg3_pstr) return 0;
-  std::string arg3_str(arg3_pstr);
-  arg3 = &arg3_str;
-  jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
-  arg4 = *(std::string **)&jarg4;
-  if (!arg4) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::string & is null");
-    return 0;
-  } 
-  {
-    try
-    {
-      result = (bool)((FIX::DataDictionary const *)arg1)->getNameValue(arg2,(std::string const &)*arg3,*arg4);
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  jresult = (jboolean)result; 
-  return jresult;
 }
 
 
@@ -103585,65 +104309,6 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
 }
 
 
-SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getGroup(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jint jarg3, jlong jarg4, jlong jarg5) {
-  jboolean jresult = 0 ;
-  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
-  std::string *arg2 = 0 ;
-  int arg3 ;
-  int *arg4 = 0 ;
-  FIX::DataDictionary **arg5 = 0 ;
-  bool result;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::DataDictionary **)&jarg1; 
-  if(!jarg2) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
-    return 0;
-  }
-  const char *arg2_pstr = (const char *)jenv->GetStringUTFChars(jarg2, 0); 
-  if (!arg2_pstr) return 0;
-  std::string arg2_str(arg2_pstr);
-  arg2 = &arg2_str;
-  jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
-  arg3 = (int)jarg3; 
-  arg4 = *(int **)&jarg4;
-  if (!arg4) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "int & is null");
-    return 0;
-  } 
-  arg5 = *(FIX::DataDictionary ***)&jarg5;
-  if (!arg5) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::DataDictionary const *& is null");
-    return 0;
-  } 
-  {
-    try
-    {
-      result = (bool)((FIX::DataDictionary const *)arg1)->getGroup((std::string const &)*arg2,arg3,*arg4,(FIX::DataDictionary const *&)*arg5);
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  jresult = (jboolean)result; 
-  return jresult;
-}
-
-
 SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1isDataField(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2) {
   jboolean jresult = 0 ;
   FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
@@ -104034,6 +104699,276 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
       return ;
     }
   }
+}
+
+
+SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getFieldName(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2) {
+  jstring jresult = 0 ;
+  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
+  int arg2 ;
+  char *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::DataDictionary **)&jarg1; 
+  arg2 = (int)jarg2; 
+  {
+    try
+    {
+      result = (char *)FIX_DataDictionary_getFieldName((FIX::DataDictionary const *)arg1,arg2);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  if (result) jresult = jenv->NewStringUTF((const char *)result);
+  return jresult;
+}
+
+
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getFieldTag(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2) {
+  jint jresult = 0 ;
+  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
+  std::string *arg2 = 0 ;
+  int result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::DataDictionary **)&jarg1; 
+  if(!jarg2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg2_pstr = (const char *)jenv->GetStringUTFChars(jarg2, 0); 
+  if (!arg2_pstr) return 0;
+  std::string arg2_str(arg2_pstr);
+  arg2 = &arg2_str;
+  jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  {
+    try
+    {
+      result = (int)FIX_DataDictionary_getFieldTag((FIX::DataDictionary const *)arg1,(std::string const &)*arg2);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = (jint)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getValueName(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jstring jarg3) {
+  jstring jresult = 0 ;
+  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
+  int arg2 ;
+  std::string *arg3 = 0 ;
+  char *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::DataDictionary **)&jarg1; 
+  arg2 = (int)jarg2; 
+  if(!jarg3) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg3_pstr = (const char *)jenv->GetStringUTFChars(jarg3, 0); 
+  if (!arg3_pstr) return 0;
+  std::string arg3_str(arg3_pstr);
+  arg3 = &arg3_str;
+  jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  {
+    try
+    {
+      result = (char *)FIX_DataDictionary_getValueName((FIX::DataDictionary const *)arg1,arg2,(std::string const &)*arg3);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  if (result) jresult = jenv->NewStringUTF((const char *)result);
+  return jresult;
+}
+
+
+SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getNameValue(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jstring jarg3) {
+  jstring jresult = 0 ;
+  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
+  int arg2 ;
+  std::string *arg3 = 0 ;
+  char *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::DataDictionary **)&jarg1; 
+  arg2 = (int)jarg2; 
+  if(!jarg3) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg3_pstr = (const char *)jenv->GetStringUTFChars(jarg3, 0); 
+  if (!arg3_pstr) return 0;
+  std::string arg3_str(arg3_pstr);
+  arg3 = &arg3_str;
+  jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  {
+    try
+    {
+      result = (char *)FIX_DataDictionary_getNameValue((FIX::DataDictionary const *)arg1,arg2,(std::string const &)*arg3);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  if (result) jresult = jenv->NewStringUTF((const char *)result);
+  return jresult;
+}
+
+
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getGroupDelimiter(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jint jarg3) {
+  jint jresult = 0 ;
+  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
+  std::string *arg2 = 0 ;
+  int arg3 ;
+  int result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::DataDictionary **)&jarg1; 
+  if(!jarg2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg2_pstr = (const char *)jenv->GetStringUTFChars(jarg2, 0); 
+  if (!arg2_pstr) return 0;
+  std::string arg2_str(arg2_pstr);
+  arg2 = &arg2_str;
+  jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  arg3 = (int)jarg3; 
+  {
+    try
+    {
+      result = (int)FIX_DataDictionary_getGroupDelimiter((FIX::DataDictionary const *)arg1,(std::string const &)*arg2,arg3);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = (jint)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getGroupDictionary(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jint jarg3) {
+  jlong jresult = 0 ;
+  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
+  std::string *arg2 = 0 ;
+  int arg3 ;
+  FIX::DataDictionary *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::DataDictionary **)&jarg1; 
+  if(!jarg2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return 0;
+  }
+  const char *arg2_pstr = (const char *)jenv->GetStringUTFChars(jarg2, 0); 
+  if (!arg2_pstr) return 0;
+  std::string arg2_str(arg2_pstr);
+  arg2 = &arg2_str;
+  jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  arg3 = (int)jarg3; 
+  {
+    try
+    {
+      result = (FIX::DataDictionary *)FIX_DataDictionary_getGroupDictionary((FIX::DataDictionary const *)arg1,(std::string const &)*arg2,arg3);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  *(FIX::DataDictionary **)&jresult = result; 
+  return jresult;
 }
 
 

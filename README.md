@@ -325,7 +325,22 @@ try (var acceptor = new ThreadedSocketAcceptor(new Orders(), new MemoryStoreFact
   callback times out, about 15 s. A callback must not `close()` its own transport, which would free it
   under the callback's thread.
 - **Engine threads attach to the JVM once**, as daemons, on their first callback, and detach when they end.
-- **Strings cross JNI as modified UTF-8**: a data field whose bytes are not text does not survive the trip.
+- **Strings cross JNI as modified UTF-8**, which arbitrary bytes do not survive: read and write a data
+  field (RawData, SecureData, XmlData) with `getFieldBytes`/`setFieldBytes`, and a whole message holding
+  one with `toBytes`/`setBytes`, giving `setBytes` the dictionary so an SOH inside the data parses.
+- **Times as `java.time`**: a timestamp field also has `getInstant` and `set(map, Instant)` (milliseconds, or
+  finer when the value is), a date field `getDate`/`set(map, LocalDate)`, a time-of-day field
+  `getTime`/`set(map, LocalTime)`, in FIX's own formats.
+- **`DataDictionary` lookups** return their answer: `getFieldName(tag)`, `getValueName`, `getNameValue`
+  (null when there is none), `getFieldTag(name)` (0), and `getGroupDelimiter`/`getGroupDictionary` for a
+  group. The header's and trailer's groups (`NoHops`) come from the version's `Message`:
+  `fix44.Message.newNoHops()`; for FIX 5 messages, from `fixt11.Message`.
+- **Only `Application`, `Log` and `LogFactory` can be written in Java.** A `MessageStore` or
+  `MessageStoreFactory` cannot -- they are not SWIG directors -- as in the Python and Ruby bindings (#140):
+  use the engine's `FileStoreFactory`, `MemoryStoreFactory`, `NullStoreFactory` or a database one.
+- **Native objects are freed by `delete()`, `close()`, or the GC's finalizer**: SWIG's proxies free theirs in
+  `finalize()`, which JDK 21 deprecates for removal but still runs. On a JVM started with
+  `--finalization=disabled`, an object not `delete()`d or `close()`d is never freed.
 - **What the JNI boundary costs**: a `setString` from Java is 1.7 μs against 0.56 μs in C++ for a
   NewOrderSingle, almost all of it string conversion; building a 20-field message and `toString()` is
   3.1 μs. A latency-critical path is better kept in C++, with Java on the control plane.

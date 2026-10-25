@@ -352,12 +352,12 @@ public class Session {
     quickfixJNI.Session_setIsNonStopSession(swigCPtr, this, value);
   }
 
-  public SWIGTYPE_p_std__setT_std__string_t getAllowedRemoteAddresses() {
-    return new SWIGTYPE_p_std__setT_std__string_t(quickfixJNI.Session_getAllowedRemoteAddresses(swigCPtr, this), false);
+  public StringSet getAllowedRemoteAddresses() {
+    return new StringSet(quickfixJNI.Session_getAllowedRemoteAddresses(swigCPtr, this), false);
   }
 
-  public void setAllowedRemoteAddresses(SWIGTYPE_p_std__setT_std__string_t value) {
-    quickfixJNI.Session_setAllowedRemoteAddresses(swigCPtr, this, SWIGTYPE_p_std__setT_std__string_t.getCPtr(value));
+  public void setAllowedRemoteAddresses(StringSet value) {
+    quickfixJNI.Session_setAllowedRemoteAddresses(swigCPtr, this, StringSet.getCPtr(value), value);
   }
 
   public boolean inAllowedRemoteAddresses(String value) {
@@ -404,14 +404,14 @@ public class Session {
     return quickfixJNI.Session_getExpectedTargetNum(swigCPtr, this);
   }
 
-  public SWIGTYPE_p_Log getLog() {
+  public Log getLog() {
     long cPtr = quickfixJNI.Session_getLog(swigCPtr, this);
-    return (cPtr == 0) ? null : new SWIGTYPE_p_Log(cPtr, false);
+    return (cPtr == 0) ? null : new Log(cPtr, false);
   }
 
-  public SWIGTYPE_p_MessageStore getStore() {
+  public MessageStore getStore() {
     long cPtr = quickfixJNI.Session_getStore(swigCPtr, this);
-    return (cPtr == 0) ? null : new SWIGTYPE_p_MessageStore(cPtr, false);
+    return (cPtr == 0) ? null : new MessageStore(cPtr, false);
   }
 
 }

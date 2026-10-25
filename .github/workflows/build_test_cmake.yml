@@ -333,6 +333,31 @@ jobs:
               -e 'require "quickfix_ruby"; f = $LOADED_FEATURES.grep(/quickfix\.so$/).first; puts "ruby: #{f}"; exit f.start_with?(ARGV[0])' "$rbstage" \
             || { echo "::error::ruby did not load the module install.sh staged"; exit 1; }
 
+          # Java (#148): the library in lib, the jar in share/java. A program compiled against the staged jar,
+          # finding the library on java.library.path as an installed one does -- not through the property
+          # the tests use -- must load both from the stage.
+          [ -e "$stage/lib/libquickfixjava.so" ] && [ -f "$stage/share/java/quickfix.jar" ] \
+            || { echo "::error::the Java binding is not installed in $stage/lib and $stage/share/java"; exit 1; }
+          javacheck="$RUNNER_TEMP/javacheck"
+          rm -rf "$javacheck"
+          mkdir -p "$javacheck"
+          cat > "$javacheck/Installed.java" << 'JAVA'
+          import com.dudleylane.quickfix.field.*;
+          public class Installed {
+              public static void main(String[] args) {
+                  var order = new com.dudleylane.quickfix.fix44.NewOrderSingle();
+                  ClOrdID.set(order, "1");
+                  Side.set(order, Side.BUY);
+                  String jar = com.dudleylane.quickfix.Message.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+                  System.out.println("java: " + jar + " " + order.toString().length() + " bytes");
+                  System.exit(jar.startsWith(args[0]) && order.toString().contains("\u000154=1\u0001") ? 0 : 1);
+              }
+          }
+          JAVA
+          javac -d "$javacheck" -cp "$stage/share/java/quickfix.jar" "$javacheck/Installed.java"
+          LD_LIBRARY_PATH="$stage/lib:$LD_LIBRARY_PATH" \
+            java -Djava.library.path="$stage/lib" -cp "$stage/share/java/quickfix.jar:$javacheck" Installed "$stage" \
+            || { echo "::error::java did not load the binding cmake --install staged"; exit 1; }
           # A C++ consumer of the same install, both ways a consumer finds it:
           # find_package and pkg-config. Nothing built one against the install
           # (#136). Then every installed header, compiled together: a header
@@ -572,7 +597,9 @@ jobs:
              python3 -m unittest discover -s test -p '*TestCase.py')
           (cd src/ruby && RUBYLIB="${{ github.workspace }}/lib/ruby:$PWD" ruby test/TestSuite.rb)
           # The Java binding (#148): HotSpot runs under the same preload and options, and the suite's child
-          # JVMs inherit them; test-java.sh adds -Xcheck:jni.
+          # JVMs inherit them; test-java.sh adds -Xcheck:jni. Leak detection stays off here too, and not only
+          # because the JVM keeps memory: LeakSanitizer does not report even native objects a Java program
+          # deliberately never frees (100 Messages, tried), so on it would be a check that cannot fail.
           (cd src/java && ./test-java.sh)
 
       - name: Run acceptance tests (reactor)

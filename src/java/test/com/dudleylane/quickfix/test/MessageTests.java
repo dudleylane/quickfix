@@ -67,4 +67,28 @@ public class MessageTests {
         Check.equal("LNUX", original.getField(55), "the original keeps its value");
         Check.equal("IBM", copy.getField(55), "the copy has its own");
     }
+
+    public void testDataFieldsCarryAnyBytes() {
+        byte[] data = new byte[256];
+        for (int i = 0; i < data.length; ++i) {
+            data[i] = (byte) i; // every byte, the SOH (1) and NUL among them
+        }
+        Message message = new Message();
+        message.getHeader().setField(8, "FIX.4.2");
+        message.getHeader().setField(35, "D");
+        message.getHeader().setField(49, "CLIENT");
+        message.getHeader().setField(56, "SERVER");
+        message.getHeader().setField(34, "1");
+        message.getHeader().setField(52, "20261025-10:00:00.000");
+        message.setField(11, "ID");
+        message.setField(95, Integer.toString(data.length)); // RawDataLength, then RawData
+        message.setFieldBytes(96, data);
+        Check.isTrue(java.util.Arrays.equals(data, message.getFieldBytes(96)), "read back as set");
+        byte[] wire = message.toBytes();
+        // The SOH inside RawData ends a field without a dictionary; with one, RawDataLength says where it ends.
+        Message parsed = new Message();
+        parsed.setBytes(wire, false, new DataDictionary(Fixture.spec("FIX42")));
+        Check.isTrue(java.util.Arrays.equals(data, parsed.getFieldBytes(96)), "the parse kept every byte");
+        Check.isTrue(java.util.Arrays.equals(wire, parsed.toBytes()), "and the message round-trips as bytes");
+    }
 }

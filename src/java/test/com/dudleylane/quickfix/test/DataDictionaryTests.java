@@ -28,4 +28,20 @@ public class DataDictionaryTests {
     public void testAMissingFileIsConfigError() {
         Check.raises(ConfigError.class, () -> new DataDictionary("/no/such/FIX42.xml"));
     }
+
+    public void testLookupsWithoutOutParameters() {
+        DataDictionary dictionary = new DataDictionary(Fixture.spec("FIX42"));
+        Check.equal("Symbol", dictionary.getFieldName(55), "a field's name");
+        Check.equal(null, dictionary.getFieldName(99999), "none: null");
+        Check.equal(55, dictionary.getFieldTag("Symbol"), "a name's tag");
+        Check.equal(0, dictionary.getFieldTag("NoSuchField"), "none: 0");
+        Check.equal("BUY", dictionary.getValueName(54, "1"), "a value's name");
+        Check.equal("1", dictionary.getNameValue(54, "BUY"), "a name's value");
+        Check.equal(null, dictionary.getValueName(54, "Q"), "no such value: null");
+        Check.equal(55, dictionary.getGroupDelimiter("V", 146), "a group's delimiter");
+        Check.equal(0, dictionary.getGroupDelimiter("D", 146), "not a group of that message: 0");
+        DataDictionary group = dictionary.getGroupDictionary("V", 146);
+        Check.isTrue(group != null && group.isField(55) && !group.isField(11), "the group's own dictionary");
+        Check.equal(null, dictionary.getGroupDictionary("D", 146), "none: null");
+    }
 }

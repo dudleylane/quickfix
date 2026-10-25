@@ -116,24 +116,8 @@ public class DataDictionary {
     quickfixJNI.DataDictionary_addFieldName(swigCPtr, this, field, name);
   }
 
-  public boolean getFieldName(int field, SWIGTYPE_p_std__string name) {
-    return quickfixJNI.DataDictionary_getFieldName(swigCPtr, this, field, SWIGTYPE_p_std__string.getCPtr(name));
-  }
-
-  public boolean getFieldTag(String name, SWIGTYPE_p_int field) {
-    return quickfixJNI.DataDictionary_getFieldTag(swigCPtr, this, name, SWIGTYPE_p_int.getCPtr(field));
-  }
-
   public void addValueName(int field, String value, String name) {
     quickfixJNI.DataDictionary_addValueName(swigCPtr, this, field, value, name);
-  }
-
-  public boolean getValueName(int field, String value, SWIGTYPE_p_std__string name) {
-    return quickfixJNI.DataDictionary_getValueName(swigCPtr, this, field, value, SWIGTYPE_p_std__string.getCPtr(name));
-  }
-
-  public boolean getNameValue(int field, String name, SWIGTYPE_p_std__string value) {
-    return quickfixJNI.DataDictionary_getNameValue(swigCPtr, this, field, name, SWIGTYPE_p_std__string.getCPtr(value));
   }
 
   public boolean isField(int field) {
@@ -208,10 +192,6 @@ public class DataDictionary {
     return quickfixJNI.DataDictionary_isGroup(swigCPtr, this, msg, field);
   }
 
-  public boolean getGroup(String msg, int field, SWIGTYPE_p_int delim, SWIGTYPE_p_p_FIX__DataDictionary pDataDictionary) {
-    return quickfixJNI.DataDictionary_getGroup(swigCPtr, this, msg, field, SWIGTYPE_p_int.getCPtr(delim), SWIGTYPE_p_p_FIX__DataDictionary.getCPtr(pDataDictionary));
-  }
-
   public boolean isDataField(int field) {
     return quickfixJNI.DataDictionary_isDataField(swigCPtr, this, field);
   }
@@ -254,6 +234,31 @@ public class DataDictionary {
 
   public void validate(Message message, boolean bodyOnly) {
     quickfixJNI.DataDictionary_validate__SWIG_2(swigCPtr, this, Message.getCPtr(message), message, bodyOnly);
+  }
+
+  public String getFieldName(int field) {
+    return quickfixJNI.DataDictionary_getFieldName(swigCPtr, this, field);
+  }
+
+  public int getFieldTag(String name) {
+    return quickfixJNI.DataDictionary_getFieldTag(swigCPtr, this, name);
+  }
+
+  public String getValueName(int field, String value) {
+    return quickfixJNI.DataDictionary_getValueName(swigCPtr, this, field, value);
+  }
+
+  public String getNameValue(int field, String name) {
+    return quickfixJNI.DataDictionary_getNameValue(swigCPtr, this, field, name);
+  }
+
+  public int getGroupDelimiter(String msg, int field) {
+    return quickfixJNI.DataDictionary_getGroupDelimiter(swigCPtr, this, msg, field);
+  }
+
+  public DataDictionary getGroupDictionary(String msg, int field) {
+    long cPtr = quickfixJNI.DataDictionary_getGroupDictionary(swigCPtr, this, msg, field);
+    return (cPtr == 0) ? null : new DataDictionary(cPtr, false);
   }
 
 }

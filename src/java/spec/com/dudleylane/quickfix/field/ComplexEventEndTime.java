@@ -18,6 +18,15 @@ public final class ComplexEventEndTime {
         FieldConvert.setString(map, FIELD, value);
     }
 
+    /** map's ComplexEventEndTime as a LocalTime; IncorrectDataFormat if it does not read as one. */
+    public static java.time.LocalTime getTime(FieldMap map) {
+        return FieldConvert.getTimeOnly(map, FIELD);
+    }
+
+    public static void set(FieldMap map, java.time.LocalTime value) {
+        FieldConvert.setTimeOnly(map, FIELD, value);
+    }
+
     public static boolean isSet(FieldMap map) {
         return map.isSetField(FIELD);
     }

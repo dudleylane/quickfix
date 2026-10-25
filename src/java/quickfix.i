@@ -372,4 +372,118 @@ public class%}
   }
 %}
 
+// Classes the headers use before the header declaring them is included: without these, Session::getLog(),
+// getStore(), Message::getGroup() and getSessionID() came out as opaque SWIGTYPE_p_* handles.
+namespace FIX
+{
+class Log;
+class MessageStore;
+class Group;
+class SessionID;
+class DataDictionary;
+}
+
+%include std_string.i
+%include std_set.i
+namespace std
+{
+%template(StringSet) set<std::string>;
+};
+
+// The DataDictionary lookups return through reference parameters, which Java has no way to pass: as SWIG
+// wraps them they took opaque handles nobody can make. In their place, Java-shaped ones: a name or value, or
+// null when the dictionary has none; a tag, or 0; and a group's delimiter and dictionary separately.
+%ignore FIX::DataDictionary::getFieldName(int, std::string &) const;
+%ignore FIX::DataDictionary::getFieldTag(const std::string &, int &) const;
+%ignore FIX::DataDictionary::getValueName(int, const std::string &, std::string &) const;
+%ignore FIX::DataDictionary::getNameValue(int, const std::string &, std::string &) const;
+%ignore FIX::DataDictionary::getGroup(const std::string &, int, int &, const DataDictionary *&) const;
+%extend FIX::DataDictionary {
+  /** The field's name, or null if the dictionary does not name it. */
+  const char *getFieldName(int field) const
+  {
+    thread_local std::string result;
+    return $self->getFieldName(field, result) ? result.c_str() : nullptr;
+  }
+  /** The tag of the field so named, or 0 if the dictionary has none. */
+  int getFieldTag(const std::string &name) const
+  {
+    int field = 0;
+    return $self->getFieldTag(name, field) ? field : 0;
+  }
+  /** The name of the field's value, or null. */
+  const char *getValueName(int field, const std::string &value) const
+  {
+    thread_local std::string result;
+    return $self->getValueName(field, value, result) ? result.c_str() : nullptr;
+  }
+  /** The value of the field's value so named, or null. */
+  const char *getNameValue(int field, const std::string &name) const
+  {
+    thread_local std::string result;
+    return $self->getNameValue(field, name, result) ? result.c_str() : nullptr;
+  }
+  /** The delimiter of the group field opens in message type msg, or 0 if it opens none. */
+  int getGroupDelimiter(const std::string &msg, int field) const
+  {
+    int delim = 0;
+    const FIX::DataDictionary *group = nullptr;
+    return $self->getGroup(msg, field, delim, group) ? delim : 0;
+  }
+  /** The dictionary of that group, or null; it belongs to this one, and lives as long as it does. */
+  const FIX::DataDictionary *getGroupDictionary(const std::string &msg, int field) const
+  {
+    int delim = 0;
+    const FIX::DataDictionary *group = nullptr;
+    return $self->getGroup(msg, field, delim, group) ? group : nullptr;
+  }
+}
+
+// Bytes that need not be text -- a data field's (RawData, SecureData, XmlData), or a whole message holding one
+// -- cross as a byte[]: a String crosses JNI as modified UTF-8, which does not survive arbitrary bytes.
+%{
+typedef std::string QuickfixBytes;
+%}
+typedef std::string QuickfixBytes;
+%typemap(jni) QuickfixBytes, const QuickfixBytes & "jbyteArray"
+%typemap(jtype) QuickfixBytes, const QuickfixBytes & "byte[]"
+%typemap(jstype) QuickfixBytes, const QuickfixBytes & "byte[]"
+%typemap(javain) const QuickfixBytes & "$javainput"
+%typemap(javaout) QuickfixBytes {
+    return $jnicall;
+  }
+%typemap(in) const QuickfixBytes & (std::string temp) {
+  if (!$input) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null byte[]");
+    return $null;
+  }
+  const jsize length = jenv->GetArrayLength($input);
+  temp.resize(static_cast<size_t>(length));
+  jenv->GetByteArrayRegion($input, 0, length, reinterpret_cast<jbyte *>(temp.data()));
+  $1 = &temp;
+}
+%typemap(out) QuickfixBytes {
+  $result = jenv->NewByteArray(static_cast<jsize>($1.size()));
+  if ($result) {
+    jenv->SetByteArrayRegion($result, 0, static_cast<jsize>($1.size()), reinterpret_cast<const jbyte *>($1.data()));
+  }
+}
+%extend FIX::FieldMap {
+  /** The field's bytes as they are, for a data field; FieldNotFound if it is not set. */
+  QuickfixBytes getFieldBytes(int tag) const { return $self->getField(tag); }
+  /** Sets the field to these bytes as they are; a data field's length field is the caller's to set. */
+  void setFieldBytes(int tag, const QuickfixBytes &value) { $self->setField(tag, value); }
+}
+%extend FIX::Message {
+  /** The message as the bytes the engine would send. */
+  QuickfixBytes toBytes() const { return $self->toString(); }
+  /** Parses these bytes into the message, as setString does. */
+  void setBytes(const QuickfixBytes &message, bool validate = true) { $self->setString(message, validate); }
+  /** With a dictionary, which a data field holding an SOH needs: it says where the field's bytes end. */
+  void setBytes(const QuickfixBytes &message, bool validate, const FIX::DataDictionary *dictionary)
+  {
+    $self->setString(message, validate, dictionary);
+  }
+}
+
 %include ../quickfix.i

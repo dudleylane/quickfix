@@ -1,6 +1,13 @@
 package com.dudleylane.quickfix;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.regex.Pattern;
 
 /**
@@ -98,6 +105,69 @@ public final class FieldConvert {
             return "0";
         }
         return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
+    }
+
+    // FIX's dates and times: yyyyMMdd, HH:mm:ss with 0, 3, 6 or 9 fractional digits, and the two joined by '-'.
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("uuuuMMdd");
+    private static final Pattern TIME = Pattern.compile("\\d{2}:\\d{2}:\\d{2}(\\.(\\d{3}|\\d{6}|\\d{9}))?");
+
+    public static Instant getUtcTimestamp(FieldMap map, int tag) {
+        String value = map.getField(tag);
+        if (value.length() < 17 || value.charAt(8) != '-' || !TIME.matcher(value.substring(9)).matches()) {
+            throw new IncorrectDataFormat(tag, value);
+        }
+        try {
+            return LocalDateTime.of(LocalDate.parse(value.substring(0, 8), DATE), LocalTime.parse(value.substring(9)))
+                .toInstant(ZoneOffset.UTC);
+        } catch (DateTimeParseException e) {
+            throw new IncorrectDataFormat(tag, value);
+        }
+    }
+
+    /** In milliseconds, as the engine writes timestamps by default, or finer when value has finer. */
+    public static void setUtcTimestamp(FieldMap map, int tag, Instant value) {
+        LocalDateTime time = LocalDateTime.ofInstant(value, ZoneOffset.UTC);
+        map.setField(tag, time.toLocalDate().format(DATE) + "-" + formatTime(time.toLocalTime()));
+    }
+
+    public static LocalDate getDate(FieldMap map, int tag) {
+        String value = map.getField(tag);
+        try {
+            if (value.length() != 8) {
+                throw new IncorrectDataFormat(tag, value);
+            }
+            return LocalDate.parse(value, DATE);
+        } catch (DateTimeParseException e) {
+            throw new IncorrectDataFormat(tag, value);
+        }
+    }
+
+    public static void setDate(FieldMap map, int tag, LocalDate value) {
+        map.setField(tag, value.format(DATE));
+    }
+
+    public static LocalTime getTimeOnly(FieldMap map, int tag) {
+        String value = map.getField(tag);
+        if (!TIME.matcher(value).matches()) {
+            throw new IncorrectDataFormat(tag, value);
+        }
+        try {
+            return LocalTime.parse(value);
+        } catch (DateTimeParseException e) {
+            throw new IncorrectDataFormat(tag, value);
+        }
+    }
+
+    public static void setTimeOnly(FieldMap map, int tag, LocalTime value) {
+        map.setField(tag, formatTime(value));
+    }
+
+    static String formatTime(LocalTime time) {
+        int nanos = time.getNano();
+        String digits = nanos % 1_000_000 == 0 ? String.format("%03d", nanos / 1_000_000)
+                        : nanos % 1_000 == 0   ? String.format("%06d", nanos / 1_000)
+                                               : String.format("%09d", nanos);
+        return String.format("%02d:%02d:%02d.%s", time.getHour(), time.getMinute(), time.getSecond(), digits);
     }
 
     /** A group's field order for the Group constructor: the tags in order, then the terminating 0. */

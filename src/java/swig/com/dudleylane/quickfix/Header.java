@@ -64,8 +64,8 @@ public class Header extends FieldMap {
     quickfixJNI.Header_replaceGroup(swigCPtr, this, num, Group.getCPtr(group), group);
   }
 
-  public SWIGTYPE_p_Group getGroup(long num, Group group) {
-    return new SWIGTYPE_p_Group(quickfixJNI.Header_getGroup(swigCPtr, this, num, Group.getCPtr(group), group), false);
+  public Group getGroup(long num, Group group) {
+    return new Group(quickfixJNI.Header_getGroup(swigCPtr, this, num, Group.getCPtr(group), group), false);
   }
 
   public void removeGroup(long num, Group group) {

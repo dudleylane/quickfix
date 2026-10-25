@@ -131,8 +131,9 @@ public class GeneratedTests {
             };
             DataDictionary application = Dictionaries.get(spec);
             for (Method factory : type.getMethods()) {
+                // Its own groups: the version's Message makes the header's (NoHops), which testHeaderGroups covers.
                 if (!factory.getName().startsWith("new") || !Modifier.isStatic(factory.getModifiers())
-                    || factory.getParameterCount() != 0) {
+                    || factory.getParameterCount() != 0 || factory.getDeclaringClass() != type) {
                     continue;
                 }
                 Message message = (Message) type.getConstructor().newInstance();
@@ -194,5 +195,40 @@ public class GeneratedTests {
         static synchronized DataDictionary get(String spec) {
             return loaded.computeIfAbsent(spec, s -> new DataDictionary(Fixture.spec(s)));
         }
+    }
+
+    public void testTimesAsJavaTime() {
+        Message message = new Message();
+        java.time.Instant instant = java.time.Instant.parse("2026-10-25T10:15:30.123Z");
+        TransactTime.set(message, instant);
+        Check.equal("20261025-10:15:30.123", TransactTime.get(message), "written in milliseconds");
+        Check.equal(instant, TransactTime.getInstant(message), "and read back");
+        java.time.Instant micros = java.time.Instant.parse("2026-10-25T10:15:30.123456Z");
+        TransactTime.set(message, micros);
+        Check.equal("20261025-10:15:30.123456", TransactTime.get(message), "finer when the value is");
+        Check.equal(micros, TransactTime.getInstant(message), "read back to the microsecond");
+        TransactTime.set(message, "20261025-10:15:30");
+        Check.equal(java.time.Instant.parse("2026-10-25T10:15:30Z"), TransactTime.getInstant(message), "no fraction");
+        TransactTime.set(message, "2026-10-25T10:15:30Z");
+        Check.equal(TransactTime.FIELD, Check.raises(IncorrectDataFormat.class, () -> TransactTime.getInstant(message)).getField(),
+                    "ISO 8601 is not FIX");
+        TradeDate.set(message, java.time.LocalDate.of(2026, 10, 25));
+        Check.equal("20261025", TradeDate.get(message), "a date");
+        Check.equal(java.time.LocalDate.of(2026, 10, 25), TradeDate.getDate(message), "read back");
+        TradeDate.set(message, "20261325");
+        Check.raises(IncorrectDataFormat.class, () -> TradeDate.getDate(message));
+        MDEntryTime.set(message, java.time.LocalTime.of(9, 30, 5));
+        Check.equal("09:30:05.000", MDEntryTime.get(message), "a time of day");
+        Check.equal(java.time.LocalTime.of(9, 30, 5), MDEntryTime.getTime(message), "read back");
+    }
+
+    public void testHeaderGroups() {
+        var order = new com.dudleylane.quickfix.fix44.NewOrderSingle();
+        var hop = com.dudleylane.quickfix.fix44.Message.newNoHops();
+        HopCompID.set(hop, "HOP1");
+        order.getHeader().addGroup(hop);
+        Check.equal(1, NoHops.get(order.getHeader()), "the header's count field");
+        Message parsed = new Message(order.toString(), new DataDictionary(Fixture.spec("FIX44")), false);
+        Check.isTrue(parsed.getHeader().hasGroup(1, NoHops.FIELD), "parsed back into the header");
     }
 }

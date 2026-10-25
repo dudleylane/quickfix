@@ -19,6 +19,22 @@ public class quickfixJNI {
     }
   }
 
+  public final static native void StringSet_Iterator_incrementUnchecked(long jarg1, StringSet.Iterator jarg1_);
+  public final static native String StringSet_Iterator_derefUnchecked(long jarg1, StringSet.Iterator jarg1_);
+  public final static native boolean StringSet_Iterator_isNot(long jarg1, StringSet.Iterator jarg1_, long jarg2, StringSet.Iterator jarg2_);
+  public final static native void delete_StringSet_Iterator(long jarg1);
+  public final static native long new_StringSet__SWIG_0();
+  public final static native long new_StringSet__SWIG_1(long jarg1, StringSet jarg1_);
+  public final static native boolean StringSet_isEmpty(long jarg1, StringSet jarg1_);
+  public final static native void StringSet_clear(long jarg1, StringSet jarg1_);
+  public final static native long StringSet_begin(long jarg1, StringSet jarg1_);
+  public final static native long StringSet_end(long jarg1, StringSet jarg1_);
+  public final static native boolean StringSet_addImpl(long jarg1, StringSet jarg1_, String jarg2);
+  public final static native boolean StringSet_containsImpl(long jarg1, StringSet jarg1_, String jarg2);
+  public final static native boolean StringSet_removeImpl(long jarg1, StringSet jarg1_, String jarg2);
+  public final static native int StringSet_sizeImpl(long jarg1, StringSet jarg1_);
+  public final static native boolean StringSet_hasNextImpl(long jarg1, StringSet jarg1_, long jarg2, StringSet.Iterator jarg2_);
+  public final static native void delete_StringSet(long jarg1);
   public final static native long new_VectorString__SWIG_0();
   public final static native long new_VectorString__SWIG_1(long jarg1, VectorString jarg1_);
   public final static native boolean VectorString_isEmpty(long jarg1, VectorString jarg1_);
@@ -326,6 +342,8 @@ public class quickfixJNI {
   public final static native long FieldMap_g_begin__SWIG_0(long jarg1, FieldMap jarg1_);
   public final static native long FieldMap_g_end__SWIG_0(long jarg1, FieldMap jarg1_);
   public final static native long FieldMap_cloneInto(long jarg1, FieldMap jarg1_, long jarg2, GroupArena jarg2_);
+  public final static native byte[] FieldMap_getFieldBytes(long jarg1, FieldMap jarg1_, int jarg2);
+  public final static native void FieldMap_setFieldBytes(long jarg1, FieldMap jarg1_, int jarg2, byte[] jarg3);
   public final static native long new_Header__SWIG_0();
   public final static native long new_Header__SWIG_1(long jarg1);
   public final static native void Header_addGroup(long jarg1, Header jarg1_, long jarg2, Group jarg2_);
@@ -383,7 +401,7 @@ public class quickfixJNI {
   public final static native void Message_setString__SWIG_1(long jarg1, Message jarg1_, String jarg2, boolean jarg3);
   public final static native void Message_setString__SWIG_2(long jarg1, Message jarg1_, String jarg2, boolean jarg3, long jarg4, DataDictionary jarg4_);
   public final static native void Message_setString__SWIG_3(long jarg1, Message jarg1_, String jarg2, boolean jarg3, long jarg4, DataDictionary jarg4_, long jarg5, DataDictionary jarg5_);
-  public final static native void Message_setGroup(long jarg1, Message jarg1_, String jarg2, long jarg3, FieldBase jarg3_, String jarg4, long jarg5, long jarg6, FieldMap jarg6_, long jarg7);
+  public final static native void Message_setGroup(long jarg1, Message jarg1_, String jarg2, long jarg3, FieldBase jarg3_, String jarg4, long jarg5, long jarg6, FieldMap jarg6_, long jarg7, DataDictionary jarg7_);
   public final static native boolean Message_setStringHeader(long jarg1, Message jarg1_, String jarg2);
   public final static native long Message_getHeader__SWIG_0(long jarg1, Message jarg1_);
   public final static native long Message_getTrailer__SWIG_0(long jarg1, Message jarg1_);
@@ -404,16 +422,20 @@ public class quickfixJNI {
   public final static native long Message_toApplVerID(String jarg1);
   public final static native long Message_toBeginString(long jarg1);
   public final static native boolean Message_isHeaderField__SWIG_0(int jarg1);
-  public final static native boolean Message_isHeaderField__SWIG_1(long jarg1, FieldBase jarg1_, long jarg2);
+  public final static native boolean Message_isHeaderField__SWIG_1(long jarg1, FieldBase jarg1_, long jarg2, DataDictionary jarg2_);
   public final static native boolean Message_isHeaderField__SWIG_2(long jarg1, FieldBase jarg1_);
-  public final static native boolean Message_isHeaderField__SWIG_3(int jarg1, long jarg2);
+  public final static native boolean Message_isHeaderField__SWIG_3(int jarg1, long jarg2, DataDictionary jarg2_);
   public final static native boolean Message_isTrailerField__SWIG_0(int jarg1);
-  public final static native boolean Message_isTrailerField__SWIG_1(long jarg1, FieldBase jarg1_, long jarg2);
+  public final static native boolean Message_isTrailerField__SWIG_1(long jarg1, FieldBase jarg1_, long jarg2, DataDictionary jarg2_);
   public final static native boolean Message_isTrailerField__SWIG_2(long jarg1, FieldBase jarg1_);
-  public final static native boolean Message_isTrailerField__SWIG_3(int jarg1, long jarg2);
+  public final static native boolean Message_isTrailerField__SWIG_3(int jarg1, long jarg2, DataDictionary jarg2_);
   public final static native long Message_getSessionID__SWIG_0(long jarg1, Message jarg1_, String jarg2);
   public final static native long Message_getSessionID__SWIG_1(long jarg1, Message jarg1_);
-  public final static native void Message_setSessionID(long jarg1, Message jarg1_, long jarg2);
+  public final static native void Message_setSessionID(long jarg1, Message jarg1_, long jarg2, SessionID jarg2_);
+  public final static native byte[] Message_toBytes(long jarg1, Message jarg1_);
+  public final static native void Message_setBytes__SWIG_0(long jarg1, Message jarg1_, byte[] jarg2, boolean jarg3);
+  public final static native void Message_setBytes__SWIG_1(long jarg1, Message jarg1_, byte[] jarg2);
+  public final static native void Message_setBytes__SWIG_2(long jarg1, Message jarg1_, byte[] jarg2, boolean jarg3, long jarg4, DataDictionary jarg4_);
   public final static native String Message___str__(long jarg1, Message jarg1_);
   public final static native long identifyType(String jarg1);
   public final static native long new_Group__SWIG_0(int jarg1, int jarg2);
@@ -6494,7 +6516,7 @@ public class quickfixJNI {
   public final static native boolean Session_getIsNonStopSession(long jarg1, Session jarg1_);
   public final static native void Session_setIsNonStopSession(long jarg1, Session jarg1_, boolean jarg2);
   public final static native long Session_getAllowedRemoteAddresses(long jarg1, Session jarg1_);
-  public final static native void Session_setAllowedRemoteAddresses(long jarg1, Session jarg1_, long jarg2);
+  public final static native void Session_setAllowedRemoteAddresses(long jarg1, Session jarg1_, long jarg2, StringSet jarg2_);
   public final static native boolean Session_inAllowedRemoteAddresses(long jarg1, Session jarg1_, String jarg2);
   public final static native void Session_setResponder(long jarg1, Session jarg1_, long jarg2);
   public final static native boolean Session_send(long jarg1, Session jarg1_, long jarg2, Message jarg2_);
@@ -6727,11 +6749,7 @@ public class quickfixJNI {
   public final static native String DataDictionary_getVersion(long jarg1, DataDictionary jarg1_);
   public final static native void DataDictionary_addField(long jarg1, DataDictionary jarg1_, int jarg2);
   public final static native void DataDictionary_addFieldName(long jarg1, DataDictionary jarg1_, int jarg2, String jarg3);
-  public final static native boolean DataDictionary_getFieldName(long jarg1, DataDictionary jarg1_, int jarg2, long jarg3);
-  public final static native boolean DataDictionary_getFieldTag(long jarg1, DataDictionary jarg1_, String jarg2, long jarg3);
   public final static native void DataDictionary_addValueName(long jarg1, DataDictionary jarg1_, int jarg2, String jarg3, String jarg4);
-  public final static native boolean DataDictionary_getValueName(long jarg1, DataDictionary jarg1_, int jarg2, String jarg3, long jarg4);
-  public final static native boolean DataDictionary_getNameValue(long jarg1, DataDictionary jarg1_, int jarg2, String jarg3, long jarg4);
   public final static native boolean DataDictionary_isField(long jarg1, DataDictionary jarg1_, int jarg2);
   public final static native void DataDictionary_addMsgType(long jarg1, DataDictionary jarg1_, String jarg2);
   public final static native boolean DataDictionary_isMsgType(long jarg1, DataDictionary jarg1_, String jarg2);
@@ -6750,7 +6768,6 @@ public class quickfixJNI {
   public final static native boolean DataDictionary_isFieldValue(long jarg1, DataDictionary jarg1_, int jarg2, String jarg3);
   public final static native void DataDictionary_addGroup(long jarg1, DataDictionary jarg1_, String jarg2, int jarg3, int jarg4, long jarg5, DataDictionary jarg5_);
   public final static native boolean DataDictionary_isGroup(long jarg1, DataDictionary jarg1_, String jarg2, int jarg3);
-  public final static native boolean DataDictionary_getGroup(long jarg1, DataDictionary jarg1_, String jarg2, int jarg3, long jarg4, long jarg5);
   public final static native boolean DataDictionary_isDataField(long jarg1, DataDictionary jarg1_, int jarg2);
   public final static native boolean DataDictionary_isMultipleValueField(long jarg1, DataDictionary jarg1_, int jarg2);
   public final static native void DataDictionary_checkFieldsOutOfOrder(long jarg1, DataDictionary jarg1_, boolean jarg2);
@@ -6762,6 +6779,12 @@ public class quickfixJNI {
   public final static native void DataDictionary_validate__SWIG_0(long jarg1, Message jarg1_, long jarg2, DataDictionary jarg2_, long jarg3, DataDictionary jarg3_);
   public final static native void DataDictionary_validate__SWIG_1(long jarg1, DataDictionary jarg1_, long jarg2, Message jarg2_);
   public final static native void DataDictionary_validate__SWIG_2(long jarg1, DataDictionary jarg1_, long jarg2, Message jarg2_, boolean jarg3);
+  public final static native String DataDictionary_getFieldName(long jarg1, DataDictionary jarg1_, int jarg2);
+  public final static native int DataDictionary_getFieldTag(long jarg1, DataDictionary jarg1_, String jarg2);
+  public final static native String DataDictionary_getValueName(long jarg1, DataDictionary jarg1_, int jarg2, String jarg3);
+  public final static native String DataDictionary_getNameValue(long jarg1, DataDictionary jarg1_, int jarg2, String jarg3);
+  public final static native int DataDictionary_getGroupDelimiter(long jarg1, DataDictionary jarg1_, String jarg2, int jarg3);
+  public final static native long DataDictionary_getGroupDictionary(long jarg1, DataDictionary jarg1_, String jarg2, int jarg3);
   public final static native long new_SSLSocketAcceptorBase__SWIG_0(long jarg1, Application jarg1_, long jarg2, MessageStoreFactory jarg2_, long jarg3, SessionSettings jarg3_);
   public final static native long new_SSLSocketAcceptorBase__SWIG_1(long jarg1, Application jarg1_, long jarg2, MessageStoreFactory jarg2_, long jarg3, SessionSettings jarg3_, long jarg4, LogFactory jarg4_);
   public final static native void delete_SSLSocketAcceptorBase(long jarg1);
