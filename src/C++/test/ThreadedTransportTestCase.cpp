@@ -17,8 +17,10 @@
 #include <fix42/TestRequest.h>
 #if (HAVE_SSL > 0)
 #include <SSLSocketAcceptor.h>
+#include <SSLSocketInitiator.h>
 #include <ThreadedSSLSocketAcceptor.h>
 #include <ThreadedSSLSocketConnection.h>
+#include <ThreadedSSLSocketInitiator.h>
 #include <UtilitySSL.h>
 #endif
 
@@ -2342,13 +2344,24 @@ TEST_CASE("SocketQueuedWritesTests")
 
 namespace
 {
-SessionSettings stopSettings(const std::string &type, int port, const std::string &sender, const std::string &target)
+SessionSettings stopSettings(const std::string &type, int port, const std::string &sender, const std::string &target,
+                             bool ssl = false)
 {
     std::stringstream config;
     config << "[DEFAULT]\nConnectionType=" << type << "\nSocketAcceptPort=" << port
            << "\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
-           << "\nReconnectInterval=1\nHeartBtInt=30\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n"
-           << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=" << sender << "\nTargetCompID=" << target << "\n";
+           << "\nReconnectInterval=1\nHeartBtInt=30\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n";
+#if (HAVE_SSL > 0)
+    if (ssl)
+    {
+        config << "ServerCertificateFile=" << certPath("127_0_0_1_server.crt") << "\n"
+               << "ServerCertificateKeyFile=" << certPath("127_0_0_1_server.key") << "\n"
+               << "CertificationAuthoritiesFile=" << certPath("certs/cacert.pem") << "\n"
+               << "ClientCertificateFile=" << certPath("127_0_0_1_client.crt") << "\n"
+               << "ClientCertificateKeyFile=" << certPath("127_0_0_1_client.key") << "\nCertificateVerifyLevel=0\n";
+    }
+#endif
+    config << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=" << sender << "\nTargetCompID=" << target << "\n";
     return SessionSettings(config);
 }
 
@@ -2514,5 +2527,153 @@ TEST_CASE("ConcurrentStopTests")
             FAIL("the stops deadlocked");
         }
         initiator.stop();
+    }
+
+    // Every transport, stopped by four threads at once (two on each end), and then by a thread that waits
+    // for the stop to have begun and destroys the transport the moment its own stop() returns -- an
+    // application's teardown racing a signal handler's. ASan reports it if the transport is destroyed under
+    // one of its threads; without ASan it crashes or hangs.
+    auto everyTransport = [&](auto makeAcceptor, auto makeInitiator, bool ssl)
+    {
+        for (int round = 0; round < 2; ++round)
+        {
+            INFO("round " << round);
+            const int port = freePort();
+            {
+                auto acceptor = makeAcceptor(stopSettings("acceptor", port, "STOPA", "STOPI", ssl));
+                acceptor->start();
+                auto initiator = makeInitiator(stopSettings("initiator", port, "STOPI", "STOPA", ssl));
+                initiator->start();
+                REQUIRE(loggedOn(SessionID("FIX.4.2", "STOPI", "STOPA")));
+                std::atomic<bool> go{false};
+                std::vector<std::thread> stoppers;
+                for (int i = 0; i < 2; ++i)
+                {
+                    stoppers.emplace_back(
+                        [&]()
+                        {
+                            while (!go)
+                            {
+                            }
+                            acceptor->stop();
+                        });
+                    stoppers.emplace_back(
+                        [&]()
+                        {
+                            while (!go)
+                            {
+                            }
+                            initiator->stop();
+                        });
+                }
+                go = true;
+                for (std::thread &stopper : stoppers)
+                {
+                    stopper.join();
+                }
+                CHECK(acceptor->isStopped());
+                CHECK(initiator->isStopped());
+            }
+            {
+                auto acceptor = makeAcceptor(stopSettings("acceptor", port, "STOPA", "STOPI", ssl));
+                acceptor->start();
+                auto initiator = makeInitiator(stopSettings("initiator", port, "STOPI", "STOPA", ssl));
+                initiator->start();
+                REQUIRE(loggedOn(SessionID("FIX.4.2", "STOPI", "STOPA")));
+                std::thread first([&]() { initiator->stop(); });
+                while (!initiator->isStopped())
+                {
+                    std::this_thread::yield();
+                }
+                initiator->stop();
+                initiator.reset(); // the moment stop() returns: destroyed under nothing
+                first.join();
+                std::thread firstAcceptor([&]() { acceptor->stop(); });
+                while (!acceptor->isStopped())
+                {
+                    std::this_thread::yield();
+                }
+                acceptor->stop();
+                acceptor.reset();
+                firstAcceptor.join();
+            }
+        }
+    };
+
+    SECTION("everyTransportStopsOnceAndCanBeDestroyedAfterASecondStop")
+    {
+        auto make = [&](auto *type)
+        {
+            return [&](SessionSettings settings)
+            { return std::make_unique<std::remove_pointer_t<decltype(type)>>(application, factory, settings); };
+        };
+        everyTransport(make(static_cast<SocketAcceptor *>(nullptr)), make(static_cast<SocketInitiator *>(nullptr)),
+                       false);
+        everyTransport(make(static_cast<ThreadedSocketAcceptor *>(nullptr)),
+                       make(static_cast<ThreadedSocketInitiator *>(nullptr)), false);
+#if (HAVE_SSL > 0)
+        everyTransport(make(static_cast<SSLSocketAcceptor *>(nullptr)),
+                       make(static_cast<SSLSocketInitiator *>(nullptr)), true);
+        everyTransport(make(static_cast<ThreadedSSLSocketAcceptor *>(nullptr)),
+                       make(static_cast<ThreadedSSLSocketInitiator *>(nullptr)), true);
+#endif
+    }
+
+    SECTION("aThreadedInitiatorsCallbackStoppingItsOwnTransportDoesNotDeadlock")
+    {
+        struct StoppingApplication : NullApplication
+        {
+            ThreadedSocketInitiator *initiator = nullptr;
+            std::atomic<bool> stopping{false};
+            std::atomic<bool> returned{false};
+            void fromApp(const Message &, const SessionID &)
+                EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType) override
+            {
+                stopping = true;
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                initiator->stop();
+                returned = true;
+            }
+        };
+        StoppingApplication stopper;
+        const int port = freePort();
+        SocketAcceptor acceptor(application, factory, stopSettings("acceptor", port, "STOPA", "STOPI"));
+        acceptor.start();
+        ThreadedSocketInitiator initiator(stopper, factory, stopSettings("initiator", port, "STOPI", "STOPA"));
+        stopper.initiator = &initiator;
+        initiator.start();
+        REQUIRE(loggedOn(SessionID("FIX.4.2", "STOPI", "STOPA")));
+        Message order;
+        order.getHeader().setField(MsgType("D"));
+        order.setField(ClOrdID("ORDER"));
+        REQUIRE(Session::sendToTarget(order, SessionID("FIX.4.2", "STOPA", "STOPI"))); // to the initiator
+        for (int i = 0; i < 500 && !stopper.stopping; ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        REQUIRE(stopper.stopping);
+        std::atomic<bool> stopped{false};
+        std::thread test(
+            [&]()
+            {
+                initiator.stop();
+                stopped = true;
+            });
+        for (int i = 0; i < 400 && !(stopped && stopper.returned); ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        CHECK(stopper.returned.load());
+        CHECK(stopped.load());
+        if (stopped)
+        {
+            test.join();
+        }
+        else
+        {
+            test.detach(); // deadlocked: never joined, so detaching it is safe for TSan (#113)
+            FAIL("the stops deadlocked");
+        }
+        acceptor.stop();
     }
 }
