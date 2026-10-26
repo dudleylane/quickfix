@@ -56,6 +56,7 @@ void ThreadedSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(Confi
         getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
         getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
         getSocketQueuedWrites(settings);
+        checkBusyPollWithQueuedWrites(settings, sessionID);
         getSocketThreadAffinity(settings);
     }
 }
@@ -161,7 +162,7 @@ void ThreadedSocketInitiator::doConnect(const SessionID &s, const Dictionary &d)
 
         ThreadedSocketConnection *pConnection =
             new ThreadedSocketConnection(s, socket, host.address, host.port, getLog(), host.sourceAddress,
-                                         host.sourcePort, getSocketQueuedWrites(d));
+                                         host.sourcePort, getSocketQueuedWrites(d), getSocketBusyPoll(d));
 
         ThreadPair *pair = new ThreadPair(this, pConnection);
 

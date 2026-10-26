@@ -267,10 +267,12 @@ THREAD_PROC ThreadedSocketAcceptor::socketAcceptorThread(void *p)
 
         Sessions sessions = pAcceptor->m_portToSessions[port];
 
-        // SocketQueuedWrites is per port, like the other socket options: every session on it has the same.
+        // SocketQueuedWrites and SocketBusyPoll are per port, like the other socket options: every session on
+        // it has the same.
         const Dictionary *settings = sessions.empty() ? 0 : pAcceptor->getSessionSettings(*sessions.begin());
         ThreadedSocketConnection *pConnection = new ThreadedSocketConnection(
-            socket, sessions, pAcceptor->getLog(), settings && getSocketQueuedWrites(*settings));
+            socket, sessions, pAcceptor->getLog(), settings && getSocketQueuedWrites(*settings),
+            settings && getSocketBusyPoll(*settings));
 
         ConnectionThreadInfo *info = new ConnectionThreadInfo(pAcceptor, pConnection);
 

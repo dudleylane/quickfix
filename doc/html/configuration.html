@@ -923,6 +923,27 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           <td>N</td>
         </tr>
 
+        <tr align="left" valign="middle">
+          <td><b>SocketBusyPoll</b></td>
+
+          <td>Threaded transports only (ThreadedSocketInitiator); any other
+          transport refuses Y at start, as does Y with SocketQueuedWrites=Y.
+          With N, the connection's thread sleeps until input arrives and pays a
+          wakeup for every message. With Y, it spins on non-blocking reads
+          instead, so a message is read as it lands: where it was measured, a one-in-flight round trip went from
+          30-36 to 19-22 microseconds at the median, and its p99 from 70-75 to
+          45-47. The cost is a
+          full core per connection, all the time, from the moment it connects;
+          pin it with SocketThreadAffinity to a core nothing else uses. On a
+          machine short of cores it is much worse than N: spinning threads take
+          the CPU from the threads they wait for.</td>
+
+          <td>Y<br>
+          N</td>
+
+          <td>N</td>
+        </tr>
+
         <tr align="center" valign="middle">
           <td colspan="4" bgcolor="#DDDDDD"><h2>Acceptor</h2></td>
         </tr>
@@ -1042,6 +1063,20 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           transport refuses Y at start. Like the other socket options it is
           per port: every session on a SocketAcceptPort must have the same
           value.</td>
+
+          <td>Y<br>
+          N</td>
+
+          <td>N</td>
+        </tr>
+
+        <tr align="left" valign="middle">
+          <td><b>SocketBusyPoll</b></td>
+
+          <td>As for the initiator, on ThreadedSocketAcceptor; per port, like the
+          other socket options. Every accepted connection spins from accept()
+          on, including one that never logs on, until the ten-second setup
+          deadline drops it.</td>
 
           <td>Y<br>
           N</td>

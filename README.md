@@ -411,6 +411,14 @@ application can avoid today, without changing the engine:
   send synchronously. Since #156 the reactor ones send straight from the caller's buffer without a
   `poll()` first, which made `pt`'s reactor streaming benchmark about 28% faster; which is faster now
   depends on the machine.
+- **Spin the threaded transports' reads.** `SocketBusyPoll=Y` makes a connection's thread spin on
+  non-blocking reads instead of sleeping in `poll()`, removing the wakeup each message otherwise pays
+  (#175): on this machine `pt`-style one-in-flight round trips on the threaded transport
+  went from 30–36 μs to 19–22 μs at the median, and from 70–75 μs to 45–47 μs at p99. It takes a full core per connection, from accept() on, so pin it to cores nothing
+  else uses; on a machine short of cores it is far worse than `N`. Not yet with `SocketQueuedWrites=Y`.
+  On this machine the kernel's own loopback round trip is ~11 μs even spinning, because a system call
+  costs ~1 μs under its CPU mitigations, so what is left of the engine's round trip is mostly the
+  engine's own work and the kernel's.
 - **Pin the connection threads.** With the threaded transports, `SocketThreadAffinity=<cpu list>`
   pins each session's connection thread to the CPUs given (#165). Pin the rest of the process with
   `taskset` or a cpuset. The engine has no busy-poll setting, so every inbound message still pays a

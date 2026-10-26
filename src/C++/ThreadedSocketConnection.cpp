@@ -33,10 +33,12 @@
 
 namespace FIX
 {
-ThreadedSocketConnection::ThreadedSocketConnection(socket_handle s, Sessions sessions, Log *pLog, bool queuedWrites)
+ThreadedSocketConnection::ThreadedSocketConnection(socket_handle s, Sessions sessions, Log *pLog, bool queuedWrites,
+                                                   bool busyPoll)
     : m_socket(s), m_pLog(pLog), m_sessions(sessions), m_pSession(0), m_disconnect(false),
       m_setupDeadline(::time(0) + SETUP_SECONDS),
-      m_wakeFd(queuedWrites ? ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC) : -1), m_queued(m_wakeFd >= 0)
+      m_wakeFd(queuedWrites ? ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC) : -1), m_queued(m_wakeFd >= 0),
+      m_busyPoll(busyPoll)
 {
 #if _MSC_VER
     FD_ZERO(&m_fds);
@@ -46,15 +48,17 @@ ThreadedSocketConnection::ThreadedSocketConnection(socket_handle s, Sessions ses
     {
         m_pLog->onEvent("SocketQueuedWrites=Y, but no eventfd could be made: this connection writes directly");
     }
+    startBusyPoll();
 }
 
 ThreadedSocketConnection::ThreadedSocketConnection(const SessionID &sessionID, socket_handle s,
                                                    const std::string &address, short port, Log *pLog,
                                                    const std::string &sourceAddress, short sourcePort,
-                                                   bool queuedWrites)
+                                                   bool queuedWrites, bool busyPoll)
     : m_socket(s), m_address(address), m_port(port), m_sourceAddress(sourceAddress), m_sourcePort(sourcePort),
       m_pLog(pLog), m_pSession(Session::lookupSession(sessionID)), m_disconnect(false),
-      m_wakeFd(queuedWrites ? ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC) : -1), m_queued(m_wakeFd >= 0)
+      m_wakeFd(queuedWrites ? ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC) : -1), m_queued(m_wakeFd >= 0),
+      m_busyPoll(busyPoll)
 {
 #if _MSC_VER
     FD_ZERO(&m_fds);
@@ -68,6 +72,7 @@ ThreadedSocketConnection::ThreadedSocketConnection(const SessionID &sessionID, s
             log->onEvent("SocketQueuedWrites=Y, but no eventfd could be made: this connection writes directly");
         }
     }
+    startBusyPoll();
     if (m_pSession)
     {
         m_pSession->setResponder(this);
@@ -166,6 +171,26 @@ bool ThreadedSocketConnection::sendQueued(const std::string &msg)
         ::eventfd_write(m_wakeFd, one);
     }
     return true;
+}
+
+// SO_BUSY_POLL asks the kernel to poll the device queue for the reads that follow; on loopback it changes
+// nothing, on a NIC that supports it it is the point. Best effort: an unprivileged process may be refused a
+// value above net.core.busy_read, and the spin works without it.
+void ThreadedSocketConnection::startBusyPoll()
+{
+    if (!m_busyPoll)
+    {
+        return;
+    }
+    const int microseconds = 50;
+    if (::setsockopt(m_socket, SOL_SOCKET, SO_BUSY_POLL, &microseconds, sizeof(microseconds)) != 0)
+    {
+        Log *log = m_pSession ? m_pSession->getLog() : m_pLog;
+        if (log)
+        {
+            log->onEvent("SocketBusyPoll=Y: SO_BUSY_POLL was refused; spinning without it");
+        }
+    }
 }
 
 void ThreadedSocketConnection::startQueuedWrites()
@@ -431,6 +456,29 @@ void ThreadedSocketConnection::pollDirect()
     }
 }
 
+// One turn of the spin (SocketBusyPoll=Y): a read that does not wait, then the session's timer if a new second
+// has begun. The socket stays blocking, for the senders' direct writes; only this read is MSG_DONTWAIT. A
+// disconnect's shutdown() makes it return 0, which ends the connection as a failed read always has.
+void ThreadedSocketConnection::pollBusy()
+{
+    const ssize_t size = ::recv(m_socket, m_buffer, sizeof(m_buffer), MSG_DONTWAIT);
+    if (size > 0)
+    {
+        m_parser.addToStream(m_buffer, size);
+    }
+    else if (size == 0 || (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR))
+    {
+        throw SocketRecvFailed(size);
+    }
+
+    const time_t second = ::time(0);
+    if (m_pSession && second != m_lastTimerSweep)
+    {
+        m_lastTimerSweep = second;
+        m_pSession->next(UtcTimeStamp::now());
+    }
+}
+
 void ThreadedSocketConnection::pollQueued()
 {
     bool queued;
@@ -493,7 +541,11 @@ bool ThreadedSocketConnection::read()
 
     try
     {
-        if (m_queued)
+        if (m_busyPoll)
+        {
+            pollBusy();
+        }
+        else if (m_queued)
         {
             pollQueued();
         }

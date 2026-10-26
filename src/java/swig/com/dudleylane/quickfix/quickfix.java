@@ -23394,6 +23394,10 @@ public class quickfix {
     return quickfixJNI.SOCKET_QUEUED_WRITES_get();
   }
 
+  public static String getSOCKET_BUSY_POLL() {
+    return quickfixJNI.SOCKET_BUSY_POLL_get();
+  }
+
   public static String getSOCKET_SEND_BUFFER_SIZE() {
     return quickfixJNI.SOCKET_SEND_BUFFER_SIZE_get();
   }

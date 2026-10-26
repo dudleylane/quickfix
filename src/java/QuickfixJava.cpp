@@ -90503,6 +90503,18 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SOCKET_1QUEU
 }
 
 
+SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SOCKET_1BUSY_1POLL_1get(JNIEnv *jenv, jclass jcls) {
+  jstring jresult = 0 ;
+  char *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  result = (char *)(char *)FIX::SOCKET_BUSY_POLL;
+  if (result) jresult = jenv->NewStringUTF((const char *)result);
+  return jresult;
+}
+
+
 SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SOCKET_1SEND_1BUFFER_1SIZE_1get(JNIEnv *jenv, jclass jcls) {
   jstring jresult = 0 ;
   char *result = 0 ;

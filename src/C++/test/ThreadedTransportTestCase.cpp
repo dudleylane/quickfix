@@ -2677,3 +2677,130 @@ TEST_CASE("ConcurrentStopTests")
         acceptor.stop();
     }
 }
+
+// SocketBusyPoll (#175): opt-in, threaded transports only; the connection thread spins on reads.
+TEST_CASE("SocketBusyPollTests")
+{
+    auto settingsFor = [](const std::string &type, int port, const std::string &extra)
+    {
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=" << type << "\nSocketAcceptPort=" << port
+               << "\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
+               << "\nReconnectInterval=1\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n"
+               << extra << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=" << (type == "acceptor" ? "BPA" : "BPI")
+               << "\nTargetCompID=" << (type == "acceptor" ? "BPI" : "BPA") << "\nHeartBtInt=30\n";
+        return SessionSettings(config);
+    };
+    NullApplication application;
+    MemoryStoreFactory factory;
+
+    SECTION("isOffByDefault")
+    {
+        Dictionary settings;
+        CHECK_FALSE(getSocketBusyPoll(settings));
+        settings.setString(SOCKET_BUSY_POLL, "Y");
+        CHECK(getSocketBusyPoll(settings));
+        settings.setString(SOCKET_BUSY_POLL, "sometimes");
+        CHECK_THROWS_AS(getSocketBusyPoll(settings), ConfigError);
+    }
+
+    SECTION("isRefusedWhereItIsNotBuilt")
+    {
+        const int port = freePort();
+        {
+            SocketAcceptor acceptor(application, factory, settingsFor("acceptor", port, "SocketBusyPoll=Y\n"));
+            CHECK_THROWS_AS(acceptor.start(), ConfigError);
+        }
+        {
+            SocketInitiator initiator(application, factory, settingsFor("initiator", port, "SocketBusyPoll=Y\n"));
+            CHECK_THROWS_AS(initiator.start(), ConfigError);
+        }
+        // With queued writes it is the next phase's single-writer design.
+        {
+            ThreadedSocketAcceptor acceptor(application, factory,
+                                            settingsFor("acceptor", port, "SocketBusyPoll=Y\nSocketQueuedWrites=Y\n"));
+            CHECK_THROWS_AS(acceptor.start(), ConfigError);
+        }
+        {
+            ThreadedSocketInitiator initiator(
+                application, factory, settingsFor("initiator", port, "SocketBusyPoll=Y\nSocketQueuedWrites=Y\n"));
+            CHECK_THROWS_AS(initiator.start(), ConfigError);
+        }
+    }
+
+    SECTION("logsOnExchangesHeartbeatsAndStops")
+    {
+        struct Heartbeats : NullApplication
+        {
+            std::atomic<int> heartbeats{0};
+            std::atomic<int> orders{0};
+            void fromAdmin(const Message &message, const SessionID &)
+                EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon) override
+            {
+                if (message.getHeader().getField(FIELD::MsgType) == "0")
+                {
+                    ++heartbeats;
+                }
+            }
+            void fromApp(const Message &, const SessionID &)
+                EXCEPT(FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType) override
+            {
+                ++orders;
+            }
+        };
+        Heartbeats server;
+        const int port = freePort();
+        ThreadedSocketAcceptor acceptor(server, factory, settingsFor("acceptor", port, "SocketBusyPoll=Y\n"));
+        acceptor.start();
+        // HeartBtInt=1, from the initiator's Logon: heartbeats come from the session's timer, which a spinning
+        // connection thread must still run.
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
+               << "\nReconnectInterval=1\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\nSocketBusyPoll=Y\n"
+               << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=BPI\nTargetCompID=BPA\nHeartBtInt=1\n";
+        SessionSettings initiatorSettings(config);
+        ThreadedSocketInitiator initiator(application, factory, initiatorSettings);
+        initiator.start();
+        const SessionID id("FIX.4.2", "BPI", "BPA");
+        REQUIRE(loggedOn(id));
+        for (int i = 0; i < 100; ++i)
+        {
+            Message order;
+            order.getHeader().setField(MsgType("D"));
+            order.setField(ClOrdID("ORDER"));
+            REQUIRE(Session::sendToTarget(order, id));
+        }
+        for (int i = 0; i < 400 && !(server.orders == 100 && server.heartbeats >= 2); ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        CHECK(server.orders == 100);
+        CHECK(server.heartbeats >= 2);
+        const auto start = std::chrono::steady_clock::now();
+        initiator.stop(true);
+        acceptor.stop(true);
+        // stop(force) skips the logout waits: what is left is the spinning threads ending, at once.
+        CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(3));
+    }
+
+    SECTION("aConnectionThatNeverLogsOnIsStillDropped")
+    {
+        // It spins from accept() on, so the setup deadline is what bounds a silent peer's cost.
+        const int port = freePort();
+        ThreadedSocketAcceptor acceptor(application, factory, settingsFor("acceptor", port, "SocketBusyPoll=Y\n"));
+        acceptor.start();
+        const int s = ::socket(AF_INET, SOCK_STREAM, 0);
+        sockaddr_in address{};
+        address.sin_family = AF_INET;
+        address.sin_port = htons(static_cast<uint16_t>(port));
+        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        REQUIRE(::connect(s, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0);
+        char buffer[16];
+        struct pollfd pfd = {s, POLLIN, 0};
+        // Dropped within the 10 s setup deadline and its once-a-second check.
+        const bool closed = ::poll(&pfd, 1, 15000) == 1 && ::recv(s, buffer, sizeof(buffer), 0) == 0;
+        ::close(s);
+        CHECK(closed);
+        acceptor.stop(true);
+    }
+}

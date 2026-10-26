@@ -58,16 +58,39 @@ inline bool getSocketQueuedWrites(const Dictionary &settings)
     return settings.has(SOCKET_QUEUED_WRITES) ? settings.getBool(SOCKET_QUEUED_WRITES) : false;
 }
 
-/// For the transports without queued writes: the reactor's already writes from its own loop, and the
-/// threaded SSL transports' would need a non-blocking SSL_write. Y is refused rather than ignored.
+/// Reads SocketBusyPoll (#175), for the threaded transports. N, the default: the connection thread sleeps
+/// in poll() until input arrives, and pays a wakeup for each message. Y: it spins on non-blocking reads
+/// instead, so input is read as it lands -- at the cost of a full core per connection, from accept() on.
+inline bool getSocketBusyPoll(const Dictionary &settings)
+{
+    return settings.has(SOCKET_BUSY_POLL) ? settings.getBool(SOCKET_BUSY_POLL) : false;
+}
+
+/// SocketQueuedWrites=Y and SocketBusyPoll=Y together are the single-writer design of #175's next phase, not
+/// yet built: refused.
+inline void checkBusyPollWithQueuedWrites(const Dictionary &settings, const SessionID &sessionID)
+{
+    if (getSocketBusyPoll(settings) && getSocketQueuedWrites(settings))
+    {
+        throw ConfigError(std::string(SOCKET_BUSY_POLL) + "=Y with " + SOCKET_QUEUED_WRITES +
+                          "=Y is not supported yet: " + sessionID.toString());
+    }
+}
+
+/// For the transports without queued writes or busy polling: the reactor's writes from its own loop, and the
+/// threaded SSL transports' would need a non-blocking SSL_write and SSL_read. Y is refused rather than ignored.
 inline void rejectSocketQueuedWrites(const SessionSettings &sessionSettings, const std::string &transport)
 {
     for (const SessionID &sessionID : sessionSettings.getSessions())
     {
-        if (getSocketQueuedWrites(sessionSettings.get(sessionID)))
+        for (const char *key : {SOCKET_QUEUED_WRITES, SOCKET_BUSY_POLL})
         {
-            throw ConfigError(std::string(SOCKET_QUEUED_WRITES) + "=Y is not supported by " + transport + ": " +
-                              sessionID.toString());
+            const Dictionary &settings = sessionSettings.get(sessionID);
+            if (settings.has(key) && settings.getBool(key))
+            {
+                throw ConfigError(std::string(key) + "=Y is not supported by " + transport + ": " +
+                                  sessionID.toString());
+            }
         }
     }
 }
@@ -174,6 +197,7 @@ inline void checkSocketOptionsPerPort(const SessionSettings &sessionSettings)
         std::string sendBufferSize;
         std::string receiveBufferSize;
         std::string queuedWrites;
+        std::string busyPoll;
     };
     std::map<std::uint16_t, PortOptions> byPort;
     for (const SessionID &sessionID : sessionSettings.getSessions())
@@ -181,10 +205,13 @@ inline void checkSocketOptionsPerPort(const SessionSettings &sessionSettings)
         const Dictionary &settings = sessionSettings.get(sessionID);
         const std::uint16_t port = getPortSetting(settings, SOCKET_ACCEPT_PORT, true);
         getSocketThreadAffinity(settings); // per session, not per port: checked here so a bad list fails early
-        const PortOptions options{sessionID, getSocketNoDelay(settings) ? "Y" : "N",
+        const PortOptions options{sessionID,
+                                  getSocketNoDelay(settings) ? "Y" : "N",
                                   std::to_string(getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE)),
                                   std::to_string(getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE)),
-                                  getSocketQueuedWrites(settings) ? "Y" : "N"};
+                                  getSocketQueuedWrites(settings) ? "Y" : "N",
+                                  getSocketBusyPoll(settings) ? "Y" : "N"};
+        checkBusyPollWithQueuedWrites(settings, sessionID);
         const auto [it, inserted] = byPort.try_emplace(port, options);
         if (inserted)
         {
@@ -196,7 +223,8 @@ inline void checkSocketOptionsPerPort(const SessionSettings &sessionSettings)
                                                                                  first.noDelay},
               {SOCKET_SEND_BUFFER_SIZE, options.sendBufferSize, first.sendBufferSize},
               {SOCKET_RECEIVE_BUFFER_SIZE, options.receiveBufferSize, first.receiveBufferSize},
-              {SOCKET_QUEUED_WRITES, options.queuedWrites, first.queuedWrites}})
+              {SOCKET_QUEUED_WRITES, options.queuedWrites, first.queuedWrites},
+              {SOCKET_BUSY_POLL, options.busyPoll, first.busyPoll}})
         {
             if (mine != theirs)
             {

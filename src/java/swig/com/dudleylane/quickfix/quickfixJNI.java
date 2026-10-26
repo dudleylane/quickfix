@@ -6342,6 +6342,7 @@ public class quickfixJNI {
   public final static native String SOCKET_NODELAY_get();
   public final static native String SOCKET_THREAD_AFFINITY_get();
   public final static native String SOCKET_QUEUED_WRITES_get();
+  public final static native String SOCKET_BUSY_POLL_get();
   public final static native String SOCKET_SEND_BUFFER_SIZE_get();
   public final static native String SOCKET_RECEIVE_BUFFER_SIZE_get();
   public final static native String HOST_SELECTION_POLICY_get();

@@ -131482,6 +131482,20 @@ SWIGINTERN PyObject *Swig_var_SOCKET_QUEUED_WRITES_get(void) {
 }
 
 
+SWIGINTERN int Swig_var_SOCKET_BUSY_POLL_set(PyObject *) {
+  SWIG_Error(SWIG_AttributeError,"Variable SOCKET_BUSY_POLL is read-only.");
+  return 1;
+}
+
+
+SWIGINTERN PyObject *Swig_var_SOCKET_BUSY_POLL_get(void) {
+  PyObject *pyobj = 0;
+  
+  pyobj = SWIG_FromCharPtr(FIX::SOCKET_BUSY_POLL);
+  return pyobj;
+}
+
+
 SWIGINTERN int Swig_var_SOCKET_SEND_BUFFER_SIZE_set(PyObject *) {
   SWIG_Error(SWIG_AttributeError,"Variable SOCKET_SEND_BUFFER_SIZE is read-only.");
   return 1;
@@ -173185,6 +173199,7 @@ SWIG_init(void) {
   SWIG_addvarlink(globals, "SOCKET_NODELAY", Swig_var_SOCKET_NODELAY_get, Swig_var_SOCKET_NODELAY_set);
   SWIG_addvarlink(globals, "SOCKET_THREAD_AFFINITY", Swig_var_SOCKET_THREAD_AFFINITY_get, Swig_var_SOCKET_THREAD_AFFINITY_set);
   SWIG_addvarlink(globals, "SOCKET_QUEUED_WRITES", Swig_var_SOCKET_QUEUED_WRITES_get, Swig_var_SOCKET_QUEUED_WRITES_set);
+  SWIG_addvarlink(globals, "SOCKET_BUSY_POLL", Swig_var_SOCKET_BUSY_POLL_get, Swig_var_SOCKET_BUSY_POLL_set);
   SWIG_addvarlink(globals, "SOCKET_SEND_BUFFER_SIZE", Swig_var_SOCKET_SEND_BUFFER_SIZE_get, Swig_var_SOCKET_SEND_BUFFER_SIZE_set);
   SWIG_addvarlink(globals, "SOCKET_RECEIVE_BUFFER_SIZE", Swig_var_SOCKET_RECEIVE_BUFFER_SIZE_get, Swig_var_SOCKET_RECEIVE_BUFFER_SIZE_set);
   SWIG_addvarlink(globals, "HOST_SELECTION_POLICY", Swig_var_HOST_SELECTION_POLICY_get, Swig_var_HOST_SELECTION_POLICY_set);
