@@ -416,13 +416,14 @@ application can avoid today, without changing the engine:
   (#175): on this machine `pt`-style one-in-flight round trips on the threaded transport
   went from 30–36 μs to 19–22 μs at the median, and from 70–75 μs to 45–47 μs at p99. It takes a full core per connection, from accept() on, so pin it to cores nothing
   else uses; on a machine short of cores it is far worse than `N`. Not yet with `SocketQueuedWrites=Y`.
-  On this machine the kernel's own loopback round trip is ~11 μs even spinning, because a system call
-  costs ~1 μs under its CPU mitigations, so what is left of the engine's round trip is mostly the
-  engine's own work and the kernel's.
+  On this machine the kernel's own loopback round trip is about 10 μs even spinning, because a
+  system call costs 0.9 μs under its CPU mitigations, so what is left of the engine's round trip is
+  mostly the engine's own work and the kernel's.
 - **Pin the connection threads.** With the threaded transports, `SocketThreadAffinity=<cpu list>`
   pins each session's connection thread to the CPUs given (#165). Pin the rest of the process with
-  `taskset` or a cpuset. The engine has no busy-poll setting, so every inbound message still pays a
-  scheduler wakeup, and on a busy machine that dominates the tail.
+  `taskset` or a cpuset. Pinning alone leaves the scheduler wakeup each inbound message pays, which on
+  a busy machine dominates the tail; `SocketBusyPoll=Y` (above) replaces it with a spin, and needs the
+  pinning.
 - **Queue the threaded transports' writes when several threads send on one session.** By default the
   sending thread writes to the socket itself under the session's lock, so concurrent senders wait on
   each other's writes. `SocketQueuedWrites=Y` hands the write to the connection's own thread (#166).
@@ -432,6 +433,48 @@ application can avoid today, without changing the engine:
   writes the queue itself. It costs every message a thread wake-up, which a single sender with one
   message in flight pays in full: `pt`'s threaded round trip goes from 33 to 52 μs, p99 from ~60 to
   ~127 μs. Other transports refuse it.
+
+#### The profile together
+
+For one order in flight on the threaded transports, the settings above combine like this (#175):
+
+```ini
+[DEFAULT]
+# Spin each connection thread's reads instead of sleeping in poll(). It takes a core per
+# connection from accept() on, and must be the same for every session on an acceptor port.
+SocketBusyPoll=Y
+# The default since #150; the profile depends on it.
+SocketNodelay=Y
+# Store no message bodies: a resend request is answered with a gap fill.
+PersistMessages=N
+
+[SESSION]
+# ... BeginString, SenderCompID, TargetCompID and the rest ...
+# A core of its own for this session's spinning thread, which nothing else uses. Not in
+# [DEFAULT]: there, every session's thread would be pinned to the same CPUs.
+SocketThreadAffinity=2
+```
+
+In code: `MemoryStoreFactory` or `NullStoreFactory`, no `LogFactory`, and sends through a cached
+`Session*`. Pin the rest of the process with `taskset` away from the connection threads' cores; a
+thread that spins waiting for the reply needs a core too.
+
+`pt` measures it as "Round trip NewOrderSingle, one in flight, on ThreadedSocket, busy-polled": the
+benchmark baseline's threaded round trip with `SocketBusyPoll=Y` added. Like that row it uses
+`MemoryStoreFactory`, no log, no data dictionary and `PersistMessages=N`, and its sending thread spins
+for the echo. It is pinned by `taskset` rather than `SocketThreadAffinity`, since a benchmark cannot
+know which CPUs a machine has. It spins three threads, so it skips itself where the process may use
+fewer than three CPUs (`ptgate` pins three), and it runs at most 20,000 round trips, because on a
+machine short of cores a trip takes milliseconds. Quiet and pinned to CPUs 1–3 on the benchmark
+baseline's machine, three runs of `./pt -p <port> -c 100000 -r 9` measured 20.7–21.3 μs per round
+trip (p50 19.6–19.9 μs, p99 42–43 μs), against 34.3–35.2 μs (p99 about 60 μs) for the blocking-read
+row beside it.
+
+One sleep remains. While another thread's `send()` holds a connection's socket, the connection
+thread's spinning read waits in the kernel for the socket's lock, so with one order in flight, as in
+`pt`'s row, the initiator's connection thread sleeps once per round trip. It is running again before
+the reply arrives: timed in two runs of 300,000 round trips, the reply waited for it in 53 and 12 of
+them, at most 0.13 and 0.01 μs a round trip on average (#175).
 
 ### Sanitizer verification
 

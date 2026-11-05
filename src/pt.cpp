@@ -48,6 +48,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <sched.h>
 #include <stdexcept>
 #include <thread>
 #include <vector>
@@ -85,7 +86,7 @@ long testDeserializeNewOrderSingleWithParties50SP2(int);
 long testDeserializeAndValidateNewOrderSingleWithParties50SP2(int);
 long testSendOnSocket(int, short);
 long testSendOnThreadedSocket(int, short);
-template <typename Acceptor, typename Initiator> long testRoundTrip(int, short);
+template <typename Acceptor, typename Initiator> long testRoundTrip(int, short, bool busyPoll = false);
 
 #ifndef _MSC_VER
 #include <ctime>
@@ -305,6 +306,24 @@ std::unique_ptr<FIX::DataDictionary> s_fix50sp2Dictionary;
 const bool VALIDATE = true;
 const bool DONT_VALIDATE = false;
 
+// The busy-polled round trip spins three threads -- the one that sends and waits for the echo, and both
+// connection threads -- so it runs only where the process may use three CPUs: with two, one of the three waits
+// out another's time slice on every trip, and the row would time the scheduler. Its round trips are capped for
+// the same reason: on a machine short of cores a trip takes milliseconds (a 6 ms median at load 27, #175), and
+// -c 500000 would then run for hours.
+static constexpr int BUSY_POLL_ROUND_TRIPS = 20000;
+
+static int availableCpus()
+{
+    cpu_set_t cpus;
+    CPU_ZERO(&cpus);
+    if (sched_getaffinity(0, sizeof(cpus), &cpus) != 0)
+    {
+        return static_cast<int>(std::thread::hardware_concurrency());
+    }
+    return CPU_COUNT(&cpus);
+}
+
 int main(int argc, char **argv)
 {
     int count = 0;
@@ -441,6 +460,20 @@ int main(int argc, char **argv)
         run(
             "Round trip NewOrderSingle, one in flight, on ThreadedSocket", [&](int n)
             { return testRoundTrip<FIX::ThreadedSocketAcceptor, FIX::ThreadedSocketInitiator>(n, port); }, count);
+
+        const char *busyPolled = "Round trip NewOrderSingle, one in flight, on ThreadedSocket, busy-polled";
+        if (availableCpus() >= 3)
+        {
+            run(
+                busyPolled, [&](int n)
+                { return testRoundTrip<FIX::ThreadedSocketAcceptor, FIX::ThreadedSocketInitiator>(n, port, true); },
+                std::min(count, BUSY_POLL_ROUND_TRIPS));
+        }
+        else
+        {
+            std::cout << busyPolled << "\n    skipped: it spins three threads, and this process may use "
+                      << availableCpus() << " CPU(s)" << std::endl;
+        }
     }
     catch (std::exception const &e)
     {
@@ -1250,7 +1283,7 @@ long testSendOnThreadedSocket(int count, short port)
 // One NewOrderSingle in flight at a time: send it, wait for the server's echo, send the next. This is the
 // latency a single order sees end to end, with SocketNodelay at its default, Y. The client sends through
 // a cached Session*, as README's low-latency notes advise.
-template <typename Acceptor, typename Initiator> long testRoundTrip(int count, short port)
+template <typename Acceptor, typename Initiator> long testRoundTrip(int count, short port, bool busyPoll)
 {
     std::stringstream stream;
     stream << "[DEFAULT]" << std::endl
@@ -1258,6 +1291,7 @@ template <typename Acceptor, typename Initiator> long testRoundTrip(int count, s
            << "SocketConnectPort=" << (unsigned short)port << std::endl
            << "SocketAcceptPort=" << (unsigned short)port << std::endl
            << "SocketReuseAddress=Y" << std::endl
+           << "SocketBusyPoll=" << (busyPoll ? "Y" : "N") << std::endl
            << "StartTime=00:00:00" << std::endl
            << "EndTime=00:00:00" << std::endl
            << "UseDataDictionary=N" << std::endl

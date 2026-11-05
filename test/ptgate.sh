@@ -7,8 +7,10 @@
 #
 # The base is built in a temporary worktree, Release, into its own output
 # directory. The two are then run alternately -- base, head, base, head --
-# pinned to two cores, each run starting once the load has settled or after
-# ten minutes regardless, and ptcompare.py judges the four runs.
+# pinned to three cores, each run starting once the load has settled or after
+# ten minutes regardless, and ptcompare.py judges the four runs. Three, not
+# two: pt's busy-polled round trip spins three threads, and skips itself with
+# fewer CPUs (#175).
 
 BASE=$1
 COUNT=${2:-500000}
@@ -52,7 +54,7 @@ run()
 {
     settle
     echo "$1 run $2, load $(cut -d' ' -f1 /proc/loadavg)"
-    (cd "$3" && taskset -c 2,3 "$4" -p "$5" -c "$COUNT") > "$WORK/$1-$2.txt" 2>&1 || {
+    (cd "$3" && taskset -c 1,2,3 "$4" -p "$5" -c "$COUNT") > "$WORK/$1-$2.txt" 2>&1 || {
         cat "$WORK/$1-$2.txt"
         echo "FAILED: the $1 pt exited non-zero"
         exit 1
