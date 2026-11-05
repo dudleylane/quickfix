@@ -415,7 +415,7 @@ application can avoid today, without changing the engine:
   non-blocking reads instead of sleeping in `poll()`, removing the wakeup each message otherwise pays
   (#175): on this machine `pt`-style one-in-flight round trips on the threaded transport
   went from 30–36 μs to 19–22 μs at the median, and from 70–75 μs to 45–47 μs at p99. It takes a full core per connection, from accept() on, so pin it to cores nothing
-  else uses; on a machine short of cores it is far worse than `N`. Not yet with `SocketQueuedWrites=Y`.
+  else uses; on a machine short of cores it is far worse than `N`. Not yet with `SocketQueuedWrites=Y` (#177).
   On this machine the kernel's own loopback round trip is about 10 μs even spinning, because a
   system call costs 0.9 μs under its CPU mitigations, so what is left of the engine's round trip is
   mostly the engine's own work and the kernel's.

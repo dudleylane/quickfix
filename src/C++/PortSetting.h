@@ -66,8 +66,7 @@ inline bool getSocketBusyPoll(const Dictionary &settings)
     return settings.has(SOCKET_BUSY_POLL) ? settings.getBool(SOCKET_BUSY_POLL) : false;
 }
 
-/// SocketQueuedWrites=Y and SocketBusyPoll=Y together are the single-writer design of #175's next phase, not
-/// yet built: refused.
+/// SocketQueuedWrites=Y and SocketBusyPoll=Y together are the single-writer design of #177, not yet built: refused.
 inline void checkBusyPollWithQueuedWrites(const Dictionary &settings, const SessionID &sessionID)
 {
     if (getSocketBusyPoll(settings) && getSocketQueuedWrites(settings))

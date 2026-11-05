@@ -2715,7 +2715,7 @@ TEST_CASE("SocketBusyPollTests")
             SocketInitiator initiator(application, factory, settingsFor("initiator", port, "SocketBusyPoll=Y\n"));
             CHECK_THROWS_AS(initiator.start(), ConfigError);
         }
-        // With queued writes it is the next phase's single-writer design.
+        // With queued writes it is the single-writer design of #177.
         {
             ThreadedSocketAcceptor acceptor(application, factory,
                                             settingsFor("acceptor", port, "SocketBusyPoll=Y\nSocketQueuedWrites=Y\n"));
