@@ -85,6 +85,26 @@ TEST_CASE_METHOD(resetOdbcStoreFixture,
 
                                         SET_SEQUENCE_NUMBERS}
 
+TEST_CASE_METHOD(resetOdbcStoreFixture, "OdbcStoreMessageTests")
+{
+    std::vector<std::string> messages;
+
+    SECTION("aMessageOfAnyLengthComesBackWhole")
+    {
+        // Either side of each multiple of the 4096 bytes get() reads at a time, which holds 4095 and a terminator.
+        const auto length = GENERATE(as<size_t>{}, 1, 4094, 4095, 4096, 4097, 8189, 8190, 8191, 70000);
+        std::string message(length, 'x');
+        message.back() = 'y';
+        CHECK(object->set(1, message));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK(message.size() == messages[0].size());
+        CHECK(message == messages[0]);
+    }
+
+    SET_SEQUENCE_NUMBERS
+}
+
 TEST_CASE_METHOD(noResetOdbcStoreFixture, "noResetOdbcStoreTests")
 {
     SECTION("reload"){CHECK_MESSAGE_STORE_RELOAD}

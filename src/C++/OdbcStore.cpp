@@ -222,13 +222,20 @@ void OdbcStore::get(SEQNUM begin, SEQNUM end, std::vector<std::string> &result) 
     while (query.fetch())
     {
         std::string message;
-        SQLVARCHAR messageBuffer[4096];
+        char messageBuffer[4096];
         SQLLEN messageLength;
 
-        while (odbcSuccess(SQLGetData(query.statement(), 1, SQL_C_CHAR, &messageBuffer, 4095, &messageLength)))
+        // messageLength is what remained before this read, not what the read returned: it can exceed the buffer, or be
+        // SQL_NO_TOTAL. A read that does not finish the value fills the buffer but for the terminator.
+        while (odbcSuccess(
+            SQLGetData(query.statement(), 1, SQL_C_CHAR, messageBuffer, sizeof(messageBuffer), &messageLength)))
         {
-            messageBuffer[messageLength] = 0;
-            message += (char *)messageBuffer;
+            if (messageLength == SQL_NULL_DATA)
+            {
+                break;
+            }
+            const bool more = messageLength == SQL_NO_TOTAL || messageLength >= (SQLLEN)sizeof(messageBuffer);
+            message.append(messageBuffer, more ? sizeof(messageBuffer) - 1 : (size_t)messageLength);
         }
 
         result.push_back(message);
