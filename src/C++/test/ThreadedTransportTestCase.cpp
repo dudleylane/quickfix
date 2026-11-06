@@ -2200,7 +2200,17 @@ TEST_CASE("ThreadedQueuedWriteTests")
                     session.send(message);
                 }
             });
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        // Wait for that state, not for a time: a disconnect that ends before the fourth send reaches the queue
+        // refuses that send, and on a loaded box the sends can take that long (#179). No connection thread runs
+        // here, so bytes at the peer can only be that sender's, and a message far larger than the socket's buffer
+        // keeps it writing, holding the role, until the peer reads.
+        int pending = 0;
+        for (int i = 0; i < 3000 && pending == 0; ++i)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            socket_fionread(pair[1], pending);
+        }
+        CHECK(pending > 0);
         std::atomic<bool> disconnected{false};
         std::thread disconnecter(
             [&]
