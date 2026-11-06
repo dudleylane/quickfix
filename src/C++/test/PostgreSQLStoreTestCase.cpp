@@ -91,8 +91,69 @@ TEST_CASE_METHOD(noResetPostgreSQLStoreFixture, "noResetPostgreSQLStoreTests")
 
     SECTION("refresh")
     {
-        CHECK_MESSAGE_STORE_RELOAD
+        CHECK_MESSAGE_STORE_REFRESH
     }
+}
+
+TEST_CASE_METHOD(resetPostgreSQLStoreFixture, "PostgreSQLStoreMessageTests")
+{
+    std::vector<std::string> messages;
+
+    SECTION("aMessageOverSixtyFourKilobytesComesBackWhole")
+    {
+        const std::string message(70000, 'x');
+        CHECK(object->set(1, message));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK(message == messages[0]);
+    }
+
+    SECTION("aMessageTheServerRefusesThrows")
+    {
+        // libpq takes a whole connection string as the database name. Reporting success turns a resend into a gap fill.
+        Dictionary refusing = TestSettings::sessionSettings.get();
+        refusing.setString(POSTGRESQL_STORE_DATABASE, "dbname=" + refusing.getString(POSTGRESQL_STORE_DATABASE) +
+                                                          " options='-c default_transaction_read_only=on'");
+        PostgreSQLStoreFactory refusingFactory(refusing);
+        MessageStore *store = refusingFactory.create(
+            UtcTimeStamp::now(), SessionID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST")));
+        CHECK_THROWS_AS(store->set(1, "refused"), IOException);
+        refusingFactory.destroy(store);
+
+        object->get(1, 1, messages);
+        CHECK(messages.empty());
+    }
+
+    SECTION("settingAgainReplacesAndAddsNoRow")
+    {
+        CHECK(object->set(1, "first"));
+        CHECK(object->set(1, "second"));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("second" == messages[0]);
+    }
+
+    SECTION("aQualifiedSessionKeepsItsOwnMessages")
+    {
+        SessionID qualifiedID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST"), "QUALIFIED");
+        MessageStore *qualified = factory.create(UtcTimeStamp::now(), qualifiedID);
+        qualified->reset(UtcTimeStamp::now());
+        CHECK(object->set(1, "plain"));
+        CHECK(qualified->set(1, "qualified"));
+        qualified->setNextSenderMsgSeqNum(5);
+
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("plain" == messages[0]);
+        qualified->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("qualified" == messages[0]);
+        CHECK(1 == object->getNextSenderMsgSeqNum());
+
+        factory.destroy(qualified);
+    }
+
+    SET_SEQUENCE_NUMBERS
 }
 
 #endif

@@ -21,74 +21,48 @@
 
 #ifdef HAVE_MYSQL
 
-#include "TestHelper.h"
+#include "DatabaseLogTestCase.h"
 #include <MySQLLog.h>
-#include <SessionSettings.h>
-
-#include "catch_amalgamated.hpp"
-
-#include <string>
-#include <vector>
 
 using namespace FIX;
 
 namespace
 {
-struct mySQLLogFixture
+struct mySQLLogFixture : DatabaseLogFixture
 {
     mySQLLogFixture()
-        : defaults(TestSettings::sessionSettings.get()), database(defaults.getString(MYSQL_LOG_DATABASE)),
-          user(defaults.getString(MYSQL_LOG_USER)), password(defaults.getString(MYSQL_LOG_PASSWORD)),
-          host(defaults.getString(MYSQL_LOG_HOST)), port((short)defaults.getInt(MYSQL_LOG_PORT)),
-          connection(database, user, password, host, port),
-          plain(BeginString("FIX.4.2"), SenderCompID("LOG"), TargetCompID("TEST")),
-          qualified(BeginString("FIX.4.2"), SenderCompID("LOG"), TargetCompID("TEST"), "QUALIFIED"),
-          other(BeginString("FIX.4.2"), SenderCompID("OTHER"), TargetCompID("TEST"))
+        : database(defaults.getString(MYSQL_LOG_DATABASE)), user(defaults.getString(MYSQL_LOG_USER)),
+          password(defaults.getString(MYSQL_LOG_PASSWORD)), host(defaults.getString(MYSQL_LOG_HOST)),
+          port((short)defaults.getInt(MYSQL_LOG_PORT)), connection(database, user, password, host, port)
     {
-        defaults.setString(CONNECTION_TYPE, "acceptor");
-        for (const char *table : {"messages_log", "event_log", "messages_backup_log", "event_backup_log"})
-        {
-            MySQLQuery query(std::string("DELETE FROM ") + table);
-            REQUIRE(connection.execute(query));
-        }
+        emptyDatabaseLogTables(*this);
     }
 
-    SessionSettings settingsFor(const Dictionary &dictionary)
+    void execute(const std::string &sql)
     {
-        SessionSettings settings;
-        settings.set(dictionary);
-        settings.set(plain, Dictionary());
-        settings.set(qualified, Dictionary());
-        settings.set(other, Dictionary());
-        return settings;
+        MySQLQuery query(sql);
+        REQUIRE(connection.execute(query));
     }
 
-    // One "beginstring|sendercompid|targetcompid|session_qualifier|text" per row, oldest first.
-    std::vector<std::string> rows(const std::string &table)
+    std::vector<std::string> select(const std::string &sql)
     {
-        MySQLQuery query("SELECT CONCAT_WS('|', IFNULL(beginstring, 'NULL'), IFNULL(sendercompid, 'NULL'), "
-                         "IFNULL(targetcompid, 'NULL'), IFNULL(session_qualifier, 'NULL'), text) FROM " +
-                         table + " ORDER BY id");
+        MySQLQuery query(sql);
         REQUIRE(connection.execute(query));
         std::vector<std::string> result;
-        const int count = query.rows();
-        for (int row = 0; row < count; ++row)
+        const int rows = query.rows();
+        for (int row = 0; row < rows; ++row)
         {
             result.push_back(query.getValue(row, 0));
         }
         return result;
     }
 
-    Dictionary defaults;
     std::string database;
     std::string user;
     std::string password;
     std::string host;
     short port;
     MySQLConnection connection;
-    SessionID plain;
-    SessionID qualified;
-    SessionID other;
 };
 
 using Rows = std::vector<std::string>;
@@ -96,41 +70,10 @@ using Rows = std::vector<std::string>;
 
 TEST_CASE_METHOD(mySQLLogFixture, "MySQLLogTests")
 {
-    SECTION("aSessionLogWritesItsSessionToItsTables")
+    SECTION("whatEveryDatabaseLogDoes")
     {
-        MySQLLogFactory factory(settingsFor(defaults));
-        Log *log = factory.create(plain);
-        log->onIncoming("in");
-        log->onOutgoing("out");
-        log->onEvent("event");
-        factory.destroy(log);
-
-        CHECK(rows("messages_log") == Rows{"FIX.4.2|LOG|TEST|NULL|in", "FIX.4.2|LOG|TEST|NULL|out"});
-        CHECK(rows("event_log") == Rows{"FIX.4.2|LOG|TEST|NULL|event"});
-    }
-
-    SECTION("aQualifiedSessionLogWritesItsQualifier")
-    {
-        MySQLLogFactory factory(settingsFor(defaults));
-        Log *log = factory.create(qualified);
-        log->onIncoming("in");
-        log->onEvent("event");
-        factory.destroy(log);
-
-        CHECK(rows("messages_log") == Rows{"FIX.4.2|LOG|TEST|QUALIFIED|in"});
-        CHECK(rows("event_log") == Rows{"FIX.4.2|LOG|TEST|QUALIFIED|event"});
-    }
-
-    SECTION("aGlobalLogWritesNoSession")
-    {
-        MySQLLogFactory factory(settingsFor(defaults));
-        Log *log = factory.create();
-        log->onIncoming("in");
-        log->onEvent("event");
-        factory.destroy(log);
-
-        CHECK(rows("messages_log") == Rows{"NULL|NULL|NULL|NULL|in"});
-        CHECK(rows("event_log") == Rows{"NULL|NULL|NULL|NULL|event"});
+        checkDatabaseLog<MySQLLogFactory>(*this, MYSQL_LOG_INCOMING_TABLE, MYSQL_LOG_OUTGOING_TABLE,
+                                          MYSQL_LOG_EVENT_TABLE);
     }
 
     SECTION("theTimeWrittenIsUtc")
@@ -148,105 +91,6 @@ TEST_CASE_METHOD(mySQLLogFixture, "MySQLLogTests")
         CHECK(std::string(query.getValue(0, 1)) == "1");
     }
 
-    SECTION("textComesBackAsWritten")
-    {
-        const std::string text = "8=FIX.4.2\x01"
-                                 "58=' \" \\ \\' \\\" ; -- %_\x01"
-                                 "10=000\x01";
-        MySQLLogFactory factory(settingsFor(defaults));
-        Log *log = factory.create(plain);
-        log->onIncoming(text);
-        factory.destroy(log);
-
-        MySQLQuery query("SELECT text FROM messages_log");
-        REQUIRE(connection.execute(query));
-        REQUIRE(query.rows() == 1);
-        CHECK(std::string(query.getValue(0, 0)) == text);
-    }
-
-    SECTION("aMessageOverSixtyFourKilobytesIsLogged")
-    {
-        const std::string text(70000, 'x');
-        MySQLLogFactory factory(settingsFor(defaults));
-        Log *log = factory.create(plain);
-        log->onIncoming(text);
-        factory.destroy(log);
-
-        MySQLQuery query("SELECT LENGTH(text) FROM messages_log");
-        REQUIRE(connection.execute(query));
-        REQUIRE(query.rows() == 1);
-        CHECK(std::string(query.getValue(0, 0)) == "70000");
-    }
-
-    SECTION("theTablesCanBeNamed")
-    {
-        Dictionary named = defaults;
-        named.setString(MYSQL_LOG_INCOMING_TABLE, "messages_backup_log");
-        named.setString(MYSQL_LOG_OUTGOING_TABLE, "messages_log");
-        named.setString(MYSQL_LOG_EVENT_TABLE, "event_backup_log");
-        MySQLLogFactory factory(settingsFor(named));
-        Log *log = factory.create(plain);
-        log->onIncoming("in");
-        log->onOutgoing("out");
-        log->onEvent("event");
-        factory.destroy(log);
-
-        CHECK(rows("messages_backup_log") == Rows{"FIX.4.2|LOG|TEST|NULL|in"});
-        CHECK(rows("messages_log") == Rows{"FIX.4.2|LOG|TEST|NULL|out"});
-        CHECK(rows("event_backup_log") == Rows{"FIX.4.2|LOG|TEST|NULL|event"});
-        CHECK(rows("event_log").empty());
-    }
-
-    SECTION("clearRemovesOnlyItsOwnRows")
-    {
-        MySQLLogFactory factory(settingsFor(defaults));
-        Log *plainLog = factory.create(plain);
-        Log *qualifiedLog = factory.create(qualified);
-        Log *otherLog = factory.create(other);
-        Log *globalLog = factory.create();
-        for (Log *log : {plainLog, qualifiedLog, otherLog, globalLog})
-        {
-            log->onIncoming("in");
-            log->onEvent("event");
-        }
-
-        const Rows expectedAll{"FIX.4.2|LOG|TEST|NULL|in", "FIX.4.2|LOG|TEST|QUALIFIED|in",
-                               "FIX.4.2|OTHER|TEST|NULL|in", "NULL|NULL|NULL|NULL|in"};
-        REQUIRE(rows("messages_log") == expectedAll);
-
-        SECTION("anUnqualifiedSession")
-        {
-            plainLog->clear();
-            CHECK(rows("messages_log") ==
-                  Rows{"FIX.4.2|LOG|TEST|QUALIFIED|in", "FIX.4.2|OTHER|TEST|NULL|in", "NULL|NULL|NULL|NULL|in"});
-            CHECK(rows("event_log") == Rows{"FIX.4.2|LOG|TEST|QUALIFIED|event", "FIX.4.2|OTHER|TEST|NULL|event",
-                                            "NULL|NULL|NULL|NULL|event"});
-        }
-
-        SECTION("aQualifiedSession")
-        {
-            qualifiedLog->clear();
-            CHECK(rows("messages_log") ==
-                  Rows{"FIX.4.2|LOG|TEST|NULL|in", "FIX.4.2|OTHER|TEST|NULL|in", "NULL|NULL|NULL|NULL|in"});
-            CHECK(rows("event_log") ==
-                  Rows{"FIX.4.2|LOG|TEST|NULL|event", "FIX.4.2|OTHER|TEST|NULL|event", "NULL|NULL|NULL|NULL|event"});
-        }
-
-        SECTION("theGlobalLog")
-        {
-            globalLog->clear();
-            CHECK(rows("messages_log") ==
-                  Rows{"FIX.4.2|LOG|TEST|NULL|in", "FIX.4.2|LOG|TEST|QUALIFIED|in", "FIX.4.2|OTHER|TEST|NULL|in"});
-            CHECK(rows("event_log") == Rows{"FIX.4.2|LOG|TEST|NULL|event", "FIX.4.2|LOG|TEST|QUALIFIED|event",
-                                            "FIX.4.2|OTHER|TEST|NULL|event"});
-        }
-
-        for (Log *log : {plainLog, qualifiedLog, otherLog, globalLog})
-        {
-            factory.destroy(log);
-        }
-    }
-
     SECTION("aLogConstructedDirectlyWrites")
     {
         {
@@ -258,7 +102,8 @@ TEST_CASE_METHOD(mySQLLogFixture, "MySQLLogTests")
             log.onIncoming("global");
         }
 
-        CHECK(rows("messages_log") == Rows{"FIX.4.2|LOG|TEST|NULL|session", "NULL|NULL|NULL|NULL|global"});
+        CHECK(databaseLogRows(*this, "messages_log") ==
+              Rows{"FIX.4.2|LOG|TEST|NULL|session", "NULL|NULL|NULL|NULL|global"});
     }
 
     SECTION("aPooledConnectionOutlivesAnyOneLog")
@@ -273,7 +118,8 @@ TEST_CASE_METHOD(mySQLLogFixture, "MySQLLogTests")
         second->onIncoming("second");
         factory.destroy(second);
 
-        CHECK(rows("messages_log") == Rows{"FIX.4.2|LOG|TEST|NULL|first", "FIX.4.2|OTHER|TEST|NULL|second"});
+        CHECK(databaseLogRows(*this, "messages_log") ==
+              Rows{"FIX.4.2|LOG|TEST|NULL|first", "FIX.4.2|OTHER|TEST|NULL|second"});
     }
 }
 

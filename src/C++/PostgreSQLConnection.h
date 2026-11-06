@@ -48,6 +48,19 @@
 
 namespace FIX
 {
+#ifndef SWIG
+/// libpq's error text, without the newline it ends with.
+inline std::string postgreSQLError(const char *text)
+{
+    std::string error = text;
+    while (!error.empty() && error.back() == '\n')
+    {
+        error.pop_back();
+    }
+    return error;
+}
+#endif
+
 class PostgreSQLQuery
 {
 public:
@@ -95,7 +108,7 @@ public:
     {
         if (!success())
         {
-            throw IOException("Query failed [" + m_query + "] ");
+            throw IOException("Query failed [" + m_query + "] " + postgreSQLError(reason()));
         }
     }
 
@@ -170,8 +183,12 @@ private:
 
         if (!connected())
         {
-            throw ConfigError("Unable to connect to postgres database '" + m_connectionID.getDatabase() + "': " +
-                              m_connectionID.getUser() + '@' + m_connectionID.getHost() + ":" + std::to_string(port));
+            // No destructor runs after a constructor throws.
+            const std::string reason = postgreSQLError(PQerrorMessage(m_pConnection));
+            PQfinish(m_pConnection);
+            throw ConfigError("Unable to connect to postgres database '" + m_connectionID.getDatabase() +
+                              "': " + m_connectionID.getUser() + '@' + m_connectionID.getHost() + ":" +
+                              std::to_string(port) + " [" + reason + "]");
         }
     }
 

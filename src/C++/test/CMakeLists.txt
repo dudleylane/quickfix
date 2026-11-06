@@ -26,8 +26,10 @@ if (QUICKFIX_TESTS)
   ${PROJECT_SOURCE_DIR}/src/C++/test/MySQLLogTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/MySQLStoreTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/NullStoreTestCase.cpp
+  ${PROJECT_SOURCE_DIR}/src/C++/test/OdbcLogTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/OdbcStoreTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/ParserTestCase.cpp
+  ${PROJECT_SOURCE_DIR}/src/C++/test/PostgreSQLLogTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/PostgreSQLStoreTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/SessionFactoryTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/SessionIDTestCase.cpp

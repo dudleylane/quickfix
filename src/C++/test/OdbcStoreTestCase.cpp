@@ -102,6 +102,55 @@ TEST_CASE_METHOD(resetOdbcStoreFixture, "OdbcStoreMessageTests")
         CHECK(message == messages[0]);
     }
 
+    SECTION("aMessageTheServerRefusesThrows")
+    {
+        // A temporary table hides messages from this one connection and refuses one sequence number, so the INSERT
+        // fails and an UPDATE finds no row. ConnSettings is psqlODBC's, which is the driver ut.cfg names.
+        Dictionary refusing = TestSettings::sessionSettings.get();
+        refusing.setString(ODBC_STORE_CONNECTION_STRING,
+                           refusing.getString(ODBC_STORE_CONNECTION_STRING) +
+                               "ConnSettings={CREATE TEMP TABLE messages "
+                               "(LIKE public.messages INCLUDING ALL, CHECK (msgseqnum <> 99))};");
+        OdbcStoreFactory refusingFactory(refusing);
+        MessageStore *store = refusingFactory.create(
+            UtcTimeStamp::now(), SessionID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST")));
+        CHECK_THROWS_AS(store->set(99, "refused"), IOException);
+        CHECK(store->set(1, "stored"));
+        store->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("stored" == messages[0]);
+        refusingFactory.destroy(store);
+    }
+
+    SECTION("settingAgainReplacesAndAddsNoRow")
+    {
+        CHECK(object->set(1, "first"));
+        CHECK(object->set(1, "second"));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("second" == messages[0]);
+    }
+
+    SECTION("aQualifiedSessionKeepsItsOwnMessages")
+    {
+        SessionID qualifiedID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST"), "QUALIFIED");
+        MessageStore *qualified = factory.create(UtcTimeStamp::now(), qualifiedID);
+        qualified->reset(UtcTimeStamp::now());
+        CHECK(object->set(1, "plain"));
+        CHECK(qualified->set(1, "qualified"));
+        qualified->setNextSenderMsgSeqNum(5);
+
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("plain" == messages[0]);
+        qualified->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("qualified" == messages[0]);
+        CHECK(1 == object->getNextSenderMsgSeqNum());
+
+        factory.destroy(qualified);
+    }
+
     SET_SEQUENCE_NUMBERS
 }
 
@@ -111,7 +160,7 @@ TEST_CASE_METHOD(noResetOdbcStoreFixture, "noResetOdbcStoreTests")
 
     SECTION("refresh")
     {
-        CHECK_MESSAGE_STORE_RELOAD
+        CHECK_MESSAGE_STORE_REFRESH
     }
 }
 

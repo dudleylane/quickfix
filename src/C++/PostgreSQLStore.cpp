@@ -199,8 +199,6 @@ void PostgreSQLStoreFactory::destroy(MessageStore *pStore) { delete pStore; }
 
 bool PostgreSQLStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException)
 {
-    const std::string msgCopy = m_pConnection->escape(msg);
-
     std::stringstream queryString;
     queryString << "INSERT INTO messages "
                 << "(beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum, message) "
@@ -209,23 +207,14 @@ bool PostgreSQLStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOExc
                 << "'" << m_sessionID.getSenderCompID().getValue() << "',"
                 << "'" << m_sessionID.getTargetCompID().getValue() << "',"
                 << "'" << m_sessionID.getSessionQualifier() << "'," << msgSeqNum << ","
-                << "'" << msgCopy << "')";
+                << "'" << m_pConnection->escape(msg) << "') "
+                << "ON CONFLICT (beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum) "
+                << "DO UPDATE SET message = EXCLUDED.message";
 
     PostgreSQLQuery query(queryString.str());
     if (!m_pConnection->execute(query))
     {
-        std::stringstream queryString2;
-        queryString2 << "UPDATE messages SET message='" << msgCopy << "' WHERE "
-                     << "beginstring=" << "'" << m_sessionID.getBeginString().getValue() << "' and "
-                     << "sendercompid=" << "'" << m_sessionID.getSenderCompID().getValue() << "' and "
-                     << "targetcompid=" << "'" << m_sessionID.getTargetCompID().getValue() << "' and "
-                     << "session_qualifier=" << "'" << m_sessionID.getSessionQualifier() << "' and "
-                     << "msgseqnum=" << msgSeqNum;
-        PostgreSQLQuery query2(queryString2.str());
-        if (!m_pConnection->execute(query2))
-        {
-            query2.throwException();
-        }
+        query.throwException();
     }
 
     return true;

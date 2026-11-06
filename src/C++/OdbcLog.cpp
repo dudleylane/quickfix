@@ -190,12 +190,16 @@ void OdbcLog::clear()
 
         if (m_pSessionID->getSessionQualifier().size())
         {
-            whereClause << "AND SessionQualifier = '" << m_pSessionID->getSessionQualifier() << "'";
+            whereClause << "AND session_qualifier = '" << m_pSessionID->getSessionQualifier() << "'";
+        }
+        else
+        {
+            whereClause << "AND session_qualifier IS NULL";
         }
     }
     else
     {
-        whereClause << "BeginString = NULL AND SenderCompID = NULL && TargetCompID = NULL";
+        whereClause << "BeginString IS NULL AND SenderCompID IS NULL AND TargetCompID IS NULL";
     }
 
     std::stringstream incomingQuery;

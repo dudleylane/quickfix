@@ -183,7 +183,6 @@ bool OdbcStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException
     OdbcQuery query(queryString.str(), msg);
     if (!m_pConnection->execute(query))
     {
-        query.close();
         std::stringstream queryString2;
         queryString2 << "UPDATE messages SET message=? WHERE "
                      << "beginstring=" << "'" << m_sessionID.getBeginString().getValue() << "' and "
@@ -195,6 +194,15 @@ bool OdbcStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException
         if (!m_pConnection->execute(query2))
         {
             query2.throwException();
+        }
+
+        // ODBC has no upsert its servers share. The INSERT was refusing a duplicate only if the UPDATE found one;
+        // otherwise its failure is the message's, and reporting success would turn a resend into a gap fill.
+        SQLLEN updated = 0;
+        SQLRowCount(query2.statement(), &updated);
+        if (updated == 0)
+        {
+            query.throwException();
         }
     }
     return true;

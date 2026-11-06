@@ -184,9 +184,8 @@ public:
         if (m_connection)
         {
             SQLDisconnect(m_connection);
-            SQLFreeHandle(SQL_HANDLE_DBC, m_connection);
-            SQLFreeHandle(SQL_HANDLE_ENV, m_environment);
         }
+        release();
     }
 
     const DatabaseConnectionID &connectionID() { return m_connectionID; }
@@ -200,9 +199,12 @@ public:
     bool reconnect()
     {
         Locker locker(m_mutex);
-        SQLDisconnect(m_connection);
-        SQLFreeHandle(SQL_HANDLE_DBC, m_connection);
-        m_connection = 0;
+        if (m_connection)
+        {
+            SQLDisconnect(m_connection);
+            SQLFreeHandle(SQL_HANDLE_DBC, m_connection);
+            m_connection = 0;
+        }
         connect();
         return true;
     }
@@ -219,6 +221,21 @@ public:
     }
 
 private:
+    void release()
+    {
+        if (m_connection)
+        {
+            SQLFreeHandle(SQL_HANDLE_DBC, m_connection);
+            m_connection = 0;
+        }
+        if (m_environment)
+        {
+            SQLFreeHandle(SQL_HANDLE_ENV, m_environment);
+            m_environment = 0;
+        }
+    }
+
+    // Every throw here releases what was allocated: no destructor runs after a constructor throws.
     void connect()
     {
         m_connected = false;
@@ -235,6 +252,7 @@ private:
             result = SQLSetEnvAttr(m_environment, SQL_ATTR_ODBC_VERSION, (void *)SQL_OV_ODBC3, 0);
             if (!odbcSuccess(result))
             {
+                release();
                 throw ConfigError("Unable to find ODBC version 3.0");
             }
         }
@@ -242,6 +260,7 @@ private:
         result = SQLAllocHandle(SQL_HANDLE_DBC, m_environment, &m_connection);
         if (!odbcSuccess(result))
         {
+            release();
             throw ConfigError("Unable to allocate ODBC connection");
         }
 
@@ -266,6 +285,7 @@ private:
         if (!odbcSuccess(result))
         {
             std::string error = odbcError(SQL_HANDLE_DBC, m_connection);
+            release();
             throw ConfigError(error);
         }
 

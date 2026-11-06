@@ -309,8 +309,10 @@ sudo -u postgres psql -c "CREATE ROLE quickfix LOGIN"
 sudo -u postgres createdb quickfix
 cat src/sql/postgresql/{sessions,messages,messages_log,event_log}_table.sql \
   | sudo -u postgres psql -d quickfix
-echo "GRANT INSERT, UPDATE, DELETE, SELECT ON ALL TABLES IN SCHEMA public TO quickfix;" \
-  | sudo -u postgres psql -d quickfix
+sudo -u postgres psql -d quickfix <<'SQL'
+GRANT INSERT, UPDATE, DELETE, SELECT ON ALL TABLES IN SCHEMA public TO quickfix;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO quickfix;
+SQL
 # In /var/lib/pgsql/18/data/pg_hba.conf, above the default host rules, trust this one
 # role and database on loopback only:
 #   host  quickfix  quickfix  127.0.0.1/32  trust
