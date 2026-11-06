@@ -169,6 +169,9 @@ public:
         escaped.resize(PQescapeStringConn(m_pConnection, escaped.data(), value.data(), value.size(), nullptr));
         return escaped;
     }
+
+    /// A value as a single-quoted literal on this connection.
+    std::string quote(const std::string &value) { return "'" + escape(value) + "'"; }
 #endif
 
 private:

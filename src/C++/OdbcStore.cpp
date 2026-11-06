@@ -36,6 +36,23 @@ const std::string OdbcStoreFactory::DEFAULT_USER = "sa";
 const std::string OdbcStoreFactory::DEFAULT_PASSWORD = "";
 const std::string OdbcStoreFactory::DEFAULT_CONNECTION_STRING = "DATABASE=quickfix;DRIVER={SQL Server};SERVER=(local);";
 
+namespace
+{
+std::string sessionIs(const SessionID &sessionID)
+{
+    return "beginstring=" + odbcQuote(sessionID.getBeginString().getValue()) +
+           " and sendercompid=" + odbcQuote(sessionID.getSenderCompID().getValue()) +
+           " and targetcompid=" + odbcQuote(sessionID.getTargetCompID().getValue()) +
+           " and session_qualifier=" + odbcQuote(sessionID.getSessionQualifier());
+}
+
+std::string sessionValues(const SessionID &sessionID)
+{
+    return odbcQuote(sessionID.getBeginString().getValue()) + "," + odbcQuote(sessionID.getSenderCompID().getValue()) +
+           "," + odbcQuote(sessionID.getTargetCompID().getValue()) + "," + odbcQuote(sessionID.getSessionQualifier());
+}
+} // namespace
+
 OdbcStore::OdbcStore(const UtcTimeStamp &now, const SessionID &sessionID, const std::string &user,
                      const std::string &password, const std::string &connectionString)
     : m_cache(now), m_sessionID(sessionID)
@@ -51,10 +68,7 @@ void OdbcStore::populateCache()
     std::stringstream queryString;
 
     queryString << "SELECT creation_time, incoming_seqnum, outgoing_seqnum FROM sessions WHERE "
-                << "beginstring=" << "'" << m_sessionID.getBeginString().getValue() << "' and "
-                << "sendercompid=" << "'" << m_sessionID.getSenderCompID().getValue() << "' and "
-                << "targetcompid=" << "'" << m_sessionID.getTargetCompID().getValue() << "' and "
-                << "session_qualifier=" << "'" << m_sessionID.getSessionQualifier() << "'";
+                << sessionIs(m_sessionID);
 
     OdbcQuery query(queryString.str());
 
@@ -102,11 +116,7 @@ void OdbcStore::populateCache()
         STRING_SPRINTF(sqlTime, "%d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
         std::stringstream queryString2;
         queryString2 << "INSERT INTO sessions (beginstring, sendercompid, targetcompid, session_qualifier,"
-                     << "creation_time, incoming_seqnum, outgoing_seqnum) VALUES("
-                     << "'" << m_sessionID.getBeginString().getValue() << "',"
-                     << "'" << m_sessionID.getSenderCompID().getValue() << "',"
-                     << "'" << m_sessionID.getTargetCompID().getValue() << "',"
-                     << "'" << m_sessionID.getSessionQualifier() << "',"
+                     << "creation_time, incoming_seqnum, outgoing_seqnum) VALUES(" << sessionValues(m_sessionID) << ","
                      << "{ts '" << sqlTime << "'}," << m_cache.getNextTargetMsgSeqNum() << ","
                      << m_cache.getNextSenderMsgSeqNum() << ")";
 
@@ -174,21 +184,13 @@ bool OdbcStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException
     std::stringstream queryString;
     queryString << "INSERT INTO messages "
                 << "(beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum, message) "
-                << "VALUES ("
-                << "'" << m_sessionID.getBeginString().getValue() << "',"
-                << "'" << m_sessionID.getSenderCompID().getValue() << "',"
-                << "'" << m_sessionID.getTargetCompID().getValue() << "',"
-                << "'" << m_sessionID.getSessionQualifier() << "'," << msgSeqNum << ",?)";
+                << "VALUES (" << sessionValues(m_sessionID) << "," << msgSeqNum << ",?)";
 
     OdbcQuery query(queryString.str(), msg);
     if (!m_pConnection->execute(query))
     {
         std::stringstream queryString2;
-        queryString2 << "UPDATE messages SET message=? WHERE "
-                     << "beginstring=" << "'" << m_sessionID.getBeginString().getValue() << "' and "
-                     << "sendercompid=" << "'" << m_sessionID.getSenderCompID().getValue() << "' and "
-                     << "targetcompid=" << "'" << m_sessionID.getTargetCompID().getValue() << "' and "
-                     << "session_qualifier=" << "'" << m_sessionID.getSessionQualifier() << "' and "
+        queryString2 << "UPDATE messages SET message=? WHERE " << sessionIs(m_sessionID) << " and "
                      << "msgseqnum=" << msgSeqNum;
         OdbcQuery query2(queryString2.str(), msg);
         if (!m_pConnection->execute(query2))
@@ -212,11 +214,7 @@ void OdbcStore::get(SEQNUM begin, SEQNUM end, std::vector<std::string> &result) 
 {
     result.clear();
     std::stringstream queryString;
-    queryString << "SELECT message FROM messages WHERE "
-                << "beginstring=" << "'" << m_sessionID.getBeginString().getValue() << "' and "
-                << "sendercompid=" << "'" << m_sessionID.getSenderCompID().getValue() << "' and "
-                << "targetcompid=" << "'" << m_sessionID.getTargetCompID().getValue() << "' and "
-                << "session_qualifier=" << "'" << m_sessionID.getSessionQualifier() << "' and "
+    queryString << "SELECT message FROM messages WHERE " << sessionIs(m_sessionID) << " and "
                 << "msgseqnum>=" << begin << " and " << "msgseqnum<=" << end << " "
                 << "ORDER BY msgseqnum";
 
@@ -257,11 +255,7 @@ SEQNUM OdbcStore::getNextTargetMsgSeqNum() const EXCEPT(IOException) { return m_
 void OdbcStore::setNextSenderMsgSeqNum(SEQNUM value) EXCEPT(IOException)
 {
     std::stringstream queryString;
-    queryString << "UPDATE sessions SET outgoing_seqnum=" << value << " WHERE "
-                << "beginstring=" << "'" << m_sessionID.getBeginString().getValue() << "' and "
-                << "sendercompid=" << "'" << m_sessionID.getSenderCompID().getValue() << "' and "
-                << "targetcompid=" << "'" << m_sessionID.getTargetCompID().getValue() << "' and "
-                << "session_qualifier=" << "'" << m_sessionID.getSessionQualifier() << "'";
+    queryString << "UPDATE sessions SET outgoing_seqnum=" << value << " WHERE " << sessionIs(m_sessionID);
     OdbcQuery query(queryString.str());
     if (!m_pConnection->execute(query))
     {
@@ -273,11 +267,7 @@ void OdbcStore::setNextSenderMsgSeqNum(SEQNUM value) EXCEPT(IOException)
 void OdbcStore::setNextTargetMsgSeqNum(SEQNUM value) EXCEPT(IOException)
 {
     std::stringstream queryString;
-    queryString << "UPDATE sessions SET incoming_seqnum=" << value << " WHERE "
-                << "beginstring=" << "'" << m_sessionID.getBeginString().getValue() << "' and "
-                << "sendercompid=" << "'" << m_sessionID.getSenderCompID().getValue() << "' and "
-                << "targetcompid=" << "'" << m_sessionID.getTargetCompID().getValue() << "' and "
-                << "session_qualifier=" << "'" << m_sessionID.getSessionQualifier() << "'";
+    queryString << "UPDATE sessions SET incoming_seqnum=" << value << " WHERE " << sessionIs(m_sessionID);
 
     OdbcQuery query(queryString.str());
     if (!m_pConnection->execute(query))
@@ -305,11 +295,7 @@ UtcTimeStamp OdbcStore::getCreationTime() const EXCEPT(IOException) { return m_c
 void OdbcStore::reset(const UtcTimeStamp &now) EXCEPT(IOException)
 {
     std::stringstream queryString;
-    queryString << "DELETE FROM messages WHERE "
-                << "beginstring=" << "'" << m_sessionID.getBeginString().getValue() << "' and "
-                << "sendercompid=" << "'" << m_sessionID.getSenderCompID().getValue() << "' and "
-                << "targetcompid=" << "'" << m_sessionID.getTargetCompID().getValue() << "' and "
-                << "session_qualifier=" << "'" << m_sessionID.getSessionQualifier() << "'";
+    queryString << "DELETE FROM messages WHERE " << sessionIs(m_sessionID);
 
     OdbcQuery query(queryString.str());
     if (!m_pConnection->execute(query))
@@ -331,11 +317,7 @@ void OdbcStore::reset(const UtcTimeStamp &now) EXCEPT(IOException)
     std::stringstream queryString2;
     queryString2 << "UPDATE sessions SET creation_time={ts '" << sqlTime << "'}, "
                  << "incoming_seqnum=" << m_cache.getNextTargetMsgSeqNum() << ", "
-                 << "outgoing_seqnum=" << m_cache.getNextSenderMsgSeqNum() << " WHERE "
-                 << "beginstring=" << "'" << m_sessionID.getBeginString().getValue() << "' and "
-                 << "sendercompid=" << "'" << m_sessionID.getSenderCompID().getValue() << "' and "
-                 << "targetcompid=" << "'" << m_sessionID.getTargetCompID().getValue() << "' and "
-                 << "session_qualifier=" << "'" << m_sessionID.getSessionQualifier() << "'";
+                 << "outgoing_seqnum=" << m_cache.getNextSenderMsgSeqNum() << " WHERE " << sessionIs(m_sessionID);
 
     OdbcQuery query2(queryString2.str());
     if (!m_pConnection->execute(query2))

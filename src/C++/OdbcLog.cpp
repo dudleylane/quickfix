@@ -184,13 +184,13 @@ void OdbcLog::clear()
 
     if (m_pSessionID)
     {
-        whereClause << "BeginString = '" << m_pSessionID->getBeginString().getValue() << "' "
-                    << "AND SenderCompID = '" << m_pSessionID->getSenderCompID().getValue() << "' "
-                    << "AND TargetCompID = '" << m_pSessionID->getTargetCompID().getValue() << "' ";
+        whereClause << "BeginString = " << odbcQuote(m_pSessionID->getBeginString().getValue()) << " "
+                    << "AND SenderCompID = " << odbcQuote(m_pSessionID->getSenderCompID().getValue()) << " "
+                    << "AND TargetCompID = " << odbcQuote(m_pSessionID->getTargetCompID().getValue()) << " ";
 
         if (m_pSessionID->getSessionQualifier().size())
         {
-            whereClause << "AND session_qualifier = '" << m_pSessionID->getSessionQualifier() << "'";
+            whereClause << "AND session_qualifier = " << odbcQuote(m_pSessionID->getSessionQualifier());
         }
         else
         {
@@ -238,16 +238,16 @@ void OdbcLog::insert(const std::string &table, const std::string value)
 
     if (m_pSessionID)
     {
-        queryString << "'" << m_pSessionID->getBeginString().getValue() << "',"
-                    << "'" << m_pSessionID->getSenderCompID().getValue() << "',"
-                    << "'" << m_pSessionID->getTargetCompID().getValue() << "',";
+        queryString << odbcQuote(m_pSessionID->getBeginString().getValue()) << ","
+                    << odbcQuote(m_pSessionID->getSenderCompID().getValue()) << ","
+                    << odbcQuote(m_pSessionID->getTargetCompID().getValue()) << ",";
         if (m_pSessionID->getSessionQualifier() == "")
         {
             queryString << "NULL" << ",";
         }
         else
         {
-            queryString << "'" << m_pSessionID->getSessionQualifier() << "',";
+            queryString << odbcQuote(m_pSessionID->getSessionQualifier()) << ",";
         }
     }
     else

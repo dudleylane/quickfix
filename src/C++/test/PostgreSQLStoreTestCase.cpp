@@ -144,6 +144,27 @@ TEST_CASE_METHOD(resetPostgreSQLStoreFixture, "PostgreSQLStoreMessageTests")
         CHECK("second" == messages[0]);
     }
 
+    SECTION("aSessionIDCanHoldAnApostrophe")
+    {
+        const SessionID apostrophe(BeginString("FIX.4.2"), SenderCompID("O'NEIL"), TargetCompID("T'EST"), "Q'UAL");
+        MessageStore *store = factory.create(UtcTimeStamp::now(), apostrophe);
+        store->reset(UtcTimeStamp::now());
+        CHECK(store->set(1, "first"));
+        CHECK(store->set(1, "stored"));
+        store->setNextSenderMsgSeqNum(5);
+        store->setNextTargetMsgSeqNum(7);
+        store->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("stored" == messages[0]);
+        factory.destroy(store);
+
+        store = factory.create(UtcTimeStamp::now(), apostrophe);
+        CHECK(5 == store->getNextSenderMsgSeqNum());
+        CHECK(7 == store->getNextTargetMsgSeqNum());
+        store->reset(UtcTimeStamp::now());
+        factory.destroy(store);
+    }
+
     SECTION("aQualifiedSessionKeepsItsOwnMessages")
     {
         SessionID qualifiedID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST"), "QUALIFIED");

@@ -37,7 +37,8 @@ struct DatabaseLogFixture
         : defaults(TestSettings::sessionSettings.get()),
           plain(BeginString("FIX.4.2"), SenderCompID("LOG"), TargetCompID("TEST")),
           qualified(BeginString("FIX.4.2"), SenderCompID("LOG"), TargetCompID("TEST"), "QUALIFIED"),
-          other(BeginString("FIX.4.2"), SenderCompID("OTHER"), TargetCompID("TEST"))
+          other(BeginString("FIX.4.2"), SenderCompID("OTHER"), TargetCompID("TEST")),
+          apostrophe(BeginString("FIX.4.2"), SenderCompID("O'NEIL"), TargetCompID("T'EST"), "Q'UAL")
     {
         defaults.setString(CONNECTION_TYPE, "acceptor");
     }
@@ -49,6 +50,7 @@ struct DatabaseLogFixture
         settings.set(plain, Dictionary());
         settings.set(qualified, Dictionary());
         settings.set(other, Dictionary());
+        settings.set(apostrophe, Dictionary());
         return settings;
     }
 
@@ -56,6 +58,7 @@ struct DatabaseLogFixture
     SessionID plain;
     SessionID qualified;
     SessionID other;
+    SessionID apostrophe;
 };
 
 /// Every schema has these three, and they have one shape.
@@ -119,6 +122,26 @@ void checkDatabaseLog(Fixture &fixture, const char *incomingTableKey, const char
 
         CHECK(rows("messages_log") == Rows{"NULL|NULL|NULL|NULL|in"});
         CHECK(rows("event_log") == Rows{"NULL|NULL|NULL|NULL|event"});
+    }
+
+    SECTION("aSessionIDCanHoldAnApostrophe")
+    {
+        Factory factory(fixture.settingsFor(fixture.defaults));
+        Log *log = factory.create(fixture.apostrophe);
+        Log *plainLog = factory.create(fixture.plain);
+        log->onIncoming("in");
+        log->onEvent("event");
+        plainLog->onIncoming("plain");
+
+        CHECK(rows("messages_log") == Rows{"FIX.4.2|O'NEIL|T'EST|Q'UAL|in", "FIX.4.2|LOG|TEST|NULL|plain"});
+        CHECK(rows("event_log") == Rows{"FIX.4.2|O'NEIL|T'EST|Q'UAL|event"});
+
+        log->clear();
+        CHECK(rows("messages_log") == Rows{"FIX.4.2|LOG|TEST|NULL|plain"});
+        CHECK(rows("event_log").empty());
+
+        factory.destroy(log);
+        factory.destroy(plainLog);
     }
 
     SECTION("textComesBackAsWritten")

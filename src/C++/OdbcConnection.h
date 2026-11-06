@@ -69,6 +69,13 @@ inline std::string odbcError(SQLSMALLINT statementType, SQLHANDLE handle)
 
 inline bool odbcSuccess(RETCODE result) { return result == SQL_SUCCESS || result == SQL_SUCCESS_WITH_INFO; }
 
+/// A session's ID, from the configuration, as a literal in a statement. A message is bound instead, by OdbcQuery.
+inline std::string odbcQuote(std::string value)
+{
+    string_replace("'", "''", value);
+    return "'" + value + "'";
+}
+
 class OdbcQuery
 {
 public:
