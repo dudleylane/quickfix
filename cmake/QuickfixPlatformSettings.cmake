@@ -22,6 +22,25 @@ include(CheckIncludeFileCXX)
 include(CheckCXXSourceCompiles)
 include(CheckSymbolExists)
 
+# FieldMap.h uses std::flat_map, which GCC 14's standard library does not have, and GCC 14 is the system compiler on
+# RHEL 10 and its relatives. Without this check such a compiler passes everything else here and stops at the first
+# compile, with an error that reads like a file missing from the tree.
+unset(HAVE_STD_FLAT_MAP CACHE)
+check_cxx_source_compiles("
+#include <flat_map>
+int main()
+{
+    std::flat_map<int, int> map;
+    return static_cast<int>(map.size());
+}" HAVE_STD_FLAT_MAP)
+if(NOT HAVE_STD_FLAT_MAP)
+  message(FATAL_ERROR
+    "${CMAKE_CXX_COMPILER} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}) cannot compile a std::flat_map, "
+    "which FieldMap.h uses. That takes GCC 15 or later. Set CC and CXX to such a compiler, as CONTRIBUTING.md shows "
+    "for gcc-toolset-15, and configure a new build directory: CMake reads CC and CXX only on a directory's first "
+    "configure. The compiler's own error is in ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeConfigureLog.yaml.")
+endif()
+
 if(NOT WIN32)
 
 unset(HAVE_DLFCN_H CACHE)
