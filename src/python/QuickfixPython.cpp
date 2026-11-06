@@ -6637,15 +6637,15 @@ SWIGINTERN void FIX_SessionSettings_setFromString(FIX::SessionSettings *self,std
     }
 
 SWIGINTERN int
-SWIG_AsVal_short (PyObject * obj, short *val)
+SWIG_AsVal_unsigned_SS_short (PyObject * obj, unsigned short *val)
 {
-  long v;
-  int res = SWIG_AsVal_long (obj, &v);
+  unsigned long v;
+  int res = SWIG_AsVal_unsigned_SS_long (obj, &v);
   if (SWIG_IsOK(res)) {
-    if ((v < SHRT_MIN || v > SHRT_MAX)) {
+    if ((v > USHRT_MAX)) {
       return SWIG_OverflowError;
     } else {
-      if (val) *val = static_cast< short >(v);
+      if (val) *val = static_cast< unsigned short >(v);
     }
   }  
   return res;
@@ -6653,9 +6653,9 @@ SWIG_AsVal_short (PyObject * obj, short *val)
 
 
 SWIGINTERNINLINE PyObject *
-SWIG_From_short  (short value)
+SWIG_From_unsigned_SS_short  (unsigned short value)
 {    
-  return SWIG_From_long  (value);
+  return SWIG_From_unsigned_SS_long  (value);
 }
 
 
@@ -153513,12 +153513,12 @@ SWIGINTERN PyObject *_wrap_new_DatabaseConnectionID(PyObject *self, PyObject *ar
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   PyObject *swig_obj[5] ;
   FIX::DatabaseConnectionID *result = 0 ;
@@ -153569,11 +153569,11 @@ SWIGINTERN PyObject *_wrap_new_DatabaseConnectionID(PyObject *self, PyObject *ar
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(swig_obj[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(swig_obj[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_DatabaseConnectionID" "', argument " "5"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_DatabaseConnectionID" "', argument " "5"" of type '" "unsigned short""'");
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -154296,7 +154296,7 @@ SWIGINTERN PyObject *_wrap_DatabaseConnectionID_getPort(PyObject *self, PyObject
   void *argp1 = 0 ;
   int res1 = 0 ;
   PyObject *swig_obj[1] ;
-  short result;
+  unsigned short result;
   
   (void)self;
   if (!args) SWIG_fail;
@@ -154311,7 +154311,7 @@ SWIGINTERN PyObject *_wrap_DatabaseConnectionID_getPort(PyObject *self, PyObject
         {
       {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            result = (short)((FIX::DatabaseConnectionID const *)arg1)->getPort();
+            result = (unsigned short)((FIX::DatabaseConnectionID const *)arg1)->getPort();
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -154322,7 +154322,7 @@ SWIGINTERN PyObject *_wrap_DatabaseConnectionID_getPort(PyObject *self, PyObject
       SWIG_fail;
     }
   }
-  resultobj = SWIG_From_short(static_cast< short >(result));
+  resultobj = SWIG_From_unsigned_SS_short(static_cast< unsigned short >(result));
   return resultobj;
 fail:
   return NULL;
@@ -154790,12 +154790,12 @@ SWIGINTERN PyObject *_wrap_new_MySQLConnection__SWIG_1(PyObject *self, Py_ssize_
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   FIX::MySQLConnection *result = 0 ;
   
@@ -154845,11 +154845,11 @@ SWIGINTERN PyObject *_wrap_new_MySQLConnection__SWIG_1(PyObject *self, Py_ssize_
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(swig_obj[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(swig_obj[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_MySQLConnection" "', argument " "5"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_MySQLConnection" "', argument " "5"" of type '" "unsigned short""'");
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -154976,7 +154976,7 @@ SWIGINTERN PyObject *_wrap_new_MySQLConnection(PyObject *self, PyObject *args) {
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -154992,7 +154992,7 @@ fail:
   SWIG_Python_RaiseOrModifyTypeError("Wrong number or type of arguments for overloaded function 'new_MySQLConnection'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    FIX::MySQLConnection::MySQLConnection(FIX::DatabaseConnectionID const &)\n"
-    "    FIX::MySQLConnection::MySQLConnection(std::string const &,std::string const &,std::string const &,std::string const &,short)\n");
+    "    FIX::MySQLConnection::MySQLConnection(std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n");
   return 0;
 }
 
@@ -155277,7 +155277,7 @@ SWIGINTERN int Swig_var_MySQLStoreFactory_DEFAULT_PORT_set(PyObject *) {
 SWIGINTERN PyObject *Swig_var_MySQLStoreFactory_DEFAULT_PORT_get(void) {
   PyObject *pyobj = 0;
   
-  pyobj = SWIG_From_short(static_cast< short >(FIX::MySQLStoreFactory::DEFAULT_PORT));
+  pyobj = SWIG_From_unsigned_SS_short(static_cast< unsigned short >(FIX::MySQLStoreFactory::DEFAULT_PORT));
   return pyobj;
 }
 
@@ -155368,12 +155368,12 @@ SWIGINTERN PyObject *_wrap_new_MySQLStoreFactory__SWIG_2(PyObject *self, Py_ssiz
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   FIX::MySQLStoreFactory *result = 0 ;
   
@@ -155423,11 +155423,11 @@ SWIGINTERN PyObject *_wrap_new_MySQLStoreFactory__SWIG_2(PyObject *self, Py_ssiz
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(swig_obj[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(swig_obj[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_MySQLStoreFactory" "', argument " "5"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_MySQLStoreFactory" "', argument " "5"" of type '" "unsigned short""'");
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -155594,7 +155594,7 @@ SWIGINTERN PyObject *_wrap_new_MySQLStoreFactory(PyObject *self, PyObject *args)
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -155611,7 +155611,7 @@ fail:
     "  Possible C/C++ prototypes are:\n"
     "    FIX::MySQLStoreFactory::MySQLStoreFactory(FIX::SessionSettings const &)\n"
     "    FIX::MySQLStoreFactory::MySQLStoreFactory(FIX::Dictionary const &)\n"
-    "    FIX::MySQLStoreFactory::MySQLStoreFactory(std::string const &,std::string const &,std::string const &,std::string const &,short)\n"
+    "    FIX::MySQLStoreFactory::MySQLStoreFactory(std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n"
     "    FIX::MySQLStoreFactory::MySQLStoreFactory()\n");
   return 0;
 }
@@ -155849,7 +155849,7 @@ SWIGINTERN PyObject *_wrap_new_MySQLStore__SWIG_1(PyObject *self, Py_ssize_t nob
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
   std::string *arg6 = 0 ;
-  short arg7 ;
+  unsigned short arg7 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   void *argp2 = 0 ;
@@ -155858,7 +155858,7 @@ SWIGINTERN PyObject *_wrap_new_MySQLStore__SWIG_1(PyObject *self, Py_ssize_t nob
   int res4 = SWIG_OLDOBJ ;
   int res5 = SWIG_OLDOBJ ;
   int res6 = SWIG_OLDOBJ ;
-  short val7 ;
+  unsigned short val7 ;
   int ecode7 = 0 ;
   FIX::MySQLStore *result = 0 ;
   
@@ -155924,11 +155924,11 @@ SWIGINTERN PyObject *_wrap_new_MySQLStore__SWIG_1(PyObject *self, Py_ssize_t nob
     }
     arg6 = ptr;
   }
-  ecode7 = SWIG_AsVal_short(swig_obj[6], &val7);
+  ecode7 = SWIG_AsVal_unsigned_SS_short(swig_obj[6], &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "new_MySQLStore" "', argument " "7"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "new_MySQLStore" "', argument " "7"" of type '" "unsigned short""'");
   } 
-  arg7 = static_cast< short >(val7);
+  arg7 = static_cast< unsigned short >(val7);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -156074,7 +156074,7 @@ SWIGINTERN PyObject *_wrap_new_MySQLStore(PyObject *self, PyObject *args) {
               _v = SWIG_CheckState(res);
               if (_v) {
                 {
-                  int res = SWIG_AsVal_short(argv[6], NULL);
+                  int res = SWIG_AsVal_unsigned_SS_short(argv[6], NULL);
                   _v = SWIG_CheckState(res);
                 }
                 if (_v) {
@@ -156092,7 +156092,7 @@ fail:
   SWIG_Python_RaiseOrModifyTypeError("Wrong number or type of arguments for overloaded function 'new_MySQLStore'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    FIX::MySQLStore::MySQLStore(FIX::UtcTimeStamp const &,FIX::SessionID const &,FIX::DatabaseConnectionID const &,FIX::MySQLConnectionPool *)\n"
-    "    FIX::MySQLStore::MySQLStore(FIX::UtcTimeStamp const &,FIX::SessionID const &,std::string const &,std::string const &,std::string const &,std::string const &,short)\n");
+    "    FIX::MySQLStore::MySQLStore(FIX::UtcTimeStamp const &,FIX::SessionID const &,std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n");
   return 0;
 }
 
@@ -156770,14 +156770,14 @@ SWIGINTERN PyObject *_wrap_new_MySQLLog__SWIG_2(PyObject *self, Py_ssize_t nobjs
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
-  short arg6 ;
+  unsigned short arg6 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
   int res5 = SWIG_OLDOBJ ;
-  short val6 ;
+  unsigned short val6 ;
   int ecode6 = 0 ;
   FIX::MySQLLog *result = 0 ;
   
@@ -156835,11 +156835,11 @@ SWIGINTERN PyObject *_wrap_new_MySQLLog__SWIG_2(PyObject *self, Py_ssize_t nobjs
     }
     arg5 = ptr;
   }
-  ecode6 = SWIG_AsVal_short(swig_obj[5], &val6);
+  ecode6 = SWIG_AsVal_unsigned_SS_short(swig_obj[5], &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "new_MySQLLog" "', argument " "6"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "new_MySQLLog" "', argument " "6"" of type '" "unsigned short""'");
   } 
-  arg6 = static_cast< short >(val6);
+  arg6 = static_cast< unsigned short >(val6);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -156941,12 +156941,12 @@ SWIGINTERN PyObject *_wrap_new_MySQLLog__SWIG_3(PyObject *self, Py_ssize_t nobjs
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   FIX::MySQLLog *result = 0 ;
   
@@ -156996,11 +156996,11 @@ SWIGINTERN PyObject *_wrap_new_MySQLLog__SWIG_3(PyObject *self, Py_ssize_t nobjs
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(swig_obj[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(swig_obj[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_MySQLLog" "', argument " "5"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_MySQLLog" "', argument " "5"" of type '" "unsigned short""'");
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -157149,7 +157149,7 @@ SWIGINTERN PyObject *_wrap_new_MySQLLog(PyObject *self, PyObject *args) {
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -157178,7 +157178,7 @@ SWIGINTERN PyObject *_wrap_new_MySQLLog(PyObject *self, PyObject *args) {
             _v = SWIG_CheckState(res);
             if (_v) {
               {
-                int res = SWIG_AsVal_short(argv[5], NULL);
+                int res = SWIG_AsVal_unsigned_SS_short(argv[5], NULL);
                 _v = SWIG_CheckState(res);
               }
               if (_v) {
@@ -157196,8 +157196,8 @@ fail:
     "  Possible C/C++ prototypes are:\n"
     "    FIX::MySQLLog::MySQLLog(FIX::SessionID const &,FIX::DatabaseConnectionID const &,FIX::MySQLConnectionPool *)\n"
     "    FIX::MySQLLog::MySQLLog(FIX::DatabaseConnectionID const &,FIX::MySQLConnectionPool *)\n"
-    "    FIX::MySQLLog::MySQLLog(FIX::SessionID const &,std::string const &,std::string const &,std::string const &,std::string const &,short)\n"
-    "    FIX::MySQLLog::MySQLLog(std::string const &,std::string const &,std::string const &,std::string const &,short)\n");
+    "    FIX::MySQLLog::MySQLLog(FIX::SessionID const &,std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n"
+    "    FIX::MySQLLog::MySQLLog(std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n");
   return 0;
 }
 
@@ -157800,7 +157800,7 @@ SWIGINTERN int Swig_var_MySQLLogFactory_DEFAULT_PORT_set(PyObject *) {
 SWIGINTERN PyObject *Swig_var_MySQLLogFactory_DEFAULT_PORT_get(void) {
   PyObject *pyobj = 0;
   
-  pyobj = SWIG_From_short(static_cast< short >(FIX::MySQLLogFactory::DEFAULT_PORT));
+  pyobj = SWIG_From_unsigned_SS_short(static_cast< unsigned short >(FIX::MySQLLogFactory::DEFAULT_PORT));
   return pyobj;
 }
 
@@ -157851,12 +157851,12 @@ SWIGINTERN PyObject *_wrap_new_MySQLLogFactory__SWIG_1(PyObject *self, Py_ssize_
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   FIX::MySQLLogFactory *result = 0 ;
   
@@ -157906,11 +157906,11 @@ SWIGINTERN PyObject *_wrap_new_MySQLLogFactory__SWIG_1(PyObject *self, Py_ssize_
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(swig_obj[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(swig_obj[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_MySQLLogFactory" "', argument " "5"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_MySQLLogFactory" "', argument " "5"" of type '" "unsigned short""'");
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -158069,7 +158069,7 @@ SWIGINTERN PyObject *_wrap_new_MySQLLogFactory(PyObject *self, PyObject *args) {
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -158085,7 +158085,7 @@ fail:
   SWIG_Python_RaiseOrModifyTypeError("Wrong number or type of arguments for overloaded function 'new_MySQLLogFactory'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    FIX::MySQLLogFactory::MySQLLogFactory(FIX::SessionSettings const &)\n"
-    "    FIX::MySQLLogFactory::MySQLLogFactory(std::string const &,std::string const &,std::string const &,std::string const &,short)\n"
+    "    FIX::MySQLLogFactory::MySQLLogFactory(std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n"
     "    FIX::MySQLLogFactory::MySQLLogFactory()\n");
   return 0;
 }
@@ -158736,12 +158736,12 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLConnection__SWIG_1(PyObject *self, Py_s
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   FIX::PostgreSQLConnection *result = 0 ;
   
@@ -158791,11 +158791,11 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLConnection__SWIG_1(PyObject *self, Py_s
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(swig_obj[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(swig_obj[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_PostgreSQLConnection" "', argument " "5"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_PostgreSQLConnection" "', argument " "5"" of type '" "unsigned short""'");
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -158922,7 +158922,7 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLConnection(PyObject *self, PyObject *ar
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -158938,7 +158938,7 @@ fail:
   SWIG_Python_RaiseOrModifyTypeError("Wrong number or type of arguments for overloaded function 'new_PostgreSQLConnection'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    FIX::PostgreSQLConnection::PostgreSQLConnection(FIX::DatabaseConnectionID const &)\n"
-    "    FIX::PostgreSQLConnection::PostgreSQLConnection(std::string const &,std::string const &,std::string const &,std::string const &,short)\n");
+    "    FIX::PostgreSQLConnection::PostgreSQLConnection(std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n");
   return 0;
 }
 
@@ -159223,7 +159223,7 @@ SWIGINTERN int Swig_var_PostgreSQLStoreFactory_DEFAULT_PORT_set(PyObject *) {
 SWIGINTERN PyObject *Swig_var_PostgreSQLStoreFactory_DEFAULT_PORT_get(void) {
   PyObject *pyobj = 0;
   
-  pyobj = SWIG_From_short(static_cast< short >(FIX::PostgreSQLStoreFactory::DEFAULT_PORT));
+  pyobj = SWIG_From_unsigned_SS_short(static_cast< unsigned short >(FIX::PostgreSQLStoreFactory::DEFAULT_PORT));
   return pyobj;
 }
 
@@ -159314,12 +159314,12 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLStoreFactory__SWIG_2(PyObject *self, Py
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   FIX::PostgreSQLStoreFactory *result = 0 ;
   
@@ -159369,11 +159369,11 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLStoreFactory__SWIG_2(PyObject *self, Py
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(swig_obj[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(swig_obj[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_PostgreSQLStoreFactory" "', argument " "5"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_PostgreSQLStoreFactory" "', argument " "5"" of type '" "unsigned short""'");
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -159540,7 +159540,7 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLStoreFactory(PyObject *self, PyObject *
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -159557,7 +159557,7 @@ fail:
     "  Possible C/C++ prototypes are:\n"
     "    FIX::PostgreSQLStoreFactory::PostgreSQLStoreFactory(FIX::SessionSettings const &)\n"
     "    FIX::PostgreSQLStoreFactory::PostgreSQLStoreFactory(FIX::Dictionary const &)\n"
-    "    FIX::PostgreSQLStoreFactory::PostgreSQLStoreFactory(std::string const &,std::string const &,std::string const &,std::string const &,short)\n"
+    "    FIX::PostgreSQLStoreFactory::PostgreSQLStoreFactory(std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n"
     "    FIX::PostgreSQLStoreFactory::PostgreSQLStoreFactory()\n");
   return 0;
 }
@@ -159795,7 +159795,7 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLStore__SWIG_1(PyObject *self, Py_ssize_
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
   std::string *arg6 = 0 ;
-  short arg7 ;
+  unsigned short arg7 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   void *argp2 = 0 ;
@@ -159804,7 +159804,7 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLStore__SWIG_1(PyObject *self, Py_ssize_
   int res4 = SWIG_OLDOBJ ;
   int res5 = SWIG_OLDOBJ ;
   int res6 = SWIG_OLDOBJ ;
-  short val7 ;
+  unsigned short val7 ;
   int ecode7 = 0 ;
   FIX::PostgreSQLStore *result = 0 ;
   
@@ -159870,11 +159870,11 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLStore__SWIG_1(PyObject *self, Py_ssize_
     }
     arg6 = ptr;
   }
-  ecode7 = SWIG_AsVal_short(swig_obj[6], &val7);
+  ecode7 = SWIG_AsVal_unsigned_SS_short(swig_obj[6], &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "new_PostgreSQLStore" "', argument " "7"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "new_PostgreSQLStore" "', argument " "7"" of type '" "unsigned short""'");
   } 
-  arg7 = static_cast< short >(val7);
+  arg7 = static_cast< unsigned short >(val7);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -160020,7 +160020,7 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLStore(PyObject *self, PyObject *args) {
               _v = SWIG_CheckState(res);
               if (_v) {
                 {
-                  int res = SWIG_AsVal_short(argv[6], NULL);
+                  int res = SWIG_AsVal_unsigned_SS_short(argv[6], NULL);
                   _v = SWIG_CheckState(res);
                 }
                 if (_v) {
@@ -160038,7 +160038,7 @@ fail:
   SWIG_Python_RaiseOrModifyTypeError("Wrong number or type of arguments for overloaded function 'new_PostgreSQLStore'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    FIX::PostgreSQLStore::PostgreSQLStore(FIX::UtcTimeStamp const &,FIX::SessionID const &,FIX::DatabaseConnectionID const &,FIX::PostgreSQLConnectionPool *)\n"
-    "    FIX::PostgreSQLStore::PostgreSQLStore(FIX::UtcTimeStamp const &,FIX::SessionID const &,std::string const &,std::string const &,std::string const &,std::string const &,short)\n");
+    "    FIX::PostgreSQLStore::PostgreSQLStore(FIX::UtcTimeStamp const &,FIX::SessionID const &,std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n");
   return 0;
 }
 
@@ -160716,14 +160716,14 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLog__SWIG_2(PyObject *self, Py_ssize_t 
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
-  short arg6 ;
+  unsigned short arg6 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
   int res5 = SWIG_OLDOBJ ;
-  short val6 ;
+  unsigned short val6 ;
   int ecode6 = 0 ;
   FIX::PostgreSQLLog *result = 0 ;
   
@@ -160781,11 +160781,11 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLog__SWIG_2(PyObject *self, Py_ssize_t 
     }
     arg5 = ptr;
   }
-  ecode6 = SWIG_AsVal_short(swig_obj[5], &val6);
+  ecode6 = SWIG_AsVal_unsigned_SS_short(swig_obj[5], &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "new_PostgreSQLLog" "', argument " "6"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "new_PostgreSQLLog" "', argument " "6"" of type '" "unsigned short""'");
   } 
-  arg6 = static_cast< short >(val6);
+  arg6 = static_cast< unsigned short >(val6);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -160887,12 +160887,12 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLog__SWIG_3(PyObject *self, Py_ssize_t 
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   FIX::PostgreSQLLog *result = 0 ;
   
@@ -160942,11 +160942,11 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLog__SWIG_3(PyObject *self, Py_ssize_t 
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(swig_obj[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(swig_obj[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_PostgreSQLLog" "', argument " "5"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_PostgreSQLLog" "', argument " "5"" of type '" "unsigned short""'");
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -161095,7 +161095,7 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLog(PyObject *self, PyObject *args) {
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -161124,7 +161124,7 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLog(PyObject *self, PyObject *args) {
             _v = SWIG_CheckState(res);
             if (_v) {
               {
-                int res = SWIG_AsVal_short(argv[5], NULL);
+                int res = SWIG_AsVal_unsigned_SS_short(argv[5], NULL);
                 _v = SWIG_CheckState(res);
               }
               if (_v) {
@@ -161142,8 +161142,8 @@ fail:
     "  Possible C/C++ prototypes are:\n"
     "    FIX::PostgreSQLLog::PostgreSQLLog(FIX::SessionID const &,FIX::DatabaseConnectionID const &,FIX::PostgreSQLConnectionPool *)\n"
     "    FIX::PostgreSQLLog::PostgreSQLLog(FIX::DatabaseConnectionID const &,FIX::PostgreSQLConnectionPool *)\n"
-    "    FIX::PostgreSQLLog::PostgreSQLLog(FIX::SessionID const &,std::string const &,std::string const &,std::string const &,std::string const &,short)\n"
-    "    FIX::PostgreSQLLog::PostgreSQLLog(std::string const &,std::string const &,std::string const &,std::string const &,short)\n");
+    "    FIX::PostgreSQLLog::PostgreSQLLog(FIX::SessionID const &,std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n"
+    "    FIX::PostgreSQLLog::PostgreSQLLog(std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n");
   return 0;
 }
 
@@ -161746,7 +161746,7 @@ SWIGINTERN int Swig_var_PostgreSQLLogFactory_DEFAULT_PORT_set(PyObject *) {
 SWIGINTERN PyObject *Swig_var_PostgreSQLLogFactory_DEFAULT_PORT_get(void) {
   PyObject *pyobj = 0;
   
-  pyobj = SWIG_From_short(static_cast< short >(FIX::PostgreSQLLogFactory::DEFAULT_PORT));
+  pyobj = SWIG_From_unsigned_SS_short(static_cast< unsigned short >(FIX::PostgreSQLLogFactory::DEFAULT_PORT));
   return pyobj;
 }
 
@@ -161797,12 +161797,12 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLogFactory__SWIG_1(PyObject *self, Py_s
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   FIX::PostgreSQLLogFactory *result = 0 ;
   
@@ -161852,11 +161852,11 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLogFactory__SWIG_1(PyObject *self, Py_s
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(swig_obj[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(swig_obj[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_PostgreSQLLogFactory" "', argument " "5"" of type '" "short""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "new_PostgreSQLLogFactory" "', argument " "5"" of type '" "unsigned short""'");
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(!tryPythonException([&]() mutable 
         {
@@ -162015,7 +162015,7 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLogFactory(PyObject *self, PyObject *ar
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -162031,7 +162031,7 @@ fail:
   SWIG_Python_RaiseOrModifyTypeError("Wrong number or type of arguments for overloaded function 'new_PostgreSQLLogFactory'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    FIX::PostgreSQLLogFactory::PostgreSQLLogFactory(FIX::SessionSettings const &)\n"
-    "    FIX::PostgreSQLLogFactory::PostgreSQLLogFactory(std::string const &,std::string const &,std::string const &,std::string const &,short)\n"
+    "    FIX::PostgreSQLLogFactory::PostgreSQLLogFactory(std::string const &,std::string const &,std::string const &,std::string const &,unsigned short)\n"
     "    FIX::PostgreSQLLogFactory::PostgreSQLLogFactory()\n");
   return 0;
 }

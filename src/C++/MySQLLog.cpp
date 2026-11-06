@@ -22,6 +22,7 @@
 #ifdef HAVE_MYSQL
 
 #include "MySQLLog.h"
+#include "PortSetting.h"
 #include "SessionID.h"
 #include "SessionSettings.h"
 #include "Utility.h"
@@ -34,7 +35,7 @@ const std::string MySQLLogFactory::DEFAULT_DATABASE = "quickfix";
 const std::string MySQLLogFactory::DEFAULT_USER = "root";
 const std::string MySQLLogFactory::DEFAULT_PASSWORD = "";
 const std::string MySQLLogFactory::DEFAULT_HOST = "localhost";
-const short MySQLLogFactory::DEFAULT_PORT = 0;
+const unsigned short MySQLLogFactory::DEFAULT_PORT = 0;
 
 MySQLLog::MySQLLog(const SessionID &sessionID, const DatabaseConnectionID &connectionID, MySQLConnectionPool *pool)
     : m_pConnectionPool(pool)
@@ -52,7 +53,7 @@ MySQLLog::MySQLLog(const DatabaseConnectionID &connectionID, MySQLConnectionPool
 }
 
 MySQLLog::MySQLLog(const SessionID &sessionID, const std::string &database, const std::string &user,
-                   const std::string &password, const std::string &host, short port)
+                   const std::string &password, const std::string &host, unsigned short port)
     : m_pConnectionPool(0)
 {
     init();
@@ -61,7 +62,7 @@ MySQLLog::MySQLLog(const SessionID &sessionID, const std::string &database, cons
 }
 
 MySQLLog::MySQLLog(const std::string &database, const std::string &user, const std::string &password,
-                   const std::string &host, short port)
+                   const std::string &host, unsigned short port)
     : m_pConnectionPool(0), m_pSessionID(0)
 {
     init();
@@ -94,7 +95,7 @@ Log *MySQLLogFactory::create()
     std::string user;
     std::string password;
     std::string host;
-    short port;
+    unsigned short port;
 
     init(m_settings.get(), database, user, password, host, port);
     DatabaseConnectionID id(database, user, password, host, port);
@@ -109,7 +110,7 @@ Log *MySQLLogFactory::create(const SessionID &s)
     std::string user;
     std::string password;
     std::string host;
-    short port;
+    unsigned short port;
 
     Dictionary settings;
     if (m_settings.has(s))
@@ -125,7 +126,7 @@ Log *MySQLLogFactory::create(const SessionID &s)
 }
 
 void MySQLLogFactory::init(const Dictionary &settings, std::string &database, std::string &user, std::string &password,
-                           std::string &host, short &port)
+                           std::string &host, unsigned short &port)
 {
     database = DEFAULT_DATABASE;
     user = DEFAULT_USER;
@@ -167,12 +168,9 @@ void MySQLLogFactory::init(const Dictionary &settings, std::string &database, st
         {
         }
 
-        try
+        if (settings.has(MYSQL_LOG_PORT))
         {
-            port = (short)settings.getInt(MYSQL_LOG_PORT);
-        }
-        catch (ConfigError &)
-        {
+            port = getPortSetting(settings, MYSQL_LOG_PORT, true);
         }
     }
     else

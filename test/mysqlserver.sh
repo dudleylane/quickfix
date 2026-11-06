@@ -8,7 +8,8 @@ set -euo pipefail
 
 name=quickfix-mysql
 image=docker.io/library/mysql:8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
-address=127.0.0.1:13306
+# Above what a short holds (#182), and outside the range the kernel hands out for outgoing connections (32768-60999).
+address=127.0.0.1:61306
 sql=$(cd "$(dirname "$0")/../src/sql/mysql" && pwd)
 
 stop() { podman rm --force --ignore --time 5 "$name" > /dev/null; }

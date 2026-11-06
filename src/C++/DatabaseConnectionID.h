@@ -35,7 +35,7 @@ class DatabaseConnectionID
 {
 public:
     DatabaseConnectionID(const std::string &database, const std::string &user, const std::string &password,
-                         const std::string &host, short port)
+                         const std::string &host, unsigned short port)
         : m_database(database), m_user(user), m_password(password), m_host(host), m_port(port)
     {
     }
@@ -48,14 +48,14 @@ public:
     const std::string &getUser() const { return m_user; }
     const std::string &getPassword() const { return m_password; }
     const std::string &getHost() const { return m_host; }
-    short getPort() const { return m_port; }
+    unsigned short getPort() const { return m_port; }
 
 private:
     std::string m_database;
     std::string m_user;
     std::string m_password;
     std::string m_host;
-    short m_port;
+    unsigned short m_port;
 };
 
 inline bool operator<(const DatabaseConnectionID &lhs, const DatabaseConnectionID &rhs)

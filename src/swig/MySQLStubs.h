@@ -35,7 +35,7 @@ public:
     MySQLConnection(const DatabaseConnectionID &id) { throw ConfigError("HAVE_MYSQL not enabled"); }
 
     MySQLConnection(const std::string &database, const std::string &user, const std::string &password,
-                    const std::string &host, short port)
+                    const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_MYSQL not enabled");
     }
@@ -61,14 +61,14 @@ public:
     static const std::string DEFAULT_USER;
     static const std::string DEFAULT_PASSWORD;
     static const std::string DEFAULT_HOST;
-    static const short DEFAULT_PORT;
+    static const unsigned short DEFAULT_PORT;
 
     MySQLStoreFactory(const SessionSettings &settings) { throw ConfigError("HAVE_MYSQL not enabled"); }
 
     MySQLStoreFactory(const Dictionary &dictionary) { throw ConfigError("HAVE_MYSQL not enabled"); }
 
     MySQLStoreFactory(const std::string &database, const std::string &user, const std::string &password,
-                      const std::string &host, short port)
+                      const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_MYSQL not enabled");
     }
@@ -83,7 +83,7 @@ const std::string MySQLStoreFactory::DEFAULT_DATABASE = "";
 const std::string MySQLStoreFactory::DEFAULT_USER = "";
 const std::string MySQLStoreFactory::DEFAULT_PASSWORD = "";
 const std::string MySQLStoreFactory::DEFAULT_HOST = "";
-const short MySQLStoreFactory::DEFAULT_PORT = 3306;
+const unsigned short MySQLStoreFactory::DEFAULT_PORT = 3306;
 
 class MySQLStore : public MessageStore
 {
@@ -95,7 +95,7 @@ public:
     }
 
     MySQLStore(const UtcTimeStamp &now, const SessionID &sessionID, const std::string &database,
-               const std::string &user, const std::string &password, const std::string &host, short port)
+               const std::string &user, const std::string &password, const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_MYSQL not enabled");
     }
@@ -125,12 +125,12 @@ public:
     static const std::string DEFAULT_USER;
     static const std::string DEFAULT_PASSWORD;
     static const std::string DEFAULT_HOST;
-    static const short DEFAULT_PORT;
+    static const unsigned short DEFAULT_PORT;
 
     MySQLLogFactory(const SessionSettings &settings) { throw ConfigError("HAVE_MYSQL not enabled"); }
 
     MySQLLogFactory(const std::string &database, const std::string &user, const std::string &password,
-                    const std::string &host, short port)
+                    const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_MYSQL not enabled");
     }
@@ -146,7 +146,7 @@ const std::string MySQLLogFactory::DEFAULT_DATABASE = "";
 const std::string MySQLLogFactory::DEFAULT_USER = "";
 const std::string MySQLLogFactory::DEFAULT_PASSWORD = "";
 const std::string MySQLLogFactory::DEFAULT_HOST = "";
-const short MySQLLogFactory::DEFAULT_PORT = 0;
+const unsigned short MySQLLogFactory::DEFAULT_PORT = 0;
 
 class MySQLLog : public Log
 {
@@ -162,13 +162,13 @@ public:
     }
 
     MySQLLog(const SessionID &sessionID, const std::string &database, const std::string &user,
-             const std::string &password, const std::string &host, short port)
+             const std::string &password, const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_MYSQL not enabled");
     }
 
     MySQLLog(const std::string &database, const std::string &user, const std::string &password, const std::string &host,
-             short port)
+             unsigned short port)
     {
         throw ConfigError("HAVE_MYSQL not enabled");
     }

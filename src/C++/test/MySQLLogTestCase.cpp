@@ -23,6 +23,7 @@
 
 #include "DatabaseLogTestCase.h"
 #include <MySQLLog.h>
+#include <PortSetting.h>
 
 using namespace FIX;
 
@@ -33,7 +34,7 @@ struct mySQLLogFixture : DatabaseLogFixture
     mySQLLogFixture()
         : database(defaults.getString(MYSQL_LOG_DATABASE)), user(defaults.getString(MYSQL_LOG_USER)),
           password(defaults.getString(MYSQL_LOG_PASSWORD)), host(defaults.getString(MYSQL_LOG_HOST)),
-          port((short)defaults.getInt(MYSQL_LOG_PORT)), connection(database, user, password, host, port)
+          port(getPortSetting(defaults, MYSQL_LOG_PORT, true)), connection(database, user, password, host, port)
     {
         emptyDatabaseLogTables(*this);
     }
@@ -61,7 +62,7 @@ struct mySQLLogFixture : DatabaseLogFixture
     std::string user;
     std::string password;
     std::string host;
-    short port;
+    unsigned short port;
     MySQLConnection connection;
 };
 
@@ -104,6 +105,14 @@ TEST_CASE_METHOD(mySQLLogFixture, "MySQLLogTests")
 
         CHECK(databaseLogRows(*this, "messages_log") ==
               Rows{"FIX.4.2|LOG|TEST|NULL|session", "NULL|NULL|NULL|NULL|global"});
+    }
+
+    SECTION("aSettingThatCannotBeAPortIsAConfigError")
+    {
+        Dictionary refused = defaults;
+        refused.setString(MYSQL_LOG_PORT, GENERATE("-1", "65536", "not a number"));
+        MySQLLogFactory factory(settingsFor(refused));
+        CHECK_THROWS_AS(factory.create(plain), ConfigError);
     }
 
     SECTION("aPooledConnectionOutlivesAnyOneLog")

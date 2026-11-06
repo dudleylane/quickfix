@@ -48,7 +48,7 @@ public class DatabaseConnectionID {
     }
   }
 
-  public DatabaseConnectionID(String database, String user, String password, String host, short port) {
+  public DatabaseConnectionID(String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_DatabaseConnectionID(database, user, password, host, port), true);
   }
 
@@ -68,7 +68,7 @@ public class DatabaseConnectionID {
     return quickfixJNI.DatabaseConnectionID_getHost(swigCPtr, this);
   }
 
-  public short getPort() {
+  public int getPort() {
     return quickfixJNI.DatabaseConnectionID_getPort(swigCPtr, this);
   }
 

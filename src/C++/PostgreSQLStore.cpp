@@ -23,6 +23,7 @@
 
 #include "FieldConvertors.h"
 #include "Parser.h"
+#include "PortSetting.h"
 #include "PostgreSQLStore.h"
 #include "SessionID.h"
 #include "SessionSettings.h"
@@ -37,7 +38,7 @@ const std::string PostgreSQLStoreFactory::DEFAULT_DATABASE = "quickfix";
 const std::string PostgreSQLStoreFactory::DEFAULT_USER = "postgres";
 const std::string PostgreSQLStoreFactory::DEFAULT_PASSWORD = "";
 const std::string PostgreSQLStoreFactory::DEFAULT_HOST = "localhost";
-const short PostgreSQLStoreFactory::DEFAULT_PORT = 0;
+const unsigned short PostgreSQLStoreFactory::DEFAULT_PORT = 0;
 
 PostgreSQLStore::PostgreSQLStore(const UtcTimeStamp &now, const SessionID &sessionID,
                                  const DatabaseConnectionID &connection, PostgreSQLConnectionPool *pool)
@@ -49,7 +50,7 @@ PostgreSQLStore::PostgreSQLStore(const UtcTimeStamp &now, const SessionID &sessi
 
 PostgreSQLStore::PostgreSQLStore(const UtcTimeStamp &now, const SessionID &sessionID, const std::string &database,
                                  const std::string &user, const std::string &password, const std::string &host,
-                                 short port)
+                                 unsigned short port)
     : m_cache(now), m_pConnectionPool(0), m_sessionID(sessionID)
 {
     m_pConnection = new PostgreSQLConnection(database, user, password, host, port);
@@ -149,7 +150,7 @@ MessageStore *PostgreSQLStoreFactory::create(const UtcTimeStamp &now, const Sess
     std::string user = DEFAULT_USER;
     std::string password = DEFAULT_PASSWORD;
     std::string host = DEFAULT_HOST;
-    short port = DEFAULT_PORT;
+    unsigned short port = DEFAULT_PORT;
 
     try
     {
@@ -183,12 +184,9 @@ MessageStore *PostgreSQLStoreFactory::create(const UtcTimeStamp &now, const Sess
     {
     }
 
-    try
+    if (settings.has(POSTGRESQL_STORE_PORT))
     {
-        port = (short)settings.getInt(POSTGRESQL_STORE_PORT);
-    }
-    catch (ConfigError &)
-    {
+        port = getPortSetting(settings, POSTGRESQL_STORE_PORT, true);
     }
 
     DatabaseConnectionID id(database, user, password, host, port);

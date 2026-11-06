@@ -35,7 +35,7 @@ public:
     PostgreSQLConnection(const DatabaseConnectionID &id) { throw ConfigError("HAVE_POSTGRESQL not enabled"); }
 
     PostgreSQLConnection(const std::string &database, const std::string &user, const std::string &password,
-                         const std::string &host, short port)
+                         const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_POSTGRESQL not enabled");
     }
@@ -61,14 +61,14 @@ public:
     static const std::string DEFAULT_USER;
     static const std::string DEFAULT_PASSWORD;
     static const std::string DEFAULT_HOST;
-    static const short DEFAULT_PORT;
+    static const unsigned short DEFAULT_PORT;
 
     PostgreSQLStoreFactory(const SessionSettings &settings) { throw ConfigError("HAVE_POSTGRESQL not enabled"); }
 
     PostgreSQLStoreFactory(const Dictionary &dictionary) { throw ConfigError("HAVE_POSTGRESQL not enabled"); }
 
     PostgreSQLStoreFactory(const std::string &database, const std::string &user, const std::string &password,
-                           const std::string &host, short port)
+                           const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_POSTGRESQL not enabled");
     }
@@ -83,7 +83,7 @@ const std::string PostgreSQLStoreFactory::DEFAULT_DATABASE = "";
 const std::string PostgreSQLStoreFactory::DEFAULT_USER = "";
 const std::string PostgreSQLStoreFactory::DEFAULT_PASSWORD = "";
 const std::string PostgreSQLStoreFactory::DEFAULT_HOST = "";
-const short PostgreSQLStoreFactory::DEFAULT_PORT = 3306;
+const unsigned short PostgreSQLStoreFactory::DEFAULT_PORT = 3306;
 
 class PostgreSQLStore : public MessageStore
 {
@@ -95,7 +95,7 @@ public:
     }
 
     PostgreSQLStore(const UtcTimeStamp &now, const SessionID &sessionID, const std::string &database,
-                    const std::string &user, const std::string &password, const std::string &host, short port)
+                    const std::string &user, const std::string &password, const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_POSTGRESQL not enabled");
     }
@@ -125,12 +125,12 @@ public:
     static const std::string DEFAULT_USER;
     static const std::string DEFAULT_PASSWORD;
     static const std::string DEFAULT_HOST;
-    static const short DEFAULT_PORT;
+    static const unsigned short DEFAULT_PORT;
 
     PostgreSQLLogFactory(const SessionSettings &settings) { throw ConfigError("HAVE_POSTGRESQL not enabled"); }
 
     PostgreSQLLogFactory(const std::string &database, const std::string &user, const std::string &password,
-                         const std::string &host, short port)
+                         const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_POSTGRESQL not enabled");
     }
@@ -146,7 +146,7 @@ const std::string PostgreSQLLogFactory::DEFAULT_DATABASE = "";
 const std::string PostgreSQLLogFactory::DEFAULT_USER = "";
 const std::string PostgreSQLLogFactory::DEFAULT_PASSWORD = "";
 const std::string PostgreSQLLogFactory::DEFAULT_HOST = "";
-const short PostgreSQLLogFactory::DEFAULT_PORT = 0;
+const unsigned short PostgreSQLLogFactory::DEFAULT_PORT = 0;
 
 class PostgreSQLLog : public Log
 {
@@ -162,13 +162,13 @@ public:
     }
 
     PostgreSQLLog(const SessionID &sessionID, const std::string &database, const std::string &user,
-                  const std::string &password, const std::string &host, short port)
+                  const std::string &password, const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_POSTGRESQL not enabled");
     }
 
     PostgreSQLLog(const std::string &database, const std::string &user, const std::string &password,
-                  const std::string &host, short port)
+                  const std::string &host, unsigned short port)
     {
         throw ConfigError("HAVE_POSTGRESQL not enabled");
     }

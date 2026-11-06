@@ -56,11 +56,11 @@ public class PostgreSQLLog extends Log {
     this(quickfixJNI.new_PostgreSQLLog__SWIG_1(DatabaseConnectionID.getCPtr(d), d, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t.getCPtr(p)), true);
   }
 
-  public PostgreSQLLog(SessionID s, String database, String user, String password, String host, short port) {
+  public PostgreSQLLog(SessionID s, String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_PostgreSQLLog__SWIG_2(SessionID.getCPtr(s), s, database, user, password, host, port), true);
   }
 
-  public PostgreSQLLog(String database, String user, String password, String host, short port) {
+  public PostgreSQLLog(String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_PostgreSQLLog__SWIG_3(database, user, password, host, port), true);
   }
 

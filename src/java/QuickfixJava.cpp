@@ -105665,13 +105665,13 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SSLSocketInitia
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1DatabaseConnectionID(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jshort jarg5) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1DatabaseConnectionID(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jint jarg5) {
   jlong jresult = 0 ;
   std::string *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   FIX::DatabaseConnectionID *result = 0 ;
   
   (void)jenv;
@@ -105712,7 +105712,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1DatabaseC
   std::string arg4_str(arg4_pstr);
   arg4 = &arg4_str;
   jenv->ReleaseStringUTFChars(jarg4, arg4_pstr); 
-  arg5 = (short)jarg5; 
+  arg5 = (unsigned short)jarg5; 
   {
     try
     {
@@ -105879,10 +105879,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DatabaseConn
 }
 
 
-SWIGEXPORT jshort JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DatabaseConnectionID_1getPort(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  jshort jresult = 0 ;
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DatabaseConnectionID_1getPort(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jint jresult = 0 ;
   FIX::DatabaseConnectionID *arg1 = (FIX::DatabaseConnectionID *) 0 ;
-  short result;
+  unsigned short result;
   
   (void)jenv;
   (void)jcls;
@@ -105891,7 +105891,7 @@ SWIGEXPORT jshort JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DatabaseConne
   {
     try
     {
-      result = (short)((FIX::DatabaseConnectionID const *)arg1)->getPort();
+      result = (unsigned short)((FIX::DatabaseConnectionID const *)arg1)->getPort();
     }
     catch (const FIX::Exception &e)
     {
@@ -105909,7 +105909,7 @@ SWIGEXPORT jshort JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DatabaseConne
       return 0;
     }
   }
-  jresult = (jshort)result; 
+  jresult = (jint)result; 
   return jresult;
 }
 
@@ -106267,13 +106267,13 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLConn
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLConnection_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jshort jarg5) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLConnection_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jint jarg5) {
   jlong jresult = 0 ;
   std::string *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   FIX::MySQLConnection *result = 0 ;
   
   (void)jenv;
@@ -106314,7 +106314,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLConn
   std::string arg4_str(arg4_pstr);
   arg4 = &arg4_str;
   jenv->ReleaseStringUTFChars(jarg4, arg4_pstr); 
-  arg5 = (short)jarg5; 
+  arg5 = (unsigned short)jarg5; 
   {
     try
     {
@@ -106566,14 +106566,14 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStoreFa
 }
 
 
-SWIGEXPORT jshort JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStoreFactory_1DEFAULT_1PORT_1get(JNIEnv *jenv, jclass jcls) {
-  jshort jresult = 0 ;
-  short result;
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStoreFactory_1DEFAULT_1PORT_1get(JNIEnv *jenv, jclass jcls) {
+  jint jresult = 0 ;
+  unsigned short result;
   
   (void)jenv;
   (void)jcls;
-  result = (short)(short)FIX::MySQLStoreFactory::DEFAULT_PORT;
-  jresult = (jshort)result; 
+  result = (unsigned short)(unsigned short)FIX::MySQLStoreFactory::DEFAULT_PORT;
+  jresult = (jint)result; 
   return jresult;
 }
 
@@ -106656,13 +106656,13 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLStor
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLStoreFactory_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jshort jarg5) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLStoreFactory_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jint jarg5) {
   jlong jresult = 0 ;
   std::string *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   FIX::MySQLStoreFactory *result = 0 ;
   
   (void)jenv;
@@ -106703,7 +106703,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLStor
   std::string arg4_str(arg4_pstr);
   arg4 = &arg4_str;
   jenv->ReleaseStringUTFChars(jarg4, arg4_pstr); 
-  arg5 = (short)jarg5; 
+  arg5 = (unsigned short)jarg5; 
   {
     try
     {
@@ -106930,7 +106930,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLStor
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLStore_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_, jstring jarg3, jstring jarg4, jstring jarg5, jstring jarg6, jshort jarg7) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLStore_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_, jstring jarg3, jstring jarg4, jstring jarg5, jstring jarg6, jint jarg7) {
   jlong jresult = 0 ;
   FIX::UtcTimeStamp *arg1 = 0 ;
   FIX::SessionID *arg2 = 0 ;
@@ -106938,7 +106938,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLStor
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
   std::string *arg6 = 0 ;
-  short arg7 ;
+  unsigned short arg7 ;
   FIX::MySQLStore *result = 0 ;
   
   (void)jenv;
@@ -106991,7 +106991,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLStor
   std::string arg6_str(arg6_pstr);
   arg6 = &arg6_str;
   jenv->ReleaseStringUTFChars(jarg6, arg6_pstr); 
-  arg7 = (short)jarg7; 
+  arg7 = (unsigned short)jarg7; 
   {
     try
     {
@@ -107528,14 +107528,14 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLog_
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLog_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jstring jarg3, jstring jarg4, jstring jarg5, jshort jarg6) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLog_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jstring jarg3, jstring jarg4, jstring jarg5, jint jarg6) {
   jlong jresult = 0 ;
   FIX::SessionID *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
-  short arg6 ;
+  unsigned short arg6 ;
   FIX::MySQLLog *result = 0 ;
   
   (void)jenv;
@@ -107582,7 +107582,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLog_
   std::string arg5_str(arg5_pstr);
   arg5 = &arg5_str;
   jenv->ReleaseStringUTFChars(jarg5, arg5_pstr); 
-  arg6 = (short)jarg6; 
+  arg6 = (unsigned short)jarg6; 
   {
     try
     {
@@ -107609,13 +107609,13 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLog_
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLog_1_1SWIG_13(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jshort jarg5) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLog_1_1SWIG_13(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jint jarg5) {
   jlong jresult = 0 ;
   std::string *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   FIX::MySQLLog *result = 0 ;
   
   (void)jenv;
@@ -107656,7 +107656,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLog_
   std::string arg4_str(arg4_pstr);
   arg4 = &arg4_str;
   jenv->ReleaseStringUTFChars(jarg4, arg4_pstr); 
-  arg5 = (short)jarg5; 
+  arg5 = (unsigned short)jarg5; 
   {
     try
     {
@@ -108069,14 +108069,14 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLogFact
 }
 
 
-SWIGEXPORT jshort JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLogFactory_1DEFAULT_1PORT_1get(JNIEnv *jenv, jclass jcls) {
-  jshort jresult = 0 ;
-  short result;
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLogFactory_1DEFAULT_1PORT_1get(JNIEnv *jenv, jclass jcls) {
+  jint jresult = 0 ;
+  unsigned short result;
   
   (void)jenv;
   (void)jcls;
-  result = (short)(short)FIX::MySQLLogFactory::DEFAULT_PORT;
-  jresult = (jshort)result; 
+  result = (unsigned short)(unsigned short)FIX::MySQLLogFactory::DEFAULT_PORT;
+  jresult = (jint)result; 
   return jresult;
 }
 
@@ -108120,13 +108120,13 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLogF
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLogFactory_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jshort jarg5) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLogFactory_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jint jarg5) {
   jlong jresult = 0 ;
   std::string *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   FIX::MySQLLogFactory *result = 0 ;
   
   (void)jenv;
@@ -108167,7 +108167,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1MySQLLogF
   std::string arg4_str(arg4_pstr);
   arg4 = &arg4_str;
   jenv->ReleaseStringUTFChars(jarg4, arg4_pstr); 
-  arg5 = (short)jarg5; 
+  arg5 = (unsigned short)jarg5; 
   {
     try
     {
@@ -108690,13 +108690,13 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLConnection_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jshort jarg5) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLConnection_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jint jarg5) {
   jlong jresult = 0 ;
   std::string *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   FIX::PostgreSQLConnection *result = 0 ;
   
   (void)jenv;
@@ -108737,7 +108737,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
   std::string arg4_str(arg4_pstr);
   arg4 = &arg4_str;
   jenv->ReleaseStringUTFChars(jarg4, arg4_pstr); 
-  arg5 = (short)jarg5; 
+  arg5 = (unsigned short)jarg5; 
   {
     try
     {
@@ -108989,14 +108989,14 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLSt
 }
 
 
-SWIGEXPORT jshort JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStoreFactory_1DEFAULT_1PORT_1get(JNIEnv *jenv, jclass jcls) {
-  jshort jresult = 0 ;
-  short result;
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStoreFactory_1DEFAULT_1PORT_1get(JNIEnv *jenv, jclass jcls) {
+  jint jresult = 0 ;
+  unsigned short result;
   
   (void)jenv;
   (void)jcls;
-  result = (short)(short)FIX::PostgreSQLStoreFactory::DEFAULT_PORT;
-  jresult = (jshort)result; 
+  result = (unsigned short)(unsigned short)FIX::PostgreSQLStoreFactory::DEFAULT_PORT;
+  jresult = (jint)result; 
   return jresult;
 }
 
@@ -109079,13 +109079,13 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLStoreFactory_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jshort jarg5) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLStoreFactory_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jint jarg5) {
   jlong jresult = 0 ;
   std::string *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   FIX::PostgreSQLStoreFactory *result = 0 ;
   
   (void)jenv;
@@ -109126,7 +109126,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
   std::string arg4_str(arg4_pstr);
   arg4 = &arg4_str;
   jenv->ReleaseStringUTFChars(jarg4, arg4_pstr); 
-  arg5 = (short)jarg5; 
+  arg5 = (unsigned short)jarg5; 
   {
     try
     {
@@ -109353,7 +109353,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLStore_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_, jstring jarg3, jstring jarg4, jstring jarg5, jstring jarg6, jshort jarg7) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLStore_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_, jstring jarg3, jstring jarg4, jstring jarg5, jstring jarg6, jint jarg7) {
   jlong jresult = 0 ;
   FIX::UtcTimeStamp *arg1 = 0 ;
   FIX::SessionID *arg2 = 0 ;
@@ -109361,7 +109361,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
   std::string *arg6 = 0 ;
-  short arg7 ;
+  unsigned short arg7 ;
   FIX::PostgreSQLStore *result = 0 ;
   
   (void)jenv;
@@ -109414,7 +109414,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
   std::string arg6_str(arg6_pstr);
   arg6 = &arg6_str;
   jenv->ReleaseStringUTFChars(jarg6, arg6_pstr); 
-  arg7 = (short)jarg7; 
+  arg7 = (unsigned short)jarg7; 
   {
     try
     {
@@ -109951,14 +109951,14 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLLog_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jstring jarg3, jstring jarg4, jstring jarg5, jshort jarg6) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLLog_1_1SWIG_12(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jstring jarg3, jstring jarg4, jstring jarg5, jint jarg6) {
   jlong jresult = 0 ;
   FIX::SessionID *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
-  short arg6 ;
+  unsigned short arg6 ;
   FIX::PostgreSQLLog *result = 0 ;
   
   (void)jenv;
@@ -110005,7 +110005,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
   std::string arg5_str(arg5_pstr);
   arg5 = &arg5_str;
   jenv->ReleaseStringUTFChars(jarg5, arg5_pstr); 
-  arg6 = (short)jarg6; 
+  arg6 = (unsigned short)jarg6; 
   {
     try
     {
@@ -110032,13 +110032,13 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLLog_1_1SWIG_13(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jshort jarg5) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLLog_1_1SWIG_13(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jint jarg5) {
   jlong jresult = 0 ;
   std::string *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   FIX::PostgreSQLLog *result = 0 ;
   
   (void)jenv;
@@ -110079,7 +110079,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
   std::string arg4_str(arg4_pstr);
   arg4 = &arg4_str;
   jenv->ReleaseStringUTFChars(jarg4, arg4_pstr); 
-  arg5 = (short)jarg5; 
+  arg5 = (unsigned short)jarg5; 
   {
     try
     {
@@ -110492,14 +110492,14 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLo
 }
 
 
-SWIGEXPORT jshort JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLogFactory_1DEFAULT_1PORT_1get(JNIEnv *jenv, jclass jcls) {
-  jshort jresult = 0 ;
-  short result;
+SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLogFactory_1DEFAULT_1PORT_1get(JNIEnv *jenv, jclass jcls) {
+  jint jresult = 0 ;
+  unsigned short result;
   
   (void)jenv;
   (void)jcls;
-  result = (short)(short)FIX::PostgreSQLLogFactory::DEFAULT_PORT;
-  jresult = (jshort)result; 
+  result = (unsigned short)(unsigned short)FIX::PostgreSQLLogFactory::DEFAULT_PORT;
+  jresult = (jint)result; 
   return jresult;
 }
 
@@ -110543,13 +110543,13 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLLogFactory_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jshort jarg5) {
+SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQLLogFactory_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jstring jarg1, jstring jarg2, jstring jarg3, jstring jarg4, jint jarg5) {
   jlong jresult = 0 ;
   std::string *arg1 = 0 ;
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   FIX::PostgreSQLLogFactory *result = 0 ;
   
   (void)jenv;
@@ -110590,7 +110590,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1PostgreSQ
   std::string arg4_str(arg4_pstr);
   arg4 = &arg4_str;
   jenv->ReleaseStringUTFChars(jarg4, arg4_pstr); 
-  arg5 = (short)jarg5; 
+  arg5 = (unsigned short)jarg5; 
   {
     try
     {

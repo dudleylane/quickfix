@@ -56,11 +56,11 @@ public class MySQLLog extends Log {
     this(quickfixJNI.new_MySQLLog__SWIG_1(DatabaseConnectionID.getCPtr(connectionID), connectionID, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t.getCPtr(pool)), true);
   }
 
-  public MySQLLog(SessionID sessionID, String database, String user, String password, String host, short port) {
+  public MySQLLog(SessionID sessionID, String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_MySQLLog__SWIG_2(SessionID.getCPtr(sessionID), sessionID, database, user, password, host, port), true);
   }
 
-  public MySQLLog(String database, String user, String password, String host, short port) {
+  public MySQLLog(String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_MySQLLog__SWIG_3(database, user, password, host, port), true);
   }
 

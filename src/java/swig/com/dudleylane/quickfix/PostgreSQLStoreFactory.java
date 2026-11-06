@@ -64,7 +64,7 @@ public class PostgreSQLStoreFactory extends MessageStoreFactory {
     return quickfixJNI.PostgreSQLStoreFactory_DEFAULT_HOST_get();
   }
 
-  public static short getDEFAULT_PORT() {
+  public static int getDEFAULT_PORT() {
     return quickfixJNI.PostgreSQLStoreFactory_DEFAULT_PORT_get();
   }
 
@@ -76,7 +76,7 @@ public class PostgreSQLStoreFactory extends MessageStoreFactory {
     this(quickfixJNI.new_PostgreSQLStoreFactory__SWIG_1(Dictionary.getCPtr(dictionary), dictionary), true);
   }
 
-  public PostgreSQLStoreFactory(String database, String user, String password, String host, short port) {
+  public PostgreSQLStoreFactory(String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_PostgreSQLStoreFactory__SWIG_2(database, user, password, host, port), true);
   }
 

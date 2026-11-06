@@ -143,7 +143,7 @@ public:
     MySQLConnection(const DatabaseConnectionID &id) : m_connectionID(id) { connect(); }
 
     MySQLConnection(const std::string &database, const std::string &user, const std::string &password,
-                    const std::string &host, short port)
+                    const std::string &host, unsigned short port)
         : m_connectionID(database, user, password, host, port)
     {
         connect();
@@ -203,7 +203,7 @@ public:
 private:
     void connect()
     {
-        short port = m_connectionID.getPort();
+        unsigned short port = m_connectionID.getPort();
         m_pConnection = mysql_init(NULL);
         if (!mysql_real_connect(m_pConnection, m_connectionID.getHost().c_str(), m_connectionID.getUser().c_str(),
                                 m_connectionID.getPassword().c_str(), m_connectionID.getDatabase().c_str(), port, 0, 0))

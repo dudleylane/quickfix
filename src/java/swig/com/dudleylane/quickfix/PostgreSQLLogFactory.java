@@ -64,7 +64,7 @@ public class PostgreSQLLogFactory extends LogFactory {
     return quickfixJNI.PostgreSQLLogFactory_DEFAULT_HOST_get();
   }
 
-  public static short getDEFAULT_PORT() {
+  public static int getDEFAULT_PORT() {
     return quickfixJNI.PostgreSQLLogFactory_DEFAULT_PORT_get();
   }
 
@@ -72,7 +72,7 @@ public class PostgreSQLLogFactory extends LogFactory {
     this(quickfixJNI.new_PostgreSQLLogFactory__SWIG_0(SessionSettings.getCPtr(settings), settings), true);
   }
 
-  public PostgreSQLLogFactory(String database, String user, String password, String host, short port) {
+  public PostgreSQLLogFactory(String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_PostgreSQLLogFactory__SWIG_1(database, user, password, host, port), true);
   }
 

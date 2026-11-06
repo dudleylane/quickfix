@@ -52,7 +52,7 @@ public class PostgreSQLConnection {
     this(quickfixJNI.new_PostgreSQLConnection__SWIG_0(DatabaseConnectionID.getCPtr(id), id), true);
   }
 
-  public PostgreSQLConnection(String database, String user, String password, String host, short port) {
+  public PostgreSQLConnection(String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_PostgreSQLConnection__SWIG_1(database, user, password, host, port), true);
   }
 

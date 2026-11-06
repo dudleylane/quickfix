@@ -6775,15 +6775,15 @@ SWIGINTERN void FIX_SessionSettings_setFromString(FIX::SessionSettings *self,std
     }
 
 SWIGINTERN int
-SWIG_AsVal_short (VALUE obj, short *val)
+SWIG_AsVal_unsigned_SS_short (VALUE obj, unsigned short *val)
 {
-  long v;
-  int res = SWIG_AsVal_long (obj, &v);
+  unsigned long v;
+  int res = SWIG_AsVal_unsigned_SS_long (obj, &v);
   if (SWIG_IsOK(res)) {
-    if ((v < SHRT_MIN || v > SHRT_MAX)) {
+    if ((v > USHRT_MAX)) {
       return SWIG_OverflowError;
     } else {
-      if (val) *val = static_cast< short >(v);
+      if (val) *val = static_cast< unsigned short >(v);
     }
   }  
   return res;
@@ -6791,9 +6791,9 @@ SWIG_AsVal_short (VALUE obj, short *val)
 
 
 SWIGINTERNINLINE VALUE
-SWIG_From_short  (short value)
+SWIG_From_unsigned_SS_short  (unsigned short value)
 {    
-  return SWIG_From_long  (value);
+  return SWIG_From_unsigned_SS_long  (value);
 }
 
 /* ---------------------------------------------------
@@ -118758,12 +118758,12 @@ _wrap_new_DatabaseConnectionID(int argc, VALUE *argv, VALUE self) {
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::DatabaseConnectionID";
   FIX::DatabaseConnectionID *result = 0 ;
@@ -118815,11 +118815,11 @@ _wrap_new_DatabaseConnectionID(int argc, VALUE *argv, VALUE self) {
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(argv[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(argv[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "short","DatabaseConnectionID", 5, argv[4] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "unsigned short","DatabaseConnectionID", 5, argv[4] ));
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(tryRubyException([&]() mutable
         {
@@ -119391,7 +119391,7 @@ _wrap_DatabaseConnectionID_getPort(int argc, VALUE *argv, VALUE self) {
   FIX::DatabaseConnectionID *arg1 = (FIX::DatabaseConnectionID *) 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
-  short result;
+  unsigned short result;
   VALUE vresult = Qnil;
   
   if ((argc < 0) || (argc > 0)) {
@@ -119405,7 +119405,7 @@ _wrap_DatabaseConnectionID_getPort(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      result = (short)((FIX::DatabaseConnectionID const *)arg1)->getPort();
+      result = (unsigned short)((FIX::DatabaseConnectionID const *)arg1)->getPort();
           return self;
         fail:
           return Qnil;
@@ -119415,7 +119415,7 @@ _wrap_DatabaseConnectionID_getPort(int argc, VALUE *argv, VALUE self) {
     }
     redeliverKill();
   }
-  vresult = SWIG_From_short(static_cast< short >(result));
+  vresult = SWIG_From_unsigned_SS_short(static_cast< unsigned short >(result));
   return vresult;
 fail:
   return Qnil;
@@ -119800,12 +119800,12 @@ _wrap_new_MySQLConnection__SWIG_1(int argc, VALUE *argv, VALUE self) {
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::MySQLConnection";
   FIX::MySQLConnection *result = 0 ;
@@ -119857,11 +119857,11 @@ _wrap_new_MySQLConnection__SWIG_1(int argc, VALUE *argv, VALUE self) {
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(argv[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(argv[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "short","MySQLConnection", 5, argv[4] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "unsigned short","MySQLConnection", 5, argv[4] ));
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(tryRubyException([&]() mutable
         {
@@ -119952,7 +119952,7 @@ SWIGINTERN VALUE _wrap_new_MySQLConnection(int nargs, VALUE *args, VALUE self) {
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -119967,7 +119967,7 @@ SWIGINTERN VALUE _wrap_new_MySQLConnection(int nargs, VALUE *args, VALUE self) {
 fail:
   Ruby_Format_OverloadedError( argc, 5, "MySQLConnection.new", 
     "    MySQLConnection.new(FIX::DatabaseConnectionID const &id)\n"
-    "    MySQLConnection.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n");
+    "    MySQLConnection.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n");
   
   return Qnil;
 }
@@ -120176,7 +120176,7 @@ SWIGINTERN VALUE
 _wrap_MySQLStoreFactory_DEFAULT_PORT_get(VALUE self) {
   VALUE _val;
   
-  _val = SWIG_From_short(static_cast< short >(FIX::MySQLStoreFactory::DEFAULT_PORT));
+  _val = SWIG_From_unsigned_SS_short(static_cast< unsigned short >(FIX::MySQLStoreFactory::DEFAULT_PORT));
   return _val;
 }
 
@@ -120265,12 +120265,12 @@ _wrap_new_MySQLStoreFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::MySQLStoreFactory";
   FIX::MySQLStoreFactory *result = 0 ;
@@ -120322,11 +120322,11 @@ _wrap_new_MySQLStoreFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(argv[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(argv[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "short","MySQLStoreFactory", 5, argv[4] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "unsigned short","MySQLStoreFactory", 5, argv[4] ));
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(tryRubyException([&]() mutable
         {
@@ -120472,7 +120472,7 @@ SWIGINTERN VALUE _wrap_new_MySQLStoreFactory(int nargs, VALUE *args, VALUE self)
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -120488,7 +120488,7 @@ fail:
   Ruby_Format_OverloadedError( argc, 5, "MySQLStoreFactory.new", 
     "    MySQLStoreFactory.new(FIX::SessionSettings const &settings)\n"
     "    MySQLStoreFactory.new(FIX::Dictionary const &dictionary)\n"
-    "    MySQLStoreFactory.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n"
+    "    MySQLStoreFactory.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n"
     "    MySQLStoreFactory.new()\n");
   
   return Qnil;
@@ -120694,7 +120694,7 @@ _wrap_new_MySQLStore__SWIG_1(int argc, VALUE *argv, VALUE self) {
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
   std::string *arg6 = 0 ;
-  short arg7 ;
+  unsigned short arg7 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   void *argp2 = 0 ;
@@ -120703,7 +120703,7 @@ _wrap_new_MySQLStore__SWIG_1(int argc, VALUE *argv, VALUE self) {
   int res4 = SWIG_OLDOBJ ;
   int res5 = SWIG_OLDOBJ ;
   int res6 = SWIG_OLDOBJ ;
-  short val7 ;
+  unsigned short val7 ;
   int ecode7 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::MySQLStore";
   FIX::MySQLStore *result = 0 ;
@@ -120771,11 +120771,11 @@ _wrap_new_MySQLStore__SWIG_1(int argc, VALUE *argv, VALUE self) {
     }
     arg6 = ptr;
   }
-  ecode7 = SWIG_AsVal_short(argv[6], &val7);
+  ecode7 = SWIG_AsVal_unsigned_SS_short(argv[6], &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), Ruby_Format_TypeError( "", "short","MySQLStore", 7, argv[6] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode7), Ruby_Format_TypeError( "", "unsigned short","MySQLStore", 7, argv[6] ));
   } 
-  arg7 = static_cast< short >(val7);
+  arg7 = static_cast< unsigned short >(val7);
   {
     if(tryRubyException([&]() mutable
         {
@@ -120889,7 +120889,7 @@ SWIGINTERN VALUE _wrap_new_MySQLStore(int nargs, VALUE *args, VALUE self) {
               _v = SWIG_CheckState(res);
               if (_v) {
                 {
-                  int res = SWIG_AsVal_short(argv[6], NULL);
+                  int res = SWIG_AsVal_unsigned_SS_short(argv[6], NULL);
                   _v = SWIG_CheckState(res);
                 }
                 if (_v) {
@@ -120906,7 +120906,7 @@ SWIGINTERN VALUE _wrap_new_MySQLStore(int nargs, VALUE *args, VALUE self) {
 fail:
   Ruby_Format_OverloadedError( argc, 7, "MySQLStore.new", 
     "    MySQLStore.new(FIX::UtcTimeStamp const &now, FIX::SessionID const &sessionID, FIX::DatabaseConnectionID const &connection, FIX::MySQLConnectionPool *pool)\n"
-    "    MySQLStore.new(FIX::UtcTimeStamp const &now, FIX::SessionID const &sessionID, std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n");
+    "    MySQLStore.new(FIX::UtcTimeStamp const &now, FIX::SessionID const &sessionID, std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n");
   
   return Qnil;
 }
@@ -121491,14 +121491,14 @@ _wrap_new_MySQLLog__SWIG_2(int argc, VALUE *argv, VALUE self) {
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
-  short arg6 ;
+  unsigned short arg6 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
   int res5 = SWIG_OLDOBJ ;
-  short val6 ;
+  unsigned short val6 ;
   int ecode6 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::MySQLLog";
   FIX::MySQLLog *result = 0 ;
@@ -121558,11 +121558,11 @@ _wrap_new_MySQLLog__SWIG_2(int argc, VALUE *argv, VALUE self) {
     }
     arg5 = ptr;
   }
-  ecode6 = SWIG_AsVal_short(argv[5], &val6);
+  ecode6 = SWIG_AsVal_unsigned_SS_short(argv[5], &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), Ruby_Format_TypeError( "", "short","MySQLLog", 6, argv[5] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode6), Ruby_Format_TypeError( "", "unsigned short","MySQLLog", 6, argv[5] ));
   } 
-  arg6 = static_cast< short >(val6);
+  arg6 = static_cast< unsigned short >(val6);
   {
     if(tryRubyException([&]() mutable
         {
@@ -121640,12 +121640,12 @@ _wrap_new_MySQLLog__SWIG_3(int argc, VALUE *argv, VALUE self) {
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::MySQLLog";
   FIX::MySQLLog *result = 0 ;
@@ -121697,11 +121697,11 @@ _wrap_new_MySQLLog__SWIG_3(int argc, VALUE *argv, VALUE self) {
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(argv[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(argv[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "short","MySQLLog", 5, argv[4] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "unsigned short","MySQLLog", 5, argv[4] ));
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(tryRubyException([&]() mutable
         {
@@ -121816,7 +121816,7 @@ SWIGINTERN VALUE _wrap_new_MySQLLog(int nargs, VALUE *args, VALUE self) {
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -121846,7 +121846,7 @@ SWIGINTERN VALUE _wrap_new_MySQLLog(int nargs, VALUE *args, VALUE self) {
             _v = SWIG_CheckState(res);
             if (_v) {
               {
-                int res = SWIG_AsVal_short(argv[5], NULL);
+                int res = SWIG_AsVal_unsigned_SS_short(argv[5], NULL);
                 _v = SWIG_CheckState(res);
               }
               if (_v) {
@@ -121863,8 +121863,8 @@ fail:
   Ruby_Format_OverloadedError( argc, 6, "MySQLLog.new", 
     "    MySQLLog.new(FIX::SessionID const &sessionID, FIX::DatabaseConnectionID const &connectionID, FIX::MySQLConnectionPool *pool)\n"
     "    MySQLLog.new(FIX::DatabaseConnectionID const &connectionID, FIX::MySQLConnectionPool *pool)\n"
-    "    MySQLLog.new(FIX::SessionID const &sessionID, std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n"
-    "    MySQLLog.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n");
+    "    MySQLLog.new(FIX::SessionID const &sessionID, std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n"
+    "    MySQLLog.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n");
   
   return Qnil;
 }
@@ -122328,7 +122328,7 @@ SWIGINTERN VALUE
 _wrap_MySQLLogFactory_DEFAULT_PORT_get(VALUE self) {
   VALUE _val;
   
-  _val = SWIG_From_short(static_cast< short >(FIX::MySQLLogFactory::DEFAULT_PORT));
+  _val = SWIG_From_unsigned_SS_short(static_cast< unsigned short >(FIX::MySQLLogFactory::DEFAULT_PORT));
   return _val;
 }
 
@@ -122378,12 +122378,12 @@ _wrap_new_MySQLLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::MySQLLogFactory";
   FIX::MySQLLogFactory *result = 0 ;
@@ -122435,11 +122435,11 @@ _wrap_new_MySQLLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(argv[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(argv[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "short","MySQLLogFactory", 5, argv[4] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "unsigned short","MySQLLogFactory", 5, argv[4] ));
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(tryRubyException([&]() mutable
         {
@@ -122576,7 +122576,7 @@ SWIGINTERN VALUE _wrap_new_MySQLLogFactory(int nargs, VALUE *args, VALUE self) {
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -122591,7 +122591,7 @@ SWIGINTERN VALUE _wrap_new_MySQLLogFactory(int nargs, VALUE *args, VALUE self) {
 fail:
   Ruby_Format_OverloadedError( argc, 5, "MySQLLogFactory.new", 
     "    MySQLLogFactory.new(FIX::SessionSettings const &settings)\n"
-    "    MySQLLogFactory.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n"
+    "    MySQLLogFactory.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n"
     "    MySQLLogFactory.new()\n");
   
   return Qnil;
@@ -123156,12 +123156,12 @@ _wrap_new_PostgreSQLConnection__SWIG_1(int argc, VALUE *argv, VALUE self) {
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::PostgreSQLConnection";
   FIX::PostgreSQLConnection *result = 0 ;
@@ -123213,11 +123213,11 @@ _wrap_new_PostgreSQLConnection__SWIG_1(int argc, VALUE *argv, VALUE self) {
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(argv[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(argv[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "short","PostgreSQLConnection", 5, argv[4] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "unsigned short","PostgreSQLConnection", 5, argv[4] ));
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(tryRubyException([&]() mutable
         {
@@ -123308,7 +123308,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLConnection(int nargs, VALUE *args, VALUE se
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -123323,7 +123323,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLConnection(int nargs, VALUE *args, VALUE se
 fail:
   Ruby_Format_OverloadedError( argc, 5, "PostgreSQLConnection.new", 
     "    PostgreSQLConnection.new(FIX::DatabaseConnectionID const &id)\n"
-    "    PostgreSQLConnection.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n");
+    "    PostgreSQLConnection.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n");
   
   return Qnil;
 }
@@ -123532,7 +123532,7 @@ SWIGINTERN VALUE
 _wrap_PostgreSQLStoreFactory_DEFAULT_PORT_get(VALUE self) {
   VALUE _val;
   
-  _val = SWIG_From_short(static_cast< short >(FIX::PostgreSQLStoreFactory::DEFAULT_PORT));
+  _val = SWIG_From_unsigned_SS_short(static_cast< unsigned short >(FIX::PostgreSQLStoreFactory::DEFAULT_PORT));
   return _val;
 }
 
@@ -123621,12 +123621,12 @@ _wrap_new_PostgreSQLStoreFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::PostgreSQLStoreFactory";
   FIX::PostgreSQLStoreFactory *result = 0 ;
@@ -123678,11 +123678,11 @@ _wrap_new_PostgreSQLStoreFactory__SWIG_2(int argc, VALUE *argv, VALUE self) {
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(argv[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(argv[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "short","PostgreSQLStoreFactory", 5, argv[4] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "unsigned short","PostgreSQLStoreFactory", 5, argv[4] ));
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(tryRubyException([&]() mutable
         {
@@ -123828,7 +123828,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLStoreFactory(int nargs, VALUE *args, VALUE 
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -123844,7 +123844,7 @@ fail:
   Ruby_Format_OverloadedError( argc, 5, "PostgreSQLStoreFactory.new", 
     "    PostgreSQLStoreFactory.new(FIX::SessionSettings const &settings)\n"
     "    PostgreSQLStoreFactory.new(FIX::Dictionary const &dictionary)\n"
-    "    PostgreSQLStoreFactory.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n"
+    "    PostgreSQLStoreFactory.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n"
     "    PostgreSQLStoreFactory.new()\n");
   
   return Qnil;
@@ -124050,7 +124050,7 @@ _wrap_new_PostgreSQLStore__SWIG_1(int argc, VALUE *argv, VALUE self) {
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
   std::string *arg6 = 0 ;
-  short arg7 ;
+  unsigned short arg7 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   void *argp2 = 0 ;
@@ -124059,7 +124059,7 @@ _wrap_new_PostgreSQLStore__SWIG_1(int argc, VALUE *argv, VALUE self) {
   int res4 = SWIG_OLDOBJ ;
   int res5 = SWIG_OLDOBJ ;
   int res6 = SWIG_OLDOBJ ;
-  short val7 ;
+  unsigned short val7 ;
   int ecode7 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::PostgreSQLStore";
   FIX::PostgreSQLStore *result = 0 ;
@@ -124127,11 +124127,11 @@ _wrap_new_PostgreSQLStore__SWIG_1(int argc, VALUE *argv, VALUE self) {
     }
     arg6 = ptr;
   }
-  ecode7 = SWIG_AsVal_short(argv[6], &val7);
+  ecode7 = SWIG_AsVal_unsigned_SS_short(argv[6], &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), Ruby_Format_TypeError( "", "short","PostgreSQLStore", 7, argv[6] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode7), Ruby_Format_TypeError( "", "unsigned short","PostgreSQLStore", 7, argv[6] ));
   } 
-  arg7 = static_cast< short >(val7);
+  arg7 = static_cast< unsigned short >(val7);
   {
     if(tryRubyException([&]() mutable
         {
@@ -124245,7 +124245,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLStore(int nargs, VALUE *args, VALUE self) {
               _v = SWIG_CheckState(res);
               if (_v) {
                 {
-                  int res = SWIG_AsVal_short(argv[6], NULL);
+                  int res = SWIG_AsVal_unsigned_SS_short(argv[6], NULL);
                   _v = SWIG_CheckState(res);
                 }
                 if (_v) {
@@ -124262,7 +124262,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLStore(int nargs, VALUE *args, VALUE self) {
 fail:
   Ruby_Format_OverloadedError( argc, 7, "PostgreSQLStore.new", 
     "    PostgreSQLStore.new(FIX::UtcTimeStamp const &now, FIX::SessionID const &sessionID, FIX::DatabaseConnectionID const &connection, FIX::PostgreSQLConnectionPool *pool)\n"
-    "    PostgreSQLStore.new(FIX::UtcTimeStamp const &now, FIX::SessionID const &sessionID, std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n");
+    "    PostgreSQLStore.new(FIX::UtcTimeStamp const &now, FIX::SessionID const &sessionID, std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n");
   
   return Qnil;
 }
@@ -124847,14 +124847,14 @@ _wrap_new_PostgreSQLLog__SWIG_2(int argc, VALUE *argv, VALUE self) {
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
   std::string *arg5 = 0 ;
-  short arg6 ;
+  unsigned short arg6 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
   int res5 = SWIG_OLDOBJ ;
-  short val6 ;
+  unsigned short val6 ;
   int ecode6 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::PostgreSQLLog";
   FIX::PostgreSQLLog *result = 0 ;
@@ -124914,11 +124914,11 @@ _wrap_new_PostgreSQLLog__SWIG_2(int argc, VALUE *argv, VALUE self) {
     }
     arg5 = ptr;
   }
-  ecode6 = SWIG_AsVal_short(argv[5], &val6);
+  ecode6 = SWIG_AsVal_unsigned_SS_short(argv[5], &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), Ruby_Format_TypeError( "", "short","PostgreSQLLog", 6, argv[5] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode6), Ruby_Format_TypeError( "", "unsigned short","PostgreSQLLog", 6, argv[5] ));
   } 
-  arg6 = static_cast< short >(val6);
+  arg6 = static_cast< unsigned short >(val6);
   {
     if(tryRubyException([&]() mutable
         {
@@ -124996,12 +124996,12 @@ _wrap_new_PostgreSQLLog__SWIG_3(int argc, VALUE *argv, VALUE self) {
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::PostgreSQLLog";
   FIX::PostgreSQLLog *result = 0 ;
@@ -125053,11 +125053,11 @@ _wrap_new_PostgreSQLLog__SWIG_3(int argc, VALUE *argv, VALUE self) {
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(argv[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(argv[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "short","PostgreSQLLog", 5, argv[4] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "unsigned short","PostgreSQLLog", 5, argv[4] ));
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(tryRubyException([&]() mutable
         {
@@ -125172,7 +125172,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLLog(int nargs, VALUE *args, VALUE self) {
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -125202,7 +125202,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLLog(int nargs, VALUE *args, VALUE self) {
             _v = SWIG_CheckState(res);
             if (_v) {
               {
-                int res = SWIG_AsVal_short(argv[5], NULL);
+                int res = SWIG_AsVal_unsigned_SS_short(argv[5], NULL);
                 _v = SWIG_CheckState(res);
               }
               if (_v) {
@@ -125219,8 +125219,8 @@ fail:
   Ruby_Format_OverloadedError( argc, 6, "PostgreSQLLog.new", 
     "    PostgreSQLLog.new(FIX::SessionID const &s, FIX::DatabaseConnectionID const &d, FIX::PostgreSQLConnectionPool *p)\n"
     "    PostgreSQLLog.new(FIX::DatabaseConnectionID const &d, FIX::PostgreSQLConnectionPool *p)\n"
-    "    PostgreSQLLog.new(FIX::SessionID const &s, std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n"
-    "    PostgreSQLLog.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n");
+    "    PostgreSQLLog.new(FIX::SessionID const &s, std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n"
+    "    PostgreSQLLog.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n");
   
   return Qnil;
 }
@@ -125684,7 +125684,7 @@ SWIGINTERN VALUE
 _wrap_PostgreSQLLogFactory_DEFAULT_PORT_get(VALUE self) {
   VALUE _val;
   
-  _val = SWIG_From_short(static_cast< short >(FIX::PostgreSQLLogFactory::DEFAULT_PORT));
+  _val = SWIG_From_unsigned_SS_short(static_cast< unsigned short >(FIX::PostgreSQLLogFactory::DEFAULT_PORT));
   return _val;
 }
 
@@ -125734,12 +125734,12 @@ _wrap_new_PostgreSQLLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
   std::string *arg2 = 0 ;
   std::string *arg3 = 0 ;
   std::string *arg4 = 0 ;
-  short arg5 ;
+  unsigned short arg5 ;
   int res1 = SWIG_OLDOBJ ;
   int res2 = SWIG_OLDOBJ ;
   int res3 = SWIG_OLDOBJ ;
   int res4 = SWIG_OLDOBJ ;
-  short val5 ;
+  unsigned short val5 ;
   int ecode5 = 0 ;
   const char *classname SWIGUNUSED = "Quickfix::PostgreSQLLogFactory";
   FIX::PostgreSQLLogFactory *result = 0 ;
@@ -125791,11 +125791,11 @@ _wrap_new_PostgreSQLLogFactory__SWIG_1(int argc, VALUE *argv, VALUE self) {
     }
     arg4 = ptr;
   }
-  ecode5 = SWIG_AsVal_short(argv[4], &val5);
+  ecode5 = SWIG_AsVal_unsigned_SS_short(argv[4], &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "short","PostgreSQLLogFactory", 5, argv[4] ));
+    SWIG_exception_fail(SWIG_ArgError(ecode5), Ruby_Format_TypeError( "", "unsigned short","PostgreSQLLogFactory", 5, argv[4] ));
   } 
-  arg5 = static_cast< short >(val5);
+  arg5 = static_cast< unsigned short >(val5);
   {
     if(tryRubyException([&]() mutable
         {
@@ -125932,7 +125932,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLLogFactory(int nargs, VALUE *args, VALUE se
           _v = SWIG_CheckState(res);
           if (_v) {
             {
-              int res = SWIG_AsVal_short(argv[4], NULL);
+              int res = SWIG_AsVal_unsigned_SS_short(argv[4], NULL);
               _v = SWIG_CheckState(res);
             }
             if (_v) {
@@ -125947,7 +125947,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLLogFactory(int nargs, VALUE *args, VALUE se
 fail:
   Ruby_Format_OverloadedError( argc, 5, "PostgreSQLLogFactory.new", 
     "    PostgreSQLLogFactory.new(FIX::SessionSettings const &settings)\n"
-    "    PostgreSQLLogFactory.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, short port)\n"
+    "    PostgreSQLLogFactory.new(std::string const &database, std::string const &user, std::string const &password, std::string const &host, unsigned short port)\n"
     "    PostgreSQLLogFactory.new()\n");
   
   return Qnil;

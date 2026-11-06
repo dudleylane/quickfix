@@ -64,7 +64,7 @@ public class MySQLLogFactory extends LogFactory {
     return quickfixJNI.MySQLLogFactory_DEFAULT_HOST_get();
   }
 
-  public static short getDEFAULT_PORT() {
+  public static int getDEFAULT_PORT() {
     return quickfixJNI.MySQLLogFactory_DEFAULT_PORT_get();
   }
 
@@ -72,7 +72,7 @@ public class MySQLLogFactory extends LogFactory {
     this(quickfixJNI.new_MySQLLogFactory__SWIG_0(SessionSettings.getCPtr(settings), settings), true);
   }
 
-  public MySQLLogFactory(String database, String user, String password, String host, short port) {
+  public MySQLLogFactory(String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_MySQLLogFactory__SWIG_1(database, user, password, host, port), true);
   }
 

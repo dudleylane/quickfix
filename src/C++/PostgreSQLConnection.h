@@ -124,7 +124,7 @@ public:
     PostgreSQLConnection(const DatabaseConnectionID &id) : m_connectionID(id) { connect(); }
 
     PostgreSQLConnection(const std::string &database, const std::string &user, const std::string &password,
-                         const std::string &host, short port)
+                         const std::string &host, unsigned short port)
         : m_connectionID(database, user, password, host, port)
     {
         connect();
@@ -174,7 +174,7 @@ public:
 private:
     void connect()
     {
-        short port = m_connectionID.getPort();
+        unsigned short port = m_connectionID.getPort();
 
         m_pConnection =
             PQsetdbLogin(m_connectionID.getHost().c_str(), port == 0 ? "" : IntConvertor::convert(port).c_str(), "", "",

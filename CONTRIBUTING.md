@@ -286,7 +286,7 @@ linked. The PostgreSQL cases run against the runner's server, and the ODBC ones 
 server through psqlODBC.
 
 The MySQL store and log run against a MySQL 8.4 container, which `test/mysqlserver.sh start` brings
-up on `127.0.0.1:13306` with the schema from `src/sql/mysql` and a `quickfix` user without a password.
+up on `127.0.0.1:61306` with the schema from `src/sql/mysql` and a `quickfix` user without a password.
 It needs rootless podman and nothing else, and a later `stop` leaves nothing behind. To run those cases
 by hand from a tree configured with `-DHAVE_MYSQL=ON`:
 

@@ -22,6 +22,7 @@
 #ifdef HAVE_POSTGRESQL
 
 #include "DatabaseLogTestCase.h"
+#include <PortSetting.h>
 #include <PostgreSQLLog.h>
 
 #include <chrono>
@@ -36,7 +37,7 @@ struct postgreSQLLogFixture : DatabaseLogFixture
     postgreSQLLogFixture()
         : database(defaults.getString(POSTGRESQL_LOG_DATABASE)), user(defaults.getString(POSTGRESQL_LOG_USER)),
           password(defaults.getString(POSTGRESQL_LOG_PASSWORD)), host(defaults.getString(POSTGRESQL_LOG_HOST)),
-          port(defaults.has(POSTGRESQL_LOG_PORT) ? (short)defaults.getInt(POSTGRESQL_LOG_PORT) : (short)0),
+          port(defaults.has(POSTGRESQL_LOG_PORT) ? getPortSetting(defaults, POSTGRESQL_LOG_PORT, true) : 0),
           connection(database, user, password, host, port)
     {
         emptyDatabaseLogTables(*this);
@@ -69,7 +70,7 @@ struct postgreSQLLogFixture : DatabaseLogFixture
     std::string user;
     std::string password;
     std::string host;
-    short port;
+    unsigned short port;
     PostgreSQLConnection connection;
 };
 
@@ -108,6 +109,14 @@ TEST_CASE_METHOD(postgreSQLLogFixture, "PostgreSQLLogTests")
 
         CHECK(databaseLogRows(*this, "messages_log") ==
               Rows{"FIX.4.2|LOG|TEST|NULL|session", "NULL|NULL|NULL|NULL|global"});
+    }
+
+    SECTION("aSettingThatCannotBeAPortIsAConfigError")
+    {
+        Dictionary refused = defaults;
+        refused.setString(POSTGRESQL_LOG_PORT, GENERATE("-1", "65536", "not a number"));
+        PostgreSQLLogFactory factory(settingsFor(refused));
+        CHECK_THROWS_AS(factory.create(plain), ConfigError);
     }
 
     SECTION("aPooledConnectionOutlivesAnyOneLog")

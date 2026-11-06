@@ -21,6 +21,7 @@
 
 #ifdef HAVE_POSTGRESQL
 
+#include "PortSetting.h"
 #include "PostgreSQLLog.h"
 #include "SessionID.h"
 #include "SessionSettings.h"
@@ -34,7 +35,7 @@ const std::string PostgreSQLLogFactory::DEFAULT_DATABASE = "quickfix";
 const std::string PostgreSQLLogFactory::DEFAULT_USER = "postgres";
 const std::string PostgreSQLLogFactory::DEFAULT_PASSWORD = "";
 const std::string PostgreSQLLogFactory::DEFAULT_HOST = "localhost";
-const short PostgreSQLLogFactory::DEFAULT_PORT = 0;
+const unsigned short PostgreSQLLogFactory::DEFAULT_PORT = 0;
 
 PostgreSQLLog::PostgreSQLLog(const SessionID &s, const DatabaseConnectionID &d, PostgreSQLConnectionPool *p)
     : m_pConnectionPool(p)
@@ -52,7 +53,7 @@ PostgreSQLLog::PostgreSQLLog(const DatabaseConnectionID &d, PostgreSQLConnection
 }
 
 PostgreSQLLog::PostgreSQLLog(const SessionID &s, const std::string &database, const std::string &user,
-                             const std::string &password, const std::string &host, short port)
+                             const std::string &password, const std::string &host, unsigned short port)
     : m_pConnectionPool(0)
 {
     init();
@@ -61,7 +62,7 @@ PostgreSQLLog::PostgreSQLLog(const SessionID &s, const std::string &database, co
 }
 
 PostgreSQLLog::PostgreSQLLog(const std::string &database, const std::string &user, const std::string &password,
-                             const std::string &host, short port)
+                             const std::string &host, unsigned short port)
     : m_pConnectionPool(0), m_pSessionID(0)
 {
     init();
@@ -94,7 +95,7 @@ Log *PostgreSQLLogFactory::create()
     std::string user;
     std::string password;
     std::string host;
-    short port;
+    unsigned short port;
 
     init(m_settings.get(), database, user, password, host, port);
     DatabaseConnectionID id(database, user, password, host, port);
@@ -109,7 +110,7 @@ Log *PostgreSQLLogFactory::create(const SessionID &s)
     std::string user;
     std::string password;
     std::string host;
-    short port;
+    unsigned short port;
 
     Dictionary settings;
     if (m_settings.has(s))
@@ -125,7 +126,7 @@ Log *PostgreSQLLogFactory::create(const SessionID &s)
 }
 
 void PostgreSQLLogFactory::init(const Dictionary &settings, std::string &database, std::string &user,
-                                std::string &password, std::string &host, short &port)
+                                std::string &password, std::string &host, unsigned short &port)
 {
     database = DEFAULT_DATABASE;
     user = DEFAULT_USER;
@@ -167,12 +168,9 @@ void PostgreSQLLogFactory::init(const Dictionary &settings, std::string &databas
         {
         }
 
-        try
+        if (settings.has(POSTGRESQL_LOG_PORT))
         {
-            port = (short)settings.getInt(POSTGRESQL_LOG_PORT);
-        }
-        catch (ConfigError &)
-        {
+            port = getPortSetting(settings, POSTGRESQL_LOG_PORT, true);
         }
     }
     else

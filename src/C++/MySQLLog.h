@@ -56,9 +56,9 @@ public:
     MySQLLog(const SessionID &sessionID, const DatabaseConnectionID &connectionID, MySQLConnectionPool *pool);
     MySQLLog(const DatabaseConnectionID &connectionID, MySQLConnectionPool *pool);
     MySQLLog(const SessionID &sessionID, const std::string &database, const std::string &user,
-             const std::string &password, const std::string &host, short port);
+             const std::string &password, const std::string &host, unsigned short port);
     MySQLLog(const std::string &database, const std::string &user, const std::string &password, const std::string &host,
-             short port);
+             unsigned short port);
 
     ~MySQLLog();
 
@@ -92,7 +92,7 @@ public:
     static const std::string DEFAULT_USER;
     static const std::string DEFAULT_PASSWORD;
     static const std::string DEFAULT_HOST;
-    static const short DEFAULT_PORT;
+    static const unsigned short DEFAULT_PORT;
 
     MySQLLogFactory(const SessionSettings &settings) : m_settings(settings), m_useSettings(true)
     {
@@ -109,7 +109,7 @@ public:
     }
 
     MySQLLogFactory(const std::string &database, const std::string &user, const std::string &password,
-                    const std::string &host, short port)
+                    const std::string &host, unsigned short port)
         : m_database(database), m_user(user), m_password(password), m_host(host), m_port(port), m_useSettings(false)
     {
         m_connectionPoolPtr = MySQLConnectionPoolPtr(new MySQLConnectionPool(false));
@@ -128,7 +128,7 @@ public:
 
 private:
     void init(const Dictionary &settings, std::string &database, std::string &user, std::string &password,
-              std::string &host, short &port);
+              std::string &host, unsigned short &port);
 
     void initLog(const Dictionary &settings, MySQLLog &log);
 
@@ -138,7 +138,7 @@ private:
     std::string m_user;
     std::string m_password;
     std::string m_host;
-    short m_port;
+    unsigned short m_port;
     bool m_useSettings;
 };
 } // namespace FIX

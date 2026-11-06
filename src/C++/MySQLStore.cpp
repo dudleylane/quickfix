@@ -24,6 +24,7 @@
 #include "FieldConvertors.h"
 #include "MySQLStore.h"
 #include "Parser.h"
+#include "PortSetting.h"
 #include "SessionID.h"
 #include "SessionSettings.h"
 #include "Utility.h"
@@ -36,7 +37,7 @@ const std::string MySQLStoreFactory::DEFAULT_DATABASE = "quickfix";
 const std::string MySQLStoreFactory::DEFAULT_USER = "";
 const std::string MySQLStoreFactory::DEFAULT_PASSWORD = "";
 const std::string MySQLStoreFactory::DEFAULT_HOST = "localhost";
-const short MySQLStoreFactory::DEFAULT_PORT = 3306;
+const unsigned short MySQLStoreFactory::DEFAULT_PORT = 3306;
 
 namespace
 {
@@ -66,7 +67,8 @@ MySQLStore::MySQLStore(const UtcTimeStamp &now, const SessionID &sessionID, cons
 }
 
 MySQLStore::MySQLStore(const UtcTimeStamp &now, const SessionID &sessionID, const std::string &database,
-                       const std::string &user, const std::string &password, const std::string &host, short port)
+                       const std::string &user, const std::string &password, const std::string &host,
+                       unsigned short port)
     : m_cache(now), m_pConnectionPool(0), m_sessionID(sessionID)
 {
     m_pConnection = new MySQLConnection(database, user, password, host, port);
@@ -159,7 +161,7 @@ MessageStore *MySQLStoreFactory::create(const UtcTimeStamp &now, const SessionID
     std::string user = DEFAULT_USER;
     std::string password = DEFAULT_PASSWORD;
     std::string host = DEFAULT_HOST;
-    short port = DEFAULT_PORT;
+    unsigned short port = DEFAULT_PORT;
 
     try
     {
@@ -193,12 +195,9 @@ MessageStore *MySQLStoreFactory::create(const UtcTimeStamp &now, const SessionID
     {
     }
 
-    try
+    if (settings.has(MYSQL_STORE_PORT))
     {
-        port = (short)settings.getInt(MYSQL_STORE_PORT);
-    }
-    catch (ConfigError &)
-    {
+        port = getPortSetting(settings, MYSQL_STORE_PORT, true);
     }
 
     DatabaseConnectionID id(database, user, password, host, port);

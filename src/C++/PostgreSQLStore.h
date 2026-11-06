@@ -56,7 +56,7 @@ public:
     static const std::string DEFAULT_USER;
     static const std::string DEFAULT_PASSWORD;
     static const std::string DEFAULT_HOST;
-    static const short DEFAULT_PORT;
+    static const unsigned short DEFAULT_PORT;
 
     PostgreSQLStoreFactory(const SessionSettings &settings)
         : m_settings(settings), m_useSettings(true), m_useDictionary(false)
@@ -80,7 +80,7 @@ public:
     }
 
     PostgreSQLStoreFactory(const std::string &database, const std::string &user, const std::string &password,
-                           const std::string &host, short port)
+                           const std::string &host, unsigned short port)
         : m_database(database), m_user(user), m_password(password), m_host(host), m_port(port), m_useSettings(false),
           m_useDictionary(false)
     {
@@ -107,7 +107,7 @@ private:
     std::string m_user;
     std::string m_password;
     std::string m_host;
-    short m_port;
+    unsigned short m_port;
     bool m_useSettings;
     bool m_useDictionary;
 };
@@ -120,7 +120,7 @@ public:
     PostgreSQLStore(const UtcTimeStamp &now, const SessionID &sessionID, const DatabaseConnectionID &connection,
                     PostgreSQLConnectionPool *pool);
     PostgreSQLStore(const UtcTimeStamp &now, const SessionID &sessionID, const std::string &database,
-                    const std::string &user, const std::string &password, const std::string &host, short port);
+                    const std::string &user, const std::string &password, const std::string &host, unsigned short port);
     ~PostgreSQLStore();
 
     bool set(SEQNUM, const std::string &) EXCEPT(IOException);

@@ -64,7 +64,7 @@ public class MySQLStoreFactory extends MessageStoreFactory {
     return quickfixJNI.MySQLStoreFactory_DEFAULT_HOST_get();
   }
 
-  public static short getDEFAULT_PORT() {
+  public static int getDEFAULT_PORT() {
     return quickfixJNI.MySQLStoreFactory_DEFAULT_PORT_get();
   }
 
@@ -76,7 +76,7 @@ public class MySQLStoreFactory extends MessageStoreFactory {
     this(quickfixJNI.new_MySQLStoreFactory__SWIG_1(Dictionary.getCPtr(dictionary), dictionary), true);
   }
 
-  public MySQLStoreFactory(String database, String user, String password, String host, short port) {
+  public MySQLStoreFactory(String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_MySQLStoreFactory__SWIG_2(database, user, password, host, port), true);
   }
 

@@ -124,6 +124,17 @@ TEST_CASE_METHOD(resetPostgreSQLStoreFixture, "PostgreSQLStoreMessageTests")
         CHECK(messages.empty());
     }
 
+    SECTION("aSettingThatCannotBeAPortIsAConfigError")
+    {
+        Dictionary refused = TestSettings::sessionSettings.get();
+        refused.setString(POSTGRESQL_STORE_PORT, GENERATE("-1", "65536", "not a number"));
+        PostgreSQLStoreFactory refusedFactory(refused);
+        CHECK_THROWS_AS(
+            refusedFactory.create(UtcTimeStamp::now(),
+                                  SessionID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST"))),
+            ConfigError);
+    }
+
     SECTION("settingAgainReplacesAndAddsNoRow")
     {
         CHECK(object->set(1, "first"));

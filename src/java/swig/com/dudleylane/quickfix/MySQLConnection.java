@@ -52,7 +52,7 @@ public class MySQLConnection {
     this(quickfixJNI.new_MySQLConnection__SWIG_0(DatabaseConnectionID.getCPtr(id), id), true);
   }
 
-  public MySQLConnection(String database, String user, String password, String host, short port) {
+  public MySQLConnection(String database, String user, String password, String host, int port) {
     this(quickfixJNI.new_MySQLConnection__SWIG_1(database, user, password, host, port), true);
   }
 
