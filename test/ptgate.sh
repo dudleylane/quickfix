@@ -35,10 +35,21 @@ fi
 WORK=$(mktemp -d)
 trap 'git -C "$TEST" worktree remove --force "$WORK/base" 2>/dev/null; rm -rf "$WORK"' EXIT
 
-git -C "$TEST" worktree add --detach "$WORK/base" "$BASE" >/dev/null || exit 1
+git -C "$TEST" worktree add --detach "$WORK/base" "$BASE" >/dev/null || {
+    echo "FAILED: could not add a worktree at $BASE"
+    exit 1
+}
 cmake -S "$WORK/base" -B "$WORK/base/build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DHAVE_SSL=ON \
-    -DQUICKFIX_TESTS=OFF -DQUICKFIX_LIB_OUTPUT_DIR="$WORK/base/out" >/dev/null || exit 1
-cmake --build "$WORK/base/build" --target pt -j"$(nproc)" >/dev/null || exit 1
+    -DQUICKFIX_TESTS=OFF -DQUICKFIX_LIB_OUTPUT_DIR="$WORK/base/out" >/dev/null || {
+    echo "FAILED: could not configure $BASE"
+    exit 1
+}
+# Quiet unless it fails: Ninja reports a failed compile on stdout, not stderr (#178).
+cmake --build "$WORK/base/build" --target pt -j"$(nproc)" > "$WORK/base-build.txt" 2>&1 || {
+    cat "$WORK/base-build.txt"
+    echo "FAILED: could not build pt at $BASE"
+    exit 1
+}
 
 settle()
 {
