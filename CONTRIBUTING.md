@@ -281,10 +281,24 @@ otherwise exit 0 and prove nothing. That is a second full build (~2m15s), which 
 every push. It also restores `src/C++/config.h`, which `configure_file` rewrites — that file is
 tracked.
 
-The same step then runs `ut` in that configuration, so the PostgreSQL and ODBC stores are
-exercised rather than just linked; the ODBC tests go through psqlODBC to the same PostgreSQL
-server. MySQL stays link-only: the runner has no MySQL server, and its client library is MariaDB's
-`libmariadb`, an API-compatible replacement for `libmysqlclient` rather than the same library.
+The same step then runs `ut` in that configuration, so the stores are exercised rather than just
+linked. The PostgreSQL cases run against the runner's server, and the ODBC ones reach the same
+server through psqlODBC.
+
+The MySQL store and log run against a MySQL 8.4 container, which `test/mysqlserver.sh start` brings
+up on `127.0.0.1:13306` with the schema from `src/sql/mysql` and a `quickfix` user without a password.
+It needs rootless podman and nothing else, and a later `stop` leaves nothing behind. To run those cases
+by hand from a tree configured with `-DHAVE_MYSQL=ON`:
+
+```bash
+test/mysqlserver.sh start
+(cd test && ../build-db/out/ut "*MySQL*" --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
+test/mysqlserver.sh stop
+```
+
+The client library stays MariaDB's `libmariadb`: on this platform `libmysqlclient.so` is a link to it.
+So what runs is that client against a MySQL server, which is what a program built here gets. Oracle's
+own `libmysqlclient` is still not exercised.
 
 The runner's database is set up once (PostgreSQL 18 from the PGDG repository):
 

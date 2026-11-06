@@ -199,8 +199,10 @@ bool MySQLStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOExceptio
     std::string msgCopy((msg.size() * 2) + 1, '\0');
     msgCopy.resize(mysql_escape_string(msgCopy.data(), msg.c_str(), msg.size()));
 
+    // One statement rather than an INSERT and, on any failure, an UPDATE: when the INSERT failed for a reason other
+    // than a duplicate key, the UPDATE matched no row and set() reported a message stored that was not.
     std::stringstream queryString;
-    queryString << "INSERT INTO messages "
+    queryString << "REPLACE INTO messages "
                 << "(beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum, message) "
                 << "VALUES ("
                 << "\"" << m_sessionID.getBeginString().getValue() << "\","
@@ -212,18 +214,7 @@ bool MySQLStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOExceptio
     MySQLQuery query(queryString.str());
     if (!m_pConnection->execute(query))
     {
-        std::stringstream queryString2;
-        queryString2 << "UPDATE messages SET message=\"" << msgCopy << "\" WHERE "
-                     << "beginstring=" << "\"" << m_sessionID.getBeginString().getValue() << "\" and "
-                     << "sendercompid=" << "\"" << m_sessionID.getSenderCompID().getValue() << "\" and "
-                     << "targetcompid=" << "\"" << m_sessionID.getTargetCompID().getValue() << "\" and "
-                     << "session_qualifier=" << "\"" << m_sessionID.getSessionQualifier() << "\" and "
-                     << "msgseqnum=" << msgSeqNum;
-        MySQLQuery query2(queryString2.str());
-        if (!m_pConnection->execute(query2))
-        {
-            query2.throwException();
-        }
+        query.throwException();
     }
     return true;
 }
@@ -246,11 +237,7 @@ void MySQLStore::get(SEQNUM begin, SEQNUM end, std::vector<std::string> &result)
         query.throwException();
     }
 
-    int rows = query.rows();
-    for (int row = 0; row < rows; row++)
-    {
-        result.push_back(query.getValue(row, 0));
-    }
+    query.getValues(0, result);
 }
 
 SEQNUM MySQLStore::getNextSenderMsgSeqNum() const EXCEPT(IOException) { return m_cache.getNextSenderMsgSeqNum(); }

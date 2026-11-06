@@ -10,7 +10,7 @@ CREATE TABLE event_log (
   sendercompid VARCHAR(64),
   targetcompid VARCHAR(64),
   session_qualifier VARCHAR(64),
-  text BLOB NOT NULL,
+  text MEDIUMBLOB NOT NULL,
   PRIMARY KEY (id)
 );
 
@@ -24,6 +24,6 @@ CREATE TABLE event_backup_log (
   sendercompid VARCHAR(64),
   targetcompid VARCHAR(64),
   session_qualifier VARCHAR(64),
-  text BLOB NOT NULL,
+  text MEDIUMBLOB NOT NULL,
   PRIMARY KEY (id)
 );

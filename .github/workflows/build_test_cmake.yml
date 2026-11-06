@@ -220,15 +220,16 @@ jobs:
         # too much on every push for drift that only needs catching before a
         # merge; the syntax check stays as the fast per-push guard.
         #
-        # It then runs ut in this configuration, so the PostgreSQL and ODBC
-        # stores are exercised, not just linked (#12): the ODBC tests go
-        # through psqlODBC to the same server. MySQL stays link-only -- the
-        # runner has no MySQL server, and its client library is MariaDB's.
+        # It then runs ut in this configuration, so the stores are exercised,
+        # not just linked (#12, #82): the PostgreSQL cases and, through psqlODBC,
+        # the ODBC ones against the runner's server; the MySQL store and log
+        # against a MySQL 8.4 container test/mysqlserver.sh starts. The client
+        # stays MariaDB's, which is what libmysqlclient is on this platform.
         #
         # Runner needs mariadb-connector-c-devel, libpq5-devel, unixODBC-devel,
-        # postgresql-odbc, and a PostgreSQL server on localhost with a
-        # passwordless quickfix role owning nothing but able to use the quickfix
-        # database's tables; CONTRIBUTING has the setup.
+        # postgresql-odbc, rootless podman, and a PostgreSQL server on localhost
+        # with a passwordless quickfix role owning nothing but able to use the
+        # quickfix database's tables; CONTRIBUTING has the setup.
         if: github.event_name != 'push' && matrix.configuration == 'Debug'
         shell: bash
         run: |
@@ -254,13 +255,29 @@ jobs:
           # timing out against it.
           psql -h localhost -U quickfix -d quickfix -qtAc 'select 1' > /dev/null \
             || { echo "::error::cannot reach the quickfix database on localhost -- see CONTRIBUTING"; exit 1; }
-          (cd test && ../build-db/out/ut "~*MySQLStore*" \
+          test/mysqlserver.sh start \
+            || { echo "::error::could not start the MySQL server -- see CONTRIBUTING"; exit 1; }
+
+          # Without HAVE_MYSQL these cases compile to nothing and ut still passes.
+          (cd test && ../build-db/out/ut --list-tests "*MySQL*" \
+              --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec) \
+            | grep -q MySQLLogTests \
+            || { echo "::error::ut has no MySQL cases in this configuration"; exit 1; }
+          (cd test && ../build-db/out/ut \
               --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
 
           # configure_file rewrote the *tracked* src/C++/config.h to define
           # HAVE_MYSQL and friends. Harmless on a fresh checkout, but left dirty
           # it misleads whatever runs next and anyone copying this recipe.
           git checkout -- src/C++/config.h
+
+      - name: Stop the MySQL server
+        # Its own step, so that a failed or cancelled run stops it too. A start
+        # removes what an earlier run left, but only if there is a next run, and
+        # this machine has other work to do.
+        if: always() && github.event_name != 'push' && matrix.configuration == 'Debug'
+        shell: bash
+        run: test/mysqlserver.sh stop
 
       - name: Run the Python binding tests
         # Compiling and linking the wrapper proves it builds, not that it works.

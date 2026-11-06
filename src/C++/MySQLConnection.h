@@ -98,6 +98,7 @@ public:
     {
         if (m_rows.empty())
         {
+            mysql_data_seek(m_result, 0);
             MYSQL_ROW row = 0;
             while ((row = mysql_fetch_row(m_result)))
             {
@@ -106,6 +107,18 @@ public:
         }
         return m_rows[row][column];
     }
+
+#ifndef SWIG
+    /// Appends every row's value in a column, whole: getValue's C string stops at a NUL, which a data field can hold.
+    void getValues(int column, std::vector<std::string> &values)
+    {
+        mysql_data_seek(m_result, 0);
+        while (MYSQL_ROW row = mysql_fetch_row(m_result))
+        {
+            values.emplace_back(row[column], mysql_fetch_lengths(m_result)[column]);
+        }
+    }
+#endif
 
     void throwException() EXCEPT(IOException)
     {
@@ -171,13 +184,12 @@ private:
         if (!mysql_real_connect(m_pConnection, m_connectionID.getHost().c_str(), m_connectionID.getUser().c_str(),
                                 m_connectionID.getPassword().c_str(), m_connectionID.getDatabase().c_str(), port, 0, 0))
         {
-            if (!connected())
-            {
-                throw ConfigError(std::string("Unable to connect to mysql database: ") + "'" +
-                                  m_connectionID.getDatabase() + "': " + m_connectionID.getUser() + '@' +
-                                  m_connectionID.getHost() + ":" + std::to_string(port) + " [" +
-                                  mysql_error(m_pConnection) + "]");
-            }
+            // The destructor will not run, and a ping of this handle would only replace the reason with its own.
+            const std::string reason = mysql_error(m_pConnection);
+            mysql_close(m_pConnection);
+            throw ConfigError(std::string("Unable to connect to mysql database: ") + "'" +
+                              m_connectionID.getDatabase() + "': " + m_connectionID.getUser() + '@' +
+                              m_connectionID.getHost() + ":" + std::to_string(port) + " [" + reason + "]");
         }
 
 #if (MYSQL_VERSION_ID > 80000)

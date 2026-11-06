@@ -64,6 +64,7 @@ MySQLLog::MySQLLog(const std::string &database, const std::string &user, const s
                    const std::string &host, short port)
     : m_pConnectionPool(0), m_pSessionID(0)
 {
+    init();
     m_pConnection = new MySQLConnection(database, user, password, host, port);
 }
 
@@ -227,12 +228,16 @@ void MySQLLog::clear()
 
         if (m_pSessionID->getSessionQualifier().size())
         {
-            whereClause << "AND SessionQualifier = \"" << m_pSessionID->getSessionQualifier() << "\"";
+            whereClause << "AND session_qualifier = \"" << m_pSessionID->getSessionQualifier() << "\"";
+        }
+        else
+        {
+            whereClause << "AND session_qualifier IS NULL";
         }
     }
     else
     {
-        whereClause << "BeginString = NULL AND SenderCompID = NULL && TargetCompID = NULL";
+        whereClause << "BeginString IS NULL AND SenderCompID IS NULL AND TargetCompID IS NULL";
     }
 
     std::stringstream incomingQuery;

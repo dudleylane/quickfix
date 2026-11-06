@@ -91,8 +91,75 @@ TEST_CASE_METHOD(noResetMySQLStoreFixture, "noResetMySQLStoreTests")
 
     SECTION("refresh")
     {
-        CHECK_MESSAGE_STORE_RELOAD
+        CHECK_MESSAGE_STORE_REFRESH
     }
+}
+
+TEST_CASE_METHOD(resetMySQLStoreFixture, "MySQLStoreMessageTests")
+{
+    std::vector<std::string> messages;
+
+    SECTION("aMessageOverSixtyFourKilobytesComesBackWhole")
+    {
+        const std::string message(70000, 'x');
+        CHECK(object->set(1, message));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK(message == messages[0]);
+    }
+
+    SECTION("aMessageHoldingANulComesBackWhole")
+    {
+        std::string message = "8=FIX.4.2\x01"
+                              "95=3\x01"
+                              "96=a";
+        message.push_back('\0');
+        message += "b\x01"
+                   "10=000\x01";
+        CHECK(object->set(1, message));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK(message == messages[0]);
+    }
+
+    SECTION("aMessageTheServerRefusesThrows")
+    {
+        // Past what the column can hold. Reporting success here turns a later resend into a gap fill.
+        CHECK_THROWS_AS(object->set(1, std::string(17 * 1024 * 1024, 'x')), IOException);
+        object->get(1, 1, messages);
+        CHECK(messages.empty());
+    }
+
+    SECTION("settingAgainReplacesAndAddsNoRow")
+    {
+        CHECK(object->set(1, "first"));
+        CHECK(object->set(1, "second"));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("second" == messages[0]);
+    }
+
+    SECTION("aQualifiedSessionKeepsItsOwnMessages")
+    {
+        SessionID qualifiedID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST"), "QUALIFIED");
+        MessageStore *qualified = factory.create(UtcTimeStamp::now(), qualifiedID);
+        qualified->reset(UtcTimeStamp::now());
+        CHECK(object->set(1, "plain"));
+        CHECK(qualified->set(1, "qualified"));
+        qualified->setNextSenderMsgSeqNum(5);
+
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("plain" == messages[0]);
+        qualified->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("qualified" == messages[0]);
+        CHECK(1 == object->getNextSenderMsgSeqNum());
+
+        factory.destroy(qualified);
+    }
+
+    SET_SEQUENCE_NUMBERS
 }
 
 #endif

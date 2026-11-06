@@ -8,6 +8,6 @@ CREATE TABLE messages (
   targetcompid VARCHAR(64) NOT NULL,
   session_qualifier VARCHAR(64) NOT NULL,
   msgseqnum BIGINT UNSIGNED NOT NULL, 
-  message BLOB NOT NULL,
+  message MEDIUMBLOB NOT NULL,
   PRIMARY KEY (beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum)
 );
