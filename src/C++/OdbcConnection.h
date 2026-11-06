@@ -132,6 +132,9 @@ public:
 
     const std::string &reason() { return m_reason; }
 
+    /// Why a query that failed could not be retried, which is more use than why it failed.
+    void reason(const std::string &reason) { m_reason = reason; }
+
     bool fetch() { return odbcSuccess(SQLFetch(m_statement)); }
 
     /*char* getValue( int row, int column )
@@ -214,7 +217,17 @@ public:
         Locker locker(m_mutex);
         if (!pQuery.execute(m_connection))
         {
-            reconnect();
+            // A connection that cannot be remade is a failed query, as on the other backends, and the next one tries
+            // again.
+            try
+            {
+                reconnect();
+            }
+            catch (const ConfigError &e)
+            {
+                pQuery.reason(e.what());
+                return false;
+            }
             return pQuery.execute(m_connection);
         }
         return true;

@@ -25,6 +25,7 @@
 #include <OdbcLog.h>
 
 #include <chrono>
+#include <stdlib.h>
 #include <thread>
 
 using namespace FIX;
@@ -114,6 +115,30 @@ TEST_CASE_METHOD(odbcLogFixture, "OdbcConnectionTests")
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
 
+        CHECK(selectFrom(victim, "SELECT 41 + 1") == Rows{"42"});
+    }
+
+    SECTION("aConnectionThatCannotBeRemadeFailsTheQuery")
+    {
+        OdbcConnection victim(user, password, connectionString);
+        const std::string id = selectFrom(victim, "SELECT pg_backend_pid()").at(0);
+        execute("SELECT pg_terminate_backend(" + id + ")");
+        while (select("SELECT COUNT(*) FROM pg_stat_activity WHERE pid = " + id) != Rows{"0"})
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        // libpq, which psqlODBC connects through, reads this on every connect, and the server refuses what it names.
+        setenv("PGOPTIONS", "-c no_such_setting=1", 1);
+        OdbcQuery query("SELECT 41 + 1");
+        const bool succeeded = victim.execute(query);
+        const bool succeededAgain = victim.execute(query);
+        unsetenv("PGOPTIONS");
+
+        CHECK_FALSE(succeeded);
+        CHECK_FALSE(succeededAgain);
+        CHECK_THROWS_AS(query.throwException(), IOException);
+        CHECK(query.reason().find("no_such_setting") != std::string::npos);
         CHECK(selectFrom(victim, "SELECT 41 + 1") == Rows{"42"});
     }
 
