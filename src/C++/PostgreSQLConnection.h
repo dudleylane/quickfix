@@ -146,6 +146,18 @@ public:
         return pQuery.execute(m_pConnection);
     }
 
+#ifndef SWIG
+    /// A value escaped for a single-quoted literal on this connection, by its own settings rather than by those of
+    /// whichever connection the process made last.
+    std::string escape(const std::string &value)
+    {
+        std::string escaped((value.size() * 2) + 1, '\0');
+        Locker locker(m_mutex);
+        escaped.resize(PQescapeStringConn(m_pConnection, escaped.data(), value.data(), value.size(), nullptr));
+        return escaped;
+    }
+#endif
+
 private:
     void connect()
     {

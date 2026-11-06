@@ -72,7 +72,15 @@ inline bool odbcSuccess(RETCODE result) { return result == SQL_SUCCESS || result
 class OdbcQuery
 {
 public:
-    OdbcQuery(const std::string &query) : m_statement(0), m_result(0), m_query(query) {}
+    OdbcQuery(const std::string &query) : m_statement(0), m_result(0), m_query(query), m_bound(false), m_valueLength(0)
+    {
+    }
+
+    /// A query whose one ? stands for the value, which the driver carries as data rather than as SQL.
+    OdbcQuery(const std::string &query, const std::string &value)
+        : m_statement(0), m_result(0), m_query(query), m_value(value), m_bound(true), m_valueLength(0)
+    {
+    }
 
     ~OdbcQuery() { close(); }
 
@@ -93,7 +101,18 @@ public:
             SQLFreeHandle(SQL_HANDLE_STMT, m_statement);
         }
         SQLAllocHandle(SQL_HANDLE_STMT, connection, &m_statement);
-        m_result = SQLExecDirect(m_statement, (SQLCHAR *)m_query.c_str(), (SQLINTEGER)m_query.size());
+        m_result = SQL_SUCCESS;
+        if (m_bound)
+        {
+            m_valueLength = (SQLLEN)m_value.size();
+            m_result = SQLBindParameter(m_statement, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_LONGVARCHAR,
+                                        m_value.empty() ? 1 : m_value.size(), 0, (SQLPOINTER)m_value.data(),
+                                        m_valueLength, &m_valueLength);
+        }
+        if (success())
+        {
+            m_result = SQLExecDirect(m_statement, (SQLCHAR *)m_query.c_str(), (SQLINTEGER)m_query.size());
+        }
         if (success() || m_result == SQL_NO_DATA)
         {
             return true;
@@ -141,6 +160,9 @@ private:
     RETCODE m_result;
     std::string m_query;
     std::string m_reason;
+    std::string m_value;
+    bool m_bound;
+    SQLLEN m_valueLength;
 };
 
 class OdbcConnection

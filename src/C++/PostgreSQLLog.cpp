@@ -264,9 +264,6 @@ void PostgreSQLLog::insert(const std::string &table, const std::string value)
     char sqlTime[100];
     STRING_SPRINTF(sqlTime, "%d-%02d-%02d %02d:%02d:%02d.%03d", year, month, day, hour, minute, second, millis);
 
-    char *valueCopy = new char[(value.size() * 2) + 1];
-    PQescapeString(valueCopy, value.c_str(), value.size());
-
     std::stringstream queryString;
     queryString << "INSERT INTO " << table << " "
                 << "(time, beginstring, sendercompid, targetcompid, session_qualifier, text) "
@@ -292,8 +289,7 @@ void PostgreSQLLog::insert(const std::string &table, const std::string value)
         queryString << "NULL, NULL, NULL, NULL, ";
     }
 
-    queryString << "'" << valueCopy << "')";
-    delete[] valueCopy;
+    queryString << "'" << m_pConnection->escape(value) << "')";
 
     PostgreSQLQuery query(queryString.str());
     m_pConnection->execute(query);

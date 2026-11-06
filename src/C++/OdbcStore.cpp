@@ -171,9 +171,6 @@ MessageStore *OdbcStoreFactory::create(const UtcTimeStamp &now, const SessionID 
 
 bool OdbcStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException)
 {
-    std::string msgCopy = msg;
-    string_replace("'", "''", msgCopy);
-
     std::stringstream queryString;
     queryString << "INSERT INTO messages "
                 << "(beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum, message) "
@@ -181,21 +178,20 @@ bool OdbcStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException
                 << "'" << m_sessionID.getBeginString().getValue() << "',"
                 << "'" << m_sessionID.getSenderCompID().getValue() << "',"
                 << "'" << m_sessionID.getTargetCompID().getValue() << "',"
-                << "'" << m_sessionID.getSessionQualifier() << "'," << msgSeqNum << ","
-                << "'" << msgCopy << "')";
+                << "'" << m_sessionID.getSessionQualifier() << "'," << msgSeqNum << ",?)";
 
-    OdbcQuery query(queryString.str());
+    OdbcQuery query(queryString.str(), msg);
     if (!m_pConnection->execute(query))
     {
         query.close();
         std::stringstream queryString2;
-        queryString2 << "UPDATE messages SET message='" << msgCopy << "' WHERE "
+        queryString2 << "UPDATE messages SET message=? WHERE "
                      << "beginstring=" << "'" << m_sessionID.getBeginString().getValue() << "' and "
                      << "sendercompid=" << "'" << m_sessionID.getSenderCompID().getValue() << "' and "
                      << "targetcompid=" << "'" << m_sessionID.getTargetCompID().getValue() << "' and "
                      << "session_qualifier=" << "'" << m_sessionID.getSessionQualifier() << "' and "
                      << "msgseqnum=" << msgSeqNum;
-        OdbcQuery query2(queryString2.str());
+        OdbcQuery query2(queryString2.str(), msg);
         if (!m_pConnection->execute(query2))
         {
             query2.throwException();

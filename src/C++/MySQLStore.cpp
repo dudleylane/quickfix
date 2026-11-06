@@ -38,6 +38,25 @@ const std::string MySQLStoreFactory::DEFAULT_PASSWORD = "";
 const std::string MySQLStoreFactory::DEFAULT_HOST = "localhost";
 const short MySQLStoreFactory::DEFAULT_PORT = 3306;
 
+namespace
+{
+std::string sessionIs(MySQLConnection &connection, const SessionID &sessionID)
+{
+    return "beginstring=" + connection.quote(sessionID.getBeginString().getValue()) +
+           " and sendercompid=" + connection.quote(sessionID.getSenderCompID().getValue()) +
+           " and targetcompid=" + connection.quote(sessionID.getTargetCompID().getValue()) +
+           " and session_qualifier=" + connection.quote(sessionID.getSessionQualifier());
+}
+
+std::string sessionValues(MySQLConnection &connection, const SessionID &sessionID)
+{
+    return connection.quote(sessionID.getBeginString().getValue()) + "," +
+           connection.quote(sessionID.getSenderCompID().getValue()) + "," +
+           connection.quote(sessionID.getTargetCompID().getValue()) + "," +
+           connection.quote(sessionID.getSessionQualifier());
+}
+} // namespace
+
 MySQLStore::MySQLStore(const UtcTimeStamp &now, const SessionID &sessionID, const DatabaseConnectionID &connection,
                        MySQLConnectionPool *pool)
     : m_cache(now), m_pConnectionPool(pool), m_sessionID(sessionID)
@@ -71,10 +90,7 @@ void MySQLStore::populateCache()
     std::stringstream queryString;
 
     queryString << "SELECT creation_time, incoming_seqnum, outgoing_seqnum FROM sessions WHERE "
-                << "beginstring=" << "\"" << m_sessionID.getBeginString().getValue() << "\" and "
-                << "sendercompid=" << "\"" << m_sessionID.getSenderCompID().getValue() << "\" and "
-                << "targetcompid=" << "\"" << m_sessionID.getTargetCompID().getValue() << "\" and "
-                << "session_qualifier=" << "\"" << m_sessionID.getSessionQualifier() << "\"";
+                << sessionIs(*m_pConnection, m_sessionID);
 
     MySQLQuery query(queryString.str());
     if (!m_pConnection->execute(query))
@@ -108,10 +124,7 @@ void MySQLStore::populateCache()
         std::stringstream queryString2;
         queryString2 << "INSERT INTO sessions (beginstring, sendercompid, targetcompid, session_qualifier,"
                      << "creation_time, incoming_seqnum, outgoing_seqnum) VALUES("
-                     << "\"" << m_sessionID.getBeginString().getValue() << "\","
-                     << "\"" << m_sessionID.getSenderCompID().getValue() << "\","
-                     << "\"" << m_sessionID.getTargetCompID().getValue() << "\","
-                     << "\"" << m_sessionID.getSessionQualifier() << "\","
+                     << sessionValues(*m_pConnection, m_sessionID) << ","
                      << "'" << sqlTime << "'," << m_cache.getNextTargetMsgSeqNum() << ","
                      << m_cache.getNextSenderMsgSeqNum() << ")";
 
@@ -196,20 +209,13 @@ void MySQLStoreFactory::destroy(MessageStore *pStore) { delete pStore; }
 
 bool MySQLStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException)
 {
-    std::string msgCopy((msg.size() * 2) + 1, '\0');
-    msgCopy.resize(mysql_escape_string(msgCopy.data(), msg.c_str(), msg.size()));
-
     // One statement rather than an INSERT and, on any failure, an UPDATE: when the INSERT failed for a reason other
     // than a duplicate key, the UPDATE matched no row and set() reported a message stored that was not.
     std::stringstream queryString;
     queryString << "REPLACE INTO messages "
                 << "(beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum, message) "
-                << "VALUES ("
-                << "\"" << m_sessionID.getBeginString().getValue() << "\","
-                << "\"" << m_sessionID.getSenderCompID().getValue() << "\","
-                << "\"" << m_sessionID.getTargetCompID().getValue() << "\","
-                << "\"" << m_sessionID.getSessionQualifier() << "\"," << msgSeqNum << ","
-                << "\"" << msgCopy << "\")";
+                << "VALUES (" << sessionValues(*m_pConnection, m_sessionID) << "," << msgSeqNum << ","
+                << m_pConnection->quote(msg) << ")";
 
     MySQLQuery query(queryString.str());
     if (!m_pConnection->execute(query))
@@ -223,11 +229,7 @@ void MySQLStore::get(SEQNUM begin, SEQNUM end, std::vector<std::string> &result)
 {
     result.clear();
     std::stringstream queryString;
-    queryString << "SELECT message FROM messages WHERE "
-                << "beginstring=" << "\"" << m_sessionID.getBeginString().getValue() << "\" and "
-                << "sendercompid=" << "\"" << m_sessionID.getSenderCompID().getValue() << "\" and "
-                << "targetcompid=" << "\"" << m_sessionID.getTargetCompID().getValue() << "\" and "
-                << "session_qualifier=" << "\"" << m_sessionID.getSessionQualifier() << "\" and "
+    queryString << "SELECT message FROM messages WHERE " << sessionIs(*m_pConnection, m_sessionID) << " and "
                 << "msgseqnum>=" << begin << " and " << "msgseqnum<=" << end << " "
                 << "ORDER BY msgseqnum";
 
@@ -248,10 +250,7 @@ void MySQLStore::setNextSenderMsgSeqNum(SEQNUM value) EXCEPT(IOException)
 {
     std::stringstream queryString;
     queryString << "UPDATE sessions SET outgoing_seqnum=" << value << " WHERE "
-                << "beginstring=" << "\"" << m_sessionID.getBeginString().getValue() << "\" and "
-                << "sendercompid=" << "\"" << m_sessionID.getSenderCompID().getValue() << "\" and "
-                << "targetcompid=" << "\"" << m_sessionID.getTargetCompID().getValue() << "\" and "
-                << "session_qualifier=" << "\"" << m_sessionID.getSessionQualifier() << "\"";
+                << sessionIs(*m_pConnection, m_sessionID);
     MySQLQuery query(queryString.str());
     if (!m_pConnection->execute(query))
     {
@@ -264,10 +263,7 @@ void MySQLStore::setNextTargetMsgSeqNum(SEQNUM value) EXCEPT(IOException)
 {
     std::stringstream queryString;
     queryString << "UPDATE sessions SET incoming_seqnum=" << value << " WHERE "
-                << "beginstring=" << "\"" << m_sessionID.getBeginString().getValue() << "\" and "
-                << "sendercompid=" << "\"" << m_sessionID.getSenderCompID().getValue() << "\" and "
-                << "targetcompid=" << "\"" << m_sessionID.getTargetCompID().getValue() << "\" and "
-                << "session_qualifier=" << "\"" << m_sessionID.getSessionQualifier() << "\"";
+                << sessionIs(*m_pConnection, m_sessionID);
 
     MySQLQuery query(queryString.str());
     if (!m_pConnection->execute(query))
@@ -295,11 +291,7 @@ UtcTimeStamp MySQLStore::getCreationTime() const EXCEPT(IOException) { return m_
 void MySQLStore::reset(const UtcTimeStamp &now) EXCEPT(IOException)
 {
     std::stringstream queryString;
-    queryString << "DELETE FROM messages WHERE "
-                << "beginstring=" << "\"" << m_sessionID.getBeginString().getValue() << "\" and "
-                << "sendercompid=" << "\"" << m_sessionID.getSenderCompID().getValue() << "\" and "
-                << "targetcompid=" << "\"" << m_sessionID.getTargetCompID().getValue() << "\" and "
-                << "session_qualifier=" << "\"" << m_sessionID.getSessionQualifier() << "\"";
+    queryString << "DELETE FROM messages WHERE " << sessionIs(*m_pConnection, m_sessionID);
 
     MySQLQuery query(queryString.str());
     if (!m_pConnection->execute(query))
@@ -321,10 +313,7 @@ void MySQLStore::reset(const UtcTimeStamp &now) EXCEPT(IOException)
     queryString2 << "UPDATE sessions SET creation_time='" << sqlTime << "', "
                  << "incoming_seqnum=" << m_cache.getNextTargetMsgSeqNum() << ", "
                  << "outgoing_seqnum=" << m_cache.getNextSenderMsgSeqNum() << " WHERE "
-                 << "beginstring=" << "\"" << m_sessionID.getBeginString().getValue() << "\" and "
-                 << "sendercompid=" << "\"" << m_sessionID.getSenderCompID().getValue() << "\" and "
-                 << "targetcompid=" << "\"" << m_sessionID.getTargetCompID().getValue() << "\" and "
-                 << "session_qualifier=" << "\"" << m_sessionID.getSessionQualifier() << "\"";
+                 << sessionIs(*m_pConnection, m_sessionID);
 
     MySQLQuery query2(queryString2.str());
     if (!m_pConnection->execute(query2))

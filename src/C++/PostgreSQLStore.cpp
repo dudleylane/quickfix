@@ -199,8 +199,7 @@ void PostgreSQLStoreFactory::destroy(MessageStore *pStore) { delete pStore; }
 
 bool PostgreSQLStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException)
 {
-    std::string msgCopy((msg.size() * 2) + 1, '\0');
-    msgCopy.resize(PQescapeString(msgCopy.data(), msg.c_str(), msg.size()));
+    const std::string msgCopy = m_pConnection->escape(msg);
 
     std::stringstream queryString;
     queryString << "INSERT INTO messages "

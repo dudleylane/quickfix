@@ -226,9 +226,6 @@ void OdbcLog::insert(const std::string &table, const std::string value)
     char sqlTime[100];
     STRING_SPRINTF(sqlTime, "%d-%02d-%02d %02d:%02d:%02d.%003d", year, month, day, hour, minute, second, millis);
 
-    std::string valueCopy = value;
-    string_replace("'", "''", valueCopy);
-
     std::stringstream queryString;
     queryString << "INSERT INTO " << table << " "
                 << "(time, beginstring, sendercompid, targetcompid, session_qualifier, text) "
@@ -254,9 +251,9 @@ void OdbcLog::insert(const std::string &table, const std::string value)
         queryString << "NULL, NULL, NULL, NULL, ";
     }
 
-    queryString << "'" << valueCopy << "')";
+    queryString << "?)";
 
-    OdbcQuery query(queryString.str());
+    OdbcQuery query(queryString.str(), value);
     m_pConnection->execute(query);
 }
 

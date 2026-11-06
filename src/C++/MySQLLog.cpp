@@ -222,13 +222,13 @@ void MySQLLog::clear()
 
     if (m_pSessionID)
     {
-        whereClause << "BeginString = \"" << m_pSessionID->getBeginString().getValue() << "\" "
-                    << "AND SenderCompID = \"" << m_pSessionID->getSenderCompID().getValue() << "\" "
-                    << "AND TargetCompID = \"" << m_pSessionID->getTargetCompID().getValue() << "\" ";
+        whereClause << "BeginString = " << m_pConnection->quote(m_pSessionID->getBeginString().getValue()) << " "
+                    << "AND SenderCompID = " << m_pConnection->quote(m_pSessionID->getSenderCompID().getValue()) << " "
+                    << "AND TargetCompID = " << m_pConnection->quote(m_pSessionID->getTargetCompID().getValue()) << " ";
 
         if (m_pSessionID->getSessionQualifier().size())
         {
-            whereClause << "AND session_qualifier = \"" << m_pSessionID->getSessionQualifier() << "\"";
+            whereClause << "AND session_qualifier = " << m_pConnection->quote(m_pSessionID->getSessionQualifier());
         }
         else
         {
@@ -268,9 +268,6 @@ void MySQLLog::insert(const std::string &table, const std::string value)
     char sqlTime[100];
     STRING_SPRINTF(sqlTime, "%d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
 
-    char *valueCopy = new char[(value.size() * 2) + 1];
-    mysql_escape_string(valueCopy, value.c_str(), value.size());
-
     std::stringstream queryString;
     queryString << "INSERT INTO " << table << " "
                 << "(time, time_milliseconds, beginstring, sendercompid, targetcompid, session_qualifier, text) "
@@ -279,16 +276,16 @@ void MySQLLog::insert(const std::string &table, const std::string value)
 
     if (m_pSessionID)
     {
-        queryString << "\"" << m_pSessionID->getBeginString().getValue() << "\","
-                    << "\"" << m_pSessionID->getSenderCompID().getValue() << "\","
-                    << "\"" << m_pSessionID->getTargetCompID().getValue() << "\",";
+        queryString << m_pConnection->quote(m_pSessionID->getBeginString().getValue()) << ","
+                    << m_pConnection->quote(m_pSessionID->getSenderCompID().getValue()) << ","
+                    << m_pConnection->quote(m_pSessionID->getTargetCompID().getValue()) << ",";
         if (m_pSessionID->getSessionQualifier() == "")
         {
             queryString << "NULL" << ",";
         }
         else
         {
-            queryString << "\"" << m_pSessionID->getSessionQualifier() << "\",";
+            queryString << m_pConnection->quote(m_pSessionID->getSessionQualifier()) << ",";
         }
     }
     else
@@ -296,8 +293,7 @@ void MySQLLog::insert(const std::string &table, const std::string value)
         queryString << "NULL, NULL, NULL, NULL, ";
     }
 
-    queryString << "\"" << valueCopy << "\")";
-    delete[] valueCopy;
+    queryString << m_pConnection->quote(value) << ")";
 
     MySQLQuery query(queryString.str());
     m_pConnection->execute(query);

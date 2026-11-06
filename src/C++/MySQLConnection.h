@@ -44,6 +44,7 @@
 #include "DatabaseConnectionID.h"
 #include "DatabaseConnectionPool.h"
 #include "Mutex.h"
+#include "Utility.h"
 #include <errmsg.h>
 #include <mysql.h>
 
@@ -74,7 +75,7 @@ public:
             {
                 mysql_free_result(m_result);
             }
-            int errcode = mysql_query(pConnection, m_query.c_str());
+            int errcode = mysql_real_query(pConnection, m_query.data(), m_query.size());
             m_result = mysql_store_result(pConnection);
             if (errcode == 0)
             {
@@ -175,6 +176,29 @@ public:
         Locker locker(m_mutex);
         return pQuery.execute(m_pConnection);
     }
+
+#ifndef SWIG
+    /// A value as a string literal this connection reads back as the same bytes. Single quotes, because with
+    /// ANSI_QUOTES a double-quoted string is an identifier. Oracle's client can refuse to escape without knowing the
+    /// quote character, which is known here; doubling it is then what the server's mode calls for.
+    std::string quote(const std::string &value)
+    {
+        std::string escaped((value.size() * 2) + 1, '\0');
+        Locker locker(m_mutex);
+        const unsigned long length =
+            mysql_real_escape_string(m_pConnection, escaped.data(), value.data(), (unsigned long)value.size());
+        if (length == (unsigned long)-1)
+        {
+            escaped = value;
+            string_replace("'", "''", escaped);
+        }
+        else
+        {
+            escaped.resize(length);
+        }
+        return "'" + escaped + "'";
+    }
+#endif
 
 private:
     void connect()
