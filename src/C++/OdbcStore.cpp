@@ -207,6 +207,22 @@ bool OdbcStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException
             query.throwException();
         }
     }
+
+    // A NUL survives on some servers and is cut on others, PostgreSQL's TEXT for one, and what is stored must be what a
+    // resend would send. A message holding one, which few do, pays for a read.
+    if (msg.find('\0') != std::string::npos)
+    {
+        std::vector<std::string> stored;
+        get(msgSeqNum, msgSeqNum, stored);
+        if (stored.size() != 1 || stored[0] != msg)
+        {
+            std::stringstream removal;
+            removal << "DELETE FROM messages WHERE " << sessionIs(m_sessionID) << " and msgseqnum=" << msgSeqNum;
+            OdbcQuery query3(removal.str());
+            m_pConnection->execute(query3);
+            throw IOException("Message " + std::to_string(msgSeqNum) + " holds a NUL, which the server did not keep");
+        }
+    }
     return true;
 }
 

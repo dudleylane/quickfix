@@ -102,6 +102,19 @@ TEST_CASE_METHOD(resetOdbcStoreFixture, "OdbcStoreMessageTests")
         CHECK(message == messages[0]);
     }
 
+    SECTION("aMessageHoldingANulIsNotStoredCut")
+    {
+        std::string message = "8=FIX.4.2\x01"
+                              "95=3\x01"
+                              "96=a";
+        message.push_back('\0');
+        message += "b\x01"
+                   "10=000\x01";
+        CHECK_THROWS_AS(object->set(1, message), IOException);
+        object->get(1, 1, messages);
+        CHECK(messages.empty());
+    }
+
     SECTION("aMessageTheServerRefusesThrows")
     {
         // A temporary table hides messages from this one connection and refuses one sequence number, so the INSERT

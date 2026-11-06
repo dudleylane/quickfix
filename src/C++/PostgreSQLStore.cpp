@@ -210,6 +210,12 @@ void PostgreSQLStoreFactory::destroy(MessageStore *pStore) { delete pStore; }
 
 bool PostgreSQLStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException)
 {
+    // TEXT cannot hold a NUL and escaping stops at one, so what was stored would not be what a resend must send.
+    if (msg.find('\0') != std::string::npos)
+    {
+        throw IOException("Message " + std::to_string(msgSeqNum) + " holds a NUL, which a TEXT column cannot");
+    }
+
     std::stringstream queryString;
     queryString << "INSERT INTO messages "
                 << "(beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum, message) "
