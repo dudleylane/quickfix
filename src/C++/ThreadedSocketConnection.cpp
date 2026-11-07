@@ -37,8 +37,8 @@ ThreadedSocketConnection::ThreadedSocketConnection(socket_handle s, Sessions ses
                                                    bool busyPoll)
     : m_socket(s), m_pLog(pLog), m_sessions(sessions), m_pSession(0), m_disconnect(false),
       m_setupDeadline(::time(0) + SETUP_SECONDS),
-      m_wakeFd(queuedWrites ? ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC) : -1), m_queued(m_wakeFd >= 0),
-      m_busyPoll(busyPoll)
+      m_wakeFd(queuedWrites && !busyPoll ? ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC) : -1),
+      m_queued(queuedWrites && (busyPoll || m_wakeFd >= 0)), m_busyPoll(busyPoll)
 {
 #if _MSC_VER
     FD_ZERO(&m_fds);
@@ -57,8 +57,8 @@ ThreadedSocketConnection::ThreadedSocketConnection(const SessionID &sessionID, s
                                                    bool queuedWrites, bool busyPoll)
     : m_socket(s), m_address(address), m_port(port), m_sourceAddress(sourceAddress), m_sourcePort(sourcePort),
       m_pLog(pLog), m_pSession(Session::lookupSession(sessionID)), m_disconnect(false),
-      m_wakeFd(queuedWrites ? ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC) : -1), m_queued(m_wakeFd >= 0),
-      m_busyPoll(busyPoll)
+      m_wakeFd(queuedWrites && !busyPoll ? ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC) : -1),
+      m_queued(queuedWrites && (busyPoll || m_wakeFd >= 0)), m_busyPoll(busyPoll)
 {
 #if _MSC_VER
     FD_ZERO(&m_fds);
@@ -164,9 +164,10 @@ bool ThreadedSocketConnection::sendQueued(const std::string &msg)
             }
         }
     }
-    if (wake)
+    if (wake && !m_busyPoll)
     {
-        // Only an empty queue needs a wake: otherwise the thread is writing it and drains it to empty.
+        // Only an empty queue needs a wake: otherwise the thread is writing it and drains it to empty. A spinning
+        // thread looks at the queue on every turn.
         const eventfd_t one = 1;
         ::eventfd_write(m_wakeFd, one);
     }
@@ -225,7 +226,7 @@ bool ThreadedSocketConnection::writeQueued()
         {
             bool progress = false;
             ok = writeFront(false, progress);
-            more = ok && progress; // no progress: the socket is full, poll for POLLOUT and come back
+            more = ok && progress; // no progress: the socket is full, come back on the next poll or turn
         }
     }
     {
@@ -456,11 +457,19 @@ void ThreadedSocketConnection::pollDirect()
     }
 }
 
-// One turn of the spin (SocketBusyPoll=Y): a read that does not wait, then the session's timer if a new second
-// has begun. The socket stays blocking, for the senders' direct writes; only this read is MSG_DONTWAIT. A
-// disconnect's shutdown() makes it return 0, which ends the connection as a failed read always has.
+// One turn of the spin (SocketBusyPoll=Y): what is queued with SocketQueuedWrites=Y, a read that does not wait, then
+// the session's timer if a new second has begun. Without queued writes the socket stays blocking, for the senders'
+// direct writes; only this read is MSG_DONTWAIT. A disconnect's shutdown() makes it return 0, which ends the connection
+// as a failed read always has. The write comes first so that what the last turn's input drew is not behind another
+// read; the look takes no lock because senders would queue behind a thread doing nothing else, and a value it misses
+// is seen on the next turn.
 void ThreadedSocketConnection::pollBusy()
 {
+    if (m_queued && m_sendQueueBytes.load(std::memory_order_relaxed) != 0 && !writeQueued())
+    {
+        throw SocketRecvFailed(-1);
+    }
+
     const ssize_t size = ::recv(m_socket, m_buffer, sizeof(m_buffer), MSG_DONTWAIT);
     if (size > 0)
     {

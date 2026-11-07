@@ -1994,6 +1994,9 @@ TEST_CASE("SocketThreadAffinityTests")
 // pair.
 TEST_CASE("ThreadedQueuedWriteTests")
 {
+    // The connection's thread sleeps in poll() until a sender wakes it, or with SocketBusyPoll=Y spins and needs no
+    // wake (#177). What the queue promises is the same either way.
+    const bool busyPoll = GENERATE(false, true);
     int pair[2];
     REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
     NullApplication application;
@@ -2003,7 +2006,7 @@ TEST_CASE("ThreadedQueuedWriteTests")
     TimeRange always(UtcTimeOnly(0, 0, 0), UtcTimeOnly(0, 0, 0));
     Session session([] { return UtcTimeStamp::now(); }, application, factory, sessionID, provider, always, 30, nullptr);
     std::unique_ptr<ThreadedSocketConnection> connection(
-        new ThreadedSocketConnection(sessionID, pair[0], "", 0, nullptr, "", 0, true));
+        new ThreadedSocketConnection(sessionID, pair[0], "", 0, nullptr, "", 0, true, busyPoll));
     connection->startQueuedWrites();
 
     std::atomic<bool> stop{false};
@@ -2725,21 +2728,12 @@ TEST_CASE("SocketBusyPollTests")
             SocketInitiator initiator(application, factory, settingsFor("initiator", port, "SocketBusyPoll=Y\n"));
             CHECK_THROWS_AS(initiator.start(), ConfigError);
         }
-        // With queued writes it is the single-writer design of #177.
-        {
-            ThreadedSocketAcceptor acceptor(application, factory,
-                                            settingsFor("acceptor", port, "SocketBusyPoll=Y\nSocketQueuedWrites=Y\n"));
-            CHECK_THROWS_AS(acceptor.start(), ConfigError);
-        }
-        {
-            ThreadedSocketInitiator initiator(
-                application, factory, settingsFor("initiator", port, "SocketBusyPoll=Y\nSocketQueuedWrites=Y\n"));
-            CHECK_THROWS_AS(initiator.start(), ConfigError);
-        }
     }
 
     SECTION("logsOnExchangesHeartbeatsAndStops")
     {
+        // With queued writes the spinning thread also writes what the senders queue (#177).
+        const std::string options = std::string("SocketBusyPoll=Y\n") + GENERATE("", "SocketQueuedWrites=Y\n");
         struct Heartbeats : NullApplication
         {
             std::atomic<int> heartbeats{0};
@@ -2760,26 +2754,44 @@ TEST_CASE("SocketBusyPollTests")
         };
         Heartbeats server;
         const int port = freePort();
-        ThreadedSocketAcceptor acceptor(server, factory, settingsFor("acceptor", port, "SocketBusyPoll=Y\n"));
+        ThreadedSocketAcceptor acceptor(server, factory, settingsFor("acceptor", port, options));
         acceptor.start();
         // HeartBtInt=1, from the initiator's Logon: heartbeats come from the session's timer, which a spinning
         // connection thread must still run.
         std::stringstream config;
         config << "[DEFAULT]\nConnectionType=initiator\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << port
-               << "\nReconnectInterval=1\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\nSocketBusyPoll=Y\n"
-               << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=BPI\nTargetCompID=BPA\nHeartBtInt=1\n";
+               << "\nReconnectInterval=1\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n"
+               << options << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=BPI\nTargetCompID=BPA\nHeartBtInt=1\n";
         SessionSettings initiatorSettings(config);
         ThreadedSocketInitiator initiator(application, factory, initiatorSettings);
         initiator.start();
         const SessionID id("FIX.4.2", "BPI", "BPA");
         REQUIRE(loggedOn(id));
-        for (int i = 0; i < 100; ++i)
+        // From several threads, the case the queue is for. ThreadedQueuedWriteTests holds the order on the wire.
+        std::atomic<int> refused{0};
+        std::vector<std::thread> senders;
+        for (int t = 0; t < 4; ++t)
         {
-            Message order;
-            order.getHeader().setField(MsgType("D"));
-            order.setField(ClOrdID("ORDER"));
-            REQUIRE(Session::sendToTarget(order, id));
+            senders.emplace_back(
+                [&]
+                {
+                    for (int i = 0; i < 25; ++i)
+                    {
+                        Message order;
+                        order.getHeader().setField(MsgType("D"));
+                        order.setField(ClOrdID("ORDER"));
+                        if (!Session::sendToTarget(order, id))
+                        {
+                            ++refused;
+                        }
+                    }
+                });
         }
+        for (std::thread &sender : senders)
+        {
+            sender.join();
+        }
+        CHECK(refused == 0);
         for (int i = 0; i < 400 && !(server.orders == 100 && server.heartbeats >= 2); ++i)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));

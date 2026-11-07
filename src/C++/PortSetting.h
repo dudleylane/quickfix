@@ -66,16 +66,6 @@ inline bool getSocketBusyPoll(const Dictionary &settings)
     return settings.has(SOCKET_BUSY_POLL) ? settings.getBool(SOCKET_BUSY_POLL) : false;
 }
 
-/// SocketQueuedWrites=Y and SocketBusyPoll=Y together are the single-writer design of #177, not yet built: refused.
-inline void checkBusyPollWithQueuedWrites(const Dictionary &settings, const SessionID &sessionID)
-{
-    if (getSocketBusyPoll(settings) && getSocketQueuedWrites(settings))
-    {
-        throw ConfigError(std::string(SOCKET_BUSY_POLL) + "=Y with " + SOCKET_QUEUED_WRITES +
-                          "=Y is not supported yet: " + sessionID.toString());
-    }
-}
-
 /// For the transports without queued writes or busy polling: the reactor's writes from its own loop, and the
 /// threaded SSL transports' would need a non-blocking SSL_write and SSL_read. Y is refused rather than ignored.
 inline void rejectSocketQueuedWrites(const SessionSettings &sessionSettings, const std::string &transport)
@@ -210,7 +200,6 @@ inline void checkSocketOptionsPerPort(const SessionSettings &sessionSettings)
                                   std::to_string(getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE)),
                                   getSocketQueuedWrites(settings) ? "Y" : "N",
                                   getSocketBusyPoll(settings) ? "Y" : "N"};
-        checkBusyPollWithQueuedWrites(settings, sessionID);
         const auto [it, inserted] = byPort.try_emplace(port, options);
         if (inserted)
         {

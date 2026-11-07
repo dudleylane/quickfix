@@ -912,7 +912,9 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           returns without waiting for the socket. That suits several threads
           sending on one session. It costs every message a thread wake-up,
           which a single sender with one message in flight pays in full:
-          about 18 microseconds a round trip where it was measured. Past 4 MiB
+          about 18 microseconds a round trip where it was measured. With
+          SocketBusyPoll=Y as well the thread is already awake and there is no
+          wake-up: that cost falls to 1-2 microseconds. Past 4 MiB
           queued, a sender writes the queue itself, which keeps a slow peer's
           backpressure. A disconnect first writes what is queued, for at most
           5 seconds. README's performance notes have the measurements.</td>
@@ -927,7 +929,7 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           <td><b>SocketBusyPoll</b></td>
 
           <td>Threaded transports only (ThreadedSocketInitiator); any other
-          transport refuses Y at start, as does Y with SocketQueuedWrites=Y.
+          transport refuses Y at start.
           With N, the connection's thread sleeps until input arrives and pays a
           wakeup for every message. With Y, it spins on non-blocking reads
           instead, so a message is read as it lands: where it was measured, a one-in-flight round trip went from
@@ -936,7 +938,8 @@ AppDataDictionary.FIX.4.4=FIX44.xml
           full core per connection, all the time, from the moment it connects;
           pin it with SocketThreadAffinity to a core nothing else uses. On a
           machine short of cores it is much worse than N: spinning threads take
-          the CPU from the threads they wait for.</td>
+          the CPU from the threads they wait for. With SocketQueuedWrites=Y as
+          well, the spinning thread also writes what senders queue.</td>
 
           <td>Y<br>
           N</td>

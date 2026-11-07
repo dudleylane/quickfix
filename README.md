@@ -415,7 +415,7 @@ application can avoid today, without changing the engine:
   non-blocking reads instead of sleeping in `poll()`, removing the wakeup each message otherwise pays
   (#175): on this machine `pt`-style one-in-flight round trips on the threaded transport
   went from 30–36 μs to 19–22 μs at the median, and from 70–75 μs to 45–47 μs at p99. It takes a full core per connection, from accept() on, so pin it to cores nothing
-  else uses; on a machine short of cores it is far worse than `N`. Not yet with `SocketQueuedWrites=Y` (#177).
+  else uses; on a machine short of cores it is far worse than `N`.
   On this machine the kernel's own loopback round trip is about 10 μs even spinning, because a
   system call costs 0.9 μs under its CPU mitigations, so what is left of the engine's round trip is
   mostly the engine's own work and the kernel's.
@@ -433,6 +433,21 @@ application can avoid today, without changing the engine:
   writes the queue itself. It costs every message a thread wake-up, which a single sender with one
   message in flight pays in full: `pt`'s threaded round trip goes from 33 to 52 μs, p99 from ~60 to
   ~127 μs. Other transports refuse it.
+- **Do both when you can spare the core.** With `SocketQueuedWrites=Y` and `SocketBusyPoll=Y` together
+  the spinning thread finds what is queued on its next turn, so the wake-up goes (#177). Senders still
+  number and store each message under the session's lock, and still get `send()`'s result. Measured
+  with each message's delay counted from when it was due, the receiver spinning: with two threads on
+  one session, 10,000 to 80,000 messages a second in all, delivery's median was 14–15 μs, against
+  22–25 μs with `SocketQueuedWrites=Y` alone, and against 13 μs up to 40,000 a second and 41 μs at
+  80,000 with neither. `send()` p50 was 1.3–3.2 μs against 7.3–9 μs with neither, moving between the
+  two from run to run; with each thread on its own physical core it stayed at 1.2–1.9 μs. Flat out it
+  adds nothing to `SocketQueuedWrites=Y`, since the queue is rarely empty and the wake rarely paid:
+  with four threads, over 22 runs each, the two took 4.5–9.5 and 5.3–9.3 μs a message, and neither
+  setting 10.1–11.3 over 16. With more busy threads than cores the tail goes: four
+  threads spinning between sends, at 40,000 a second in all, on this machine's four cores had an end to
+  end p99 of 477 μs, against 2.9 ms with queued writes alone and 106 μs with neither. For one order in
+  flight it is the wrong choice: against `SocketBusyPoll=Y` alone, a round trip's median rose by
+  1.1–1.8 μs and its CPU by 17%.
 
 #### The profile together
 

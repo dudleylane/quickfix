@@ -56,7 +56,7 @@ void ThreadedSocketInitiator::onConfigure(const SessionSettings &s) EXCEPT(Confi
         getSocketBufferSize(settings, SOCKET_SEND_BUFFER_SIZE);
         getSocketBufferSize(settings, SOCKET_RECEIVE_BUFFER_SIZE);
         getSocketQueuedWrites(settings);
-        checkBusyPollWithQueuedWrites(settings, sessionID);
+        getSocketBusyPoll(settings);
         getSocketThreadAffinity(settings);
     }
 }

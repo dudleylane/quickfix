@@ -54,7 +54,7 @@ public:
     typedef std::set<SessionID> Sessions;
 
     /// queuedWrites is SocketQueuedWrites, busyPoll SocketBusyPoll: fixed here, before any sender can reach
-    /// the connection. Not both (checkBusyPollWithQueuedWrites).
+    /// the connection.
     ThreadedSocketConnection(socket_handle s, Sessions sessions, Log *pLog, bool queuedWrites = false,
                              bool busyPoll = false);
     ThreadedSocketConnection(const SessionID &, socket_handle s, const std::string &address, short port, Log *pLog,
@@ -108,7 +108,8 @@ private:
     // Outgoing messages with SocketQueuedWrites=Y (#166); with N none of this is used, and send() writes the
     // message itself, blocking. send() is called under the session's lock, so in sequence order. It queues the
     // message and wakes this connection's thread through m_wakeFd, which writes the queue, so no sender waits
-    // for the peer to read. Past SEND_QUEUE_LIMIT queued bytes the sender writes the queue itself, as every
+    // for the peer to read; with SocketBusyPoll=Y that thread is spinning and needs no wake, and no m_wakeFd is
+    // made. Past SEND_QUEUE_LIMIT queued bytes the sender writes the queue itself, as every
     // sender does with N, which keeps a slow peer's backpressure. It cannot wait for the connection's thread
     // instead: that thread calls into the session, whose lock the sender holds. One writer at a time holds
     // m_writing. Lock order: Session::m_mutex, then m_sendMutex; m_sendMutex is held only to
@@ -121,13 +122,14 @@ private:
     std::mutex m_sendMutex;
     std::condition_variable m_sendSpace;
     std::deque<std::string> m_sendQueue;
-    std::size_t m_sendQueueBytes = 0;
+    std::atomic<std::size_t> m_sendQueueBytes{0}; // written under m_sendMutex; a spinning thread looks without it
     std::size_t m_sendOffset = 0;
     bool m_writing = false; // whoever writes holds this, under m_sendMutex: one writer at a time
-    int m_wakeFd;           // -1 with N
-    const bool m_queued;    // Y, and m_wakeFd was made; without it, writes stay direct
+    int m_wakeFd;           // -1 with N, and with SocketBusyPoll=Y
+    const bool m_queued;    // Y, and m_wakeFd was made if one is needed; without it, writes stay direct
     // SocketBusyPoll=Y (#175): the connection's thread spins on non-blocking reads instead of sleeping in
-    // poll(), and runs the session's timer once a wall-clock second (m_lastTimerSweep), as queued writes do.
+    // poll(), writes what is queued as it goes, and runs the session's timer once a wall-clock second
+    // (m_lastTimerSweep), as queued writes do.
     const bool m_busyPoll;
     time_t m_lastTimerSweep = 0;
 #if _MSC_VER
