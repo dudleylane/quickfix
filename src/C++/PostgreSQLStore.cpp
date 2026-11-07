@@ -210,21 +210,15 @@ void PostgreSQLStoreFactory::destroy(MessageStore *pStore) { delete pStore; }
 
 bool PostgreSQLStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException)
 {
-    // TEXT cannot hold a NUL and escaping stops at one, so what was stored would not be what a resend must send.
-    if (msg.find('\0') != std::string::npos)
-    {
-        throw IOException("Message " + std::to_string(msgSeqNum) + " holds a NUL, which a TEXT column cannot");
-    }
-
     std::stringstream queryString;
     queryString << "INSERT INTO messages "
                 << "(beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum, message) "
-                << "VALUES (" << sessionValues(*m_pConnection, m_sessionID) << "," << msgSeqNum << ","
-                << "'" << m_pConnection->escape(msg) << "') "
+                << "VALUES (" << sessionValues(*m_pConnection, m_sessionID) << "," << msgSeqNum << ",$1) "
                 << "ON CONFLICT (beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum) "
                 << "DO UPDATE SET message = EXCLUDED.message";
 
-    PostgreSQLQuery query(queryString.str());
+    // The column is BYTEA, or TEXT in a database not altered yet, where the server refuses what TEXT cannot hold.
+    PostgreSQLQuery query(queryString.str(), msg);
     if (!m_pConnection->execute(query))
     {
         query.throwException();
@@ -242,6 +236,7 @@ void PostgreSQLStore::get(SEQNUM begin, SEQNUM end, std::vector<std::string> &re
                 << "ORDER BY msgseqnum";
 
     PostgreSQLQuery query(queryString.str());
+    query.resultsAsBytes();
     if (!m_pConnection->execute(query))
     {
         query.throwException();
@@ -250,7 +245,7 @@ void PostgreSQLStore::get(SEQNUM begin, SEQNUM end, std::vector<std::string> &re
     int rows = query.rows();
     for (int row = 0; row < rows; row++)
     {
-        result.push_back(query.getValue(row, 0));
+        result.push_back(std::string(query.getValue(row, 0), query.getLength(row, 0)));
     }
 }
 

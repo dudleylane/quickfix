@@ -108,7 +108,7 @@ TEST_CASE_METHOD(resetPostgreSQLStoreFixture, "PostgreSQLStoreMessageTests")
         CHECK(message == messages[0]);
     }
 
-    SECTION("aMessageHoldingANulIsNotStoredCut")
+    SECTION("aMessageHoldingANulComesBackWhole")
     {
         std::string message = "8=FIX.4.2\x01"
                               "95=3\x01"
@@ -116,9 +116,36 @@ TEST_CASE_METHOD(resetPostgreSQLStoreFixture, "PostgreSQLStoreMessageTests")
         message.push_back('\0');
         message += "b\x01"
                    "10=000\x01";
-        CHECK_THROWS_AS(object->set(1, message), IOException);
+        CHECK(object->set(1, message));
         object->get(1, 1, messages);
-        CHECK(messages.empty());
+        REQUIRE(1U == messages.size());
+        CHECK(message == messages[0]);
+    }
+
+    SECTION("aMessageHoldingAByteInvalidInUtf8ComesBackWhole")
+    {
+        const std::string message = "8=FIX.4.2\x01"
+                                    "58=caf\xFC\x01"
+                                    "10=000\x01";
+        CHECK(object->set(1, message));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK(message == messages[0]);
+    }
+
+    SECTION("aMessageHoldingEveryByteComesBackWhole")
+    {
+        const auto length = GENERATE(as<size_t>{}, 1, 256, 70000);
+        std::string message(length, '\0');
+        for (size_t i = 0; i < length; ++i)
+        {
+            message[i] = static_cast<char>(i);
+        }
+        CHECK(object->set(1, message));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK(message.size() == messages[0].size());
+        CHECK(message == messages[0]);
     }
 
     SECTION("aMessageTheServerRefusesThrows")

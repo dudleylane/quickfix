@@ -44,7 +44,9 @@
 #include "DatabaseConnectionID.h"
 #include "DatabaseConnectionPool.h"
 #include "Mutex.h"
+#include <algorithm>
 #include <libpq-fe.h>
+#include <limits>
 
 namespace FIX
 {
@@ -64,7 +66,22 @@ inline std::string postgreSQLError(const char *text)
 class PostgreSQLQuery
 {
 public:
-    PostgreSQLQuery(const std::string &query) : m_result(0), m_query(query) {}
+    PostgreSQLQuery(const std::string &query) : m_result(0), m_query(query), m_parameters(0), m_resultFormat(0) {}
+
+#ifndef SWIG
+    /// A query whose one $1 stands for the value, which the server takes as its bytes rather than as SQL.
+    PostgreSQLQuery(const std::string &query, const std::string &value)
+        : m_result(0), m_query(query), m_value(value), m_parameters(1), m_resultFormat(0)
+    {
+    }
+
+    /// Asks for results as the bytes a column holds, where text format would show a BYTEA column in hex. It applies to
+    /// every column the query selects.
+    void resultsAsBytes() { m_resultFormat = 1; }
+
+    /// The length of a value, which getValue cannot tell for one holding a NUL.
+    int getLength(int row, int column) { return PQgetlength(m_result, row, column); }
+#endif
 
     ~PostgreSQLQuery()
     {
@@ -84,7 +101,7 @@ public:
             {
                 PQclear(m_result);
             }
-            m_result = PQexec(pConnection, m_query.c_str());
+            m_result = send(pConnection);
             m_status = PQresultStatus(m_result);
             if (success())
             {
@@ -113,9 +130,26 @@ public:
     }
 
 private:
+    PGresult *send(PGconn *pConnection)
+    {
+        if (m_parameters == 0 && m_resultFormat == 0)
+        {
+            return PQexec(pConnection, m_query.c_str());
+        }
+        const char *value = m_value.data();
+        // The server refuses a value of a gigabyte or more, so this limit cuts nothing it would have stored.
+        const int length = static_cast<int>(std::min<std::size_t>(m_value.size(), std::numeric_limits<int>::max()));
+        const int binary = 1;
+        return PQexecParams(pConnection, m_query.c_str(), m_parameters, nullptr, &value, &length, &binary,
+                            m_resultFormat);
+    }
+
     PGresult *m_result;
     ExecStatusType m_status;
     std::string m_query;
+    std::string m_value;
+    int m_parameters;
+    int m_resultFormat;
 };
 
 class PostgreSQLConnection

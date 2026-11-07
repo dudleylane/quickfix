@@ -55,16 +55,39 @@ std::string sessionValues(const SessionID &sessionID)
 
 OdbcStore::OdbcStore(const UtcTimeStamp &now, const SessionID &sessionID, const std::string &user,
                      const std::string &password, const std::string &connectionString)
-    : m_cache(now), m_sessionID(sessionID)
+    : m_cache(now), m_sessionID(sessionID), m_messageType(SQL_LONGVARCHAR)
 {
     m_pConnection = new OdbcConnection(user, password, connectionString);
-    populateCache();
+    try
+    {
+        populateCache();
+    }
+    catch (...)
+    {
+        // No destructor runs after a constructor throws.
+        delete m_pConnection;
+        throw;
+    }
 }
 
 OdbcStore::~OdbcStore() { delete m_pConnection; }
 
 void OdbcStore::populateCache()
 {
+    // The column decides how a message goes and comes back, and a wrong guess is not refused: through psqlODBC, a
+    // character binding reads a binary column as hex, and a binary one stores hex in a text column. Only a binary
+    // column holds every byte, and a text one, as on SQL Server's schema, keeps the binding it always had.
+    OdbcQuery column("SELECT message FROM messages WHERE 1=0");
+    SQLSMALLINT type, digits, nullable;
+    SQLULEN size;
+    if (!m_pConnection->execute(column) ||
+        !odbcSuccess(SQLDescribeCol(column.statement(), 1, nullptr, 0, nullptr, &type, &size, &digits, &nullable)))
+    {
+        throw ConfigError("Unable to query messages table");
+    }
+    m_messageType = odbcIsBinary(type) ? type : SQL_LONGVARCHAR;
+    column.close();
+
     std::stringstream queryString;
 
     queryString << "SELECT creation_time, incoming_seqnum, outgoing_seqnum FROM sessions WHERE "
@@ -186,13 +209,13 @@ bool OdbcStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException
                 << "(beginstring, sendercompid, targetcompid, session_qualifier, msgseqnum, message) "
                 << "VALUES (" << sessionValues(m_sessionID) << "," << msgSeqNum << ",?)";
 
-    OdbcQuery query(queryString.str(), msg);
+    OdbcQuery query(queryString.str(), msg, m_messageType);
     if (!m_pConnection->execute(query))
     {
         std::stringstream queryString2;
         queryString2 << "UPDATE messages SET message=? WHERE " << sessionIs(m_sessionID) << " and "
                      << "msgseqnum=" << msgSeqNum;
-        OdbcQuery query2(queryString2.str(), msg);
+        OdbcQuery query2(queryString2.str(), msg, m_messageType);
         if (!m_pConnection->execute(query2))
         {
             query2.throwException();
@@ -208,9 +231,9 @@ bool OdbcStore::set(SEQNUM msgSeqNum, const std::string &msg) EXCEPT(IOException
         }
     }
 
-    // A NUL survives on some servers and is cut on others, PostgreSQL's TEXT for one, and what is stored must be what a
-    // resend would send. A message holding one, which few do, pays for a read.
-    if (msg.find('\0') != std::string::npos)
+    // In a text column a NUL survives on some servers and is cut on others, PostgreSQL's TEXT for one, and what is
+    // stored must be what a resend would send. A message holding one, which few do, pays for a read.
+    if (!odbcIsBinary(m_messageType) && msg.find('\0') != std::string::npos)
     {
         std::vector<std::string> stored;
         get(msgSeqNum, msgSeqNum, stored);
@@ -241,23 +264,26 @@ void OdbcStore::get(SEQNUM begin, SEQNUM end, std::vector<std::string> &result) 
         query.throwException();
     }
 
+    const bool binary = odbcIsBinary(m_messageType);
     while (query.fetch())
     {
         std::string message;
         char messageBuffer[4096];
         SQLLEN messageLength;
+        // A character read keeps a byte for the terminator, and a binary read has none.
+        const SQLLEN room = binary ? sizeof(messageBuffer) : sizeof(messageBuffer) - 1;
 
-        // messageLength is what remained before this read, not what the read returned: it can exceed the buffer, or be
-        // SQL_NO_TOTAL. A read that does not finish the value fills the buffer but for the terminator.
-        while (odbcSuccess(
-            SQLGetData(query.statement(), 1, SQL_C_CHAR, messageBuffer, sizeof(messageBuffer), &messageLength)))
+        // messageLength is what remained before this read, not what the read returned: it can exceed the room, or be
+        // SQL_NO_TOTAL. A read that does not finish the value fills the room.
+        while (odbcSuccess(SQLGetData(query.statement(), 1, binary ? SQL_C_BINARY : SQL_C_CHAR, messageBuffer,
+                                      sizeof(messageBuffer), &messageLength)))
         {
             if (messageLength == SQL_NULL_DATA)
             {
                 break;
             }
-            const bool more = messageLength == SQL_NO_TOTAL || messageLength >= (SQLLEN)sizeof(messageBuffer);
-            message.append(messageBuffer, more ? sizeof(messageBuffer) - 1 : (size_t)messageLength);
+            const bool more = messageLength == SQL_NO_TOTAL || messageLength > room;
+            message.append(messageBuffer, more ? room : messageLength);
         }
 
         result.push_back(message);

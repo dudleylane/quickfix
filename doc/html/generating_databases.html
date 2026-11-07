@@ -40,6 +40,18 @@
     creates the <code>quickfix</code> role. The unit tests' configuration
     (<code>test/cfg/ut.cfg</code>) connects as that role with no password on localhost;
     CONTRIBUTING.md has the full setup CI's runner uses.</p>
+    <p>The <code>messages</code> table keeps a message in <code>BYTEA</code>, since a FIX data field
+    can hold any byte. A database made before that keeps <code>TEXT</code> until it is altered. The
+    library works on either, but on <code>TEXT</code> the server refuses a message holding a NUL or
+    a byte invalid in the database's encoding, so the session logs the failure and does not send it.
+    To alter one, upgrade the library first, since an older one reads <code>BYTEA</code> back as
+    hex, and stop every session using the database:</p>
+    <pre class='fragment'>
+ALTER TABLE messages ALTER COLUMN message TYPE BYTEA
+  USING convert_to(message, current_setting('server_encoding'));
+</pre>
+    <p>A plain cast will not do: it parses the text as <code>BYTEA</code>'s input format rather than
+    keeping its bytes. The log tables stay <code>TEXT</code>.</p>
 
     <br/><hr/>
     <h1>ODBC</h1>
@@ -47,6 +59,9 @@
     psqlODBC against the PostgreSQL database above. <code>src/sql/mssql/mssql.sql</code> is a schema
     for Microsoft SQL Server, to load with that server's own tools; there is no separate MSSQL
     store.</p>
+    <p>OdbcStore asks the driver what type the <code>message</code> column is. A binary column keeps
+    every byte. A text column, which is what <code>mssql.sql</code> has, may not: a message holding
+    a NUL is read back, and refused if the server did not keep it. Only psqlODBC has been run.</p>
   </div>
 </body>
 </html>

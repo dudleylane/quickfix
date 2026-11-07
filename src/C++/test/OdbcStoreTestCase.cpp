@@ -89,12 +89,79 @@ TEST_CASE_METHOD(resetOdbcStoreFixture, "OdbcStoreMessageTests")
 {
     std::vector<std::string> messages;
 
+    // A store on a text column, which a PostgreSQL database not altered yet has, and SQL Server's schema. A temporary
+    // table hides messages from this one connection. ConnSettings is psqlODBC's, which is the driver ut.cfg names.
+    Dictionary textColumn = TestSettings::sessionSettings.get();
+    textColumn.setString(ODBC_STORE_CONNECTION_STRING,
+                         textColumn.getString(ODBC_STORE_CONNECTION_STRING) +
+                             "ConnSettings={CREATE TEMP TABLE messages (LIKE public.messages INCLUDING ALL);"
+                             "ALTER TABLE pg_temp.messages ALTER COLUMN message TYPE TEXT};");
+    const SessionID sessionID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST"));
+
     SECTION("aMessageOfAnyLengthComesBackWhole")
     {
-        // Either side of each multiple of the 4096 bytes get() reads at a time, which holds 4095 and a terminator.
+        // Either side of each multiple of the 4096 bytes get() reads at a time, all of which a binary column's read
+        // holds.
+        const auto length = GENERATE(as<size_t>{}, 1, 4095, 4096, 4097, 8191, 8192, 8193, 70000);
+        std::string message(length, 'x');
+        message.back() = 'y';
+        CHECK(object->set(1, message));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK(message.size() == messages[0].size());
+        CHECK(message == messages[0]);
+    }
+
+    SECTION("aMessageOfAnyLengthComesBackWholeFromATextColumn")
+    {
+        // A text column's read holds 4095 of those bytes and a terminator.
         const auto length = GENERATE(as<size_t>{}, 1, 4094, 4095, 4096, 4097, 8189, 8190, 8191, 70000);
         std::string message(length, 'x');
         message.back() = 'y';
+        OdbcStoreFactory textFactory(textColumn);
+        MessageStore *store = textFactory.create(UtcTimeStamp::now(), sessionID);
+        CHECK(store->set(1, message));
+        store->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK(message.size() == messages[0].size());
+        CHECK(message == messages[0]);
+        textFactory.destroy(store);
+    }
+
+    SECTION("aMessageHoldingANulComesBackWhole")
+    {
+        std::string message = "8=FIX.4.2\x01"
+                              "95=3\x01"
+                              "96=a";
+        message.push_back('\0');
+        message += "b\x01"
+                   "10=000\x01";
+        CHECK(object->set(1, message));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK(message == messages[0]);
+    }
+
+    SECTION("aMessageHoldingAByteInvalidInUtf8ComesBackWhole")
+    {
+        const std::string message = "8=FIX.4.2\x01"
+                                    "58=caf\xFC\x01"
+                                    "10=000\x01";
+        CHECK(object->set(1, message));
+        object->get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK(message == messages[0]);
+    }
+
+    SECTION("aMessageHoldingEveryByteComesBackWhole")
+    {
+        // Across the reads' edges too.
+        const auto length = GENERATE(as<size_t>{}, 1, 256, 4096, 4097, 8192, 8193, 70000);
+        std::string message(length, '\0');
+        for (size_t i = 0; i < length; ++i)
+        {
+            message[i] = static_cast<char>(i);
+        }
         CHECK(object->set(1, message));
         object->get(1, 1, messages);
         REQUIRE(1U == messages.size());
@@ -110,9 +177,33 @@ TEST_CASE_METHOD(resetOdbcStoreFixture, "OdbcStoreMessageTests")
         message.push_back('\0');
         message += "b\x01"
                    "10=000\x01";
-        CHECK_THROWS_AS(object->set(1, message), IOException);
-        object->get(1, 1, messages);
+        OdbcStoreFactory textFactory(textColumn);
+        MessageStore *store = textFactory.create(UtcTimeStamp::now(), sessionID);
+        CHECK_THROWS_AS(store->set(1, message), IOException);
+        store->get(1, 1, messages);
         CHECK(messages.empty());
+        textFactory.destroy(store);
+    }
+
+    SECTION("aMessageATextColumnCannotHoldThrows")
+    {
+        OdbcStoreFactory textFactory(textColumn);
+        MessageStore *store = textFactory.create(UtcTimeStamp::now(), sessionID);
+        CHECK_THROWS_AS(store->set(1, "58=caf\xFC\x01"), IOException);
+        textFactory.destroy(store);
+    }
+
+    SECTION("aMessagesTableThatCannotBeReadIsAConfigError")
+    {
+        // A store guessing the column's type could store what it could not read back. A search path of nothing leaves
+        // only the temporary table.
+        Dictionary noMessages = TestSettings::sessionSettings.get();
+        noMessages.setString(ODBC_STORE_CONNECTION_STRING,
+                             noMessages.getString(ODBC_STORE_CONNECTION_STRING) +
+                                 "ConnSettings={CREATE TEMP TABLE sessions (LIKE public.sessions INCLUDING ALL);"
+                                 "SET search_path=nowhere};");
+        OdbcStoreFactory noMessagesFactory(noMessages);
+        CHECK_THROWS_AS(noMessagesFactory.create(UtcTimeStamp::now(), sessionID), ConfigError);
     }
 
     SECTION("aMessageTheServerRefusesThrows")

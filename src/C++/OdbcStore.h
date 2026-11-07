@@ -122,6 +122,7 @@ private:
     MemoryStore m_cache;
     SessionID m_sessionID;
     OdbcConnection *m_pConnection;
+    SQLSMALLINT m_messageType;
 };
 } // namespace FIX
 

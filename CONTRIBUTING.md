@@ -324,6 +324,14 @@ sudo dnf install postgresql-odbc   # /etc/odbcinst.ini already names the driver 
 `test/cfg/ut.cfg` connects as `quickfix` with no password; the ODBC tests use the DSN-less string
 `DRIVER={PostgreSQL};SERVER=localhost;DATABASE=quickfix;`.
 
+A database set up before `messages.message` became `BYTEA` needs altering once, or the store cases
+for a message holding any byte fail:
+
+```bash
+sudo -u postgres psql -d quickfix -c "ALTER TABLE messages ALTER COLUMN message TYPE BYTEA
+  USING convert_to(message, current_setting('server_encoding'))"
+```
+
 The Debug leg then **runs** both binding suites: the Python bindings' 52 tests
 (`src/python/test/`) and the Ruby bindings' 48 (`src/ruby/test/`, via `TestSuite.rb`), the Ruby
 one on the module CMake built. `src/ruby/make_ruby.sh` builds the same module with mkmf for builds

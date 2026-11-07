@@ -76,16 +76,26 @@ inline std::string odbcQuote(std::string value)
     return "'" + value + "'";
 }
 
+/// Whether a column of this type holds bytes rather than characters.
+inline bool odbcIsBinary(SQLSMALLINT type)
+{
+    return type == SQL_BINARY || type == SQL_VARBINARY || type == SQL_LONGVARBINARY;
+}
+
 class OdbcQuery
 {
 public:
-    OdbcQuery(const std::string &query) : m_statement(0), m_result(0), m_query(query), m_bound(false), m_valueLength(0)
+    OdbcQuery(const std::string &query)
+        : m_statement(0), m_result(0), m_query(query), m_bound(false), m_valueType(SQL_LONGVARCHAR), m_valueLength(0)
     {
     }
 
-    /// A query whose one ? stands for the value, which the driver carries as data rather than as SQL.
-    OdbcQuery(const std::string &query, const std::string &value)
-        : m_statement(0), m_result(0), m_query(query), m_value(value), m_bound(true), m_valueLength(0)
+    /// A query whose one ? stands for the value, which the driver carries as data rather than as SQL. For a binary
+    /// column, valueType is the type the driver reports for it: psqlODBC can take another binary type for a large
+    /// object.
+    OdbcQuery(const std::string &query, const std::string &value, SQLSMALLINT valueType = SQL_LONGVARCHAR)
+        : m_statement(0), m_result(0), m_query(query), m_value(value), m_bound(true), m_valueType(valueType),
+          m_valueLength(0)
     {
     }
 
@@ -112,9 +122,9 @@ public:
         if (m_bound)
         {
             m_valueLength = (SQLLEN)m_value.size();
-            m_result = SQLBindParameter(m_statement, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_LONGVARCHAR,
-                                        m_value.empty() ? 1 : m_value.size(), 0, (SQLPOINTER)m_value.data(),
-                                        m_valueLength, &m_valueLength);
+            m_result = SQLBindParameter(
+                m_statement, 1, SQL_PARAM_INPUT, odbcIsBinary(m_valueType) ? SQL_C_BINARY : SQL_C_CHAR, m_valueType,
+                m_value.empty() ? 1 : m_value.size(), 0, (SQLPOINTER)m_value.data(), m_valueLength, &m_valueLength);
         }
         if (success())
         {
@@ -172,6 +182,7 @@ private:
     std::string m_reason;
     std::string m_value;
     bool m_bound;
+    SQLSMALLINT m_valueType;
     SQLLEN m_valueLength;
 };
 
