@@ -64,7 +64,7 @@ PostgreSQLStore::PostgreSQLStore(const UtcTimeStamp &now, const SessionID &sessi
     : m_cache(now), m_pConnectionPool(pool), m_sessionID(sessionID)
 {
     m_pConnection = m_pConnectionPool->create(connection);
-    populateCache();
+    start();
 }
 
 PostgreSQLStore::PostgreSQLStore(const UtcTimeStamp &now, const SessionID &sessionID, const std::string &database,
@@ -73,10 +73,26 @@ PostgreSQLStore::PostgreSQLStore(const UtcTimeStamp &now, const SessionID &sessi
     : m_cache(now), m_pConnectionPool(0), m_sessionID(sessionID)
 {
     m_pConnection = new PostgreSQLConnection(database, user, password, host, port);
-    populateCache();
+    start();
 }
 
-PostgreSQLStore::~PostgreSQLStore()
+PostgreSQLStore::~PostgreSQLStore() { release(); }
+
+void PostgreSQLStore::start()
+{
+    try
+    {
+        populateCache();
+    }
+    catch (...)
+    {
+        // No destructor runs after a constructor throws.
+        release();
+        throw;
+    }
+}
+
+void PostgreSQLStore::release()
 {
     if (m_pConnectionPool)
     {

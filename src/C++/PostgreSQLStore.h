@@ -139,6 +139,8 @@ public:
     void refresh() EXCEPT(IOException);
 
 private:
+    void start();
+    void release();
     void populateCache();
 
     MemoryStore m_cache;

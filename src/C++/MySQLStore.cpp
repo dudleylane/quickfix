@@ -63,7 +63,7 @@ MySQLStore::MySQLStore(const UtcTimeStamp &now, const SessionID &sessionID, cons
     : m_cache(now), m_pConnectionPool(pool), m_sessionID(sessionID)
 {
     m_pConnection = m_pConnectionPool->create(connection);
-    populateCache();
+    start();
 }
 
 MySQLStore::MySQLStore(const UtcTimeStamp &now, const SessionID &sessionID, const std::string &database,
@@ -72,10 +72,26 @@ MySQLStore::MySQLStore(const UtcTimeStamp &now, const SessionID &sessionID, cons
     : m_cache(now), m_pConnectionPool(0), m_sessionID(sessionID)
 {
     m_pConnection = new MySQLConnection(database, user, password, host, port);
-    populateCache();
+    start();
 }
 
-MySQLStore::~MySQLStore()
+MySQLStore::~MySQLStore() { release(); }
+
+void MySQLStore::start()
+{
+    try
+    {
+        populateCache();
+    }
+    catch (...)
+    {
+        // No destructor runs after a constructor throws.
+        release();
+        throw;
+    }
+}
+
+void MySQLStore::release()
 {
     if (m_pConnectionPool)
     {

@@ -175,6 +175,38 @@ TEST_CASE_METHOD(resetPostgreSQLStoreFixture, "PostgreSQLStoreMessageTests")
             ConfigError);
     }
 
+    SECTION("aSessionTheDatabaseCannotHoldIsAConfigError")
+    {
+        // A CompID longer than its column, so the session's row cannot be made. A sanitizer build is what sees a
+        // connection this leaves behind: no destructor runs after a constructor throws.
+        CHECK_THROWS_AS(
+            factory.create(UtcTimeStamp::now(),
+                           SessionID(BeginString("FIX.4.2"), SenderCompID(std::string(65, 'x')), TargetCompID("TEST"))),
+            ConfigError);
+    }
+
+    SECTION("aStoreThatFailsToStartLeavesAPooledConnectionToTheStoresUsingIt")
+    {
+        const Dictionary settings = TestSettings::sessionSettings.get();
+        const DatabaseConnectionID id(
+            settings.getString(POSTGRESQL_STORE_DATABASE), settings.getString(POSTGRESQL_STORE_USER),
+            settings.getString(POSTGRESQL_STORE_PASSWORD), settings.getString(POSTGRESQL_STORE_HOST),
+            settings.has(POSTGRESQL_STORE_PORT) ? settings.getInt(POSTGRESQL_STORE_PORT) : 0);
+        PostgreSQLConnectionPool pool(true);
+        PostgreSQLStore store(UtcTimeStamp::now(),
+                              SessionID(BeginString("FIX.4.2"), SenderCompID("SETGET"), TargetCompID("TEST")), id,
+                              &pool);
+        CHECK_THROWS_AS(
+            PostgreSQLStore(UtcTimeStamp::now(),
+                            SessionID(BeginString("FIX.4.2"), SenderCompID(std::string(65, 'x')), TargetCompID("TEST")),
+                            id, &pool),
+            ConfigError);
+        CHECK(store.set(1, "still connected"));
+        store.get(1, 1, messages);
+        REQUIRE(1U == messages.size());
+        CHECK("still connected" == messages[0]);
+    }
+
     SECTION("settingAgainReplacesAndAddsNoRow")
     {
         CHECK(object->set(1, "first"));
