@@ -77,6 +77,22 @@ build: it builds the base's `pt` in a temporary worktree, runs the two alternate
 and `ptcompare.py` fails if a benchmark of 0.2 µs or more is over 10% slower in both pairs. CI runs
 it on pull requests and manual runs (#93).
 
+`pt` sends from one thread. `ptsenders`, built beside it, measures several threads sending on one
+session (#184). It is open loop: each sender follows its own schedule, and a message's delay counts
+from when it was due, so a stalled sender cannot hide behind its own stall. It prints `send()`'s
+duration, end-to-end latency to the peer's `fromApp`, and the time per message:
+
+```bash
+# Two senders, each every 100 μs on average, with queued writes and both connection threads spinning.
+./lib/ptsenders -p 54325 -s 2 -c 50000 -g 100 -q -b -r
+```
+
+Without `-q`, `-b` or `-r`, the matching setting is off; `-g 0` is flat out and `-f <dir>` adds a
+`FileStore`. Like `pt` it judges nothing, so run it on a quiet machine and compare the runs yourself.
+Senders spin between messages, so each needs a CPU, as does each spinning connection thread: past
+the machine's physical cores it measures the scheduler. `ptgate` does not run it, since it pins three
+CPUs.
+
 Captured at `c150d178` (2026-10-23) with `./pt -p <port> -c 100000 -r 9`, pinned via `taskset -c
 1,2,3` on an Intel i7-6820HQ (4C/8T, `performance` governor), Release build, GCC 15. Each capture is
 the median of nine runs after a discarded warm-up, and started once the 1-minute load average was
@@ -428,7 +444,10 @@ application can avoid today, without changing the engine:
   sending thread writes to the socket itself under the session's lock, so concurrent senders wait on
   each other's writes. `SocketQueuedWrites=Y` hands the write to the connection's own thread (#166).
   With four threads on one session, paced at 100 μs each, `send()` p50 fell from 16 to 5.5 μs and
-  p99.9 from 68 to 23–29 μs. Flat out, p99.9 fell from ~10 ms to 0.65–1.4 ms and delivery rose from
+  p99.9 from 68 to 23–29 μs. That pacing waited for each `send()` to return, so a stalled sender only
+  delayed its next message. Open loop, as `ptsenders` measures, with the receiver spinning, the same
+  case reads 12.5 to 3.7 μs and 149 to 24 μs, and delivery's median rises from 19 to 27 μs. Flat out,
+  p99.9 fell from ~10 ms to 0.65–1.4 ms and delivery rose from
   10.6 to 4.7–7.3 μs a message, but p99 rose from 29 to 150–300 μs: past 4 MiB queued, a sender
   writes the queue itself. It costs every message a thread wake-up, which a single sender with one
   message in flight pays in full: `pt`'s threaded round trip goes from 33 to 52 μs, p99 from ~60 to
@@ -436,8 +455,8 @@ application can avoid today, without changing the engine:
 - **Do both when you can spare the core.** With `SocketQueuedWrites=Y` and `SocketBusyPoll=Y` together
   the spinning thread finds what is queued on its next turn, so the wake-up goes (#177). Senders still
   number and store each message under the session's lock, and still get `send()`'s result. Measured
-  with each message's delay counted from when it was due, the receiver spinning: with two threads on
-  one session, 10,000 to 80,000 messages a second in all, delivery's median was 14–15 μs, against
+  open loop, as `ptsenders` does, with the receiver spinning: with two threads on one session, 10,000
+  to 80,000 messages a second in all, delivery's median was 14–15 μs, against
   22–25 μs with `SocketQueuedWrites=Y` alone, and against 13 μs up to 40,000 a second and 41 μs at
   80,000 with neither. `send()` p50 was 1.3–3.2 μs against 7.3–9 μs with neither, moving between the
   two from run to run; with each thread on its own physical core it stayed at 1.2–1.9 μs. Flat out it

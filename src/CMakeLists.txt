@@ -42,6 +42,13 @@ if (QUICKFIX_EXAMPLES)
                         RUNTIME_OUTPUT_DIRECTORY_RELEASE ${PROJECT_SOURCE_DIR}/test/release/pt/
                         RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${PROJECT_SOURCE_DIR}/test/release/pt/)
   endif()  
+
+  add_executable(ptsenders ptsenders.cpp getopt.c)
+
+  target_include_directories(ptsenders PRIVATE ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/src/C++)
+
+  target_link_libraries(ptsenders ${PROJECT_NAME})
 endif()  
 
 endif()
