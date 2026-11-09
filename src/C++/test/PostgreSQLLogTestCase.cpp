@@ -26,12 +26,20 @@
 #include <PostgreSQLLog.h>
 
 #include <chrono>
+#include <stdlib.h>
 #include <thread>
 
 using namespace FIX;
 
 namespace
 {
+/// PGCLIENTENCODING for the connections made while this lives, which libpq reads as it connects.
+struct ClientEncoding
+{
+    explicit ClientEncoding(const char *encoding) { setenv("PGCLIENTENCODING", encoding, 1); }
+    ~ClientEncoding() { unsetenv("PGCLIENTENCODING"); }
+};
+
 struct postgreSQLLogFixture : DatabaseLogFixture
 {
     postgreSQLLogFixture()
@@ -85,6 +93,8 @@ TEST_CASE_METHOD(postgreSQLLogFixture, "PostgreSQLLogTests")
                                                POSTGRESQL_LOG_EVENT_TABLE);
     }
 
+    SECTION("whatEveryLogWritingTextDoes") { checkDatabaseLogText<PostgreSQLLogFactory>(*this); }
+
     SECTION("theTimeWrittenIsUtc")
     {
         PostgreSQLLogFactory factory(settingsFor(defaults));
@@ -133,6 +143,32 @@ TEST_CASE_METHOD(postgreSQLLogFixture, "PostgreSQLLogTests")
 
         CHECK(databaseLogRows(*this, "messages_log") ==
               Rows{"FIX.4.2|LOG|TEST|NULL|first", "FIX.4.2|OTHER|TEST|NULL|second"});
+    }
+
+    SECTION("wellFormedUtf8IsWrittenAsItIsOnAUtf8Connection")
+    {
+        REQUIRE(select("SHOW server_encoding") == Rows{"UTF8"});
+        const std::string text = "58=caf\xC3\xA9 \xE2\x82\xAC \xF0\x9D\x84\x9E\x01";
+        PostgreSQLLogFactory factory(settingsFor(defaults));
+        Log *log = factory.create(plain);
+        log->onIncoming(text);
+        factory.destroy(log);
+
+        CHECK(select("SELECT text FROM messages_log") == Rows{text});
+    }
+
+    SECTION("everyByteOverSevenBitsIsWrittenInHexOnAnyOtherConnection")
+    {
+        PostgreSQLLogFactory factory(settingsFor(defaults));
+        Log *log = nullptr;
+        {
+            ClientEncoding latin1("LATIN1");
+            log = factory.create(plain);
+        }
+        log->onIncoming("58=caf\xC3\xA9\x01");
+        factory.destroy(log);
+
+        CHECK(select("SELECT text FROM messages_log") == Rows{"58=caf\\xC3\\xA9\x01"});
     }
 }
 

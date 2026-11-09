@@ -24,6 +24,8 @@
 
 #include "catch_amalgamated.hpp"
 
+#include <cstddef>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -77,6 +79,108 @@ template <typename Fixture> std::vector<std::string> databaseLogRows(Fixture &fi
                           "COALESCE(sendercompid, 'NULL'), COALESCE(targetcompid, 'NULL'), "
                           "COALESCE(session_qualifier, 'NULL'), text) FROM " +
                           table + " ORDER BY id");
+}
+
+/// The message a database log's text was written for: each \x and two hex digits read back as that byte.
+inline std::string readDatabaseLogText(const std::string &text)
+{
+    const auto digit = [](char c) -> int
+    {
+        if (c >= '0' && c <= '9')
+        {
+            return c - '0';
+        }
+        if (c >= 'A' && c <= 'F')
+        {
+            return c - 'A' + 10;
+        }
+        return c >= 'a' && c <= 'f' ? c - 'a' + 10 : -1;
+    };
+    std::string message;
+    for (std::size_t i = 0; i < text.size(); ++i)
+    {
+        if (text[i] == '\\' && text.size() - i > 3 && text[i + 1] == 'x' && digit(text[i + 2]) >= 0 &&
+            digit(text[i + 3]) >= 0)
+        {
+            message += static_cast<char>(digit(text[i + 2]) * 16 + digit(text[i + 3]));
+            i += 3;
+        }
+        else
+        {
+            message += text[i];
+        }
+    }
+    return message;
+}
+
+/// The first and last code point of each row of the Unicode standard's table of well-formed UTF-8.
+inline std::vector<std::string> wellFormedUtf8Bounds()
+{
+    return {"\xC2\x80",         "\xDF\xBF",         "\xE0\xA0\x80",     "\xE0\xBF\xBF",
+            "\xE1\x80\x80",     "\xEC\xBF\xBF",     "\xED\x80\x80",     "\xED\x9F\xBF",
+            "\xEE\x80\x80",     "\xEF\xBF\xBF",     "\xF0\x90\x80\x80", "\xF0\xBF\xBF\xBF",
+            "\xF1\x80\x80\x80", "\xF3\xBF\xBF\xBF", "\xF4\x80\x80\x80", "\xF4\x8F\xBF\xBF"};
+}
+
+/// Bytes over 0x7F that are not well-formed UTF-8: just outside those bounds, a lead byte no sequence has, and cut
+/// short.
+inline std::vector<std::string> illFormedUtf8()
+{
+    return {"\x80",
+            "\xBF",
+            "\xC0\x80",
+            "\xC1\xBF",
+            "\xE0\x9F\xBF",
+            "\xED\xA0\x80",
+            "\xED\xBF\xBF",
+            "\xF0\x8F\xBF\xBF",
+            "\xF4\x90\x80\x80",
+            "\xF5\x80\x80\x80",
+            "\xFE",
+            "\xFF",
+            "\xC3",
+            "\xE2\x82",
+            "\xF0\x9D\x84"};
+}
+
+/// Messages a database log must keep: every byte in one, a NUL inside a message, a backslash before what reads as hex,
+/// each sequence above, and a seeded sample of short random ones.
+inline std::vector<std::string> databaseLogTextSamples()
+{
+    std::string everyByte;
+    for (int byte = 0; byte < 256; ++byte)
+    {
+        everyByte += static_cast<char>(byte);
+    }
+    std::string nul = "8=FIX.4.2\x01"
+                      "58=a";
+    nul += '\0';
+    nul += "b\x01"
+           "10=000\x01";
+
+    std::vector<std::string> samples{everyByte, nul, "58=\\x41 \\xfc\x01", "\\\xFC"};
+    for (const std::string &sequence : wellFormedUtf8Bounds())
+    {
+        samples.push_back("a" + sequence + "b");
+    }
+    for (const std::string &sequence : illFormedUtf8())
+    {
+        samples.push_back("a" + sequence + "b");
+    }
+
+    std::mt19937 random(20261109);
+    std::uniform_int_distribution<int> length(1, 48);
+    std::uniform_int_distribution<int> byte(0, 255);
+    for (int n = 0; n < 200; ++n)
+    {
+        std::string sample(length(random), '\0');
+        for (char &c : sample)
+        {
+            c = static_cast<char>(byte(random));
+        }
+        samples.push_back(sample);
+    }
+    return samples;
 }
 
 /// What every database log must do, however it reaches its server.
@@ -234,6 +338,46 @@ void checkDatabaseLog(Fixture &fixture, const char *incomingTableKey, const char
         {
             factory.destroy(log);
         }
+    }
+}
+
+/// What a database log that writes its text through databaseLogText must do. MySQLLog keeps bytes as they are instead.
+template <typename Factory, typename Fixture> void checkDatabaseLogText(Fixture &fixture)
+{
+    using Rows = std::vector<std::string>;
+
+    SECTION("everyRowReadsBackAsItsMessage")
+    {
+        const Rows messages = databaseLogTextSamples();
+        Factory factory(fixture.settingsFor(fixture.defaults));
+        Log *log = factory.create(fixture.plain);
+        for (const std::string &message : messages)
+        {
+            log->onIncoming(message);
+        }
+        factory.destroy(log);
+
+        const Rows texts = fixture.select("SELECT text FROM messages_log ORDER BY id");
+        REQUIRE(texts.size() == messages.size());
+        std::vector<std::size_t> differing;
+        for (std::size_t i = 0; i < texts.size(); ++i)
+        {
+            if (readDatabaseLogText(texts[i]) != messages[i])
+            {
+                differing.push_back(i);
+            }
+        }
+        CHECK(differing == std::vector<std::size_t>{});
+    }
+
+    SECTION("aBackslashThatWouldReadAsHexIsWrittenInHex")
+    {
+        Factory factory(fixture.settingsFor(fixture.defaults));
+        Log *log = factory.create(fixture.plain);
+        log->onIncoming("58=\\x41 \\xG1 \\x4\x01");
+        factory.destroy(log);
+
+        CHECK(fixture.select("SELECT text FROM messages_log") == Rows{"58=\\x5Cx41 \\xG1 \\x4\x01"});
     }
 }
 } // namespace FIX

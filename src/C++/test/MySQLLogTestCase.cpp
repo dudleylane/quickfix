@@ -130,6 +130,33 @@ TEST_CASE_METHOD(mySQLLogFixture, "MySQLLogTests")
         CHECK(databaseLogRows(*this, "messages_log") ==
               Rows{"FIX.4.2|LOG|TEST|NULL|first", "FIX.4.2|OTHER|TEST|NULL|second"});
     }
+
+    SECTION("everyRowHoldsItsMessageByteForByte")
+    {
+        const Rows messages = databaseLogTextSamples();
+        MySQLLogFactory factory(settingsFor(defaults));
+        Log *log = factory.create(plain);
+        for (const std::string &message : messages)
+        {
+            log->onIncoming(message);
+        }
+        factory.destroy(log);
+
+        // Compared in hex, since select() reads each value as a C string, which ends at a NUL.
+        static const char digits[] = "0123456789ABCDEF";
+        Rows expected;
+        for (const std::string &message : messages)
+        {
+            std::string hex;
+            for (char c : message)
+            {
+                hex += digits[static_cast<unsigned char>(c) >> 4];
+                hex += digits[static_cast<unsigned char>(c) & 0x0F];
+            }
+            expected.push_back(hex);
+        }
+        CHECK(select("SELECT HEX(text) FROM messages_log ORDER BY id") == expected);
+    }
 }
 
 TEST_CASE_METHOD(mySQLLogFixture, "MySQLConnectionTests")

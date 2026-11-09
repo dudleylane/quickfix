@@ -85,6 +85,8 @@ TEST_CASE_METHOD(odbcLogFixture, "OdbcLogTests")
         checkDatabaseLog<OdbcLogFactory>(*this, ODBC_LOG_INCOMING_TABLE, ODBC_LOG_OUTGOING_TABLE, ODBC_LOG_EVENT_TABLE);
     }
 
+    SECTION("whatEveryLogWritingTextDoes") { checkDatabaseLogText<OdbcLogFactory>(*this); }
+
     SECTION("aLogConstructedDirectlyWrites")
     {
         {
@@ -98,6 +100,16 @@ TEST_CASE_METHOD(odbcLogFixture, "OdbcLogTests")
 
         CHECK(databaseLogRows(*this, "messages_log") ==
               Rows{"FIX.4.2|LOG|TEST|NULL|session", "NULL|NULL|NULL|NULL|global"});
+    }
+
+    SECTION("everyByteOverSevenBitsIsWrittenInHex")
+    {
+        OdbcLogFactory factory(settingsFor(defaults));
+        Log *log = factory.create(plain);
+        log->onIncoming("58=caf\xC3\xA9\x01");
+        factory.destroy(log);
+
+        CHECK(select("SELECT text FROM messages_log") == Rows{"58=caf\\xC3\\xA9\x01"});
     }
 }
 

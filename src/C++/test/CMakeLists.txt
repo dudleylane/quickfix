@@ -6,6 +6,7 @@ if (QUICKFIX_TESTS)
   ${PROJECT_SOURCE_DIR}/src/C++/test/AllowedRemoteAddressTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/DataDictionaryProviderTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/DataDictionaryTestCase.cpp
+  ${PROJECT_SOURCE_DIR}/src/C++/test/DatabaseLogTextTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/DictionaryTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/FieldBaseTestCase.cpp
   ${PROJECT_SOURCE_DIR}/src/C++/test/FieldConvertorsTestCase.cpp

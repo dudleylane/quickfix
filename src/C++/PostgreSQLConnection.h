@@ -45,6 +45,7 @@
 #include "DatabaseConnectionPool.h"
 #include "Mutex.h"
 #include <algorithm>
+#include <cstring>
 #include <libpq-fe.h>
 #include <limits>
 
@@ -206,6 +207,15 @@ public:
 
     /// A value as a single-quoted literal on this connection.
     std::string quote(const std::string &value) { return "'" + escape(value) + "'"; }
+
+    /// Whether text on this connection is UTF-8 both as it is sent and as the server keeps it.
+    bool isUtf8()
+    {
+        Locker locker(m_mutex);
+        const char *client = PQparameterStatus(m_pConnection, "client_encoding");
+        const char *server = PQparameterStatus(m_pConnection, "server_encoding");
+        return client && server && std::strcmp(client, "UTF8") == 0 && std::strcmp(server, "UTF8") == 0;
+    }
 #endif
 
 private:

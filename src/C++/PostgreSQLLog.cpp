@@ -21,6 +21,7 @@
 
 #ifdef HAVE_POSTGRESQL
 
+#include "DatabaseLogText.h"
 #include "PortSetting.h"
 #include "PostgreSQLLog.h"
 #include "SessionID.h"
@@ -291,7 +292,7 @@ void PostgreSQLLog::insert(const std::string &table, const std::string value)
         queryString << "NULL, NULL, NULL, NULL, ";
     }
 
-    queryString << "'" << m_pConnection->escape(value) << "')";
+    queryString << "'" << m_pConnection->escape(databaseLogText(value, m_pConnection->isUtf8())) << "')";
 
     PostgreSQLQuery query(queryString.str());
     m_pConnection->execute(query);

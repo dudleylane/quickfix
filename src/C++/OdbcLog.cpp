@@ -21,6 +21,7 @@
 
 #ifdef HAVE_ODBC
 
+#include "DatabaseLogText.h"
 #include "OdbcLog.h"
 #include "SessionID.h"
 #include "SessionSettings.h"
@@ -257,7 +258,8 @@ void OdbcLog::insert(const std::string &table, const std::string value)
 
     queryString << "?)";
 
-    OdbcQuery query(queryString.str(), value);
+    // ODBC does not say how the server keeps text, so only ASCII is written as it is.
+    OdbcQuery query(queryString.str(), databaseLogText(value, false));
     m_pConnection->execute(query);
 }
 
