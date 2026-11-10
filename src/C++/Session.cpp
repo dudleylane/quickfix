@@ -70,9 +70,11 @@ Session::Session(std::move_only_function<UtcTimeStamp()> timestamper, Applicatio
             m_state.log(m_pLogFactory->create(m_sessionID));
         }
 
-        if (!checkSessionTime(m_timestamper()))
+        const UtcTimeStamp now = m_timestamper();
+        if (!checkSessionTime(now))
         {
-            m_state.reset(m_timestamper());
+            logSessionTimeReset(now, false);
+            m_state.reset(now);
         }
 
         // Registered before onCreate, so the application can look the session up from it.
@@ -129,12 +131,25 @@ void Session::fill(Header &header)
     insertSendingTime(header);
 }
 
+void Session::logSessionTimeReset(const UtcTimeStamp &now, bool droppingMessage)
+{
+    // The store's creation time says which period it belongs to, which is what a schedule is checked against.
+    std::string event = isSessionTime(now) ? "New session period" : "Not in session time";
+    event += ": resetting the store created " + UtcTimeStampConvertor::convert(m_state.getCreationTime());
+    if (droppingMessage)
+    {
+        event += "; the message received is dropped";
+    }
+    m_state.onEvent(event);
+}
+
 void Session::next(const UtcTimeStamp &now)
 {
     try
     {
         if (!checkSessionTime(now))
         {
+            logSessionTimeReset(now, false);
             reset();
             return;
         }
@@ -1630,6 +1645,7 @@ void Session::next(const Message &message, const UtcTimeStamp &now, bool queued)
     {
         if (!checkSessionTime(now))
         {
+            logSessionTimeReset(now, true);
             reset();
             return;
         }

@@ -224,8 +224,10 @@ public:
         {
             refresh();
         }
-        if (!checkSessionTime(m_timestamper()))
+        const UtcTimeStamp now = m_timestamper();
+        if (!checkSessionTime(now))
         {
+            logSessionTimeReset(now, false);
             reset();
         }
 
@@ -289,6 +291,8 @@ private:
         UtcTimeStamp creationTime = m_state.getCreationTime();
         return m_sessionTime.isInSameRange(now, creationTime);
     }
+    // Says why the session is about to reset for its session time: reset() logs at most "Disconnecting" (#188).
+    void logSessionTimeReset(const UtcTimeStamp &now, bool droppingMessage);
     bool isTargetTooHigh(SEQNUM msgSeqNum) { return msgSeqNum > (m_state.getNextTargetMsgSeqNum()); }
     bool isTargetTooLow(SEQNUM msgSeqNum) { return msgSeqNum < (m_state.getNextTargetMsgSeqNum()); }
     bool isCorrectCompID(const std::string &senderCompID, const std::string &targetCompID)

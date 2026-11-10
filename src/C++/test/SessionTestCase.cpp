@@ -55,13 +55,16 @@
 
 #include "catch_amalgamated.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
+#include <string>
 #include <thread>
+#include <vector>
 
 using namespace FIX;
 
@@ -3590,4 +3593,139 @@ TEST_CASE_METHOD(sessionFixture, "SessionRegistryConcurrencyTests")
     done = true;
     reader.join();
     CHECK(object != nullptr);
+}
+
+namespace
+{
+// Keeps every event a session logs.
+class EventLog : public NullLog
+{
+public:
+    explicit EventLog(std::vector<std::string> &events) : m_events(events) {}
+    void onEvent(const std::string &event) override { m_events.push_back(event); }
+
+private:
+    std::vector<std::string> &m_events;
+};
+
+class EventLogFactory : public LogFactory
+{
+public:
+    Log *create() override { return new NullLog; }
+    Log *create(const SessionID &) override { return new EventLog(events); }
+    void destroy(Log *log) override { delete log; }
+
+    std::vector<std::string>::const_iterator find(const std::string &event,
+                                                  std::vector<std::string>::const_iterator from) const
+    {
+        return std::find(from, events.cend(), event);
+    }
+    bool logged(const std::string &event) const { return find(event, events.cbegin()) != events.cend(); }
+
+    std::vector<std::string> events;
+};
+
+// Gives every store one creation time, as a store kept from an earlier run has.
+class DatedStoreFactory : public MessageStoreFactory
+{
+public:
+    explicit DatedStoreFactory(const UtcTimeStamp &created) : m_created(created) {}
+    MessageStore *create(const UtcTimeStamp &, const SessionID &) override { return new MemoryStore(m_created); }
+    void destroy(MessageStore *store) override { delete store; }
+
+private:
+    UtcTimeStamp m_created;
+};
+
+struct DiscardingResponder : public Responder
+{
+    bool send(const std::string &) override { return true; }
+    void disconnect() override {}
+};
+} // namespace
+
+// A session that resets for its session time says why first. reset() logs at most "Disconnecting", so a wrong
+// schedule looked like a dropped connection, and a message dropped at the boundary left no trace (#188).
+TEST_CASE("SessionTimeResetTestCase")
+{
+    const SessionID sessionID(BeginString("FIX.4.2"), SenderCompID("TW"), TargetCompID("PERIOD"));
+    DataDictionaryProvider provider;
+    provider.addTransportDataDictionary(sessionID.getBeginString(), FIX::TestSettings::pathForSpec("FIX42"));
+    const TimeRange daily(UtcTimeOnly(0, 0, 0), UtcTimeOnly(0, 0, 0));
+    const TimeRange daytime(UtcTimeOnly(8, 0, 0), UtcTimeOnly(17, 0, 0));
+
+    NullApplication application;
+    MemoryStoreFactory stores;
+    EventLogFactory logs;
+    DiscardingResponder responder;
+    UtcTimeStamp now(23, 59, 50, 10, 11, 2026);
+    auto const timestamper = [&now]() { return now; };
+
+    SECTION("the timer, at a new session period")
+    {
+        Session session(timestamper, application, stores, sessionID, provider, daily, 0, &logs);
+        session.setResponder(&responder);
+        now = UtcTimeStamp(0, 0, 1, 11, 11, 2026);
+        session.next(now);
+
+        const auto reset =
+            logs.find("New session period: resetting the store created 20261110-23:59:50", logs.events.cbegin());
+        CHECK(reset != logs.events.cend());
+        CHECK(logs.find("Disconnecting", reset) != logs.events.cend());
+    }
+
+    SECTION("a message, at a new session period")
+    {
+        Session session(timestamper, application, stores, sessionID, provider, daily, 0, &logs);
+        session.setResponder(&responder);
+        now = UtcTimeStamp(0, 0, 1, 11, 11, 2026);
+        session.next(createHeartbeat("PERIOD", "TW", 1), now);
+
+        CHECK(logs.logged("New session period: resetting the store created 20261110-23:59:50; the message received "
+                          "is dropped"));
+    }
+
+    SECTION("a connection, at a new session period")
+    {
+        Session session(timestamper, application, stores, sessionID, provider, daily, 0, &logs);
+        now = UtcTimeStamp(0, 0, 1, 11, 11, 2026);
+        session.setResponder(&responder);
+
+        CHECK(logs.logged("New session period: resetting the store created 20261110-23:59:50"));
+    }
+
+    SECTION("the timer, after the session time ends")
+    {
+        now = UtcTimeStamp(12, 0, 0, 10, 11, 2026);
+        Session session(timestamper, application, stores, sessionID, provider, daytime, 0, &logs);
+        session.setResponder(&responder);
+        now = UtcTimeStamp(17, 0, 1, 10, 11, 2026);
+        session.next(now);
+
+        CHECK(logs.logged("Not in session time: resetting the store created 20261110-12:00:00"));
+    }
+
+    SECTION("creation, with a store from an earlier period")
+    {
+        DatedStoreFactory earlier(UtcTimeStamp(12, 0, 0, 9, 11, 2026));
+        now = UtcTimeStamp(12, 0, 0, 10, 11, 2026);
+        Session session(timestamper, application, earlier, sessionID, provider, daily, 0, &logs);
+
+        CHECK(logs.logged("New session period: resetting the store created 20261109-12:00:00"));
+    }
+
+    SECTION("nothing, within the period")
+    {
+        Session session(timestamper, application, stores, sessionID, provider, daily, 0, &logs);
+        session.setResponder(&responder);
+        now = UtcTimeStamp(23, 59, 59, 10, 11, 2026);
+        session.next(now);
+        session.next(createHeartbeat("PERIOD", "TW", 1), now);
+
+        for (const std::string &event : logs.events)
+        {
+            CHECK(event.rfind("New session period", 0) != 0);
+            CHECK(event.rfind("Not in session time", 0) != 0);
+        }
+    }
 }
