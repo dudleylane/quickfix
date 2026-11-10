@@ -1012,20 +1012,24 @@ long testNoPoolQuoteRequest(int count)
     return sampleLoop(count, [&] { FIX::Message message(str, *s_dataDictionary, DONT_VALIDATE); });
 }
 
-// Waits for a benchmark's client session to log on. A fixed second was not always enough: on a busy machine
-// or a sanitizer build the first messages then went out before the logon and were dropped, and the
-// benchmark's wait for them never ended.
-void waitForLogon(const FIX::SessionID &sessionID)
+// Waits for a benchmark's client session to log on, and returns it. A fixed second was not always enough: on a busy
+// machine or a sanitizer build the first messages then went out before the logon and were dropped, and the
+// benchmark's wait for them never ended. A session that has not logged on in 30 s fails the benchmark, with both
+// transports stopped first: unwinding would destroy them with their threads running, and pt would abort before
+// saying which benchmark failed (#187).
+FIX::Session &waitForLogon(const FIX::SessionID &sessionID, FIX::Initiator &initiator, FIX::Acceptor &acceptor)
 {
     for (int i = 0; i < 3000; ++i)
     {
         FIX::Session *session = FIX::Session::lookupSession(sessionID);
         if (session && session->isLoggedOn())
         {
-            return;
+            return *session;
         }
         FIX::process_sleep(0.01);
     }
+    initiator.stop();
+    acceptor.stop();
     throw std::runtime_error("benchmark session " + sessionID.toString() + " did not log on in 30 s");
 }
 
@@ -1250,7 +1254,7 @@ long testSendOnSocket(int count, short port)
     FIX::SocketInitiator initiator(application, factory, settings);
     initiator.start();
 
-    waitForLogon(sessionID);
+    waitForLogon(sessionID, initiator, acceptor);
 
     application.expect(count);
     long start = GetTickCount();
@@ -1323,7 +1327,7 @@ long testSendOnThreadedSocket(int count, short port)
     FIX::ThreadedSocketInitiator initiator(application, factory, settings);
     initiator.start();
 
-    waitForLogon(sessionID);
+    waitForLogon(sessionID, initiator, acceptor);
 
     application.expect(count);
     long start = GetTickCount();
@@ -1391,16 +1395,7 @@ template <typename Acceptor, typename Initiator> long testRoundTrip(int count, s
     Initiator initiator(application, factory, settings);
     initiator.start();
 
-    FIX::Session *client = nullptr;
-    for (int i = 0; i < 1000 && !(client && client->isLoggedOn()); ++i)
-    {
-        client = FIX::Session::lookupSession(FIX::SessionID("FIX.4.2", "CLIENT", "SERVER"));
-        FIX::process_sleep(0.01);
-    }
-    if (!client || !client->isLoggedOn())
-    {
-        throw std::runtime_error("round trip: the session did not log on");
-    }
+    FIX::Session &client = waitForLogon(FIX::SessionID("FIX.4.2", "CLIENT", "SERVER"), initiator, acceptor);
 
     long expected = application.echoes();
     bool lost = false;
@@ -1411,7 +1406,7 @@ template <typename Acceptor, typename Initiator> long testRoundTrip(int count, s
                                       {
                                           return;
                                       }
-                                      client->send(message);
+                                      client.send(message);
                                       ++expected;
                                       lost = !waitForEcho(application, expected);
                                   });
