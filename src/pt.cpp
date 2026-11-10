@@ -42,6 +42,7 @@
 #include "getopt-repl.h"
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <fstream>
@@ -230,9 +231,11 @@ static double pct(const std::vector<uint64_t> &sorted, double q)
 }
 
 static int s_reps = 5;
+static const char *s_running = nullptr; // the benchmark a failure is reported against
 
 template <typename Fn> void run(const char *name, Fn fn, int count)
 {
+    s_running = name;
     double warmUsPerOp = 0.0;
     if (count >= 10)
     {
@@ -312,6 +315,11 @@ const bool DONT_VALIDATE = false;
 // the same reason: on a machine short of cores a trip takes milliseconds (a 6 ms median at load 27, #175), and
 // -c 500000 would then run for hours.
 static constexpr int BUSY_POLL_ROUND_TRIPS = 20000;
+
+// How long a session benchmark waits with nothing arriving before it fails. A message the sessions drop would
+// otherwise be waited for for ever: when they were daily sessions, a run crossing 00:00 UTC lost one to the
+// reset there and held CI's runner for six hours (#186).
+static constexpr int STALL_SECONDS = 30;
 
 static int availableCpus()
 {
@@ -477,6 +485,10 @@ int main(int argc, char **argv)
     }
     catch (std::exception const &e)
     {
+        if (s_running)
+        {
+            std::cerr << s_running << ": ";
+        }
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
@@ -1070,6 +1082,58 @@ private:
     std::atomic<long> m_echoes{0};
 };
 
+std::string stalled(long arrived, long expected)
+{
+    return "nothing arrived for " + std::to_string(STALL_SECONDS) + " s, with " + std::to_string(arrived) + " of " +
+           std::to_string(expected) + " messages in";
+}
+
+// Waits for the target-th message, and returns false once none has arrived for STALL_SECONDS.
+bool waitForMessages(TestApplication &application, int target)
+{
+    int seen = -1;
+    auto lastArrival = std::chrono::steady_clock::now();
+    for (int arrived = application.getCount(); arrived < target; arrived = application.getCount())
+    {
+        const auto now = std::chrono::steady_clock::now();
+        if (arrived != seen)
+        {
+            seen = arrived;
+            lastArrival = now;
+        }
+        else if (now - lastArrival >= std::chrono::seconds(STALL_SECONDS))
+        {
+            return false;
+        }
+        FIX::process_sleep(0.01);
+    }
+    return true;
+}
+
+// Spins until the expected-th echo arrives, and returns false once it has not for STALL_SECONDS. The clock is
+// read only after 2^16 turns, far more than a round trip takes, so the trips measured never read it.
+bool waitForEcho(const EchoApplication &application, long expected)
+{
+    std::chrono::steady_clock::time_point deadline;
+    for (unsigned long turns = 1; application.echoes() < expected; ++turns)
+    {
+        std::this_thread::yield();
+        if (turns % (1ul << 16) == 0)
+        {
+            const auto now = std::chrono::steady_clock::now();
+            if (turns == 1ul << 16)
+            {
+                deadline = now + std::chrono::seconds(STALL_SECONDS);
+            }
+            else if (now >= deadline)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 // A FIX 5.0 SP2 NewOrderSingle with three parties, complete enough to validate.
 FIX50SP2::NewOrderSingle newOrderSingleWithParties50SP2()
 {
@@ -1142,9 +1206,10 @@ long testSendOnSocket(int count, short port)
            << "SocketConnectHost=localhost" << std::endl
            << "SocketConnectPort=" << (unsigned short)port << std::endl
            << "SocketAcceptPort=" << (unsigned short)port << std::endl
-           << "SocketReuseAddress=Y" << std::endl
-           << "StartTime=00:00:00" << std::endl
-           << "EndTime=00:00:00" << std::endl
+           << "SocketReuseAddress=Y"
+           << std::endl
+           // Non-stop: a daily session resets at 00:00 UTC, dropping the message in hand (see STALL_SECONDS).
+           << "NonStopSession=Y" << std::endl
            << "UseDataDictionary=N" << std::endl
            << "BeginString=FIX.4.2" << std::endl
            << "PersistMessages=N"
@@ -1195,16 +1260,16 @@ long testSendOnSocket(int count, short port)
         FIX::Session::sendToTarget(message, sessionID);
     }
 
-    while (application.getCount() < count)
-    {
-        FIX::process_sleep(0.01);
-    }
-
+    const bool arrived = waitForMessages(application, count);
     long ticks = application.doneAt() - start;
 
     initiator.stop();
     acceptor.stop();
 
+    if (!arrived)
+    {
+        throw std::runtime_error(stalled(application.getCount(), count));
+    }
     return ticks;
 }
 
@@ -1215,9 +1280,10 @@ long testSendOnThreadedSocket(int count, short port)
            << "SocketConnectHost=localhost" << std::endl
            << "SocketConnectPort=" << (unsigned short)port << std::endl
            << "SocketAcceptPort=" << (unsigned short)port << std::endl
-           << "SocketReuseAddress=Y" << std::endl
-           << "StartTime=00:00:00" << std::endl
-           << "EndTime=00:00:00" << std::endl
+           << "SocketReuseAddress=Y"
+           << std::endl
+           // Non-stop: a daily session resets at 00:00 UTC, dropping the message in hand (see STALL_SECONDS).
+           << "NonStopSession=Y" << std::endl
            << "UseDataDictionary=N" << std::endl
            << "BeginString=FIX.4.2" << std::endl
            << "PersistMessages=N"
@@ -1267,16 +1333,16 @@ long testSendOnThreadedSocket(int count, short port)
         FIX::Session::sendToTarget(message, sessionID);
     }
 
-    while (application.getCount() < count)
-    {
-        FIX::process_sleep(0.01);
-    }
-
+    const bool arrived = waitForMessages(application, count);
     long ticks = application.doneAt() - start;
 
     initiator.stop();
     acceptor.stop();
 
+    if (!arrived)
+    {
+        throw std::runtime_error(stalled(application.getCount(), count));
+    }
     return ticks;
 }
 
@@ -1291,9 +1357,10 @@ template <typename Acceptor, typename Initiator> long testRoundTrip(int count, s
            << "SocketConnectPort=" << (unsigned short)port << std::endl
            << "SocketAcceptPort=" << (unsigned short)port << std::endl
            << "SocketReuseAddress=Y" << std::endl
-           << "SocketBusyPoll=" << (busyPoll ? "Y" : "N") << std::endl
-           << "StartTime=00:00:00" << std::endl
-           << "EndTime=00:00:00" << std::endl
+           << "SocketBusyPoll=" << (busyPoll ? "Y" : "N")
+           << std::endl
+           // Non-stop: a daily session resets at 00:00 UTC, dropping the message in hand (see STALL_SECONDS).
+           << "NonStopSession=Y" << std::endl
            << "UseDataDictionary=N" << std::endl
            << "BeginString=FIX.4.2" << std::endl
            << "PersistMessages=N" << std::endl
@@ -1336,18 +1403,24 @@ template <typename Acceptor, typename Initiator> long testRoundTrip(int count, s
     }
 
     long expected = application.echoes();
+    bool lost = false;
     const long ticks = sampleLoop(count,
                                   [&]
                                   {
+                                      if (lost)
+                                      {
+                                          return;
+                                      }
                                       client->send(message);
                                       ++expected;
-                                      while (application.echoes() < expected)
-                                      {
-                                          std::this_thread::yield();
-                                      }
+                                      lost = !waitForEcho(application, expected);
                                   });
 
     initiator.stop();
     acceptor.stop();
+    if (lost)
+    {
+        throw std::runtime_error(stalled(application.echoes(), count + 1));
+    }
     return ticks;
 }

@@ -106,11 +106,11 @@ std::vector<long> drawGaps(int sender, const Options &options)
 int measure(const Options &options)
 {
     // Separate settings for each transport: an acceptor checks that every session it reads agrees on its socket
-    // options.
+    // options. Non-stop sessions: a daily one resets at 00:00 UTC and drops the message in hand (#186).
     std::stringstream common;
     common << "[DEFAULT]\nSocketConnectHost=127.0.0.1\nSocketConnectPort=" << options.port
            << "\nSocketAcceptPort=" << options.port
-           << "\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\nBeginString=FIX.4.2\nResetOnLogon=Y\n"
+           << "\nNonStopSession=Y\nUseDataDictionary=N\nBeginString=FIX.4.2\nResetOnLogon=Y\n"
            << "PersistMessages=" << (options.fileStore.empty() ? "N" : "Y") << "\n";
     std::stringstream acceptorConfig, initiatorConfig;
     acceptorConfig << common.str() << "[SESSION]\nConnectionType=acceptor\nSenderCompID=SERVER\nTargetCompID=CLIENT\n"

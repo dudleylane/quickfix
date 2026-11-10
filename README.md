@@ -124,6 +124,11 @@ so they compare across releases; the default has been `Y` since #150, which cost
 one its Nagle coalescing. **The round-trip rows** keep one order in flight: send, wait for the
 server's echo, send the next, with `SocketNodelay` at its default. Most of their ~35 μs is two
 blocking-socket wakeups per trip on this machine; `pt` also prints their p99, about 60–70 μs.
+Both kinds now run non-stop sessions (`NonStopSession=Y`). They were daily sessions, which reset at
+00:00 UTC and drop the message in hand, so a `pt` running then waited for ever (#186). A daily
+session also checks the time on every message it receives, about 42 ns by a probe here, so these
+rows read about 1.5% faster than the captures above (one message received per streamed order) and
+the round trips about 0.2% (two per trip).
 
 **Before `c658c6f2` and `c150d178` the Store and streaming rows measured `pt`, not the engine.** The
 streaming benchmarks polled for the last message every 100 ms and stopped the clock at the poll, so
