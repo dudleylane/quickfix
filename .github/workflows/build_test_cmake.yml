@@ -512,6 +512,9 @@ jobs:
         # comparison below runs this pt in full.
         if: matrix.configuration == 'Release' && github.event_name == 'push'
         working-directory: ./test
+        # A hang would hold this runner, and every job queued for it, until
+        # GitHub's 6-hour job limit; the step takes 3 to 14 minutes.
+        timeout-minutes: 45
         # -r 1: a smoke test does not need the repetition harness's default of
         # 5 runs per benchmark.
         run: ./pt -p 54323 -c 500000 -r 1
@@ -525,6 +528,10 @@ jobs:
         if: matrix.configuration == 'Release' && github.event_name != 'push'
         working-directory: ./test
         shell: bash
+        # 13 to 35 minutes when it passes, 71 at the most so far: up to four
+        # settle() waits of 10 minutes each come on top of the runs. A hang
+        # would otherwise hold the runner until the 6-hour job limit.
+        timeout-minutes: 120
         # Through the environment, not interpolated into the script: an input
         # is text, and must not become shell.
         env:
