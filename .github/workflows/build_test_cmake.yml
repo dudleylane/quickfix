@@ -17,8 +17,23 @@ on:
         default: ''
 
 jobs:
+  idle:
+    # The runners share this machine with other repositories' runners and with their benchmarks. No job here
+    # starts until those are idle: a run beside them disturbs their work, and theirs disturbs this run's tests and
+    # timings. waitidle.sh logs what it waits for once a minute, so a run that waits here for hours shows why; a day
+    # without an idle machine fails the run.
+    name: Wait for an idle machine
+    runs-on: [self-hosted, Linux, X64, quickfix-dev]
+    timeout-minutes: 1440
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Wait for other projects to finish
+        run: test/waitidle.sh
+
   build:
     name: Build + tests (${{ matrix.configuration }})
+    needs: idle
     runs-on: [self-hosted, Linux, X64, quickfix-dev]
     # gcc-toolset-15 is required: Stream 10's default is GCC 14, which lacks
     # <flat_map>.  No `source enable` script exists at the standard path on
@@ -82,7 +97,7 @@ jobs:
         # load until #135. A few seconds, so every event; Debug only.
         if: matrix.configuration == 'Debug'
         working-directory: ./test
-        run: ruby -I. test.rb
+        run: ./isolate.sh ruby -I. test.rb
 
       - name: Check the generated code matches spec/
         # spec/generate.sh writes the message classes, the MessageCracker.h
@@ -113,16 +128,25 @@ jobs:
             -DHAVE_JAVA=${{ matrix.configuration == 'Debug' && 'ON' || 'OFF' }}
 
       - name: Build
+        # The jobs build at once on one machine: each takes half its cores,
+        # and Ninja holds off while the load is above the core count, so
+        # four of them starting together cannot burst to 32 compilers.
         shell: bash
-        run: cmake --build build -j"$(nproc)"
+        run: cmake --build build -j"$(( $(nproc) / 2 ))" -- -l"$(nproc)"
 
       - name: Run unit tests
         # ut/at/pt symlinks land at <repo>/test/{ut,at,pt} via the custom
         # CMake symlink targets in src/CMakeLists.txt and src/C++/test/
         # CMakeLists.txt — same paths whether the build is in-tree or
         # out-of-tree.
+        #
+        # isolate.sh gives the step its own loopback and process table: the
+        # jobs run side by side, and the tests bind fixed ports -- ut 5000
+        # and up, acceptance 54321 -- and runat.sh begins with killall. So
+        # does every step here that binds a port, except the database step,
+        # which needs the host's servers.
         working-directory: ./test
-        run: ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
+        run: ./isolate.sh ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
 
       - name: Build and test the Ruby bindings
         # Replaces an -fsyntax-only check of QuickfixRuby.cpp. Ruby has no CMake
@@ -155,7 +179,7 @@ jobs:
           LD_LIBRARY_PATH="${{ github.workspace }}/lib:$LD_LIBRARY_PATH" RUBYLIB="$PWD" \
             ruby -e 'require "quickfix_ruby"; exit $LOADED_FEATURES.grep(/quickfix\.so$/).first == File.join(Dir.pwd, "quickfix.so")' \
             || { echo "::error::make_ruby.sh's module did not load"; exit 1; }
-          ./test.sh
+          ../../test/isolate.sh ./test.sh
 
       - name: Compile the database backends
         # Nothing compiles MySQLStore/Log, PostgreSQLStore/Log or OdbcStore/Log
@@ -233,6 +257,15 @@ jobs:
         if: github.event_name != 'push' && matrix.configuration == 'Debug'
         shell: bash
         run: |
+          # The machine's database and the MySQL container have fixed names,
+          # and runs can overlap now that jobs run side by side: one run at a
+          # time holds them, until this step's shell exits. Not in isolate.sh,
+          # which would cut ut off from both servers.
+          lock="$HOME/.cache/quickfix-ci/database.lock"
+          mkdir -p "${lock%/*}"
+          exec 9> "$lock"
+          flock 9
+
           # Its own build dir and output dir. Since #54 only a tree building into
           # the default lib/ creates the test/{ut,at,pt} links, so this tree
           # leaves them on the build the later steps -- acceptance among them --
@@ -241,7 +274,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DHAVE_SSL=ON -DHAVE_MYSQL=ON -DHAVE_POSTGRESQL=ON -DHAVE_ODBC=ON \
             -DQUICKFIX_LIB_OUTPUT_DIR="${{ github.workspace }}/build-db/out"
-          cmake --build build-db -j"$(nproc)"
+          cmake --build build-db -j"$(( $(nproc) / 2 ))" -- -l"$(nproc)"
 
           # Exiting 0 is not the check: confirm the backends were really linked
           # in, rather than the options having been silently ignored.
@@ -277,7 +310,16 @@ jobs:
         # this machine has other work to do.
         if: always() && github.event_name != 'push' && matrix.configuration == 'Debug'
         shell: bash
-        run: test/mysqlserver.sh stop
+        run: |
+          # Only while no run holds the database lock. Another run's link step
+          # may own the container by now, and its own stop removes it.
+          lock="$HOME/.cache/quickfix-ci/database.lock"
+          mkdir -p "${lock%/*}"
+          flock -n -E 75 "$lock" test/mysqlserver.sh stop || {
+            status=$?
+            [ "$status" -eq 75 ] || exit "$status"
+            echo "another run holds the database lock; its stop removes the container"
+          }
 
       - name: Run the Python binding tests
         # Compiling and linking the wrapper proves it builds, not that it works.
@@ -296,7 +338,7 @@ jobs:
         if: matrix.configuration == 'Debug'
         working-directory: ./src/python
         shell: bash
-        run: ./test-python3.sh
+        run: ../../test/isolate.sh ./test-python3.sh
 
       - name: Run the Java binding tests
         # The Java binding (#148): messages, fields and groups, settings, dictionaries and stores; logon and
@@ -307,7 +349,7 @@ jobs:
         if: matrix.configuration == 'Debug'
         working-directory: ./src/java
         shell: bash
-        run: ./test-java.sh
+        run: ../../test/isolate.sh ./test-java.sh
 
       - name: Install the bindings and load them from the install
         # The tests above load both bindings from the tree. Until #108 neither
@@ -418,7 +460,7 @@ jobs:
         # push to master.
         if: github.event_name != 'push'
         working-directory: ./test
-        run: ./runat.sh 54321
+        run: ./isolate.sh ./runat.sh 54321
 
       - name: Run the client definitions
         # The acceptance suite tests an acceptor. These test an initiator: the
@@ -427,8 +469,8 @@ jobs:
         if: github.event_name != 'push'
         working-directory: ./test
         run: |
-          ./runat_client.sh 54331
-          ./runat_client.sh 54332 -t
+          ./isolate.sh ./runat_client.sh 54331
+          ./isolate.sh ./runat_client.sh 54332 -t
 
       - name: Run acceptance tests through the Python and Ruby bindings
         # src/at.py and src/at.rb are at.cpp through each binding, and nothing ran
@@ -447,8 +489,8 @@ jobs:
         run: |
           export LD_LIBRARY_PATH="${{ github.workspace }}/lib:$LD_LIBRARY_PATH"
           export PYTHONPATH="${{ github.workspace }}/lib:${{ github.workspace }}/src/python"
-          AT="python3 ../src/at.py" ./runat.sh 54321
-          AT="ruby -I ../src/ruby ../src/at.rb" ./runat.sh 54321
+          AT="python3 ../src/at.py" ./isolate.sh ./runat.sh 54321
+          AT="ruby -I ../src/ruby ../src/at.rb" ./isolate.sh ./runat.sh 54321
 
       - name: Run the example applications
         # Nothing ran the examples, and running them by hand before 22.0.0 found
@@ -457,7 +499,7 @@ jobs:
         # ordermatch -- with tradeclient sending an order per FIX version it
         # serves. Debug, where both bindings are built; not on push.
         if: github.event_name != 'push' && matrix.configuration == 'Debug'
-        run: test/runexamples.sh
+        run: test/isolate.sh test/runexamples.sh
 
       - name: Build and test without SSL
         # Every other step configures with HAVE_SSL=ON, so nothing built the
@@ -470,14 +512,14 @@ jobs:
         run: |
           cmake -B build-nossl -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=OFF \
             -DQUICKFIX_LIB_OUTPUT_DIR="${{ github.workspace }}/build-nossl/out"
-          cmake --build build-nossl -j"$(nproc)"
+          cmake --build build-nossl -j"$(( $(nproc) / 2 ))" -- -l"$(nproc)"
 
           # Exiting 0 is not the check: confirm SSL really was left out.
           lib=$(find build-nossl/out -name 'libquickfix.so.*' -type f | head -1)
           if ldd "$lib" | grep libssl; then
             echo "::error::$lib links libssl in a HAVE_SSL=OFF build"; exit 1
           fi
-          (cd test && ../build-nossl/out/ut \
+          (cd test && ./isolate.sh ../build-nossl/out/ut \
               --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
 
           # configure_file rewrote the tracked src/C++/config.h to undefine
@@ -494,7 +536,7 @@ jobs:
         run: |
           cmake -B build-tbb -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DHAVE_SSL=ON -DENABLE_TBB_ALLOCATOR=ON \
             -DQUICKFIX_EXAMPLES=OFF -DQUICKFIX_LIB_OUTPUT_DIR="${{ github.workspace }}/build-tbb/out"
-          cmake --build build-tbb -j"$(nproc)"
+          cmake --build build-tbb -j"$(( $(nproc) / 2 ))" -- -l"$(nproc)"
 
           # Exiting 0 is not the check: the option must reach what consumers
           # compile and link against.
@@ -502,14 +544,14 @@ jobs:
             || { echo "::error::QuickFIXBuildConfig.h does not record the TBB allocator"; exit 1; }
           grep -q -- '-ltbbmalloc' build-tbb/quickfix.pc \
             || { echo "::error::quickfix.pc does not link tbbmalloc"; exit 1; }
-          (cd test && ../build-tbb/out/ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
+          (cd test && ./isolate.sh ../build-tbb/out/ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
 
           git checkout -- src/C++/config.h
 
       - name: Run performance tests
         # Release-only: pt benchmarks against the Debug build are noise.
-        # On a push, a smoke test for crashes and hangs; elsewhere the
-        # comparison below runs this pt in full.
+        # On a push, a smoke test for crashes and hangs; elsewhere the pt job
+        # compares a pt like this one with the base's.
         if: matrix.configuration == 'Release' && github.event_name == 'push'
         working-directory: ./test
         # A hang would hold this runner, and every job queued for it, until
@@ -517,32 +559,7 @@ jobs:
         timeout-minutes: 45
         # -r 1: a smoke test does not need the repetition harness's default of
         # 5 runs per benchmark.
-        run: ./pt -p 54323 -c 500000 -r 1
-
-      - name: Compare pt with the base commit
-        # The regression gate (#93): the base's pt and this one, run
-        # alternately and pinned, judged by ptcompare.py -- a benchmark of
-        # 0.2 us or more that is 10% slower in both pairs fails the job. About
-        # 15 minutes, so not on push. The base is the pull request's target,
-        # or the pt_base input, or the previous commit.
-        if: matrix.configuration == 'Release' && github.event_name != 'push'
-        working-directory: ./test
-        shell: bash
-        # 13 to 35 minutes when it passes, 71 at the most so far: up to four
-        # settle() waits of 10 minutes each come on top of the runs. A hang
-        # would otherwise hold the runner until the 6-hour job limit.
-        timeout-minutes: 120
-        # Through the environment, not interpolated into the script: an input
-        # is text, and must not become shell.
-        env:
-          PT_BASE: ${{ github.event.pull_request.base.sha || inputs.pt_base }}
-        run: |
-          # The history and the tags, so that pt_base may be a short SHA or a
-          # tag name, not only a full SHA fetched by name (#115).
-          git fetch --quiet --tags --unshallow origin 2> /dev/null || git fetch --quiet --tags origin
-          base=$(git rev-parse --verify "${PT_BASE:-HEAD~1}^{commit}") \
-            || { echo "::error::pt_base '$PT_BASE' is not a commit"; exit 1; }
-          ./ptgate.sh "$base"
+        run: ./isolate.sh ./pt -p 54323 -c 500000 -r 1
 
   sanitizers:
     # The README's sanitizer baselines, kept by CI rather than by whoever ran
@@ -556,6 +573,7 @@ jobs:
     # from ASan. The build goes to the default lib/, so the test links are
     # this job's own.
     name: ${{ matrix.sanitizer }}
+    needs: idle
     runs-on: [self-hosted, Linux, X64, quickfix-dev]
     env:
       PATH: /opt/rh/gcc-toolset-15/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -594,12 +612,14 @@ jobs:
             -DHAVE_JAVA=${{ matrix.bindings }}
 
       - name: Build
+        # Half the cores and a load limit, as in the build job.
         shell: bash
-        run: cmake --build build -j"$(nproc)"
+        run: cmake --build build -j"$(( $(nproc) / 2 ))" -- -l"$(nproc)"
 
       - name: Run unit tests
+        # In its own loopback and process table, as in the build job.
         working-directory: ./test
-        run: ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
+        run: ./isolate.sh ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
 
       - name: Run the binding suites under ASan + UBSan
         # The bindings' own lifetime and threading code (the Ruby GVL handling,
@@ -615,23 +635,84 @@ jobs:
         shell: bash
         run: |
           asan=$(ldd lib/_quickfix.so | awk '/libasan/ {print $3}')
-          export LD_PRELOAD="$asan" ASAN_OPTIONS=detect_leaks=0:use_sigaltstack=0
+          export ASAN_OPTIONS=detect_leaks=0:use_sigaltstack=0
           export LD_LIBRARY_PATH="${{ github.workspace }}/lib:$LD_LIBRARY_PATH"
+          # Each suite in its own loopback and process table, as in the build
+          # job, with the preload set inside so that isolate.sh's own tools
+          # run without it.
+          isolated="${{ github.workspace }}/test/isolate.sh env LD_PRELOAD=$asan"
           (cd src/python && PYTHONPATH="${{ github.workspace }}/lib:$PWD" \
-             python3 -m unittest discover -s test -p '*TestCase.py')
-          (cd src/ruby && RUBYLIB="${{ github.workspace }}/lib/ruby:$PWD" ruby test/TestSuite.rb)
+             $isolated python3 -m unittest discover -s test -p '*TestCase.py')
+          (cd src/ruby && RUBYLIB="${{ github.workspace }}/lib/ruby:$PWD" $isolated ruby test/TestSuite.rb)
           # The Java binding (#148): HotSpot runs under the same preload and options, and the suite's child
           # JVMs inherit them; test-java.sh adds -Xcheck:jni. Leak detection stays off here too, and not only
           # because the JVM keeps memory: LeakSanitizer does not report even native objects a Java program
           # deliberately never frees (100 Messages, tried), so on it would be a check that cannot fail.
-          (cd src/java && ./test-java.sh)
+          (cd src/java && $isolated ./test-java.sh)
 
       - name: Run acceptance tests (reactor)
         if: github.event_name != 'push'
         working-directory: ./test
-        run: ./runat.sh 54321
+        run: ./isolate.sh ./runat.sh 54321
 
       - name: Run acceptance tests (threaded)
         if: github.event_name != 'push'
         working-directory: ./test
-        run: ./runat.sh 54321 -t
+        run: ./isolate.sh ./runat.sh 54321 -t
+
+  pt:
+    # The regression gate (#93): the base's pt and this one, run alternately
+    # and pinned, judged by ptcompare.py -- a benchmark of 0.2 us or more that
+    # is 10% slower in both pairs fails the job. About 15 minutes, so not on
+    # push. The base is the pull request's target, or the pt_base input, or
+    # the previous commit.
+    #
+    # Its own job, after the others, so that their builds and tests do not
+    # share the machine with it. It runs when one of them failed too, so a red
+    # elsewhere cannot hide a pt regression, but not when the wait for an idle
+    # machine ended without one.
+    name: Compare pt with the base commit
+    needs: [idle, build, sanitizers]
+    if: ${{ !cancelled() && needs.idle.result == 'success' && github.event_name != 'push' }}
+    runs-on: [self-hosted, Linux, X64, quickfix-dev]
+    # The wait, the build and the comparison's own 120 minutes.
+    timeout-minutes: 1600
+    env:
+      PATH: /opt/rh/gcc-toolset-15/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      LD_LIBRARY_PATH: /opt/rh/gcc-toolset-15/root/usr/lib64
+      CC: /opt/rh/gcc-toolset-15/root/usr/bin/gcc
+      CXX: /opt/rh/gcc-toolset-15/root/usr/bin/g++
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Wait for other projects to finish
+        # Again: another project may have started while the other jobs ran.
+        timeout-minutes: 1440
+        run: test/waitidle.sh
+
+      - name: Build pt
+        # pt_target builds pt and links test/pt to it, which ptgate.sh runs.
+        shell: bash
+        run: |
+          cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DHAVE_SSL=ON -DQUICKFIX_TESTS=OFF
+          cmake --build build --target pt_target -j"$(nproc)"
+
+      - name: Compare pt with the base commit
+        working-directory: ./test
+        shell: bash
+        # 13 to 35 minutes when it passes, 71 at the most so far: up to four
+        # settle() waits of 10 minutes each come on top of the runs. A hang
+        # would otherwise hold the runner until the 6-hour job limit.
+        timeout-minutes: 120
+        # Through the environment, not interpolated into the script: an input
+        # is text, and must not become shell.
+        env:
+          PT_BASE: ${{ github.event.pull_request.base.sha || inputs.pt_base }}
+        run: |
+          # The history and the tags, so that pt_base may be a short SHA or a
+          # tag name, not only a full SHA fetched by name (#115).
+          git fetch --quiet --tags --unshallow origin 2> /dev/null || git fetch --quiet --tags origin
+          base=$(git rev-parse --verify "${PT_BASE:-HEAD~1}^{commit}") \
+            || { echo "::error::pt_base '$PT_BASE' is not a commit"; exit 1; }
+          # In its own loopback, like the tests: two runs can still overlap.
+          ./isolate.sh ./ptgate.sh "$base"

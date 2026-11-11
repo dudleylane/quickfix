@@ -256,6 +256,17 @@ the Python and Ruby bindings, the database link and test step, the no-SSL and TB
 builds, and the `pt` regression gate, which compares this commit's `pt` with the base's
 (`-f pt_base=<full SHA>` for a manual run; otherwise the previous commit).
 
+The self-hosted runners share one machine with other repositories' runners and with their
+benchmarks. A run therefore starts with a job that waits until the machine is idle of them
+(`test/waitidle.sh`): no runner serving another repository is running a job, and under one core
+was busy in each of three minutes in a row. Such a run can wait for hours, and logs once a
+minute what it is waiting for; a day without an idle machine fails it. Its jobs then run side by
+side, one per registered runner. Every step that binds a port runs through `test/isolate.sh`, in
+its own user, network and PID namespaces, so the fixed ports and `runat.sh`'s `killall` belong to
+one job each. That needs unprivileged user namespaces, which the stock kernel allows. The database
+step needs the host's servers, so it takes a lock in `~/.cache/quickfix-ci/` instead. The `pt`
+gate is a job of its own that runs after the others and waits for an idle machine again.
+
 The Debug leg also covers the checked-in SWIG output, which went 33 commits without compiling at
 all before anyone noticed. It configures with `-DHAVE_PYTHON3=ON`, so CMake compiles and links
 `src/python/QuickfixPython.cpp` into `_quickfix.so`, and with `-DHAVE_RUBY=ON`, so it builds
