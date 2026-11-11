@@ -267,6 +267,33 @@ one job each. That needs unprivileged user namespaces, which the stock kernel al
 step needs the host's servers, so it takes a lock in `~/.cache/quickfix-ci/` instead. The `pt`
 gate is a job of its own that runs after the others and waits for an idle machine again.
 
+There are four runners, `quickfix-localhost` and `quickfix-localhost-2` to `-4`. Each is a copy of
+the first one's install with its own `bin.<version>` and `externals.<version>`, registered with the
+label `quickfix-dev` that every job's `runs-on` asks for, and run by a systemd user unit. To add
+one, as the runner's user with `gh` logged in:
+
+```bash
+n=5
+src=~/actions-runner-quickfix dst=~/actions-runner-quickfix-$n
+ver=$(readlink "$src/bin") && ver=${ver##*/bin.}
+mkdir "$dst" && cp -a "$src/bin.$ver" "$src/externals.$ver" "$dst/"
+ln -s "$dst/bin.$ver" "$dst/bin" && ln -s "$dst/externals.$ver" "$dst/externals"
+cp -a "$src"/{config.sh,env.sh,run.sh,run-helper.sh.template,safe_sleep.sh} "$dst/"
+(cd "$dst" && ./config.sh --unattended --url https://github.com/dudleylane/quickfix \
+  --name "quickfix-localhost-$n" --labels quickfix-dev --work _work \
+  --token "$(gh api -X POST repos/dudleylane/quickfix/actions/runners/registration-token --jq .token)")
+cp -p "$src/.env" "$src/.path" "$dst/"
+sed "s|actions-runner-quickfix|&-$n|g" ~/.config/systemd/user/quickfix-runner.service \
+  > ~/.config/systemd/user/quickfix-$n-runner.service
+systemctl --user daemon-reload && systemctl --user enable --now quickfix-$n-runner.service
+```
+
+`config.sh` writes the configuring shell's `LD_LIBRARY_PATH` and `PATH` into the copy's `.env` and
+`.path`, so the first runner's go back over them. Don't check a unit with `systemd-analyze --user
+verify`: on this machine's systemd 257 it took over the user manager's control socket, and every
+`systemctl --user` was refused until the manager was re-executed (`env -u XDG_RUNTIME_DIR
+systemctl --user …` reaches it meanwhile, over D-Bus).
+
 The Debug leg also covers the checked-in SWIG output, which went 33 commits without compiling at
 all before anyone noticed. It configures with `-DHAVE_PYTHON3=ON`, so CMake compiles and links
 `src/python/QuickfixPython.cpp` into `_quickfix.so`, and with `-DHAVE_RUBY=ON`, so it builds

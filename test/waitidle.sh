@@ -8,8 +8,9 @@
 #
 # Idle means that no runner serving another repository is running a job, and that fewer than IDLE_CPUS cores
 # (default 1.0) were busy in each of IDLE_MINUTES minutes in a row (default 3). The desktop and idle sessions use
-# less than one core; a benchmark or a build uses more. Each busy minute prints a line saying what it waits for, so
-# a run that waits for hours shows why in its log. The job's timeout bounds the wait.
+# less than one core; a benchmark or a build uses more. Each minute prints its reading, so a run that waits for
+# hours shows why in its log, and the quiet minutes show how far under the limit an idle machine sits. The job's
+# timeout bounds the wait.
 
 IDLE_CPUS=${IDLE_CPUS:-1.0}
 IDLE_MINUTES=${IDLE_MINUTES:-3}
@@ -18,7 +19,8 @@ REPOSITORY=${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-dudleyl
 CPUS=$(grep -c '^cpu[0-9]' /proc/stat)
 
 # The other repositories whose runners are running a job. A runner runs each job in a Runner.Worker, and the
-# .runner file two directories above it names the repository the runner serves.
+# .runner file two directories above it names the repository the runner serves. A job counts however little it
+# does, so a repository that gated its runs the same way would wait on this one while this one waited on it.
 other_repositories()
 {
     for pid in $(pgrep -x Runner.Worker); do
@@ -47,6 +49,7 @@ while [ "$quiet" -lt "$IDLE_MINUTES" ]; do
     # A reading that is not a number counts as busy.
     if [ -z "$others" ] && awk -v b="$busy" -v l="$IDLE_CPUS" 'BEGIN { exit !(b ~ /^[0-9.]+$/ && b < l) }'; then
         quiet=$((quiet + 1))
+        echo "$(date -u +%H:%M:%S) quiet: $busy of $CPUS cores busy ($quiet of $IDLE_MINUTES min)"
     else
         quiet=0
         echo "$(date -u +%H:%M:%S) waiting: $busy of $CPUS cores busy (limit $IDLE_CPUS)${others:+; running a job for $others}"
