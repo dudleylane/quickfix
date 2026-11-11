@@ -32,9 +32,16 @@ if git -C "$TEST" diff --quiet "$BASE" HEAD -- ../src/C++ ../src/pt.cpp ../CMake
     echo "pt's sources are the same at $BASE and HEAD; nothing to compare"
     exit 0
 fi
-WORK=$(mktemp -d)
+# A run the runner kills never reaches its EXIT trap, and left its worktree behind (#189). Under RUNNER_TEMP, which
+# the runner empties at the start and end of every job, nothing outlives the job; prune then drops the worktree's
+# registration, whose directory is gone.
+WORK=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/ptgate.XXXXXX") || {
+    echo "FAILED: could not make a working directory"
+    exit 1
+}
 trap 'git -C "$TEST" worktree remove --force "$WORK/base" 2>/dev/null; rm -rf "$WORK"' EXIT
 
+git -C "$TEST" worktree prune
 git -C "$TEST" worktree add --detach "$WORK/base" "$BASE" >/dev/null || {
     echo "FAILED: could not add a worktree at $BASE"
     exit 1
