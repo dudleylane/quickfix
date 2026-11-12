@@ -15,15 +15,16 @@ classes="$lib/test-classes"
 rm -rf "$classes"
 # The examples compile with the suites, and ExampleTests runs them, so they cannot rot unseen.
 javac -d "$classes" -cp "$lib/quickfix.jar" --release 21 -Xlint:all,-this-escape -Werror \
-    test/com/dudleylane/quickfix/test/*.java examples/com/dudleylane/quickfix/examples/*.java || exit 1
+    test/com/dudleylane/quickfix/test/*.java $(find examples -name '*.java') || exit 1
 
 export LD_LIBRARY_PATH="$lib/..${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 output=$(mktemp)
 trap 'rm -f "$output"' EXIT
 # A transport that deadlocks would otherwise hold the run until CI's job timeout: QUICKFIX_JAVA_TIMEOUT
-# seconds (default 900) for the whole suite.
+# seconds (default 900) for the whole suite. Headless, display or none: ExampleTests builds Banzai's window
+# content and clicks through it, and never opens a window.
 timeout --kill-after=30 "${QUICKFIX_JAVA_TIMEOUT:-900}" java -Xcheck:jni -cp "$lib/quickfix.jar:$classes" \
-    -Dcom.dudleylane.quickfix.library="$lib/libquickfixjava.so" -Dquickfix.test.root="$root" \
+    -Djava.awt.headless=true -Dcom.dudleylane.quickfix.library="$lib/libquickfixjava.so" -Dquickfix.test.root="$root" \
     com.dudleylane.quickfix.test.TestRunner "$@" 2>&1 | tee "$output"
 status=$(sed -n 's/^\([0-9]*\) passed, \([0-9]*\) failed$/\2/p' "$output")
 if [ -z "$status" ]; then

@@ -297,8 +297,12 @@ links.
 
 `-DHAVE_JAVA=ON` builds `lib/java/libquickfixjava.so` and `lib/java/quickfix.jar` (Java 21, package
 `com.dudleylane.quickfix`). Put the jar on the class path and the library on `java.library.path`, or name
-the library file with `-Dcom.dudleylane.quickfix.library=<path>`. `src/java/test-java.sh` runs the suite;
-`src/java/examples/.../Executor.java` is `examples/executor` in Java.
+the library file with `-Dcom.dudleylane.quickfix.library=<path>`. `src/java/test-java.sh` runs the suite.
+In `src/java/examples`, package `com.dudleylane.quickfix.examples`, `Executor` is `examples/executor` in Java,
+`ordermatch` is `examples/ordermatch`, and `banzai` is Banzai, a trading client with a Swing window: upstream's
+`tradeclientgui`, which it removed in 2023, on this binding. `bin/run_executor_java.sh`,
+`bin/run_ordermatch_java.sh` and `bin/run_banzai.sh` run them, and `test-java.sh` compiles and tests all three,
+Banzai's window headless, never shown.
 
 ```java
 import com.dudleylane.quickfix.*;

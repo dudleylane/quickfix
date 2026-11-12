@@ -16,12 +16,15 @@
 
   <div class='contents'>
     <p>QuickFIX includes several example applications in the
-    <b>examples/</b> directory to demonstrate various FIX application patterns.</p>
+    <b>examples/</b> directory to demonstrate various FIX application patterns.
+    The Java ones are in <b>src/java/examples/</b>.</p>
 
     <h2>ordermatch</h2>
     <p><b>ordermatch</b> is a C++ server application that implements a simple
     matching engine. It accepts limit orders and matches them when buy and sell
-    orders cross. This example demonstrates:</p>
+    orders cross. It is in Java too, with the same console: type a symbol to see
+    its book, <code>#symbols</code> to list the symbols, <code>#quit</code> to stop.
+    This example demonstrates:</p>
     <ul>
       <li>FIX acceptor implementation</li>
       <li>Order management and matching logic</li>
@@ -39,6 +42,19 @@
       <li>Receiving and displaying execution reports</li>
     </ul>
 
+    <h2>banzai</h2>
+    <p><b>banzai</b> is a Java trading client with a window, upstream's former
+    <b>tradeclientgui</b> on this fork's Java binding. Orders are entered in the window
+    and sent on any session logged on; their state and fills show in tables as the
+    execution reports come back, and the order selected can be cancelled or replaced.
+    It sends in each session's version of FIX, 4.0 to 4.4 and 5.0, and trades with
+    ordermatch and the executors. This example demonstrates:</p>
+    <ul>
+      <li>The Java binding's callbacks handing messages to a GUI thread</li>
+      <li>Order, cancel and replace messages for each FIX version</li>
+      <li>Following an order's state through its execution reports</li>
+    </ul>
+
     <h2>executor</h2>
     <p><b>executor</b> is a simple server that automatically fills every
     limit order it receives. This example is available in multiple languages
@@ -47,6 +63,7 @@
       <li><b>C++</b> - Full-featured implementation</li>
       <li><b>Python</b> - Demonstrates Python bindings</li>
       <li><b>Ruby</b> - Demonstrates Ruby bindings</li>
+      <li><b>Java</b> - Demonstrates the Java binding; fills FIX 4.4 orders only</li>
     </ul>
     <p>The executor example is particularly useful for testing trading clients
     and demonstrates basic order execution flow.</p>
@@ -61,8 +78,11 @@
         <code>bin/run_executor_ruby.sh</code> (needs <code>src/ruby/make_ruby.sh</code>)</li>
       <li><code>bin/run_ordermatch.sh</code></li>
       <li><code>bin/run_tradeclient.sh</code>, <code>bin/run_tradeclient_ssl.sh</code> (TLS)</li>
+      <li><code>bin/run_executor_java.sh</code>, <code>bin/run_ordermatch_java.sh</code> and
+        <code>bin/run_banzai.sh</code> (need <code>-DHAVE_JAVA=ON</code>; each compiles its
+        example first, and Banzai needs a display)</li>
     </ul>
-    <p>Start an executor or ordermatch, then a tradeclient in another terminal. The TLS runs use the
+    <p>Start an executor or ordermatch, then a tradeclient or Banzai in another terminal. The TLS runs use the
     certificates in <code>bin/cfg/certs/</code>; their keys are public, for the examples only (see
     <code>bin/cfg/certs/README</code>).</p>
 
