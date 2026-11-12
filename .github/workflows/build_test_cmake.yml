@@ -288,7 +288,10 @@ jobs:
           # timing out against it.
           psql -h localhost -U quickfix -d quickfix -qtAc 'select 1' > /dev/null \
             || { echo "::error::cannot reach the quickfix database on localhost -- see CONTRIBUTING"; exit 1; }
-          test/mysqlserver.sh start \
+          # Without the lock's descriptor: podman's conmon and pasta outlive
+          # this step, and would hold the lock until the runner killed them at
+          # the job's end, so the stop step would skip a container it owns.
+          test/mysqlserver.sh start 9>&- \
             || { echo "::error::could not start the MySQL server -- see CONTRIBUTING"; exit 1; }
 
           # Without HAVE_MYSQL these cases compile to nothing and ut still passes.
