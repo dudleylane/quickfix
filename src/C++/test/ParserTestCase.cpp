@@ -23,6 +23,7 @@
 #include <SocketConnector.h>
 #include <SocketServer.h>
 #include <Utility.h>
+#include <algorithm>
 #include <sstream>
 #include <string>
 #include <sys/resource.h>
@@ -31,6 +32,49 @@
 #include "catch_amalgamated.hpp"
 
 using namespace FIX;
+
+namespace
+{
+// The CPU time this thread has used, in milliseconds. Other threads' work is not counted.
+double threadCpuMillis()
+{
+    rusage usage{};
+    getrusage(RUSAGE_THREAD, &usage);
+    return (usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1000.0 +
+           (usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000.0;
+}
+
+// The CPU this thread spends on `stream` arriving at a new Parser in `reads` reads, reading after each as a transport
+// does.
+double parseCpuMillis(const std::string &stream, std::size_t reads)
+{
+    Parser parser;
+    std::string message;
+    const std::size_t size = (stream.size() + reads - 1) / reads;
+    const double start = threadCpuMillis();
+    for (std::size_t offset = 0; offset < stream.size(); offset += size)
+    {
+        parser.addToStream(stream.data() + offset, std::min(size, stream.size() - offset));
+        while (parser.readFixMessage(message))
+        {
+        }
+    }
+    return threadCpuMillis() - start;
+}
+
+// Checks that `stream`, which frames no message, costs about as much to parse in 256 reads as in one, as linear
+// parsing does. Rescanning what is buffered on every read costs over a hundred times as much, so a bound of eight
+// times leaves room either way. A ratio and not a time: the same parse costs about ten times as much under TSan as in
+// a plain build, and several times as much again on a loaded machine, which slows both parses alike. The floor stops
+// a plain build's few milliseconds, where a page fault or a busy sibling core is a large share, from deciding it.
+void checkParsingIsLinear(const std::string &stream)
+{
+    const double oneRead = parseCpuMillis(stream, 1);
+    const double everyChunk = parseCpuMillis(stream, 256);
+    INFO("one read: " << oneRead << " ms of CPU");
+    CHECK(everyChunk < std::max(8 * oneRead, 50.0));
+}
+} // namespace
 
 TEST_CASE("ParserTests")
 {
@@ -147,29 +191,8 @@ TEST_CASE("ParserTests")
         // A stream that never yields "8=" must not be rescanned from the front on every
         // read: that is quadratic in the buffered size and the caller lets the buffer grow
         // to MAX_MESSAGE_SIZE. '8' bytes are the worst input -- each one is a candidate
-        // start of "8=". Feed 1 MB in recv-sized chunks, reading after each as a transport
-        // does, and bound the CPU it takes. Linear parsing spends a few milliseconds here;
-        // the rescan spent on the order of a second on this input at 1 MB, and far more at
-        // the 8 MB cap.
-        auto cpuMillis = []
-        {
-            rusage usage{};
-            getrusage(RUSAGE_SELF, &usage);
-            return (usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1000.0 +
-                   (usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000.0;
-        };
-
-        const std::string chunk(4096, '8');
-        const double start = cpuMillis();
-        std::string readFixMsg;
-        for (int i = 0; i < 256; ++i) // 256 * 4096 == 1 MB, under the 8 MB cap
-        {
-            object.addToStream(chunk);
-            while (object.readFixMessage(readFixMsg))
-            {
-            }
-        }
-        CHECK(cpuMillis() - start < 500.0);
+        // start of "8=". Feed 1 MB, under the 8 MB cap, in recv-sized chunks.
+        checkParsingIsLinear(std::string(1024 * 1024, '8'));
     }
 
     SECTION("readFixMessageDoesNotRescanForTheLengthHeader")
@@ -177,27 +200,8 @@ TEST_CASE("ParserTests")
         // The companion case: "8=" is present but the "\0019=" length header never arrives, so
         // readFixMessage cannot frame a message. It must resume the header search where it left
         // off rather than rescan from the front each read. SOH bytes after "8=" are the worst
-        // input -- every byte is a candidate start of "\0019=". Bound the CPU as above.
-        auto cpuMillis = []
-        {
-            rusage usage{};
-            getrusage(RUSAGE_SELF, &usage);
-            return (usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1000.0 +
-                   (usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000.0;
-        };
-
-        object.addToStream(std::string("8="));
-        const std::string chunk(4096, '\001');
-        const double start = cpuMillis();
-        std::string readFixMsg;
-        for (int i = 0; i < 256; ++i) // 1 MB of SOH after the "8="
-        {
-            object.addToStream(chunk);
-            while (object.readFixMessage(readFixMsg))
-            {
-            }
-        }
-        CHECK(cpuMillis() - start < 500.0);
+        // input -- every byte is a candidate start of "\0019=".
+        checkParsingIsLinear("8=" + std::string(1024 * 1024, '\001'));
     }
 
     SECTION("readFixMessageFramesEveryReadBoundary")
