@@ -40,6 +40,22 @@ module Quickfix
 		end
 	end
 
+	# Equal by value, as the engine compares (#193): ==, eql? and hash by the
+	# session's string, so two SessionIDs naming one session are equal, as Hash
+	# keys too. Written here rather than in the wrapper, whose == would raise
+	# TypeError for an object of another type, which Array#include? or a Hash
+	# lookup can hand it.
+	class SessionID
+		def ==( other )
+			other.is_a?( SessionID ) && to_s == other.to_s
+		end
+		alias eql? ==
+
+		def hash
+			to_s.hash
+		end
+	end
+
 	class Initiator
 		def start
 			@quickfixThread = Thread.new { block() }

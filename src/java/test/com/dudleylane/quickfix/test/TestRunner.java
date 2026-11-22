@@ -16,8 +16,8 @@ import java.util.List;
 public final class TestRunner {
     static final Class<?>[] SUITES = {FieldTests.class, MessageTests.class, SettingsTests.class,
                                       DataDictionaryTests.class, StoreTests.class, TransportTests.class,
-                                      CallbackErrorTests.class, LifetimeTests.class, ExceptionListTests.class,
-                                      GeneratedTests.class, ExampleTests.class};
+                                      CallbackErrorTests.class, LifetimeTests.class, SessionIDTests.class,
+                                      ExceptionListTests.class, GeneratedTests.class, ExampleTests.class};
 
     public static void main(String[] args) throws Exception {
         List<Class<?>> suites = new ArrayList<>();

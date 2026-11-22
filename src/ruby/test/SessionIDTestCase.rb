@@ -1,10 +1,10 @@
 require 'quickfix_ruby'
 require 'test/unit'
 
-# A SessionID the binding hands Ruby -- a callback's argument, LogFactory#create's, Session#getSessionID's
-# result -- is Ruby's own copy, never a view of the engine's: a session's ID is freed with its transport (#193).
-# Each test uses an initiator that is never started: making it makes its session, which calls onCreate and the
-# LogFactory, and deleting it deletes the session.
+# A SessionID is equal by value, and the one the binding hands Ruby -- a callback's argument, LogFactory#create's,
+# Session#getSessionID's result -- is Ruby's own copy, never a view of the engine's: a session's ID is freed with
+# its transport (#193). Each test with a transport uses an initiator that is never started: making it makes its
+# session, which calls onCreate and the LogFactory, and deleting it deletes the session.
 class SessionIDTestCase < Test::Unit::TestCase
 
 	class Keeper < Quickfix::Application
@@ -43,6 +43,39 @@ class SessionIDTestCase < Test::Unit::TestCase
 			"StartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\nHeartBtInt=30\n" \
 			"[SESSION]\nBeginString=FIX.4.2\nSenderCompID=#{sender}\nTargetCompID=ACC\n")
 		settings
+	end
+
+	def test_equal_by_value
+		# Each was a distinct object, equal only to itself, with its own hash.
+		a, b = Quickfix::SessionID.new('FIX.4.2', 'A', 'B'), Quickfix::SessionID.new('FIX.4.2', 'A', 'B')
+		other = Quickfix::SessionID.new('FIX.4.2', 'A', 'C')
+		assert(a == b)
+		assert(a.eql?(b))
+		assert(!(a != b))
+		assert_equal(a.hash, b.hash)
+		assert(a != other)
+		assert(a != Quickfix::SessionID.new('FIX.4.2', 'A', 'B', 'QUALIFIER'))
+		assert_equal(1, { a => 1 }[b])
+		assert([a].include?(b))
+		assert_equal([], [a].reject { |x| x == b })
+		list = [a]
+		list.delete(b)
+		assert_equal([], list)
+		# Another type compares unequal rather than raising.
+		assert(!(a == 'FIX.4.2:A->B'))
+		assert(!a.eql?(nil))
+		assert(!['FIX.4.2:A->B', 1].include?(a))
+	end
+
+	def test_a_handed_sessionID_equals_one_made_by_hand
+		application = Keeper.new
+		initiator = Quickfix::SocketInitiator.new(application, Quickfix::MemoryStoreFactory.new, settings('EQUAL'),
+			KeepingLogFactory.new)
+		sessionID = Quickfix::SessionID.new('FIX.4.2', 'EQUAL', 'ACC')
+		assert_equal([sessionID], application.kept)
+		assert_equal(sessionID, Quickfix::Session.lookupSession(sessionID).getSessionID)
+		assert_equal(1, { application.kept[0] => 1 }[sessionID])
+		assert(Quickfix._destroyInitiator(initiator))
 	end
 
 	def test_changing_a_handed_sessionID_leaves_the_sessions_own

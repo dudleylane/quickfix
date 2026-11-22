@@ -47,8 +47,8 @@ public class BanzaiApplication extends Application {
     private final ExecutionTableModel executionTableModel;
     private final List<Consumer<LogonEvent>> logonListeners = new CopyOnWriteArrayList<>();
     private final List<Consumer<Order>> orderListeners = new CopyOnWriteArrayList<>();
-    // The ExecIDs each session has reported, by the session's string: SessionID compares by identity.
-    private final Map<String, Set<String>> execIDs = new HashMap<>();
+    // The ExecIDs each session has reported.
+    private final Map<SessionID, Set<String>> execIDs = new HashMap<>();
 
     public BanzaiApplication(OrderTableModel orderTableModel, ExecutionTableModel executionTableModel) {
         this.orderTableModel = orderTableModel;
@@ -115,7 +115,7 @@ public class BanzaiApplication extends Application {
 
     private void executionReport(Message message, SessionID sessionID) {
         String execID = ExecID.get(message);
-        if (!execIDs.computeIfAbsent(sessionID.toString(), session -> new HashSet<>()).add(execID)) {
+        if (!execIDs.computeIfAbsent(sessionID, session -> new HashSet<>()).add(execID)) {
             return;
         }
 

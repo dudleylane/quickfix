@@ -527,6 +527,16 @@ typedef FIX::SessionSettings SessionSettings;
   std::string __str__() {
     return self->toString();
   }
+#ifdef SWIGPYTHON
+  // Equal by value, as the engine compares (#193): == and hash by the session's string. SWIG names this __eq__
+  // and returns NotImplemented for an object of another type, so it compares unequal to one rather than raising.
+  bool operator==(const FIX::SessionID &other) const {
+    return *self == other;
+  }
+  size_t __hash__() const {
+    return std::hash<std::string>()(self->toStringFrozen());
+  }
+#endif
 }
 
 // A SessionID handed to Python or Ruby is its own copy, freed with its proxy (QuickfixBinding::handOver).

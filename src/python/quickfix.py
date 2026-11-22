@@ -1651,6 +1651,12 @@ class SessionID(object):
 
     def __str__(self):
         return _quickfix.SessionID___str__(self)
+
+    def __eq__(self, other):
+        return _quickfix.SessionID___eq__(self, other)
+
+    def __hash__(self):
+        return _quickfix.SessionID___hash__(self)
     __swig_destroy__ = _quickfix.delete_SessionID
 
 # Register SessionID in _quickfix:

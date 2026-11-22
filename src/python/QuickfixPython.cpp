@@ -6641,6 +6641,12 @@ SWIG_FromCharPtr(const char *cptr)
 SWIGINTERN std::string FIX_SessionID___str__(FIX::SessionID *self){
     return self->toString();
   }
+SWIGINTERN bool FIX_SessionID_operator_Se__Se_(FIX::SessionID const *self,FIX::SessionID const &other){
+    return *self == other;
+  }
+SWIGINTERN size_t FIX_SessionID___hash__(FIX::SessionID const *self){
+    return std::hash<std::string>()(self->toStringFrozen());
+  }
 SWIGINTERN void FIX_SessionSettings_setFromString(FIX::SessionSettings *self,std::string const &str){
         std::stringstream(str) >> (*self);
     }
@@ -129639,6 +129645,99 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SessionID___eq__(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::SessionID *arg1 = (FIX::SessionID *) 0 ;
+  FIX::SessionID *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject *swig_obj[2] ;
+  bool result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SessionID___eq__", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID___eq__" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SessionID___eq__" "', argument " "2"" of type '" "FIX::SessionID const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "SessionID___eq__" "', argument " "2"" of type '" "FIX::SessionID const &""'"); 
+  }
+  arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = (bool)FIX_SessionID_operator_Se__Se_((FIX::SessionID const *)arg1,(FIX::SessionID const &)*arg2);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  if (PyErr_Occurred() && !PyErr_ExceptionMatches(PyExc_TypeError)) {
+    return NULL;
+  }
+  PyErr_Clear();
+  SWIG_Py_INCREF(Py_NotImplemented);
+  return Py_NotImplemented;
+}
+
+
+SWIGINTERN PyObject *_wrap_SessionID___hash__(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::SessionID *arg1 = (FIX::SessionID *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  size_t result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID___hash__" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+  }
+  arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      {
+        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+            result = FIX_SessionID___hash__((FIX::SessionID const *)arg1);
+            SWIG_PYTHON_THREAD_END_ALLOW;
+          }
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_size_t(static_cast< size_t >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_delete_SessionID(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   FIX::SessionID *arg1 = (FIX::SessionID *) 0 ;
@@ -165100,6 +165199,8 @@ static PyMethodDef SwigMethods[] = {
 	 { "SessionID_toString", _wrap_SessionID_toString, METH_VARARGS, NULL},
 	 { "SessionID___invert__", _wrap_SessionID___invert__, METH_O, NULL},
 	 { "SessionID___str__", _wrap_SessionID___str__, METH_O, NULL},
+	 { "SessionID___eq__", _wrap_SessionID___eq__, METH_VARARGS, NULL},
+	 { "SessionID___hash__", _wrap_SessionID___hash__, METH_O, NULL},
 	 { "delete_SessionID", _wrap_delete_SessionID, METH_O, NULL},
 	 { "SessionID_swigregister", SessionID_swigregister, METH_O, NULL},
 	 { "SessionID_swiginit", SessionID_swiginit, METH_VARARGS, NULL},

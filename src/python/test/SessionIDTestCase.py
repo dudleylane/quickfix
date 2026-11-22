@@ -1,7 +1,7 @@
-# A SessionID the binding hands Python -- a callback's argument, LogFactory.create's, Session.getSessionID()'s
-# result -- is Python's own copy, never a view of the engine's: a session's ID is freed with its transport (#190,
-# #193). Each test uses an initiator that is never started: making it makes its session, which calls onCreate and
-# the LogFactory, and freeing it frees the session.
+# A SessionID is equal by value, and the one the binding hands Python -- a callback's argument, LogFactory.create's,
+# Session.getSessionID()'s result -- is Python's own copy, never a view of the engine's: a session's ID is freed with
+# its transport (#190, #193). Each test with a transport uses an initiator that is never started: making it makes its
+# session, which calls onCreate and the LogFactory, and freeing it frees the session.
 import gc
 import unittest
 
@@ -59,6 +59,32 @@ class KeepingLogFactory(fix.LogFactory):
 
 
 class SessionIDTestCase(unittest.TestCase):
+
+    def test_equal_by_value(self):
+        # Each was a distinct object, equal only to itself, with its own hash.
+        a, b = fix.SessionID('FIX.4.2', 'A', 'B'), fix.SessionID('FIX.4.2', 'A', 'B')
+        other = fix.SessionID('FIX.4.2', 'A', 'C')
+        self.assertTrue(a == b)
+        self.assertFalse(a != b)
+        self.assertEqual(hash(a), hash(b))
+        self.assertNotEqual(a, other)
+        self.assertNotEqual(a, fix.SessionID('FIX.4.2', 'A', 'B', 'QUALIFIER'))
+        self.assertEqual(1, {a: 1}[b])
+        self.assertIn(b, {a})
+        self.assertEqual([], [x for x in [a] if x != b])
+        # Another type compares unequal rather than raising.
+        self.assertFalse(a == 'FIX.4.2:A->B')
+        self.assertTrue(a != None)
+
+    def test_a_handed_sessionID_equals_one_made_by_hand(self):
+        application = Keeper()
+        initiator = fix.SocketInitiator(application, fix.MemoryStoreFactory(), settings('EQUAL'), KeepingLogFactory())
+        sessionID = fix.SessionID('FIX.4.2', 'EQUAL', 'ACC')
+        self.assertEqual([sessionID], application.kept)
+        self.assertEqual(sessionID, fix.Session.lookupSession(sessionID).getSessionID())
+        self.assertEqual(1, {application.kept[0]: 1}[sessionID])
+        del initiator
+        gc.collect()
 
     def test_changing_a_handed_sessionID_leaves_the_sessions_own(self):
         # A view was the session's own ID: onCreate's change, and this one, changed the engine's.

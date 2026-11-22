@@ -395,6 +395,17 @@ inline FIX::SessionID *share(const FIX::SessionID &sessionID)
     }
     fromStringUnchecked(str);
   }
+
+  // Equal by value, as the engine's operator== compares: by the session's string, which toString() returns (#190).
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof SessionID other && toString().equals(other.toString());
+  }
+
+  @Override
+  public int hashCode() {
+    return toString().hashCode();
+  }
 %}
 
 %typemap(javaclassmodifiers) FIX::Application %{
