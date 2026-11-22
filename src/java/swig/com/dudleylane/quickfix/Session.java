@@ -97,7 +97,7 @@ public class Session {
   }
 
   public SessionID getSessionID() {
-    return new SessionID(quickfixJNI.Session_getSessionID(swigCPtr, this), false);
+    return SessionID.swigShare(quickfixJNI.Session_getSessionID(swigCPtr, this));
   }
 
   public void setDataDictionaryProvider(SWIGTYPE_p_DataDictionaryProvider dataDictionaryProvider) {

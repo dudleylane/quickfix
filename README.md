@@ -333,6 +333,11 @@ try (var acceptor = new ThreadedSocketAcceptor(new Orders(), new MemoryStoreFact
 - **A callback's `Message` is the engine's, valid only until the callback returns.** The engine reuses
   it for the next message (#167). `view` reads it in place; keep a copy (`new Message(message)`), never the
   argument itself.
+- **A callback's `SessionID` can be kept**, as can `Session.getSessionID()`'s result: it stays valid after the
+  callback returns and after the transport is closed. It is the binding's one copy of that session's ID, shared by
+  every `SessionID` handed out for it, so it cannot change: `fromString` throws `UnsupportedOperationException`
+  for it, and every `SessionID`'s getters return copies. It was a view of the session's own ID, freed with the
+  transport (#190). The Python and Ruby bindings hand out the application's own copy instead (#193).
 - **Exceptions are unchecked**, `FIXException` and its subclasses, mirroring the engine's. The ones a
   callback may throw to the engine -- `FieldNotFound`, `IncorrectTagValue` and `IncorrectDataFormat`
   from `fromApp` or `fromAdmin`, `UnsupportedMessageType` from `fromApp`, `RejectLogon` from `fromAdmin`,

@@ -6290,6 +6290,15 @@ VALUE tryRubyException(std::function<VALUE()> const& function)
 }
 #endif
          
+// Every SessionID the Python and Ruby bindings hand their language -- a callback's argument, or
+// Session::getSessionID()'s result -- is the language's own copy, never a view of the engine's: a session's ID is
+// freed with its transport, and a view kept past that reads freed memory (#190, #193). The typemaps that call this
+// are below. Java shares one copy per ID instead (QuickfixJava::share in java/quickfix.i).
+namespace QuickfixBinding
+{
+inline FIX::SessionID *handOver(const FIX::SessionID &sessionID) { return new FIX::SessionID(sessionID); }
+}
+
 typedef FIX::UtcTimeStamp UtcTimeStamp;
 typedef FIX::UtcDate UtcDate;
 typedef FIX::UtcTimeOnly UtcTimeOnly;
@@ -7223,7 +7232,7 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
   int swig_res ;
   swig_owntype own ;
   
-  obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__SessionID,  0 );
+  obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
   args.recv = swig_get_self();
   args.id = rb_intern("create");
   args.argc = 1;
@@ -7387,7 +7396,7 @@ void SwigDirector_Application::onCreate(FIX::SessionID const &arg0) {
   Swig::body_args args ;
   int status ;
   
-  obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__SessionID,  0 );
+  obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
   args.recv = swig_get_self();
   args.id = rb_intern("onCreate");
   args.argc = 1;
@@ -7408,7 +7417,7 @@ void SwigDirector_Application::onLogon(FIX::SessionID const &arg0) {
   Swig::body_args args ;
   int status ;
   
-  obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__SessionID,  0 );
+  obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
   args.recv = swig_get_self();
   args.id = rb_intern("onLogon");
   args.argc = 1;
@@ -7429,7 +7438,7 @@ void SwigDirector_Application::onLogout(FIX::SessionID const &arg0) {
   Swig::body_args args ;
   int status ;
   
-  obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__SessionID,  0 );
+  obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
   args.recv = swig_get_self();
   args.id = rb_intern("onLogout");
   args.argc = 1;
@@ -7452,7 +7461,7 @@ void SwigDirector_Application::toAdmin(FIX::Message &arg0,FIX::SessionID const &
   int status ;
   
   obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
-  obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg1), SWIGTYPE_p_FIX__SessionID,  0 );
+  obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg1)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
   args.recv = swig_get_self();
   args.id = rb_intern("toAdmin");
   args.argc = 2;
@@ -7476,7 +7485,7 @@ void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &ar
   int status ;
   
   obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
-  obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg1), SWIGTYPE_p_FIX__SessionID,  0 );
+  obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg1)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
   args.recv = swig_get_self();
   args.id = rb_intern("toApp");
   args.argc = 2;
@@ -7500,7 +7509,7 @@ void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID
   int status ;
   
   obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
-  obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg1), SWIGTYPE_p_FIX__SessionID,  0 );
+  obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg1)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
   args.recv = swig_get_self();
   args.id = rb_intern("fromAdmin");
   args.argc = 2;
@@ -7524,7 +7533,7 @@ void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID c
   int status ;
   
   obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
-  obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg1), SWIGTYPE_p_FIX__SessionID,  0 );
+  obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg1)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
   args.recv = swig_get_self();
   args.id = rb_intern("fromApp");
   args.argc = 2;
@@ -101648,7 +101657,7 @@ _wrap_Session_getSessionID(int argc, VALUE *argv, VALUE self) {
     }
     redeliverKill();
   }
-  vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  vresult = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(*result)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
   return vresult;
 fail:
   return Qnil;

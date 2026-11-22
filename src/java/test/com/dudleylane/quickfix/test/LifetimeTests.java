@@ -1,6 +1,12 @@
 package com.dudleylane.quickfix.test;
 
 import com.dudleylane.quickfix.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LifetimeTests {
@@ -107,5 +113,131 @@ public class LifetimeTests {
             Check.isTrue(!stopper.isAlive(), "the other stop() returned");
         }
         acceptor.close();
+    }
+
+    /** Every SessionID each callback is handed, kept. */
+    static class Keeper extends Application {
+        final Map<String, List<SessionID>> handed = new ConcurrentHashMap<>();
+
+        void keep(String callback, SessionID id) {
+            handed.computeIfAbsent(callback, name -> new CopyOnWriteArrayList<>()).add(id);
+        }
+
+        @Override public void onCreate(SessionID id) { keep("onCreate", id); }
+        @Override public void onLogon(SessionID id) { keep("onLogon", id); }
+        @Override public void onLogout(SessionID id) { keep("onLogout", id); }
+        @Override public void toAdmin(Message message, SessionID id) { keep("toAdmin", id); }
+        @Override public void toApp(Message message, SessionID id) { keep("toApp", id); }
+        @Override public void fromAdmin(Message message, SessionID id) { keep("fromAdmin", id); }
+        @Override public void fromApp(Message message, SessionID id) { keep("fromApp", id); }
+    }
+
+    static class KeepingLogFactory extends TransportTests.EventLogFactory {
+        final List<SessionID> kept = new CopyOnWriteArrayList<>();
+
+        @Override
+        public Log create(SessionID id) {
+            kept.add(id);
+            return super.create(id);
+        }
+    }
+
+    /** Whether the proxy frees its native SessionID: SWIG's flag, which nothing public reads. */
+    static boolean owned(SessionID id) throws ReflectiveOperationException {
+        java.lang.reflect.Field own = SessionID.class.getDeclaredField("swigCMemOwn");
+        own.setAccessible(true);
+        return own.getBoolean(id);
+    }
+
+    /** The native SessionID the proxy wraps: SWIG's pointer, which nothing public reads. */
+    static long pointer(SessionID id) throws ReflectiveOperationException {
+        java.lang.reflect.Field cPtr = SessionID.class.getDeclaredField("swigCPtr");
+        cPtr.setAccessible(true);
+        return cPtr.getLong(id);
+    }
+
+    /**
+     * A SessionID the binding hands Java -- a callback's argument, LogFactory.create's, Session.getSessionID()'s
+     * result -- is the binding's one copy of that ID, which every SessionID handed out for it shares and nothing
+     * frees (#190). Each was a view of the session's own ID, and one kept past close(), which frees the
+     * transport's sessions, read freed memory.
+     */
+    public void testAHandedSessionIDOutlivesItsTransport() throws Exception {
+        List<String> serverCallbacks = List.of("onCreate", "onLogon", "toAdmin", "fromAdmin", "fromApp");
+        List<String> clientCallbacks = List.of("onCreate", "onLogon", "toAdmin", "fromAdmin", "toApp");
+        for (String transport : new String[] {"Socket", "ThreadedSocket"}) {
+            int port = Fixture.freePort();
+            Keeper server = new Keeper();
+            Keeper client = new Keeper();
+            KeepingLogFactory logs = new KeepingLogFactory();
+            SessionSettings serverSettings = Fixture.acceptorSettings(port, "SERVER", "CLIENT", false);
+            SessionSettings clientSettings = Fixture.initiatorSettings(port, "SERVER", "CLIENT", false);
+            List<SessionID> kept = new ArrayList<>();
+            try (AutoCloseable acceptor = Fixture.acceptor(transport, server, new MemoryStoreFactory(), serverSettings, logs);
+                 AutoCloseable initiator = Fixture.initiator(transport, client, new MemoryStoreFactory(), clientSettings, null)) {
+                Fixture.start(acceptor);
+                Fixture.start(initiator);
+                Check.isTrue(Fixture.loggedOn(TransportTests.CLIENT), transport + ": logged on");
+                Session.sendToTarget(Fixture.order("KEPT"), TransportTests.CLIENT);
+                Check.isTrue(Check.eventually(10, () -> server.handed.containsKey("fromApp")), transport + ": order arrived");
+                kept.add(Session.lookupSession(TransportTests.CLIENT).getSessionID());
+            }
+            Check.isTrue(Session.lookupSession(TransportTests.CLIENT) == null, transport + ": close() freed the session");
+            Check.isTrue(server.handed.keySet().containsAll(serverCallbacks)
+                             && client.handed.keySet().containsAll(clientCallbacks) && !logs.kept.isEmpty(),
+                         transport + ": every callback ran: " + server.handed.keySet() + ", " + client.handed.keySet());
+            kept.addAll(logs.kept);
+            for (Keeper keeper : List.of(server, client)) {
+                keeper.handed.values().forEach(kept::addAll);
+            }
+            Map<String, Long> copies = new HashMap<>();
+            for (SessionID id : kept) {
+                Check.isTrue(!owned(id), transport + ": a handed SessionID is the binding's, not Java's own");
+                String text = id.toString(); // freed memory, while these were views
+                Check.isTrue(text.equals("FIX.4.2:CLIENT->SERVER") || text.equals("FIX.4.2:SERVER->CLIENT"),
+                             transport + ": a kept SessionID reads " + text);
+                Long copy = copies.putIfAbsent(text, pointer(id));
+                Check.isTrue(copy == null || copy == pointer(id), transport + ": one copy of " + text + " is handed out");
+            }
+        }
+    }
+
+    /**
+     * A SessionID the binding hands Java is shared by every one handed out for its session, so it cannot change
+     * (#190): fromString throws for it, and every SessionID's getters return copies. It was a view of the session's
+     * own ID, so changing it changed the engine's.
+     */
+    public void testAHandedSessionIDCannotChange() throws Exception {
+        List<Throwable> refused = new CopyOnWriteArrayList<>();
+        Fixture.Recorder application = new Fixture.Recorder() {
+            @Override public void onCreate(SessionID id) {
+                try {
+                    id.fromString("FIX.4.2:CHANGED->BYAPP");
+                } catch (UnsupportedOperationException e) {
+                    refused.add(e); // thrown out of a callback, it would end the process
+                }
+                id.getSenderCompID().setValue("CHANGED");
+            }
+        };
+        SessionSettings settings = Fixture.initiatorSettings(Fixture.freePort(), "SERVER", "CHANGER", false);
+        // Never started: making it makes its session, which calls onCreate, and closing it frees the session.
+        AutoCloseable initiator = Fixture.initiator("Socket", application, new MemoryStoreFactory(), settings, null);
+        try {
+            Check.equal(1, refused.size(), "onCreate's fromString threw");
+            Session session = Session.lookupSession(new SessionID("FIX.4.2", "CHANGER", "SERVER"));
+            Check.isTrue(session != null, "the session is found by its ID");
+            SessionID handed = session.getSessionID();
+            Check.equal("FIX.4.2:CHANGER->SERVER", handed.toString(), "after onCreate tried to change its argument");
+            Check.equal("CHANGER", handed.getSenderCompID().getValue(), "its SenderCompID");
+            Check.raises(UnsupportedOperationException.class, () -> handed.fromString("FIX.4.2:CHANGED->BYAPP"));
+            Check.equal("FIX.4.2:CHANGER->SERVER", session.getSessionID().toString(), "after fromString was refused");
+        } finally {
+            initiator.close();
+        }
+        SessionID own = new SessionID("FIX.4.2", "A", "B");
+        own.getSenderCompID().setValue("CHANGED");
+        Check.equal("A", own.getSenderCompID().getValue(), "an application's SessionID, after its getter's copy changed");
+        own.fromString("FIX.4.2:C->D");
+        Check.equal("FIX.4.2:C->D", own.toString(), "an application's own SessionID changes");
     }
 }

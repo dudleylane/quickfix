@@ -1039,6 +1039,37 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *)
 }
 
 
+#include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
+
+#include <SessionID.h>
+
+namespace QuickfixJava
+{
+inline FIX::SessionID *share(const FIX::SessionID &sessionID)
+{
+  struct Copies
+  {
+    std::shared_mutex mutex;
+    std::unordered_map<std::string, FIX::SessionID> byString; // a node keeps its address through a rehash
+  };
+  static Copies *const copies = new Copies; // never freed: a proxy can outlive every static destructor
+  const std::string &key = sessionID.toStringFrozen();
+  {
+    std::shared_lock lock(copies->mutex);
+    auto found = copies->byString.find(key);
+    if (found != copies->byString.end())
+    {
+      return &found->second;
+    }
+  }
+  std::unique_lock lock(copies->mutex);
+  return &copies->byString.try_emplace(key, sessionID).first->second;
+}
+}
+
+
 #include <string>
 
 
@@ -1589,6 +1620,15 @@ VALUE tryRubyException(std::function<VALUE()> const& function)
 }
 #endif
          
+// Every SessionID the Python and Ruby bindings hand their language -- a callback's argument, or
+// Session::getSessionID()'s result -- is the language's own copy, never a view of the engine's: a session's ID is
+// freed with its transport, and a view kept past that reads freed memory (#190, #193). The typemaps that call this
+// are below. Java shares one copy per ID instead (QuickfixJava::share in java/quickfix.i).
+namespace QuickfixBinding
+{
+inline FIX::SessionID *handOver(const FIX::SessionID &sessionID) { return new FIX::SessionID(sessionID); }
+}
+
 typedef FIX::UtcTimeStamp UtcTimeStamp;
 typedef FIX::UtcDate UtcDate;
 typedef FIX::UtcTimeOnly UtcTimeOnly;
@@ -1746,7 +1786,7 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
   }
   swigjobj = swig_get_self(jenv);
   if (swigjobj && jenv->IsSameObject(swigjobj, NULL) == JNI_FALSE) {
-    *(FIX::SessionID **)&jarg0 = (FIX::SessionID *) &arg0; 
+    *(FIX::SessionID **)&jarg0 = QuickfixJava::share(arg0); 
     jresult = (jlong) jenv->CallStaticLongMethod(Swig::jclass_quickfixJNI, Swig::director_method_ids[1], swigjobj, jarg0);
     {
       jthrowable swigerror = jenv->ExceptionOccurred();
@@ -2014,7 +2054,7 @@ void SwigDirector_Application::onCreate(FIX::SessionID const &arg0) {
   }
   swigjobj = swig_get_self(jenv);
   if (swigjobj && jenv->IsSameObject(swigjobj, NULL) == JNI_FALSE) {
-    *(FIX::SessionID **)&jarg0 = (FIX::SessionID *) &arg0; 
+    *(FIX::SessionID **)&jarg0 = QuickfixJava::share(arg0); 
     jenv->CallStaticVoidMethod(Swig::jclass_quickfixJNI, Swig::director_method_ids[8], swigjobj, jarg0);
     {
       jthrowable swigerror = jenv->ExceptionOccurred();
@@ -2043,7 +2083,7 @@ void SwigDirector_Application::onLogon(FIX::SessionID const &arg0) {
   }
   swigjobj = swig_get_self(jenv);
   if (swigjobj && jenv->IsSameObject(swigjobj, NULL) == JNI_FALSE) {
-    *(FIX::SessionID **)&jarg0 = (FIX::SessionID *) &arg0; 
+    *(FIX::SessionID **)&jarg0 = QuickfixJava::share(arg0); 
     jenv->CallStaticVoidMethod(Swig::jclass_quickfixJNI, Swig::director_method_ids[9], swigjobj, jarg0);
     {
       jthrowable swigerror = jenv->ExceptionOccurred();
@@ -2072,7 +2112,7 @@ void SwigDirector_Application::onLogout(FIX::SessionID const &arg0) {
   }
   swigjobj = swig_get_self(jenv);
   if (swigjobj && jenv->IsSameObject(swigjobj, NULL) == JNI_FALSE) {
-    *(FIX::SessionID **)&jarg0 = (FIX::SessionID *) &arg0; 
+    *(FIX::SessionID **)&jarg0 = QuickfixJava::share(arg0); 
     jenv->CallStaticVoidMethod(Swig::jclass_quickfixJNI, Swig::director_method_ids[10], swigjobj, jarg0);
     {
       jthrowable swigerror = jenv->ExceptionOccurred();
@@ -2103,7 +2143,7 @@ void SwigDirector_Application::toAdmin(FIX::Message &arg0,FIX::SessionID const &
   swigjobj = swig_get_self(jenv);
   if (swigjobj && jenv->IsSameObject(swigjobj, NULL) == JNI_FALSE) {
     *(FIX::Message **)&jarg0 = (FIX::Message *) &arg0; 
-    *(FIX::SessionID **)&jarg1 = (FIX::SessionID *) &arg1; 
+    *(FIX::SessionID **)&jarg1 = QuickfixJava::share(arg1); 
     jenv->CallStaticVoidMethod(Swig::jclass_quickfixJNI, Swig::director_method_ids[11], swigjobj, jarg0, jarg1);
     {
       jthrowable swigerror = jenv->ExceptionOccurred();
@@ -2134,7 +2174,7 @@ void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &ar
   swigjobj = swig_get_self(jenv);
   if (swigjobj && jenv->IsSameObject(swigjobj, NULL) == JNI_FALSE) {
     *(FIX::Message **)&jarg0 = (FIX::Message *) &arg0; 
-    *(FIX::SessionID **)&jarg1 = (FIX::SessionID *) &arg1; 
+    *(FIX::SessionID **)&jarg1 = QuickfixJava::share(arg1); 
     jenv->CallStaticVoidMethod(Swig::jclass_quickfixJNI, Swig::director_method_ids[12], swigjobj, jarg0, jarg1);
     {
       jthrowable swigerror = jenv->ExceptionOccurred();
@@ -2169,7 +2209,7 @@ void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID
   swigjobj = swig_get_self(jenv);
   if (swigjobj && jenv->IsSameObject(swigjobj, NULL) == JNI_FALSE) {
     *(FIX::Message **)&jarg0 = (FIX::Message *) &arg0; 
-    *(FIX::SessionID **)&jarg1 = (FIX::SessionID *) &arg1; 
+    *(FIX::SessionID **)&jarg1 = QuickfixJava::share(arg1); 
     jenv->CallStaticVoidMethod(Swig::jclass_quickfixJNI, Swig::director_method_ids[13], swigjobj, jarg0, jarg1);
     {
       jthrowable swigerror = jenv->ExceptionOccurred();
@@ -2220,7 +2260,7 @@ void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID c
   swigjobj = swig_get_self(jenv);
   if (swigjobj && jenv->IsSameObject(swigjobj, NULL) == JNI_FALSE) {
     *(FIX::Message **)&jarg0 = (FIX::Message *) &arg0; 
-    *(FIX::SessionID **)&jarg1 = (FIX::SessionID *) &arg1; 
+    *(FIX::SessionID **)&jarg1 = QuickfixJava::share(arg1); 
     jenv->CallStaticVoidMethod(Swig::jclass_quickfixJNI, Swig::director_method_ids[14], swigjobj, jarg0, jarg1);
     {
       jthrowable swigerror = jenv->ExceptionOccurred();
@@ -88899,7 +88939,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1get
       return 0;
     }
   }
-  *(FIX::BeginString **)&jresult = result; 
+  *(FIX::BeginString **)&jresult = new FIX::BeginString(*result); 
   return jresult;
 }
 
@@ -88934,7 +88974,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1get
       return 0;
     }
   }
-  *(FIX::SenderCompID **)&jresult = result; 
+  *(FIX::SenderCompID **)&jresult = new FIX::SenderCompID(*result); 
   return jresult;
 }
 
@@ -88969,7 +89009,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1get
       return 0;
     }
   }
-  *(FIX::TargetCompID **)&jresult = result; 
+  *(FIX::TargetCompID **)&jresult = new FIX::TargetCompID(*result); 
   return jresult;
 }
 
@@ -89114,7 +89154,7 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1t
 }
 
 
-SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1fromString(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2) {
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1fromStringUnchecked(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2) {
   FIX::SessionID *arg1 = (FIX::SessionID *) 0 ;
   std::string *arg2 = 0 ;
   
@@ -92518,7 +92558,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getSe
       return 0;
     }
   }
-  *(FIX::SessionID **)&jresult = result; 
+  *(FIX::SessionID **)&jresult = QuickfixJava::share(*result); 
   return jresult;
 }
 

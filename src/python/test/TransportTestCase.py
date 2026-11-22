@@ -76,6 +76,10 @@ class TransportTestCase(unittest.TestCase):
         self.assertEqual('True', lines.get('ticked'), output)
         if ending == 'stop':
             self.assertEqual('True', lines.get('stopped'), output)
+        # Every SessionID a callback or the LogFactory was handed was Python's own copy (#190, #193).
+        self.assertEqual('', lines.get('views'), output)
+        self.assertLessEqual({'create', 'onCreate', 'onLogon', 'toAdmin', 'fromAdmin', 'toApp', 'fromApp'},
+                             set(lines.get('handed', '').split(',')), output)
         # Including when the interpreter's exit is left to free running transports.
         self.assertEqual(0, status, output)
 

@@ -31,23 +31,34 @@ initiatorTls = (f'CertificationAuthoritiesFile={certs}/certs/cacert.pem\n'
                 f'ClientCertificateKeyFile={certs}/127_0_0_1_client.key\n') if 'ssl' in kind else ''
 
 
+# Whether every SessionID each callback was handed, and the LogFactory, was Python's own copy rather than a view
+# of the session's, which the transport frees with its sessions (#190, #193).
+handed = {}
+
+
+def keep(callback, sessionID):
+    handed[callback] = handed.get(callback, True) and sessionID.thisown
+
+
 class App(fix.Application):
     def __init__(self):
         super().__init__()
         self.received = []
         self.refuse = False
 
-    def onCreate(self, sessionID): pass
-    def onLogon(self, sessionID): pass
-    def onLogout(self, sessionID): pass
-    def toAdmin(self, message, sessionID): pass
-    def fromAdmin(self, message, sessionID): pass
+    def onCreate(self, sessionID): keep('onCreate', sessionID)
+    def onLogon(self, sessionID): keep('onLogon', sessionID)
+    def onLogout(self, sessionID): keep('onLogout', sessionID)
+    def toAdmin(self, message, sessionID): keep('toAdmin', sessionID)
+    def fromAdmin(self, message, sessionID): keep('fromAdmin', sessionID)
 
     def toApp(self, message, sessionID):
+        keep('toApp', sessionID)
         if self.refuse:
             raise fix.DoNotSend()
 
     def fromApp(self, message, sessionID):
+        keep('fromApp', sessionID)
         clOrdID = fix.ClOrdID()
         message.getField(clOrdID)
         self.received.append(clOrdID.getValue())
@@ -74,6 +85,8 @@ class CountingLogFactory(fix.LogFactory):
         self.logs = []
 
     def create(self, *args):
+        for sessionID in args:
+            keep('create', sessionID)
         log = CountingLog()
         self.logs.append(log)
         return log
@@ -149,3 +162,6 @@ if ending == 'stop':
     initiator.stop()
     acceptor.stop()
     print(f'stopped={initiator.isStopped() and acceptor.isStopped()}', flush=True)
+
+print(f'handed={",".join(sorted(handed))}', flush=True)
+print(f'views={",".join(sorted(callback for callback, owned in handed.items() if not owned))}', flush=True)

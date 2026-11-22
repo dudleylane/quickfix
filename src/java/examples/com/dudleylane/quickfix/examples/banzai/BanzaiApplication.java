@@ -37,9 +37,10 @@ import javax.swing.SwingUtilities;
  * -- 4.0 to 4.4, and FIX 5.0 over FIXT 1.1 -- and keeps the order and execution tables in step with the
  * ExecutionReports and OrderCancelRejects that come back.
  *
- * The engine calls the Application methods on its own threads, with a Message and a SessionID that are the
- * engine's and valid only for the call. Each is copied there and handed to the Swing thread, which alone reads and
- * changes the orders, the tables and this object's state; send, cancel and replace are called on it too.
+ * The engine calls the Application methods on its own threads, with a Message that is the engine's and valid only
+ * for the call, so it is copied there, and a SessionID that stays valid for as long as it is kept. Both are
+ * handed to the Swing thread, which alone reads and changes the orders, the tables and this object's
+ * state; send, cancel and replace are called on it too.
  */
 public class BanzaiApplication extends Application {
     private final OrderTableModel orderTableModel;
@@ -58,13 +59,13 @@ public class BanzaiApplication extends Application {
 
     @Override
     public void onLogon(SessionID sessionID) {
-        LogonEvent event = new LogonEvent(copy(sessionID), true);
+        LogonEvent event = new LogonEvent(sessionID, true);
         SwingUtilities.invokeLater(() -> logonListeners.forEach(listener -> listener.accept(event)));
     }
 
     @Override
     public void onLogout(SessionID sessionID) {
-        LogonEvent event = new LogonEvent(copy(sessionID), false);
+        LogonEvent event = new LogonEvent(sessionID, false);
         SwingUtilities.invokeLater(() -> logonListeners.forEach(listener -> listener.accept(event)));
     }
 
@@ -84,8 +85,7 @@ public class BanzaiApplication extends Application {
     @Override
     public void fromApp(Message message, SessionID sessionID) {
         Message copy = new Message(message);
-        SessionID session = copy(sessionID);
-        SwingUtilities.invokeLater(() -> process(copy, session));
+        SwingUtilities.invokeLater(() -> process(copy, sessionID));
     }
 
     /** listener hears, on the Swing thread, each session logging on or off. */
@@ -291,11 +291,5 @@ public class BanzaiApplication extends Application {
 
     private static IllegalArgumentException unsupported(String version) {
         return new IllegalArgumentException("Unsupported BeginString '" + version + "' in order");
-    }
-
-    // A callback's SessionID is a view of the engine's own; one kept past the callback is built afresh from it.
-    private static SessionID copy(SessionID sessionID) {
-        return new SessionID(sessionID.getBeginString().getValue(), sessionID.getSenderCompID().getValue(),
-                             sessionID.getTargetCompID().getValue(), sessionID.getSessionQualifier());
     }
 }

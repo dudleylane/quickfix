@@ -6283,7 +6283,7 @@ public class quickfixJNI {
   public final static native boolean SessionID_isFIXT(long jarg1, SessionID jarg1_);
   public final static native String SessionID_toString__SWIG_0(long jarg1, SessionID jarg1_);
   public final static native String SessionID_toStringFrozen(long jarg1, SessionID jarg1_);
-  public final static native void SessionID_fromString(long jarg1, SessionID jarg1_, String jarg2);
+  public final static native void SessionID_fromStringUnchecked(long jarg1, SessionID jarg1_, String jarg2);
   public final static native long SessionID_toString__SWIG_1(long jarg1, SessionID jarg1_, long jarg2);
   public final static native String SessionID___str__(long jarg1, SessionID jarg1_);
   public final static native void delete_SessionID(long jarg1);
@@ -7038,7 +7038,7 @@ public class quickfixJNI {
     return Log.getCPtr(LogFactory.swigKeep(jself, jself.create()));
   }
   public static long SwigDirector_LogFactory_create__SWIG_1(LogFactory jself, long arg0) {
-    return Log.getCPtr(LogFactory.swigKeep(jself, jself.create(new SessionID(arg0, false))));
+    return Log.getCPtr(LogFactory.swigKeep(jself, jself.create(SessionID.swigShare(arg0))));
   }
   public static void SwigDirector_LogFactory_destroy(LogFactory jself, long arg0) {
     jself.destroy(LogFactory.swigRelease(jself, arg0));
@@ -7059,25 +7059,25 @@ public class quickfixJNI {
     jself.onEvent(arg0);
   }
   public static void SwigDirector_Application_onCreate(Application jself, long arg0) {
-    jself.onCreate(new SessionID(arg0, false));
+    jself.onCreate(SessionID.swigShare(arg0));
   }
   public static void SwigDirector_Application_onLogon(Application jself, long arg0) {
-    jself.onLogon(new SessionID(arg0, false));
+    jself.onLogon(SessionID.swigShare(arg0));
   }
   public static void SwigDirector_Application_onLogout(Application jself, long arg0) {
-    jself.onLogout(new SessionID(arg0, false));
+    jself.onLogout(SessionID.swigShare(arg0));
   }
   public static void SwigDirector_Application_toAdmin(Application jself, long arg0, long arg1) {
-    jself.toAdmin(new Message(arg0, false), new SessionID(arg1, false));
+    jself.toAdmin(new Message(arg0, false), SessionID.swigShare(arg1));
   }
   public static void SwigDirector_Application_toApp(Application jself, long arg0, long arg1) {
-    jself.toApp(new Message(arg0, false), new SessionID(arg1, false));
+    jself.toApp(new Message(arg0, false), SessionID.swigShare(arg1));
   }
   public static void SwigDirector_Application_fromAdmin(Application jself, long arg0, long arg1) {
-    jself.fromAdmin(new Message(arg0, false), new SessionID(arg1, false));
+    jself.fromAdmin(new Message(arg0, false), SessionID.swigShare(arg1));
   }
   public static void SwigDirector_Application_fromApp(Application jself, long arg0, long arg1) {
-    jself.fromApp(new Message(arg0, false), new SessionID(arg1, false));
+    jself.fromApp(new Message(arg0, false), SessionID.swigShare(arg1));
   }
 
   private final static native void swig_module_init();

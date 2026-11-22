@@ -6421,6 +6421,15 @@ VALUE tryRubyException(std::function<VALUE()> const& function)
 }
 #endif
          
+// Every SessionID the Python and Ruby bindings hand their language -- a callback's argument, or
+// Session::getSessionID()'s result -- is the language's own copy, never a view of the engine's: a session's ID is
+// freed with its transport, and a view kept past that reads freed memory (#190, #193). The typemaps that call this
+// are below. Java shares one copy per ID instead (QuickfixJava::share in java/quickfix.i).
+namespace QuickfixBinding
+{
+inline FIX::SessionID *handOver(const FIX::SessionID &sessionID) { return new FIX::SessionID(sessionID); }
+}
+
 typedef FIX::UtcTimeStamp UtcTimeStamp;
 typedef FIX::UtcDate UtcDate;
 typedef FIX::UtcTimeOnly UtcTimeOnly;
@@ -6729,7 +6738,7 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
   {
     swig::SwigVar_PyObject obj0;
-    obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__SessionID,  0 );
+    obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call LogFactory.__init__.");
     }
@@ -6985,7 +6994,7 @@ void SwigDirector_Application::onCreate(FIX::SessionID const &arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
   {
     swig::SwigVar_PyObject obj0;
-    obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__SessionID,  0 );
+    obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Application.__init__.");
     }
@@ -7018,7 +7027,7 @@ void SwigDirector_Application::onLogon(FIX::SessionID const &arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
   {
     swig::SwigVar_PyObject obj0;
-    obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__SessionID,  0 );
+    obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Application.__init__.");
     }
@@ -7051,7 +7060,7 @@ void SwigDirector_Application::onLogout(FIX::SessionID const &arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
   {
     swig::SwigVar_PyObject obj0;
-    obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__SessionID,  0 );
+    obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Application.__init__.");
     }
@@ -7086,7 +7095,7 @@ void SwigDirector_Application::toAdmin(FIX::Message &arg0,FIX::SessionID const &
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
     swig::SwigVar_PyObject obj1;
-    obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg1), SWIGTYPE_p_FIX__SessionID,  0 );
+    obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg1)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Application.__init__.");
     }
@@ -7121,7 +7130,7 @@ void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &ar
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
     swig::SwigVar_PyObject obj1;
-    obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg1), SWIGTYPE_p_FIX__SessionID,  0 );
+    obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg1)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Application.__init__.");
     }
@@ -7162,7 +7171,7 @@ void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
     swig::SwigVar_PyObject obj1;
-    obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg1), SWIGTYPE_p_FIX__SessionID,  0 );
+    obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg1)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Application.__init__.");
     }
@@ -7209,7 +7218,7 @@ void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID c
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
     swig::SwigVar_PyObject obj1;
-    obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg1), SWIGTYPE_p_FIX__SessionID,  0 );
+    obj1 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg1)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Application.__init__.");
     }
@@ -134334,7 +134343,7 @@ SWIGINTERN PyObject *_wrap_Session_getSessionID(PyObject *self, PyObject *args) 
       SWIG_fail;
     }
   }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(*result)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
   return resultobj;
 fail:
   return NULL;

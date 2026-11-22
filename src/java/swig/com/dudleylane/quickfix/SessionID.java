@@ -48,6 +48,29 @@ public class SessionID {
     }
   }
 
+  // Whether the engine handed this out: then it is the one copy of its ID, which all of those share.
+  private transient boolean shared;
+
+  static SessionID swigShare(long cPtr) {
+    SessionID sessionID = new SessionID(cPtr, false);
+    sessionID.shared = true;
+    return sessionID;
+  }
+
+  /**
+   * Sets this SessionID from its string, "BeginString:SenderCompID->TargetCompID", or with ":qualifier" after
+   * that. A SessionID the engine handed out -- a callback's argument, LogFactory.create's, or
+   * Session.getSessionID()'s result -- is shared by every one handed out for its session, so it cannot change:
+   * for one of those this throws UnsupportedOperationException. Change a new SessionID instead.
+   */
+  public void fromString(String str) {
+    if (shared) {
+      throw new UnsupportedOperationException("a SessionID the engine handed out is shared and cannot change: "
+                                              + "change a new SessionID instead");
+    }
+    fromStringUnchecked(str);
+  }
+
   public SessionID() {
     this(quickfixJNI.new_SessionID__SWIG_0(), true);
   }
@@ -61,15 +84,15 @@ public class SessionID {
   }
 
   public BeginStringField getBeginString() {
-    return new BeginStringField(quickfixJNI.SessionID_getBeginString(swigCPtr, this), false);
+    return new BeginStringField(quickfixJNI.SessionID_getBeginString(swigCPtr, this), true);
   }
 
   public SenderCompIDField getSenderCompID() {
-    return new SenderCompIDField(quickfixJNI.SessionID_getSenderCompID(swigCPtr, this), false);
+    return new SenderCompIDField(quickfixJNI.SessionID_getSenderCompID(swigCPtr, this), true);
   }
 
   public TargetCompIDField getTargetCompID() {
-    return new TargetCompIDField(quickfixJNI.SessionID_getTargetCompID(swigCPtr, this), false);
+    return new TargetCompIDField(quickfixJNI.SessionID_getTargetCompID(swigCPtr, this), true);
   }
 
   public String getSessionQualifier() {
@@ -88,8 +111,8 @@ public class SessionID {
     return quickfixJNI.SessionID_toStringFrozen(swigCPtr, this);
   }
 
-  public void fromString(String str) {
-    quickfixJNI.SessionID_fromString(swigCPtr, this, str);
+  private void fromStringUnchecked(String str) {
+    quickfixJNI.SessionID_fromStringUnchecked(swigCPtr, this, str);
   }
 
   public SWIGTYPE_p_std__string toString(SWIGTYPE_p_std__string str) {

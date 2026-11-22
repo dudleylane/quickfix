@@ -412,6 +412,15 @@ VALUE tryRubyException(std::function<VALUE()> const& function)
 }
 #endif
          
+// Every SessionID the Python and Ruby bindings hand their language -- a callback's argument, or
+// Session::getSessionID()'s result -- is the language's own copy, never a view of the engine's: a session's ID is
+// freed with its transport, and a view kept past that reads freed memory (#190, #193). The typemaps that call this
+// are below. Java shares one copy per ID instead (QuickfixJava::share in java/quickfix.i).
+namespace QuickfixBinding
+{
+inline FIX::SessionID *handOver(const FIX::SessionID &sessionID) { return new FIX::SessionID(sessionID); }
+}
+
 typedef FIX::UtcTimeStamp UtcTimeStamp;
 typedef FIX::UtcDate UtcDate;
 typedef FIX::UtcTimeOnly UtcTimeOnly;
@@ -519,6 +528,16 @@ typedef FIX::SessionSettings SessionSettings;
     return self->toString();
   }
 }
+
+// A SessionID handed to Python or Ruby is its own copy, freed with its proxy (QuickfixBinding::handOver).
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
+%typemap(directorin, noblock=1) const FIX::SessionID & {
+  $input = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver($1)), $descriptor(FIX::SessionID *), SWIG_POINTER_OWN);
+}
+%typemap(out, noblock=1) const FIX::SessionID & {
+  $result = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(*$1)), $descriptor(FIX::SessionID *), SWIG_POINTER_OWN);
+}
+#endif
 
 %extend FIX::FieldBase {
   std::string __str__() {

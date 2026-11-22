@@ -315,6 +315,88 @@ QUICKFIX_JAVA_CALLBACK(FIX::LogFactory::destroy, )
   }
 %}
 
+// A SessionID handed to Java -- a callback's argument, LogFactory.create's, or Session.getSessionID()'s result --
+// is never a view of the engine's, which its transport frees with its sessions (#190). Nor is it a copy per call,
+// as Python and Ruby are handed: Java frees a native object only in its proxy's finalize(), after a collection
+// that native memory does not prompt, and a copy's 280 native bytes outweigh the 64 its proxy takes in the heap,
+// so an application allocating little else would hold several times its young generation in copies. It is one
+// copy per session ID, made when first handed out and never freed, which every SessionID handed out for that ID
+// shares. Being shared, it cannot change: fromString throws for it, and every SessionID's getters return copies,
+// which also keeps a field's lazily computed length off the shared one.
+%{
+#include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
+
+#include <SessionID.h>
+
+namespace QuickfixJava
+{
+inline FIX::SessionID *share(const FIX::SessionID &sessionID)
+{
+  struct Copies
+  {
+    std::shared_mutex mutex;
+    std::unordered_map<std::string, FIX::SessionID> byString; // a node keeps its address through a rehash
+  };
+  static Copies *const copies = new Copies; // never freed: a proxy can outlive every static destructor
+  const std::string &key = sessionID.toStringFrozen();
+  {
+    std::shared_lock lock(copies->mutex);
+    auto found = copies->byString.find(key);
+    if (found != copies->byString.end())
+    {
+      return &found->second;
+    }
+  }
+  std::unique_lock lock(copies->mutex);
+  return &copies->byString.try_emplace(key, sessionID).first->second;
+}
+}
+%}
+%typemap(directorin, descriptor="L$packagepath/$javaclassname;") const FIX::SessionID &
+%{ *(FIX::SessionID **)&$input = QuickfixJava::share($1); %}
+%typemap(javadirectorin) const FIX::SessionID & "$javaclassname.swigShare($jniinput)"
+%typemap(out) const FIX::SessionID & %{ *(FIX::SessionID **)&$result = QuickfixJava::share(*$1); %}
+%typemap(javaout) const FIX::SessionID & {
+    return $javaclassname.swigShare($jnicall);
+  }
+%rename(fromStringUnchecked) FIX::SessionID::fromString;
+%javamethodmodifiers FIX::SessionID::fromString "private";
+%typemap(out) const FIX::BeginString &getBeginString %{ *(FIX::BeginString **)&$result = new FIX::BeginString(*$1); %}
+%typemap(out) const FIX::SenderCompID &getSenderCompID
+%{ *(FIX::SenderCompID **)&$result = new FIX::SenderCompID(*$1); %}
+%typemap(out) const FIX::TargetCompID &getTargetCompID
+%{ *(FIX::TargetCompID **)&$result = new FIX::TargetCompID(*$1); %}
+%typemap(javaout) const FIX::BeginString &getBeginString, const FIX::SenderCompID &getSenderCompID,
+                  const FIX::TargetCompID &getTargetCompID {
+    return new $javaclassname($jnicall, true);
+  }
+%typemap(javacode) FIX::SessionID %{
+  // Whether the engine handed this out: then it is the one copy of its ID, which all of those share.
+  private transient boolean shared;
+
+  static SessionID swigShare(long cPtr) {
+    SessionID sessionID = new SessionID(cPtr, false);
+    sessionID.shared = true;
+    return sessionID;
+  }
+
+  /**
+   * Sets this SessionID from its string, "BeginString:SenderCompID->TargetCompID", or with ":qualifier" after
+   * that. A SessionID the engine handed out -- a callback's argument, LogFactory.create's, or
+   * Session.getSessionID()'s result -- is shared by every one handed out for its session, so it cannot change:
+   * for one of those this throws UnsupportedOperationException. Change a new SessionID instead.
+   */
+  public void fromString(String str) {
+    if (shared) {
+      throw new UnsupportedOperationException("a SessionID the engine handed out is shared and cannot change: "
+                                              + "change a new SessionID instead");
+    }
+    fromStringUnchecked(str);
+  }
+%}
+
 %typemap(javaclassmodifiers) FIX::Application %{
 /**
  * FIX::Application: the engine calls these on its own threads -- a reactor's, or a threaded transport's
