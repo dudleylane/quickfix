@@ -1,8 +1,9 @@
 name: Release tag check
 
-# A release tag must name the version project() declares in CMakeLists.txt -- the one the soname,
-# QuickFIXVersion.h, the Python module and the CMake and pkg-config files all derive from -- the
-# built library must carry the matching soname, and NEWS must have a section for it. No other
+# A release tag must name a commit on master and the version project() declares in CMakeLists.txt
+# -- the one the soname, QuickFIXVersion.h, the Python module and the CMake and pkg-config files all
+# derive from -- the built library must carry the matching soname, and NEWS must have a section
+# for it. No other
 # workflow builds or checks a tag (#44). This runs once the tag exists, however it was made: git
 # push, gh release create, or the web UI. A failure means delete the tag, fix the commit, and tag
 # again.
@@ -24,7 +25,7 @@ permissions:
 
 jobs:
   check:
-    name: Tag matches project(), the built soname and NEWS
+    name: Tag is on master and matches project(), the built soname and NEWS
     runs-on: [self-hosted, Linux, X64, quickfix-dev]
     # The wait for an idle machine, then the build and the comparison.
     timeout-minutes: 1480
@@ -36,6 +37,23 @@ jobs:
       TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The next step needs master's history to find the tagged commit in it.
+          fetch-depth: 0
+
+      - name: Check the tagged commit is on master
+        # A release is cut from master: its notes, NEWS and the advisories' patched versions
+        # describe master. The step after the wait reads project(), NEWS and the soname, which are
+        # the same on a commit master does not contain, so a tag there would pass it. First, so that
+        # such a tag fails before the wait for an idle machine and the build.
+        shell: bash
+        run: |
+          git fetch --quiet --no-tags origin +refs/heads/master:refs/remotes/origin/master
+          if ! git merge-base --is-ancestor HEAD origin/master; then
+            echo "::error::$TAG names $(git rev-parse --short HEAD), which master does not contain: delete the tag and tag a commit on master"
+            exit 1
+          fi
+          echo "$TAG names $(git rev-parse --short HEAD), which is on master."
 
       - name: Wait for other projects to finish
         # The runners share this machine with other repositories' runners and benchmarks, and this builds the
