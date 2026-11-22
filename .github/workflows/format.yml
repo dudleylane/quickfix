@@ -4,6 +4,9 @@ jobs:
   formatting-check:
     name: Formatting Check
     runs-on: [self-hosted, Linux, X64, quickfix-dev]
+    # A hang would hold the runner until GitHub's 6-hour limit. The longest of
+    # the last 60 runs took 4.6 minutes.
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
     - name: Run clang-format style check for C/C++/Protobuf programs.

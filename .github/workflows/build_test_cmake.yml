@@ -35,6 +35,15 @@ jobs:
     name: Build + tests (${{ matrix.configuration }})
     needs: idle
     runs-on: [self-hosted, Linux, X64, quickfix-dev]
+    # A hang in a step without a cap of its own would hold the runner until
+    # GitHub's 6-hour limit, as pt's did in run 42714203006 (#186). About twice
+    # the longest full run of each leg in the 100 runs to 2026-11-13: Debug's
+    # 52.8 minutes, with more room because only two full runs had their jobs
+    # side by side and the database step can wait for another run's lock, and
+    # Release's 30.2 plus up to 14 for the pt smoke on a push. The clock starts
+    # when a runner picks the job up, not while it waits. A job cancelled at its
+    # cap is a hang to find or a cap to re-measure, never a run to repeat.
+    timeout-minutes: ${{ matrix.configuration == 'Debug' && 120 || 90 }}
     # gcc-toolset-15 is required: Stream 10's default is GCC 14, which lacks
     # <flat_map>.  No `source enable` script exists at the standard path on
     # Stream 10 — the SCL way is `scl enable …`, but env vars achieve the
@@ -578,6 +587,9 @@ jobs:
     name: ${{ matrix.sanitizer }}
     needs: idle
     runs-on: [self-hosted, Linux, X64, quickfix-dev]
+    # As in the build job: about twice the longest full run, ASan + UBSan's
+    # 39.3 minutes (TSan's was 32.3).
+    timeout-minutes: 80
     env:
       PATH: /opt/rh/gcc-toolset-15/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       LD_LIBRARY_PATH: /opt/rh/gcc-toolset-15/root/usr/lib64

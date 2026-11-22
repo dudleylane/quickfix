@@ -265,7 +265,10 @@ side, one per registered runner. Every step that binds a port runs through `test
 its own user, network and PID namespaces, so the fixed ports and `runat.sh`'s `killall` belong to
 one job each. That needs unprivileged user namespaces, which the stock kernel allows. The database
 step needs the host's servers, so it takes a lock in `~/.cache/quickfix-ci/` instead. The `pt`
-gate is a job of its own that runs after the others and waits for an idle machine again.
+gate is a job of its own that runs after the others and waits for an idle machine again. Every job
+has a time limit of about twice its longest run so far, so a hang frees its runner in an hour or two
+rather than after GitHub's six; a job cancelled at its limit is a hang to find, or a limit to
+re-measure, never a run to repeat until it passes.
 
 There are four runners, `quickfix-localhost` and `quickfix-localhost-2` to `-4`. Each is a copy of
 the first one's install with its own `bin.<version>` and `externals.<version>`, registered with the
