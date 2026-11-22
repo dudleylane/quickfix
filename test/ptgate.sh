@@ -27,8 +27,13 @@ fi
 TEST=$(pwd)
 
 # Nothing to compare when pt is built from the same sources on both sides: under
-# a busy machine the runs then only measure noise (#115).
-if git -C "$TEST" diff --quiet "$BASE" HEAD -- ../src/C++ ../src/pt.cpp ../CMakeLists.txt ../cmake ../spec; then
+# a busy machine the runs then only measure noise (#115). The sources are what pt
+# is built from and reads (#192): the library (src/C++ less src/C++/test, which
+# only ut is built from), pt's target and its option parsing, the CMake files and
+# the template configure writes config.h from, and the spec files it loads.
+if git -C "$TEST" diff --quiet "$BASE" HEAD -- ../src/C++ ':(exclude)../src/C++/test' ../src/pt.cpp \
+    ../src/getopt.c ../src/getopt-repl.h ../src/CMakeLists.txt ../CMakeLists.txt ../cmake ../cmake_config.h.in \
+    ../spec; then
     echo "pt's sources are the same at $BASE and HEAD; nothing to compare"
     exit 0
 fi
