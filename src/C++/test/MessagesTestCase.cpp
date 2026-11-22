@@ -270,7 +270,7 @@ TEST_CASE("MessageTests")
         // with no '='. The parser steps over it, notes the tag it cut, and counts
         // its bytes toward BodyLength and CheckSum, so a correctly framed message
         // still validates and can be rejected rather than dropped. Until now only
-        // the acceptance suite covered this, which CI runs on pull requests only.
+        // the acceptance suite covered this, which CI then ran on pull requests only.
         const std::string body = std::string("35=D\00134=2\00149=TW\00152=20000426-12:05:06\00156=ISLD\001") +
                                  "11=ID\00121=1\00140=1\00154=1\00138=200\00155=INTC\001" + "336=PRE-\001OPEN\001" +
                                  "60=20000426-12:05:06\001";

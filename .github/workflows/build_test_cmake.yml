@@ -5,9 +5,8 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
-  # Runs the steps gated on "not a push" -- the acceptance suite, the
-  # sanitizer acceptance runs, the pt comparison and the database link step
-  # -- on demand:
+  # Runs everything a push runs and the pt comparison, the one job a push does
+  # not, on demand:
   #   gh workflow run build_test_cmake.yml --ref master [-f pt_base=<commit>]
   workflow_dispatch:
     inputs:
@@ -207,26 +206,22 @@ jobs:
           ../../test/isolate.sh ./test.sh
 
       - name: Compile the database backends
-        # Nothing compiles MySQLStore/Log, PostgreSQLStore/Log or OdbcStore/Log
-        # on any push -- CI never sets HAVE_MYSQL, HAVE_POSTGRESQL or HAVE_ODBC
-        # -- so they can stop compiling and every job stays green. That is what
-        # happened to the SWIG wrappers, which went 33 commits broken before
-        # anyone noticed, and all six of these were last touched by 6ff4a20f, a
-        # scripted tree-wide edit that silently damaged other files it touched.
+        # The link step below builds MySQLStore/Log, PostgreSQLStore/Log and
+        # OdbcStore/Log with their options on, links them and runs their tests;
+        # this checks, in seconds, what it cannot see. Each file is compiled
+        # with its guard macro defined, after a grep that the file still tests
+        # that macro: without the -D it is entirely #ifdef'd out and "compiles"
+        # in 12ms instead of ~3s, so a renamed guard would leave it checking
+        # nothing while every build still passed -- the link step looks for the
+        # MySQL cases in ut, not for the PostgreSQL or ODBC code. It began as
+        # the only check of these files on a push, after the SWIG wrappers went
+        # 33 commits broken unnoticed and 6ff4a20f, a scripted tree-wide edit,
+        # silently damaged other files it touched.
         #
-        # A syntax check rather than a CMake build with the options on. Enabling
-        # them pulls in store test cases that need live database servers, which
-        # the link step below runs, and configure_file would rewrite the
-        # *tracked* src/C++/config.h. A second full build costs ~2m per push on a runner
-        # that already shares this machine, to guard leaf implementations whose
-        # realistic breakage -- a MessageStore or Log interface they no longer
-        # satisfy -- is a compile error. The limit: this does not link, so a
-        # missing symbol would still pass.
-        #
-        # The grep is not redundant. The -D is load-bearing: without it each
-        # file is entirely #ifdef'd out and "compiles" in 12ms instead of ~3s,
-        # so if the guard macro were ever renamed this step would keep passing
-        # while checking nothing.
+        # A syntax check rather than a CMake build with the options on, which
+        # is the link step's job: configure_file would rewrite the *tracked*
+        # src/C++/config.h. It does not link, so a missing symbol is the link
+        # step's to catch.
         #
         # Runner needs unixODBC-devel, libpq5-devel and mariadb-connector-c-devel.
         # The last provides /usr/include/mysql/mysql.h, which is the MySQL C API
@@ -255,8 +250,8 @@ jobs:
           check HAVE_MYSQL      "$mysql_include"  MySQLStore MySQLLog
 
       - name: Link the database backends
-        # The per-push step above syntax-checks these six files, which proves
-        # they parse against their headers and never resolves a symbol. That
+        # The step above syntax-checks these six files, which proves they
+        # parse against their headers and never resolves a symbol. That
         # matters most for MySQL: the headers come from mariadb-connector-c,
         # an API-compatible *replacement* for libmysqlclient rather than the
         # same library -- /usr/lib64/libmysqlclient_r.so is a symlink to
@@ -264,10 +259,8 @@ jobs:
         # the shared object is exactly what a syntax check cannot catch and a
         # link can.
         #
-        # Not on push, like the acceptance suite: pull requests and manual runs
-        # only. A second full build costs ~2m15s,
-        # too much on every push for drift that only needs catching before a
-        # merge; the syntax check stays as the fast per-push guard.
+        # On every event, like the rest of the suite: a second full build,
+        # ~2m15s on its own and longer beside the other jobs.
         #
         # It then runs ut in this configuration, so the stores are exercised,
         # not just linked (#12, #82): the PostgreSQL cases and, through psqlODBC,
@@ -279,7 +272,7 @@ jobs:
         # postgresql-odbc, rootless podman, and a PostgreSQL server on localhost
         # with a passwordless quickfix role owning nothing but able to use the
         # quickfix database's tables; CONTRIBUTING has the setup.
-        if: github.event_name != 'push' && matrix.configuration == 'Debug'
+        if: matrix.configuration == 'Debug'
         shell: bash
         run: |
           # The machine's database and the MySQL container have fixed names,
@@ -338,7 +331,7 @@ jobs:
         # Its own step, so that a failed or cancelled run stops it too. A start
         # removes what an earlier run left, but only if there is a next run, and
         # this machine has other work to do.
-        if: always() && github.event_name != 'push' && matrix.configuration == 'Debug'
+        if: always() && matrix.configuration == 'Debug'
         shell: bash
         run: |
           # Only while no run holds the database lock. Another run's link step
@@ -485,18 +478,17 @@ jobs:
             || { echo "::error::an installed header does not compile on its own install"; exit 1; }
 
       - name: Run acceptance tests
-        # Not on push: the at-driven Ruby runner takes about 7.5 minutes for the
-        # 470 definitions (454 s on this runner) and isn't informative on every
-        # push to master.
-        if: github.event_name != 'push'
+        # The at-driven Ruby runner takes about 7.5 minutes for the 470
+        # definitions (454 s on this runner). Until 2026-11-22 it ran only on
+        # pull requests and manual runs, which left most commits on master
+        # without it: changes land here as direct pushes.
         working-directory: ./test
         run: ./isolate.sh ./runat.sh 54321
 
       - name: Run the client definitions
         # The acceptance suite tests an acceptor. These test an initiator: the
         # harness listens and at -i connects to it, on both transports (#146).
-        # Seconds; with the acceptance suite, not on push.
-        if: github.event_name != 'push'
+        # Seconds.
         working-directory: ./test
         run: |
           ./isolate.sh ./runat_client.sh 54331
@@ -507,9 +499,8 @@ jobs:
         # them, so they had drifted (#127); run through the bindings, the suite
         # is also the strongest test the bindings get. A subset keeps it to a few
         # minutes: fix40 and fix41 back to back, then fix42 and FIXT 1.1 with
-        # FIX 5.0 SP2. Debug only, where both modules are built, and not on push,
-        # like the acceptance step.
-        if: github.event_name != 'push' && matrix.configuration == 'Debug'
+        # FIX 5.0 SP2. Debug only, where both modules are built.
+        if: matrix.configuration == 'Debug'
         working-directory: ./test
         shell: bash
         env:
@@ -527,17 +518,16 @@ jobs:
         # #100, #101 and #103 (#114). Each acceptor example -- the executor in
         # C++, over TLS on both transports, through Python and Ruby, and
         # ordermatch -- with tradeclient sending an order per FIX version it
-        # serves. Debug, where both bindings are built; not on push.
-        if: github.event_name != 'push' && matrix.configuration == 'Debug'
+        # serves. Debug, where both bindings are built.
+        if: matrix.configuration == 'Debug'
         run: test/isolate.sh test/runexamples.sh
 
       - name: Build and test without SSL
         # Every other step configures with HAVE_SSL=ON, so nothing built the
         # tree without it, and ut did not compile that way from 20.0.0 until
-        # #120. Pull requests and manual runs only, like the database link
-        # step, and for the same reasons: a second full build, and its own
+        # #120. A second full build, like the database link step, with its own
         # output dir so the test links stay on the build the other steps use.
-        if: github.event_name != 'push' && matrix.configuration == 'Debug'
+        if: matrix.configuration == 'Debug'
         shell: bash
         run: |
           cmake -B build-nossl -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHAVE_SSL=OFF \
@@ -561,9 +551,9 @@ jobs:
       - name: Build and test with the TBB allocator
         # ENABLE_TBB_ALLOCATOR changes what FieldMap::Fields and the send queues
         # allocate with, inline in consumers' code (#33), and no other build here
-        # turns it on (#132). Release, on pull requests and manual runs, like the
-        # no-SSL step: its own tree and output dir, then config.h restored.
-        if: github.event_name != 'push' && matrix.configuration == 'Release'
+        # turns it on (#132). Release, like the no-SSL step in Debug: its own
+        # tree and output dir, then config.h restored.
+        if: matrix.configuration == 'Release'
         shell: bash
         run: |
           cmake -B build-tbb -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DHAVE_SSL=ON -DENABLE_TBB_ALLOCATOR=ON \
@@ -597,12 +587,12 @@ jobs:
 
   sanitizers:
     # The README's sanitizer baselines, kept by CI rather than by whoever ran
-    # the recipes last (#92): ut on every event, and on pull requests and
-    # manual runs the acceptance suite in both transports, where runat.sh
-    # fails if at exits non-zero -- a LeakSanitizer or ThreadSanitizer report
-    # (#84). TSan uses the default allocator: tbb::scalable_allocator's
-    # per-thread freelists hide their synchronisation from it, which the
-    # threaded transport turns into false reports (#15). Neither enables the
+    # the recipes last (#92): ut and the acceptance suite in both transports
+    # on every event, where runat.sh fails if at exits non-zero -- a
+    # LeakSanitizer or ThreadSanitizer report (#84). TSan uses the default
+    # allocator: tbb::scalable_allocator's per-thread freelists hide their
+    # synchronisation from it, which the threaded transport turns into false
+    # reports (#15). Neither enables the
     # TBB allocator, which would hide FieldMap::Fields and the send queues
     # from ASan. The build goes to the default lib/, so the test links are
     # this job's own.
@@ -692,21 +682,21 @@ jobs:
           (cd src/java && $isolated ./test-java.sh)
 
       - name: Run acceptance tests (reactor)
-        if: github.event_name != 'push'
         working-directory: ./test
         run: ./isolate.sh ./runat.sh 54321
 
       - name: Run acceptance tests (threaded)
-        if: github.event_name != 'push'
         working-directory: ./test
         run: ./isolate.sh ./runat.sh 54321 -t
 
   pt:
     # The regression gate (#93): the base's pt and this one, run alternately
     # and pinned, judged by ptcompare.py -- a benchmark of 0.2 us or more that
-    # is 10% slower in both pairs fails the job. About 15 minutes, so not on
-    # push. The base is the pull request's target, or the pt_base input, or
-    # the previous commit.
+    # is 10% slower in both pairs fails the job. The one job a push does not
+    # run: 13 to 35 minutes after a wait of its own for an idle machine, and a
+    # push has only the previous commit as its base. The base is the pull
+    # request's target, or the pt_base input -- the previous release, for a
+    # release's manual run -- or the previous commit.
     #
     # Its own job, after the others, so that their builds and tests do not
     # share the machine with it. It runs when one of them failed too, so a red

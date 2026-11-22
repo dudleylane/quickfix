@@ -525,9 +525,9 @@ These recipes are how changes are checked under ThreadSanitizer and AddressSanit
 them for anything touching locking, object lifetime, or the repeating-group arena.
 
 CI runs them too (#92): the `sanitizers` job builds with the ASan + UBSan recipe below and with
-TSan on the default allocator, runs `ut` on every push, and on pull requests and manual runs also
-the acceptance suite in both transports, which fails on a leak or a TSan report because `runat.sh`
-fails when `at` exits non-zero. The concurrent-churn run below stays a local check.
+TSan on the default allocator, and on every push and pull request runs `ut` and the acceptance
+suite in both transports, which fails on a leak or a TSan report because `runat.sh` fails when `at`
+exits non-zero. The concurrent-churn run below stays a local check.
 
 **The ASan build must not enable the TBB allocator.** ASan detects heap errors through the allocator
 it interposes. `tbb::scalable_allocator` suballocates from `libtbbmalloc`'s own slabs, which ASan

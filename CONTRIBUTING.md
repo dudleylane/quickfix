@@ -241,20 +241,22 @@ it, so the initiator's side of the session is tested too (#146).
 
 `test/runexamples.sh` runs the example applications against tradeclient -- the executor in C++,
 over TLS, through Python and Ruby, and ordermatch -- and checks every order is answered (CI runs it
-on pull requests).
+on every push and pull request).
 
 The acceptance harness has tests of its own -- the comparator that judges each definition, and the
 parser, reflector and socket server around it: `cd test && ruby -I. test.rb` (a few seconds; CI
 runs it on every push).
 
-CI runs, on every push: the Debug and Release builds and `ut`; the SWIG and generated-code
-checks, the binding suites, the staged install with its C++ consumers, and the acceptance
-harness's own tests (Debug); a `pt` smoke run (Release); and `ut` under ASan + UBSan and under
-TSan. On pull requests and manual runs (`gh workflow run build_test_cmake.yml --ref master`) it
-adds the acceptance suite in both legs and under both sanitizers, the acceptance subset through
-the Python and Ruby bindings, the database link and test step, the no-SSL and TBB-allocator
-builds, and the `pt` regression gate, which compares this commit's `pt` with the base's
-(`-f pt_base=<full SHA>` for a manual run; otherwise the previous commit).
+CI runs the whole suite on every push to `master` and every pull request: the Debug and Release
+builds and `ut`; the SWIG and generated-code checks, the binding suites, the staged install with
+its C++ consumers, and the acceptance harness's own tests (Debug); the acceptance suite in both
+legs and under both sanitizers, the client definitions, and the acceptance subset through the
+Python and Ruby bindings; the database link and test step, the example applications, and the
+no-SSL and TBB-allocator builds; `ut` under ASan + UBSan and under TSan; and a `pt` smoke run
+(Release, on a push). On pull requests and manual runs
+(`gh workflow run build_test_cmake.yml --ref master`) it adds the `pt` regression gate, which
+compares this commit's `pt` with the base's (`-f pt_base=<full SHA>` for a manual run; otherwise
+the previous commit).
 
 The self-hosted runners share one machine with other repositories' runners and with their
 benchmarks. A run therefore starts with a job that waits until the machine is idle of them
@@ -313,18 +315,17 @@ change to a header `src/quickfix.i` wraps must commit the regenerated output wit
 never hand-edit the output. The check needs the SWIG version the wrappers were generated with, 4.3.0 at present; a
 SWIG upgrade means regenerating once and committing the result.
 
-The Debug leg additionally syntax-checks all six database backends, which no build configures — CI
-never sets `HAVE_MYSQL`, `HAVE_POSTGRESQL` or `HAVE_ODBC`, so `MySQLStore.cpp`, `MySQLLog.cpp`,
-`PostgreSQLStore.cpp`, `PostgreSQLLog.cpp`, `OdbcStore.cpp` and `OdbcLog.cpp` would otherwise
-compile for nobody. The runner needs `unixODBC-devel`, `libpq5-devel` and
-`mariadb-connector-c-devel`.
+The Debug leg also syntax-checks all six database backends -- `MySQLStore.cpp`, `MySQLLog.cpp`,
+`PostgreSQLStore.cpp`, `PostgreSQLLog.cpp`, `OdbcStore.cpp` and `OdbcLog.cpp` -- each with its
+guard macro defined, after checking the file still tests that macro: a renamed guard would
+otherwise leave the file compiled to nothing while every build passed. The runner needs
+`unixODBC-devel`, `libpq5-devel` and `mariadb-connector-c-devel`.
 
-On **pull requests and manual runs** a further step links them: it configures with `-DHAVE_MYSQL=ON
--DHAVE_POSTGRESQL=ON -DHAVE_ODBC=ON` into its own build directory and then checks `ldd` really
-reports `libmariadb`, `libpq` and `libodbc`, since a build that quietly ignored the options would
-otherwise exit 0 and prove nothing. That is a second full build (~2m15s), which is why it is not on
-every push. It also restores `src/C++/config.h`, which `configure_file` rewrites — that file is
-tracked.
+A further step links them: it configures with `-DHAVE_MYSQL=ON -DHAVE_POSTGRESQL=ON -DHAVE_ODBC=ON`
+into its own build directory and then checks `ldd` really reports `libmariadb`, `libpq` and
+`libodbc`, since a build that quietly ignored the options would otherwise exit 0 and prove nothing.
+That is a second full build (~2m15s). It also restores `src/C++/config.h`, which `configure_file`
+rewrites — that file is tracked.
 
 The same step then runs `ut` in that configuration, so the stores are exercised rather than just
 linked. The PostgreSQL cases run against the runner's server, and the ODBC ones reach the same
