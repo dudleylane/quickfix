@@ -16,6 +16,15 @@ on:
         required: false
         default: ''
 
+# A pull request pushed again cancels its earlier runs: each would run the
+# full suite on the four runners, and then the pt job, for a tree that is no
+# longer the pull request's head. Every other run is a group of its own, so a
+# push or a dispatch is never cancelled and never waits behind another run --
+# including a dispatch on a commit whose push run is still going.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   idle:
     # The runners share this machine with other repositories' runners and with their benchmarks. No job here

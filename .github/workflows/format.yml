@@ -1,5 +1,10 @@
 name: clang-format Check
 on: [push, pull_request]
+# As in build_test_cmake.yml: a pull request pushed again cancels its earlier
+# runs, and every other run is a group of its own, never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   formatting-check:
     name: Formatting Check

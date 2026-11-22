@@ -268,7 +268,9 @@ step needs the host's servers, so it takes a lock in `~/.cache/quickfix-ci/` ins
 gate is a job of its own that runs after the others and waits for an idle machine again. Every job
 has a time limit of about twice its longest run so far, so a hang frees its runner in an hour or two
 rather than after GitHub's six; a job cancelled at its limit is a hang to find, or a limit to
-re-measure, never a run to repeat until it passes.
+re-measure, never a run to repeat until it passes. A pull request pushed again cancels its earlier
+runs; a run for a push to `master` or a manual run is never cancelled, and never waits behind
+another.
 
 There are four runners, `quickfix-localhost` and `quickfix-localhost-2` to `-4`. Each is a copy of
 the first one's install with its own `bin.<version>` and `externals.<version>`, registered with the
