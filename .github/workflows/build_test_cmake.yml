@@ -163,8 +163,15 @@ jobs:
         # and up, acceptance 54321 -- and runat.sh begins with killall. So
         # does every step here that binds a port, except the database step,
         # which needs the host's servers.
+        #
+        # ut exits 0 when a test skips, so each run here also writes a copy of
+        # its console report to a file, and noskips.py fails the step unless
+        # the totals there say every test passed.
         working-directory: ./test
-        run: ./isolate.sh ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
+        run: |
+          ./isolate.sh ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec \
+            -r console -r "console::out=$RUNNER_TEMP/ut.txt"
+          ./noskips.py "$RUNNER_TEMP/ut.txt"
 
       - name: Build and test the Ruby bindings
         # Replaces an -fsyntax-only check of QuickfixRuby.cpp. Ruby has no CMake
@@ -318,7 +325,9 @@ jobs:
             | grep -q MySQLLogTests \
             || { echo "::error::ut has no MySQL cases in this configuration"; exit 1; }
           (cd test && ../build-db/out/ut \
-              --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
+              --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec \
+              -r console -r "console::out=$RUNNER_TEMP/ut-db.txt")
+          test/noskips.py "$RUNNER_TEMP/ut-db.txt"
 
           # configure_file rewrote the *tracked* src/C++/config.h to define
           # HAVE_MYSQL and friends. Harmless on a fresh checkout, but left dirty
@@ -541,7 +550,9 @@ jobs:
             echo "::error::$lib links libssl in a HAVE_SSL=OFF build"; exit 1
           fi
           (cd test && ./isolate.sh ../build-nossl/out/ut \
-              --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
+              --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec \
+              -r console -r "console::out=$RUNNER_TEMP/ut-nossl.txt")
+          test/noskips.py "$RUNNER_TEMP/ut-nossl.txt"
 
           # configure_file rewrote the tracked src/C++/config.h to undefine
           # HAVE_SSL; put it back, as the database link step does.
@@ -565,7 +576,9 @@ jobs:
             || { echo "::error::QuickFIXBuildConfig.h does not record the TBB allocator"; exit 1; }
           grep -q -- '-ltbbmalloc' build-tbb/quickfix.pc \
             || { echo "::error::quickfix.pc does not link tbbmalloc"; exit 1; }
-          (cd test && ./isolate.sh ../build-tbb/out/ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec)
+          (cd test && ./isolate.sh ../build-tbb/out/ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec \
+              -r console -r "console::out=$RUNNER_TEMP/ut-tbb.txt")
+          test/noskips.py "$RUNNER_TEMP/ut-tbb.txt"
 
           git checkout -- src/C++/config.h
 
@@ -641,9 +654,13 @@ jobs:
         run: cmake --build build -j"$(( $(nproc) / 2 ))" -- -l"$(nproc)"
 
       - name: Run unit tests
-        # In its own loopback and process table, as in the build job.
+        # In its own loopback and process table, and failing on a skipped
+        # test, as in the build job.
         working-directory: ./test
-        run: ./isolate.sh ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec
+        run: |
+          ./isolate.sh ./ut --quickfix-config-file cfg/ut.cfg --quickfix-spec-path ../spec \
+            -r console -r "console::out=$RUNNER_TEMP/ut.txt"
+          ./noskips.py "$RUNNER_TEMP/ut.txt"
 
       - name: Run the binding suites under ASan + UBSan
         # The bindings' own lifetime and threading code (the Ruby GVL handling,
