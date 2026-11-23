@@ -45,15 +45,34 @@ jobs:
         # A release is cut from master: its notes, NEWS and the advisories' patched versions
         # describe master. The step after the wait reads project(), NEWS and the soname, which are
         # the same on a commit master does not contain, so a tag there would pass it. First, so that
-        # such a tag fails before the wait for an idle machine and the build.
+        # such a tag fails before the wait for an idle machine and the build. On a tag push HEAD is
+        # the tagged commit. A dispatch checks the selected ref as though it carried the tag, so HEAD
+        # is that ref, and the tag may not exist yet or may name another commit; the lines say which
+        # (#195).
         shell: bash
         run: |
           git fetch --quiet --no-tags origin +refs/heads/master:refs/remotes/origin/master
+          short=$(git rev-parse --short HEAD)
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            if ! git merge-base --is-ancestor HEAD origin/master; then
+              echo "::error::$TAG names $short, which master does not contain: delete the tag and tag a commit on master"
+              exit 1
+            fi
+            echo "$TAG names $short, which is on master."
+            exit 0
+          fi
           if ! git merge-base --is-ancestor HEAD origin/master; then
-            echo "::error::$TAG names $(git rev-parse --short HEAD), which master does not contain: delete the tag and tag a commit on master"
+            echo "::error::$short, the ref checked as $TAG, is not on master: dispatch on a ref master contains"
             exit 1
           fi
-          echo "$TAG names $(git rev-parse --short HEAD), which is on master."
+          echo "$short, the ref checked as $TAG, is on master."
+          # Where the tag points, if it exists: the checkout fetched no tags. The peeled line is an
+          # annotated tag's commit. Only a note, so a failed lookup leaves it out rather than failing.
+          tagged=$(git ls-remote --tags origin 2>/dev/null | awk -v ref="refs/tags/$TAG" \
+            '$2 == ref {sha = $1} $2 == ref "^{}" {peeled = $1} END {print peeled ? peeled : sha}') || tagged=
+          if [ -n "$tagged" ] && [ "$tagged" != "$(git rev-parse HEAD)" ]; then
+            echo "$TAG exists and names ${tagged:0:${#short}}, not the commit checked."
+          fi
 
       - name: Wait for other projects to finish
         # The runners share this machine with other repositories' runners and benchmarks, and this builds the
