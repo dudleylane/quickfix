@@ -13,14 +13,17 @@ public class SecurityDefinition extends Message {
     }
 
     /**
-     * message as a SecurityDefinition, without copying it: the same engine object, so valid only while message is. A
-     * callback's message is the engine's and lasts only for the callback; copy it (new Message(message)) to keep it.
+     * message as a SecurityDefinition, without copying it: the same engine object, and the view keeps message from being
+     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
+     * the view; copy it (new Message(message)) to keep it.
      */
     public static SecurityDefinition view(com.dudleylane.quickfix.Message message) {
         if (!MSGTYPE.equals(message.getHeader().getField(35))) {
             throw new IllegalArgumentException("not a SecurityDefinition (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
         }
-        return new SecurityDefinition(getCPtr(message));
+        SecurityDefinition view = new SecurityDefinition(getCPtr(message));
+        view.swigOwner = message;
+        return view;
     }
 
     /** A new NoSecurityAltID group, as this one holds it. */

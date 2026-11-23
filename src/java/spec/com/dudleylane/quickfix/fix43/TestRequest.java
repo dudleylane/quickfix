@@ -13,13 +13,16 @@ public class TestRequest extends Message {
     }
 
     /**
-     * message as a TestRequest, without copying it: the same engine object, so valid only while message is. A
-     * callback's message is the engine's and lasts only for the callback; copy it (new Message(message)) to keep it.
+     * message as a TestRequest, without copying it: the same engine object, and the view keeps message from being
+     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
+     * the view; copy it (new Message(message)) to keep it.
      */
     public static TestRequest view(com.dudleylane.quickfix.Message message) {
         if (!MSGTYPE.equals(message.getHeader().getField(35))) {
             throw new IllegalArgumentException("not a TestRequest (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
         }
-        return new TestRequest(getCPtr(message));
+        TestRequest view = new TestRequest(getCPtr(message));
+        view.swigOwner = message;
+        return view;
     }
 }

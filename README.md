@@ -383,10 +383,11 @@ In Python, Ruby and Java, such a call returns one of these, and each was once a 
 keep past its owner and so read freed memory (#194):
 
 - **A view that keeps its owner**: `Message.getHeader()` and `getTrailer()`, `getGroupRef` and `getGroupPtr`,
-  `SessionSettings.get`, and Java's `DataDictionary.getGroupDictionary`. It is the owner's object in place, so a
-  write through it reaches the owner, and the owner lives as long as the view. As with a C++ reference, a
-  group's view ends when its group is removed or its message cleared or set from a string (#196), a view of
-  a callback's message ends when the callback returns, and in Java one ends when its owner is `delete()`d.
+  `SessionSettings.get`, and in Java `DataDictionary.getGroupDictionary` and a generated message class's
+  `view(message)`. It is the owner's object in place, so a write through it reaches the owner, and the owner
+  lives as long as the view. As with a C++ reference, a group's view ends when its group is removed or its
+  message cleared or set from a string (#196), a view of a callback's message ends when the callback returns,
+  and in Java one ends when its owner is `delete()`d.
 - **A copy** where C++ returns `const`: `getFieldRef`, `getFieldPtr`, a `SessionID`'s getters, and Java's
   `getSessions()`. Writing it changes nothing else.
 - **The argument itself** where that is the result: `getField(field)` and `getGroup(..., group)`, as its own

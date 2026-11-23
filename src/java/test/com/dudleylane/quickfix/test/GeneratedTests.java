@@ -2,6 +2,7 @@ package com.dudleylane.quickfix.test;
 
 import com.dudleylane.quickfix.*;
 import com.dudleylane.quickfix.field.*;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -82,6 +83,15 @@ public class GeneratedTests {
         ClOrdID.set(view, "ORDER2");
         Check.equal("ORDER2", ClOrdID.get(generic), "and writes it");
         Check.raises(IllegalArgumentException.class, () -> com.dudleylane.quickfix.fix44.Logon.view(generic));
+    }
+
+    public void testAViewKeepsItsMessage() {
+        Message generic = new Message(order().toString());
+        WeakReference<Message> owner = new WeakReference<>(generic);
+        var view = com.dudleylane.quickfix.fix44.NewOrderSingle.view(generic);
+        generic = null;
+        ViewTests.checkKeeps(view, owner, "view()");
+        Check.equal("ORDER1", ClOrdID.get(view), "reads the message it keeps");
     }
 
     public void testFix5MessagesCarryTheirApplVerID() {

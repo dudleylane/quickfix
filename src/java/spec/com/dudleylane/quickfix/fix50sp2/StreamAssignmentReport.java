@@ -13,14 +13,17 @@ public class StreamAssignmentReport extends Message {
     }
 
     /**
-     * message as a StreamAssignmentReport, without copying it: the same engine object, so valid only while message is. A
-     * callback's message is the engine's and lasts only for the callback; copy it (new Message(message)) to keep it.
+     * message as a StreamAssignmentReport, without copying it: the same engine object, and the view keeps message from being
+     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
+     * the view; copy it (new Message(message)) to keep it.
      */
     public static StreamAssignmentReport view(com.dudleylane.quickfix.Message message) {
         if (!MSGTYPE.equals(message.getHeader().getField(35))) {
             throw new IllegalArgumentException("not a StreamAssignmentReport (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
         }
-        return new StreamAssignmentReport(getCPtr(message));
+        StreamAssignmentReport view = new StreamAssignmentReport(getCPtr(message));
+        view.swigOwner = message;
+        return view;
     }
 
     /** A new NoAsgnReqs group, as this one holds it. */
