@@ -91,7 +91,7 @@ public class MySQLLogFactory extends LogFactory {
   }
 
   public void destroy(Log arg0) {
-    quickfixJNI.MySQLLogFactory_destroy(swigCPtr, this, Log.getCPtr(arg0), arg0);
+    quickfixJNI.MySQLLogFactory_destroy(swigCPtr, this, Proxies.cPtr(Log.getCPtr(arg0), arg0), arg0);
   }
 
 }

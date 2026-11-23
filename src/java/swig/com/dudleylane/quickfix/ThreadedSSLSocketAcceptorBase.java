@@ -65,7 +65,7 @@ public class ThreadedSSLSocketAcceptorBase extends Acceptor {
   }
 
   public static int passPhraseHandleCB(String buf, int bufsize, int verify, SWIGTYPE_p_void instance) {
-    return quickfixJNI.ThreadedSSLSocketAcceptorBase_passPhraseHandleCB(buf, bufsize, verify, SWIGTYPE_p_void.getCPtr(instance));
+    return quickfixJNI.ThreadedSSLSocketAcceptorBase_passPhraseHandleCB(buf, bufsize, verify, Proxies.cPtr(SWIGTYPE_p_void.getCPtr(instance), instance));
   }
 
 }

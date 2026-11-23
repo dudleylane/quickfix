@@ -49,7 +49,7 @@ public class MessageStoreFactoryExceptionWrapper {
   }
 
   public MessageStoreFactoryExceptionWrapper(MessageStoreFactory pFactory) {
-    this(quickfixJNI.new_MessageStoreFactoryExceptionWrapper(MessageStoreFactory.getCPtr(pFactory), pFactory), true);
+    this(quickfixJNI.new_MessageStoreFactoryExceptionWrapper(Proxies.cPtr(MessageStoreFactory.getCPtr(pFactory), pFactory), pFactory), true);
   }
 
   public MessageStore create(UtcTimeStamp now, SessionID arg1, SWIGTYPE_p_bool arg2, SWIGTYPE_p_FIX__ConfigError arg3) {
@@ -58,7 +58,7 @@ public class MessageStoreFactoryExceptionWrapper {
   }
 
   public void destroy(MessageStore arg0) {
-    quickfixJNI.MessageStoreFactoryExceptionWrapper_destroy(swigCPtr, this, MessageStore.getCPtr(arg0), arg0);
+    quickfixJNI.MessageStoreFactoryExceptionWrapper_destroy(swigCPtr, this, Proxies.cPtr(MessageStore.getCPtr(arg0), arg0), arg0);
   }
 
 }

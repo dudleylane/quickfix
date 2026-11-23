@@ -67,7 +67,7 @@ public class ScreenLogFactory extends LogFactory {
   }
 
   public void destroy(Log log) {
-    quickfixJNI.ScreenLogFactory_destroy(swigCPtr, this, Log.getCPtr(log), log);
+    quickfixJNI.ScreenLogFactory_destroy(swigCPtr, this, Proxies.cPtr(Log.getCPtr(log), log), log);
   }
 
 }

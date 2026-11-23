@@ -49,7 +49,7 @@ public class PostgreSQLStore extends MessageStore {
   }
 
   public PostgreSQLStore(UtcTimeStamp now, SessionID sessionID, DatabaseConnectionID connection, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t pool) {
-    this(quickfixJNI.new_PostgreSQLStore__SWIG_0(UtcTimeStamp.getCPtr(now), now, SessionID.getCPtr(sessionID), sessionID, DatabaseConnectionID.getCPtr(connection), connection, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t.getCPtr(pool)), true);
+    this(quickfixJNI.new_PostgreSQLStore__SWIG_0(UtcTimeStamp.getCPtr(now), now, SessionID.getCPtr(sessionID), sessionID, DatabaseConnectionID.getCPtr(connection), connection, Proxies.cPtr(SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t.getCPtr(pool), pool)), true);
   }
 
   public PostgreSQLStore(UtcTimeStamp now, SessionID sessionID, String database, String user, String password, String host, int port) {

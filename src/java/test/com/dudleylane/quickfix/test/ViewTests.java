@@ -154,6 +154,26 @@ public class ViewTests {
         }
     }
 
+    /** A proxy whose object was deleted has swigCPtr 0: as self a call ran on a null pointer, which crashed the JVM,
+     *  and as a pointer argument it read as none. */
+    public void testADeletedObjectThrowsWhereverItIsPassed() {
+        Message message = order();
+        message.getHeader().setField(8, "FIX.4.4");
+        message.getHeader().setField(35, "D");
+        String wire = message.toString();
+        message.delete();
+        Check.raises(NullPointerException.class, () -> message.getHeader());
+        Header header = new Header();
+        header.delete();
+        Check.raises(NullPointerException.class, () -> new Message().reverseRoute(header));
+        DataDictionary dictionary = new DataDictionary();
+        dictionary.delete();
+        Check.raises(NullPointerException.class, () -> new Message().setString(wire, false, dictionary));
+        Message parsed = new Message();
+        parsed.setString(wire, false, null);
+        Check.equal("D", parsed.getHeader().getField(35), "null is still no dictionary");
+    }
+
     public void testInternalsAreNotWrapped() {
         Map<Class<?>, List<String>> removed = Map.of(
             FieldMap.class, List.of("groups", "cloneInto"), Group.class, List.of("cloneInto"),

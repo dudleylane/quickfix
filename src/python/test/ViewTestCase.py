@@ -123,6 +123,33 @@ class ViewTestCase(unittest.TestCase):
             self.assertIs(got, part.getGroup(1, got))
             self.assertEqual("HOP", got.getField(628))
 
+    def test_an_ended_view_raises_wherever_it_is_passed(self):
+        # A view whose object is destroyed is ended: its pointer becomes null. As self it ran C++ on a null
+        # pointer, and as a pointer argument it read as none.
+        message = order()
+        message.getHeader().setField(fix.BeginString("FIX.4.4"))
+        message.getHeader().setField(fix.MsgType("D"))
+        wire = message.toString()
+        header = message.getHeader()
+        self.assertTrue(fix._endView(header))
+        with self.assertRaises(ReferenceError):
+            header.getField(35)
+        # As a reference argument SWIG raised already.
+        with self.assertRaises(TypeError):
+            fix.Message().reverseRoute(header)
+        # As a pointer argument: setString's dictionary, which None still leaves out.
+        dictionary = fix.DataDictionary()
+        dictionary.thisown = False
+        self.assertTrue(fix._endView(dictionary))
+        with self.assertRaises(ReferenceError):
+            fix.Message().setString(wire, False, dictionary)
+        parsed = fix.Message()
+        parsed.setString(wire, False, None)
+        self.assertEqual("D", parsed.getHeader().getField(35))
+        # An owner is never ended: its pointer is what frees its object.
+        self.assertFalse(fix._endView(message))
+        self.assertEqual("D", message.getHeader().getField(35))
+
     def test_internals_are_not_wrapped(self):
         for owner, names in ((fix.FieldMap, ("groups", "cloneInto")), (fix.Group, ("cloneInto",)),
                              (fix.DataDictionary, ("getOrderedFields", "getHeaderOrderedFields",

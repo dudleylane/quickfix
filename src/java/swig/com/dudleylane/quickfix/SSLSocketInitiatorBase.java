@@ -61,7 +61,7 @@ public class SSLSocketInitiatorBase extends Initiator {
   }
 
   public void setCertAndKey(SWIGTYPE_p_X509 cert, SWIGTYPE_p_RSA key) {
-    quickfixJNI.SSLSocketInitiatorBase_setCertAndKey(swigCPtr, this, SWIGTYPE_p_X509.getCPtr(cert), SWIGTYPE_p_RSA.getCPtr(key));
+    quickfixJNI.SSLSocketInitiatorBase_setCertAndKey(swigCPtr, this, Proxies.cPtr(SWIGTYPE_p_X509.getCPtr(cert), cert), Proxies.cPtr(SWIGTYPE_p_RSA.getCPtr(key), key));
   }
 
   public int passwordHandleCallback(String buf, long bufsize, int verify) {
@@ -69,7 +69,7 @@ public class SSLSocketInitiatorBase extends Initiator {
   }
 
   public static int passwordHandleCB(String buf, int bufsize, int verify, SWIGTYPE_p_void instance) {
-    return quickfixJNI.SSLSocketInitiatorBase_passwordHandleCB(buf, bufsize, verify, SWIGTYPE_p_void.getCPtr(instance));
+    return quickfixJNI.SSLSocketInitiatorBase_passwordHandleCB(buf, bufsize, verify, Proxies.cPtr(SWIGTYPE_p_void.getCPtr(instance), instance));
   }
 
 }

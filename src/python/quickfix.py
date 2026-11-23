@@ -60,6 +60,9 @@ class _SwigNonDynamicMeta(type):
 
 import weakref
 
+
+def _endView(view):
+    return _quickfix._endView(view)
 class SwigPyIterator(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
 

@@ -53,7 +53,7 @@ public class PostgreSQLQuery {
   }
 
   public boolean execute(SWIGTYPE_p_PGconn pConnection) {
-    return quickfixJNI.PostgreSQLQuery_execute(swigCPtr, this, SWIGTYPE_p_PGconn.getCPtr(pConnection));
+    return quickfixJNI.PostgreSQLQuery_execute(swigCPtr, this, Proxies.cPtr(SWIGTYPE_p_PGconn.getCPtr(pConnection), pConnection));
   }
 
   public boolean success() {

@@ -614,4 +614,16 @@ typedef std::string QuickfixBytes;
     return group;
   }
 
+// A proxy whose object was deleted, or a view whose object the binding has destroyed, has swigCPtr 0, and a call
+// took it for a null pointer: a method ran on nullptr, which crashed the JVM, and a pointer argument read it as
+// none, as setString does a dictionary. As self it now throws NullPointerException, and as a pointer argument too
+// (Proxies.cPtr). null still passes as a null pointer, and a reference argument throws already (SWIG's null check).
+%typemap(check, noblock=1) SWIGTYPE *self {
+  if (!$1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "$symname: its object was deleted, or the view ended");
+    return $null;
+  }
+}
+%typemap(javain) SWIGTYPE * "Proxies.cPtr($javaclassname.getCPtr($javainput), $javainput)"
+
 %include ../quickfix.i

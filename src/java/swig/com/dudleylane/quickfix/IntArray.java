@@ -66,7 +66,7 @@ public class IntArray {
   }
 
   public static IntArray frompointer(SWIGTYPE_p_int t) {
-    long cPtr = quickfixJNI.IntArray_frompointer(SWIGTYPE_p_int.getCPtr(t));
+    long cPtr = quickfixJNI.IntArray_frompointer(Proxies.cPtr(SWIGTYPE_p_int.getCPtr(t), t));
     return (cPtr == 0) ? null : new IntArray(cPtr, false);
   }
 

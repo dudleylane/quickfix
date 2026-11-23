@@ -62,7 +62,7 @@ public class FileStoreFactory extends MessageStoreFactory {
   }
 
   public void destroy(MessageStore arg0) {
-    quickfixJNI.FileStoreFactory_destroy(swigCPtr, this, MessageStore.getCPtr(arg0), arg0);
+    quickfixJNI.FileStoreFactory_destroy(swigCPtr, this, Proxies.cPtr(MessageStore.getCPtr(arg0), arg0), arg0);
   }
 
 }

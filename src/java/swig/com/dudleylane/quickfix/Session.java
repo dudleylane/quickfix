@@ -365,7 +365,7 @@ public class Session {
   }
 
   public void setResponder(SWIGTYPE_p_Responder pR) {
-    quickfixJNI.Session_setResponder(swigCPtr, this, SWIGTYPE_p_Responder.getCPtr(pR));
+    quickfixJNI.Session_setResponder(swigCPtr, this, Proxies.cPtr(SWIGTYPE_p_Responder.getCPtr(pR), pR));
   }
 
   public boolean send(Message arg0) {

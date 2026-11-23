@@ -400,6 +400,12 @@ keep past its owner and so read freed memory (#194):
 trailer and message forms, and `sessionToPort()` are not wrapped: they returned engine internals and opaque
 types nothing in a binding could use.
 
+An object with no C++ object behind it raises wherever it is used, as the receiver or as an argument. In Java that
+is an object that was `delete()`d. Java passed its null pointer on: a method ran on it and crashed the JVM, and a
+pointer argument read it as none, so `setString` parsed without the dictionary it was given. It now throws
+`NullPointerException`. For the same case Python raises `ReferenceError` and Ruby SWIG's `ObjectPreviouslyDeleted`.
+`null`, `None` and `nil` still mean none.
+
 ## Testing
 
 ```bash

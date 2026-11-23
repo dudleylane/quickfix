@@ -4146,6 +4146,28 @@ namespace swig {
 }
 
 
+// Ends a view: a proxy that owns nothing, of an object that is destroyed or about to be. Its pointer becomes null,
+// so any later use raises (the typemap above). An owner is never ended: its pointer is what frees its object.
+bool quickfixEndView(PyObject *view)
+{
+  SwigPyObject *proxy = SWIG_Python_GetSwigThis(view);
+  if (!proxy || proxy->own)
+    return false;
+  proxy->ptr = 0;
+  return true;
+}
+
+
+bool quickfixTestEndView(PyObject *view) { return quickfixEndView(view); }
+
+
+SWIGINTERNINLINE PyObject*
+  SWIG_From_bool  (bool value)
+{
+  return PyBool_FromLong(value ? 1 : 0);
+}
+
+
 #include <string>
 
 
@@ -4533,13 +4555,6 @@ SWIG_From_ptrdiff_t  (ptrdiff_t value)
     return SWIG_From_long_SS_long  (static_cast< long long >(value));
   }
 #endif
-}
-
-
-SWIGINTERNINLINE PyObject*
-  SWIG_From_bool  (bool value)
-{
-  return PyBool_FromLong(value ? 1 : 0);
 }
 
 
@@ -7264,6 +7279,35 @@ void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID c
 #ifdef __cplusplus
 extern "C" {
 #endif
+SWIGINTERN PyObject *_wrap__endView(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  PyObject *arg1 = (PyObject *) 0 ;
+  PyObject *swig_obj[1] ;
+  bool result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  arg1 = swig_obj[0];
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      result = (bool)quickfixTestEndView(arg1);
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_delete_SwigPyIterator(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   swig::SwigPyIterator *arg1 = (swig::SwigPyIterator *) 0 ;
@@ -7274,9 +7318,13 @@ SWIGINTERN PyObject *_wrap_delete_SwigPyIterator(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SwigPyIterator" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SwigPyIterator" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SwigPyIterator', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   {
@@ -7313,9 +7361,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_value(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_value" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_value" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_value', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   {
@@ -7361,9 +7413,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_incr__SWIG_0(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_incr" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_incr" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_incr', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   ecode2 = SWIG_AsVal_size_t(swig_obj[1], &val2);
@@ -7411,9 +7467,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_incr__SWIG_1(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_incr" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_incr" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_incr', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   {
@@ -7501,9 +7561,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_decr__SWIG_0(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_decr" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_decr" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_decr', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   ecode2 = SWIG_AsVal_size_t(swig_obj[1], &val2);
@@ -7551,9 +7615,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_decr__SWIG_1(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_decr" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_decr" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_decr', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   {
@@ -7642,9 +7710,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_distance(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SwigPyIterator_distance", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_distance" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_distance" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_distance', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_swig__SwigPyIterator,  0  | 0);
@@ -7695,9 +7767,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_equal(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SwigPyIterator_equal", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_equal" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_equal" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_equal', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_swig__SwigPyIterator,  0  | 0);
@@ -7746,9 +7822,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_copy(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_copy" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_copy" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_copy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   {
@@ -7785,9 +7865,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_next(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_next" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_next" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_next', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   {
@@ -7832,9 +7916,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator___next__(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___next__" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___next__" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator___next__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   {
@@ -7879,9 +7967,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_previous(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_previous" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_previous" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_previous', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   {
@@ -7928,9 +8020,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator_advance(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SwigPyIterator_advance", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_advance" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator_advance" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator_advance', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -7982,9 +8078,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator___eq__(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SwigPyIterator___eq__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___eq__" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___eq__" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator___eq__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_swig__SwigPyIterator,  0  | 0);
@@ -8036,9 +8136,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator___ne__(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SwigPyIterator___ne__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___ne__" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___ne__" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator___ne__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_swig__SwigPyIterator,  0  | 0);
@@ -8090,9 +8194,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator___iadd__(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SwigPyIterator___iadd__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___iadd__" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___iadd__" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator___iadd__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -8144,9 +8252,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator___isub__(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SwigPyIterator___isub__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___isub__" "', argument " "1"" of type '" "swig::SwigPyIterator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___isub__" "', argument " "1"" of type '" "swig::SwigPyIterator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator___isub__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -8198,9 +8310,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator___add__(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SwigPyIterator___add__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___add__" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___add__" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator___add__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -8256,9 +8372,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator___sub____SWIG_0(PyObject *self, Py_ssi
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___sub__" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___sub__" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator___sub__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -8314,9 +8434,13 @@ SWIGINTERN PyObject *_wrap_SwigPyIterator___sub____SWIG_1(PyObject *self, Py_ssi
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_swig__SwigPyIterator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___sub__" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SwigPyIterator___sub__" "', argument " "1"" of type '" "swig::SwigPyIterator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SwigPyIterator___sub__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< swig::SwigPyIterator * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_swig__SwigPyIterator,  0  | 0);
@@ -8418,9 +8542,13 @@ SWIGINTERN PyObject *_wrap_VectorString_iterator(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_iterator" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_iterator" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_iterator', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -8457,9 +8585,13 @@ SWIGINTERN PyObject *_wrap_VectorString___nonzero__(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___nonzero__" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___nonzero__" "', argument " "1"" of type '" "std::vector< std::string > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___nonzero__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -8496,9 +8628,13 @@ SWIGINTERN PyObject *_wrap_VectorString___bool__(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___bool__" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___bool__" "', argument " "1"" of type '" "std::vector< std::string > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___bool__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -8535,9 +8671,13 @@ SWIGINTERN PyObject *_wrap_VectorString___len__(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___len__" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___len__" "', argument " "1"" of type '" "std::vector< std::string > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___len__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -8579,9 +8719,13 @@ SWIGINTERN PyObject *_wrap_VectorString___getslice__(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "VectorString___getslice__", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___getslice__" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___getslice__" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___getslice__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -8637,9 +8781,13 @@ SWIGINTERN PyObject *_wrap_VectorString___setslice____SWIG_0(PyObject *self, Py_
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___setslice__" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___setslice__" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___setslice__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -8697,9 +8845,13 @@ SWIGINTERN PyObject *_wrap_VectorString___setslice____SWIG_1(PyObject *self, Py_
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___setslice__" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___setslice__" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___setslice__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -8831,9 +8983,13 @@ SWIGINTERN PyObject *_wrap_VectorString___delslice__(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "VectorString___delslice__", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___delslice__" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___delslice__" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___delslice__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -8886,9 +9042,13 @@ SWIGINTERN PyObject *_wrap_VectorString___delitem____SWIG_0(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___delitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___delitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___delitem__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -8935,9 +9095,13 @@ SWIGINTERN PyObject *_wrap_VectorString___getitem____SWIG_0(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___getitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___getitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___getitem__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -8986,9 +9150,13 @@ SWIGINTERN PyObject *_wrap_VectorString___setitem____SWIG_0(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___setitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___setitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___setitem__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9048,9 +9216,13 @@ SWIGINTERN PyObject *_wrap_VectorString___setitem____SWIG_1(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___setitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___setitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___setitem__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9097,9 +9269,13 @@ SWIGINTERN PyObject *_wrap_VectorString___delitem____SWIG_1(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___delitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___delitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___delitem__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9194,9 +9370,13 @@ SWIGINTERN PyObject *_wrap_VectorString___getitem____SWIG_1(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___getitem__" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___getitem__" "', argument " "1"" of type '" "std::vector< std::string > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___getitem__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -9290,9 +9470,13 @@ SWIGINTERN PyObject *_wrap_VectorString___setitem____SWIG_2(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___setitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString___setitem__" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString___setitem__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -9434,9 +9618,13 @@ SWIGINTERN PyObject *_wrap_VectorString_pop(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_pop" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_pop" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_pop', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9477,9 +9665,13 @@ SWIGINTERN PyObject *_wrap_VectorString_append(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "VectorString_append", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_append" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_append" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_append', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9618,9 +9810,13 @@ SWIGINTERN PyObject *_wrap_VectorString_empty(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_empty" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_empty" "', argument " "1"" of type '" "std::vector< std::string > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_empty', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9657,9 +9853,13 @@ SWIGINTERN PyObject *_wrap_VectorString_size(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_size" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_size" "', argument " "1"" of type '" "std::vector< std::string > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_size', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9697,9 +9897,13 @@ SWIGINTERN PyObject *_wrap_VectorString_swap(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "VectorString_swap", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_swap" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_swap" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_swap', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_std__vectorT_std__string_t,  0 );
@@ -9744,9 +9948,13 @@ SWIGINTERN PyObject *_wrap_VectorString_begin(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_begin" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_begin" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_begin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9784,9 +9992,13 @@ SWIGINTERN PyObject *_wrap_VectorString_end(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_end" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_end" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_end', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9824,9 +10036,13 @@ SWIGINTERN PyObject *_wrap_VectorString_rbegin(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_rbegin" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_rbegin" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_rbegin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9864,9 +10080,13 @@ SWIGINTERN PyObject *_wrap_VectorString_rend(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_rend" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_rend" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_rend', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9903,9 +10123,13 @@ SWIGINTERN PyObject *_wrap_VectorString_clear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_clear" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_clear" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_clear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -9942,9 +10166,13 @@ SWIGINTERN PyObject *_wrap_VectorString_get_allocator(PyObject *self, PyObject *
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_get_allocator" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_get_allocator" "', argument " "1"" of type '" "std::vector< std::string > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_get_allocator', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -10017,9 +10245,13 @@ SWIGINTERN PyObject *_wrap_VectorString_pop_back(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_pop_back" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_pop_back" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_pop_back', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -10056,9 +10288,13 @@ SWIGINTERN PyObject *_wrap_VectorString_resize__SWIG_0(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_resize" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_resize" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_resize', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_size_t(swig_obj[1], &val2);
@@ -10101,9 +10337,13 @@ SWIGINTERN PyObject *_wrap_VectorString_erase__SWIG_0(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_erase" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_erase" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_erase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], SWIG_as_voidptrptr(&iter2), swig::SwigPyIterator::descriptor(), 0);
@@ -10156,9 +10396,13 @@ SWIGINTERN PyObject *_wrap_VectorString_erase__SWIG_1(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_erase" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_erase" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_erase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], SWIG_as_voidptrptr(&iter2), swig::SwigPyIterator::descriptor(), 0);
@@ -10390,9 +10634,13 @@ SWIGINTERN PyObject *_wrap_VectorString_push_back(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "VectorString_push_back", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_push_back" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_push_back" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_push_back', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -10458,9 +10706,13 @@ SWIGINTERN PyObject *_wrap_VectorString_front(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_front" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_front" "', argument " "1"" of type '" "std::vector< std::string > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_front', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -10498,9 +10750,13 @@ SWIGINTERN PyObject *_wrap_VectorString_back(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_back" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_back" "', argument " "1"" of type '" "std::vector< std::string > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_back', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -10541,9 +10797,13 @@ SWIGINTERN PyObject *_wrap_VectorString_assign(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "VectorString_assign", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_assign" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_assign" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_assign', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_size_t(swig_obj[1], &val2);
@@ -10616,9 +10876,13 @@ SWIGINTERN PyObject *_wrap_VectorString_resize__SWIG_1(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_resize" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_resize" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_resize', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_size_t(swig_obj[1], &val2);
@@ -10742,9 +11006,13 @@ SWIGINTERN PyObject *_wrap_VectorString_insert__SWIG_0(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_insert" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_insert" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_insert', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], SWIG_as_voidptrptr(&iter2), swig::SwigPyIterator::descriptor(), 0);
@@ -10827,9 +11095,13 @@ SWIGINTERN PyObject *_wrap_VectorString_insert__SWIG_1(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_insert" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_insert" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_insert', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], SWIG_as_voidptrptr(&iter2), swig::SwigPyIterator::descriptor(), 0);
@@ -10970,9 +11242,13 @@ SWIGINTERN PyObject *_wrap_VectorString_reserve(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "VectorString_reserve", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_reserve" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_reserve" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_reserve', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   ecode2 = SWIG_AsVal_size_t(swig_obj[1], &val2);
@@ -11014,9 +11290,13 @@ SWIGINTERN PyObject *_wrap_VectorString_capacity(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_capacity" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorString_capacity" "', argument " "1"" of type '" "std::vector< std::string > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'VectorString_capacity', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -11052,9 +11332,13 @@ SWIGINTERN PyObject *_wrap_delete_VectorString(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__vectorT_std__string_t, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__vectorT_std__string_t, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_VectorString" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_VectorString" "', argument " "1"" of type '" "std::vector< std::string > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_VectorString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::vector< std::string > * >(argp1);
   {
@@ -11140,9 +11424,13 @@ SWIGINTERN PyObject *_wrap_delete_IntArray(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_IntArray, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_IntArray, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IntArray" "', argument " "1"" of type '" "IntArray *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IntArray" "', argument " "1"" of type '" "IntArray *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_IntArray', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< IntArray * >(argp1);
   {
@@ -11181,9 +11469,13 @@ SWIGINTERN PyObject *_wrap_IntArray___getitem__(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "IntArray___getitem__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_IntArray, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_IntArray, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntArray___getitem__" "', argument " "1"" of type '" "IntArray *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntArray___getitem__" "', argument " "1"" of type '" "IntArray *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'IntArray___getitem__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< IntArray * >(argp1);
   ecode2 = SWIG_AsVal_size_t(swig_obj[1], &val2);
@@ -11229,9 +11521,13 @@ SWIGINTERN PyObject *_wrap_IntArray___setitem__(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "IntArray___setitem__", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_IntArray, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_IntArray, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntArray___setitem__" "', argument " "1"" of type '" "IntArray *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntArray___setitem__" "', argument " "1"" of type '" "IntArray *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'IntArray___setitem__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< IntArray * >(argp1);
   ecode2 = SWIG_AsVal_size_t(swig_obj[1], &val2);
@@ -11278,9 +11574,13 @@ SWIGINTERN PyObject *_wrap_IntArray_cast(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_IntArray, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_IntArray, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntArray_cast" "', argument " "1"" of type '" "IntArray *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntArray_cast" "', argument " "1"" of type '" "IntArray *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'IntArray_cast', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< IntArray * >(argp1);
   {
@@ -11317,9 +11617,13 @@ SWIGINTERN PyObject *_wrap_IntArray_frompointer(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_int, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_int, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntArray_frompointer" "', argument " "1"" of type '" "int *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntArray_frompointer" "', argument " "1"" of type '" "int *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'IntArray_frompointer', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< int * >(argp1);
   {
@@ -11409,9 +11713,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_iterator(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_iterator" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_iterator" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_iterator', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -11448,9 +11756,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet___nonzero__(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet___nonzero__" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet___nonzero__" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet___nonzero__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -11487,9 +11799,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet___bool__(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet___bool__" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet___bool__" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet___bool__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -11526,9 +11842,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet___len__(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet___len__" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet___len__" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet___len__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -11566,9 +11886,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_append(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet_append", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_append" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_append" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_append', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -11620,9 +11944,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet___contains__(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet___contains__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet___contains__" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet___contains__" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet___contains__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -11674,9 +12002,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet___getitem__(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet___getitem__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet___getitem__" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet___getitem__" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet___getitem__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   ecode2 = SWIG_AsVal_ptrdiff_t(swig_obj[1], &val2);
@@ -11723,9 +12055,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_add(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet_add", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_add" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_add" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_add', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -11776,9 +12112,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_discard(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet_discard", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_discard" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_discard" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_discard', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -11939,9 +12279,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_empty(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_empty" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_empty" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_empty', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -11978,9 +12322,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_size(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_size" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_size" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_size', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -12016,9 +12364,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_clear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_clear" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_clear" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_clear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -12056,9 +12408,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_swap(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet_swap", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_swap" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_swap" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_swap', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_std__setT_FIX__SessionID_t,  0 );
@@ -12104,9 +12460,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_erase__SWIG_0(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_erase" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_erase" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_erase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -12153,9 +12513,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_count(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet_count", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_count" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_count" "', argument " "1"" of type '" "std::set< FIX::SessionID > const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_count', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -12200,9 +12564,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_begin(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_begin" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_begin" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_begin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -12240,9 +12608,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_end(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_end" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_end" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_end', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -12280,9 +12652,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_rbegin(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_rbegin" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_rbegin" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_rbegin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -12320,9 +12696,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_rend(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_rend" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_rend" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_rend', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -12360,9 +12740,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_erase__SWIG_1(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_erase" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_erase" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_erase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], SWIG_as_voidptrptr(&iter2), swig::SwigPyIterator::descriptor(), 0);
@@ -12413,9 +12797,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_erase__SWIG_2(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_erase" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_erase" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_erase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], SWIG_as_voidptrptr(&iter2), swig::SwigPyIterator::descriptor(), 0);
@@ -12538,9 +12926,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_find(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet_find", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_find" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_find" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_find', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -12588,9 +12980,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_lower_bound(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet_lower_bound", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_lower_bound" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_lower_bound" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_lower_bound', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -12638,9 +13034,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_upper_bound(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet_upper_bound", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_upper_bound" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_upper_bound" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_upper_bound', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -12688,9 +13088,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_equal_range(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet_equal_range", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_equal_range" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_equal_range" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_equal_range', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -12741,9 +13145,13 @@ SWIGINTERN PyObject *_wrap_SessionIDSet_insert(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionIDSet_insert", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_insert" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionIDSet_insert" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionIDSet_insert', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -12790,9 +13198,13 @@ SWIGINTERN PyObject *_wrap_delete_SessionIDSet(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_std__setT_FIX__SessionID_t, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_std__setT_FIX__SessionID_t, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SessionIDSet" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SessionIDSet" "', argument " "1"" of type '" "std::set< FIX::SessionID > *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SessionIDSet', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< std::set< FIX::SessionID > * >(argp1);
   {
@@ -12931,9 +13343,13 @@ SWIGINTERN PyObject *_wrap_delete_FIXException(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Exception, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Exception, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FIXException" "', argument " "1"" of type '" "FIX::Exception *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FIXException" "', argument " "1"" of type '" "FIX::Exception *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_FIXException', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Exception * >(argp1);
   {
@@ -12970,9 +13386,13 @@ SWIGINTERN PyObject *_wrap_FIXException_type_set(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FIXException_type_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Exception, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Exception, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FIXException_type_set" "', argument " "1"" of type '" "FIX::Exception *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FIXException_type_set" "', argument " "1"" of type '" "FIX::Exception *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FIXException_type_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Exception * >(argp1);
   {
@@ -13027,9 +13447,13 @@ SWIGINTERN PyObject *_wrap_FIXException_type_get(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Exception, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Exception, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FIXException_type_get" "', argument " "1"" of type '" "FIX::Exception *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FIXException_type_get" "', argument " "1"" of type '" "FIX::Exception *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FIXException_type_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Exception * >(argp1);
   {
@@ -13055,9 +13479,13 @@ SWIGINTERN PyObject *_wrap_FIXException_detail_set(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FIXException_detail_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Exception, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Exception, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FIXException_detail_set" "', argument " "1"" of type '" "FIX::Exception *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FIXException_detail_set" "', argument " "1"" of type '" "FIX::Exception *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FIXException_detail_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Exception * >(argp1);
   {
@@ -13112,9 +13540,13 @@ SWIGINTERN PyObject *_wrap_FIXException_detail_get(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Exception, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Exception, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FIXException_detail_get" "', argument " "1"" of type '" "FIX::Exception *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FIXException_detail_get" "', argument " "1"" of type '" "FIX::Exception *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FIXException_detail_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Exception * >(argp1);
   {
@@ -13140,9 +13572,13 @@ SWIGINTERN PyObject *_wrap_FIXException___str__(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Exception, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Exception, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FIXException___str__" "', argument " "1"" of type '" "FIX::Exception *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FIXException___str__" "', argument " "1"" of type '" "FIX::Exception *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FIXException___str__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Exception * >(argp1);
   {
@@ -13378,9 +13814,13 @@ SWIGINTERN PyObject *_wrap_delete_DataDictionaryNotFound(PyObject *self, PyObjec
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionaryNotFound, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionaryNotFound, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DataDictionaryNotFound" "', argument " "1"" of type '" "FIX::DataDictionaryNotFound *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DataDictionaryNotFound" "', argument " "1"" of type '" "FIX::DataDictionaryNotFound *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_DataDictionaryNotFound', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionaryNotFound * >(argp1);
   {
@@ -13417,9 +13857,13 @@ SWIGINTERN PyObject *_wrap_DataDictionaryNotFound_version_set(PyObject *self, Py
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionaryNotFound_version_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionaryNotFound, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionaryNotFound, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionaryNotFound_version_set" "', argument " "1"" of type '" "FIX::DataDictionaryNotFound *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionaryNotFound_version_set" "', argument " "1"" of type '" "FIX::DataDictionaryNotFound *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionaryNotFound_version_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionaryNotFound * >(argp1);
   {
@@ -13474,9 +13918,13 @@ SWIGINTERN PyObject *_wrap_DataDictionaryNotFound_version_get(PyObject *self, Py
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionaryNotFound, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionaryNotFound, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionaryNotFound_version_get" "', argument " "1"" of type '" "FIX::DataDictionaryNotFound *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionaryNotFound_version_get" "', argument " "1"" of type '" "FIX::DataDictionaryNotFound *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionaryNotFound_version_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionaryNotFound * >(argp1);
   {
@@ -13694,9 +14142,13 @@ SWIGINTERN PyObject *_wrap_FieldNotFound_field_set(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldNotFound_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldNotFound, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldNotFound, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldNotFound_field_set" "', argument " "1"" of type '" "FIX::FieldNotFound *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldNotFound_field_set" "', argument " "1"" of type '" "FIX::FieldNotFound *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldNotFound_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldNotFound * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -13727,9 +14179,13 @@ SWIGINTERN PyObject *_wrap_FieldNotFound_field_get(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldNotFound, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldNotFound, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldNotFound_field_get" "', argument " "1"" of type '" "FIX::FieldNotFound *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldNotFound_field_get" "', argument " "1"" of type '" "FIX::FieldNotFound *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldNotFound_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldNotFound * >(argp1);
   {
@@ -13754,9 +14210,13 @@ SWIGINTERN PyObject *_wrap_delete_FieldNotFound(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldNotFound, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldNotFound, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FieldNotFound" "', argument " "1"" of type '" "FIX::FieldNotFound *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FieldNotFound" "', argument " "1"" of type '" "FIX::FieldNotFound *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_FieldNotFound', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldNotFound * >(argp1);
   {
@@ -13921,9 +14381,13 @@ SWIGINTERN PyObject *_wrap_delete_FieldConvertError(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldConvertError, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldConvertError, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FieldConvertError" "', argument " "1"" of type '" "FIX::FieldConvertError *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FieldConvertError" "', argument " "1"" of type '" "FIX::FieldConvertError *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_FieldConvertError', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldConvertError * >(argp1);
   {
@@ -14088,9 +14552,13 @@ SWIGINTERN PyObject *_wrap_delete_MessageParseError(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageParseError, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageParseError, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MessageParseError" "', argument " "1"" of type '" "FIX::MessageParseError *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MessageParseError" "', argument " "1"" of type '" "FIX::MessageParseError *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MessageParseError', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageParseError * >(argp1);
   {
@@ -14255,9 +14723,13 @@ SWIGINTERN PyObject *_wrap_delete_InvalidMessage(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__InvalidMessage, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__InvalidMessage, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_InvalidMessage" "', argument " "1"" of type '" "FIX::InvalidMessage *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_InvalidMessage" "', argument " "1"" of type '" "FIX::InvalidMessage *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_InvalidMessage', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::InvalidMessage * >(argp1);
   {
@@ -14422,9 +14894,13 @@ SWIGINTERN PyObject *_wrap_delete_ConfigError(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ConfigError, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ConfigError, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ConfigError" "', argument " "1"" of type '" "FIX::ConfigError *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ConfigError" "', argument " "1"" of type '" "FIX::ConfigError *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_ConfigError', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ConfigError * >(argp1);
   {
@@ -14589,9 +15065,13 @@ SWIGINTERN PyObject *_wrap_delete_RuntimeError(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RuntimeError, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RuntimeError, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_RuntimeError" "', argument " "1"" of type '" "FIX::RuntimeError *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_RuntimeError" "', argument " "1"" of type '" "FIX::RuntimeError *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_RuntimeError', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RuntimeError * >(argp1);
   {
@@ -14820,9 +15300,13 @@ SWIGINTERN PyObject *_wrap_InvalidTagNumber_field_set(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "InvalidTagNumber_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__InvalidTagNumber, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__InvalidTagNumber, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "InvalidTagNumber_field_set" "', argument " "1"" of type '" "FIX::InvalidTagNumber *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "InvalidTagNumber_field_set" "', argument " "1"" of type '" "FIX::InvalidTagNumber *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'InvalidTagNumber_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::InvalidTagNumber * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -14853,9 +15337,13 @@ SWIGINTERN PyObject *_wrap_InvalidTagNumber_field_get(PyObject *self, PyObject *
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__InvalidTagNumber, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__InvalidTagNumber, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "InvalidTagNumber_field_get" "', argument " "1"" of type '" "FIX::InvalidTagNumber *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "InvalidTagNumber_field_get" "', argument " "1"" of type '" "FIX::InvalidTagNumber *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'InvalidTagNumber_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::InvalidTagNumber * >(argp1);
   {
@@ -14880,9 +15368,13 @@ SWIGINTERN PyObject *_wrap_delete_InvalidTagNumber(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__InvalidTagNumber, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__InvalidTagNumber, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_InvalidTagNumber" "', argument " "1"" of type '" "FIX::InvalidTagNumber *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_InvalidTagNumber" "', argument " "1"" of type '" "FIX::InvalidTagNumber *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_InvalidTagNumber', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::InvalidTagNumber * >(argp1);
   {
@@ -15111,9 +15603,13 @@ SWIGINTERN PyObject *_wrap_RequiredTagMissing_field_set(PyObject *self, PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "RequiredTagMissing_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RequiredTagMissing, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RequiredTagMissing, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RequiredTagMissing_field_set" "', argument " "1"" of type '" "FIX::RequiredTagMissing *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RequiredTagMissing_field_set" "', argument " "1"" of type '" "FIX::RequiredTagMissing *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'RequiredTagMissing_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RequiredTagMissing * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -15144,9 +15640,13 @@ SWIGINTERN PyObject *_wrap_RequiredTagMissing_field_get(PyObject *self, PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RequiredTagMissing, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RequiredTagMissing, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RequiredTagMissing_field_get" "', argument " "1"" of type '" "FIX::RequiredTagMissing *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RequiredTagMissing_field_get" "', argument " "1"" of type '" "FIX::RequiredTagMissing *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'RequiredTagMissing_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RequiredTagMissing * >(argp1);
   {
@@ -15171,9 +15671,13 @@ SWIGINTERN PyObject *_wrap_delete_RequiredTagMissing(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RequiredTagMissing, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RequiredTagMissing, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_RequiredTagMissing" "', argument " "1"" of type '" "FIX::RequiredTagMissing *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_RequiredTagMissing" "', argument " "1"" of type '" "FIX::RequiredTagMissing *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_RequiredTagMissing', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RequiredTagMissing * >(argp1);
   {
@@ -15402,9 +15906,13 @@ SWIGINTERN PyObject *_wrap_TagNotDefinedForMessage_field_set(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "TagNotDefinedForMessage_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__TagNotDefinedForMessage, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__TagNotDefinedForMessage, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "TagNotDefinedForMessage_field_set" "', argument " "1"" of type '" "FIX::TagNotDefinedForMessage *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "TagNotDefinedForMessage_field_set" "', argument " "1"" of type '" "FIX::TagNotDefinedForMessage *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'TagNotDefinedForMessage_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::TagNotDefinedForMessage * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -15435,9 +15943,13 @@ SWIGINTERN PyObject *_wrap_TagNotDefinedForMessage_field_get(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__TagNotDefinedForMessage, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__TagNotDefinedForMessage, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "TagNotDefinedForMessage_field_get" "', argument " "1"" of type '" "FIX::TagNotDefinedForMessage *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "TagNotDefinedForMessage_field_get" "', argument " "1"" of type '" "FIX::TagNotDefinedForMessage *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'TagNotDefinedForMessage_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::TagNotDefinedForMessage * >(argp1);
   {
@@ -15462,9 +15974,13 @@ SWIGINTERN PyObject *_wrap_delete_TagNotDefinedForMessage(PyObject *self, PyObje
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__TagNotDefinedForMessage, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__TagNotDefinedForMessage, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_TagNotDefinedForMessage" "', argument " "1"" of type '" "FIX::TagNotDefinedForMessage *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_TagNotDefinedForMessage" "', argument " "1"" of type '" "FIX::TagNotDefinedForMessage *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_TagNotDefinedForMessage', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::TagNotDefinedForMessage * >(argp1);
   {
@@ -15693,9 +16209,13 @@ SWIGINTERN PyObject *_wrap_NoTagValue_field_set(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NoTagValue_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NoTagValue, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NoTagValue, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NoTagValue_field_set" "', argument " "1"" of type '" "FIX::NoTagValue *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NoTagValue_field_set" "', argument " "1"" of type '" "FIX::NoTagValue *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NoTagValue_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NoTagValue * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -15726,9 +16246,13 @@ SWIGINTERN PyObject *_wrap_NoTagValue_field_get(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NoTagValue, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NoTagValue, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NoTagValue_field_get" "', argument " "1"" of type '" "FIX::NoTagValue *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NoTagValue_field_get" "', argument " "1"" of type '" "FIX::NoTagValue *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NoTagValue_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NoTagValue * >(argp1);
   {
@@ -15753,9 +16277,13 @@ SWIGINTERN PyObject *_wrap_delete_NoTagValue(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NoTagValue, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NoTagValue, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NoTagValue" "', argument " "1"" of type '" "FIX::NoTagValue *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NoTagValue" "', argument " "1"" of type '" "FIX::NoTagValue *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_NoTagValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NoTagValue * >(argp1);
   {
@@ -15984,9 +16512,13 @@ SWIGINTERN PyObject *_wrap_IncorrectTagValue_field_set(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "IncorrectTagValue_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IncorrectTagValue, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IncorrectTagValue, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IncorrectTagValue_field_set" "', argument " "1"" of type '" "FIX::IncorrectTagValue *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IncorrectTagValue_field_set" "', argument " "1"" of type '" "FIX::IncorrectTagValue *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'IncorrectTagValue_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IncorrectTagValue * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -16017,9 +16549,13 @@ SWIGINTERN PyObject *_wrap_IncorrectTagValue_field_get(PyObject *self, PyObject 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IncorrectTagValue, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IncorrectTagValue, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IncorrectTagValue_field_get" "', argument " "1"" of type '" "FIX::IncorrectTagValue *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IncorrectTagValue_field_get" "', argument " "1"" of type '" "FIX::IncorrectTagValue *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'IncorrectTagValue_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IncorrectTagValue * >(argp1);
   {
@@ -16044,9 +16580,13 @@ SWIGINTERN PyObject *_wrap_delete_IncorrectTagValue(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IncorrectTagValue, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IncorrectTagValue, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IncorrectTagValue" "', argument " "1"" of type '" "FIX::IncorrectTagValue *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IncorrectTagValue" "', argument " "1"" of type '" "FIX::IncorrectTagValue *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_IncorrectTagValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IncorrectTagValue * >(argp1);
   {
@@ -16275,9 +16815,13 @@ SWIGINTERN PyObject *_wrap_IncorrectDataFormat_field_set(PyObject *self, PyObjec
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "IncorrectDataFormat_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IncorrectDataFormat, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IncorrectDataFormat, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IncorrectDataFormat_field_set" "', argument " "1"" of type '" "FIX::IncorrectDataFormat *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IncorrectDataFormat_field_set" "', argument " "1"" of type '" "FIX::IncorrectDataFormat *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'IncorrectDataFormat_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IncorrectDataFormat * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -16308,9 +16852,13 @@ SWIGINTERN PyObject *_wrap_IncorrectDataFormat_field_get(PyObject *self, PyObjec
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IncorrectDataFormat, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IncorrectDataFormat, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IncorrectDataFormat_field_get" "', argument " "1"" of type '" "FIX::IncorrectDataFormat *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IncorrectDataFormat_field_get" "', argument " "1"" of type '" "FIX::IncorrectDataFormat *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'IncorrectDataFormat_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IncorrectDataFormat * >(argp1);
   {
@@ -16335,9 +16883,13 @@ SWIGINTERN PyObject *_wrap_delete_IncorrectDataFormat(PyObject *self, PyObject *
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IncorrectDataFormat, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IncorrectDataFormat, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IncorrectDataFormat" "', argument " "1"" of type '" "FIX::IncorrectDataFormat *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IncorrectDataFormat" "', argument " "1"" of type '" "FIX::IncorrectDataFormat *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_IncorrectDataFormat', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IncorrectDataFormat * >(argp1);
   {
@@ -16502,9 +17054,13 @@ SWIGINTERN PyObject *_wrap_delete_IncorrectMessageStructure(PyObject *self, PyOb
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IncorrectMessageStructure, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IncorrectMessageStructure, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IncorrectMessageStructure" "', argument " "1"" of type '" "FIX::IncorrectMessageStructure *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IncorrectMessageStructure" "', argument " "1"" of type '" "FIX::IncorrectMessageStructure *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_IncorrectMessageStructure', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IncorrectMessageStructure * >(argp1);
   {
@@ -16669,9 +17225,13 @@ SWIGINTERN PyObject *_wrap_delete_DuplicateFieldNumber(PyObject *self, PyObject 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DuplicateFieldNumber, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DuplicateFieldNumber, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DuplicateFieldNumber" "', argument " "1"" of type '" "FIX::DuplicateFieldNumber *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DuplicateFieldNumber" "', argument " "1"" of type '" "FIX::DuplicateFieldNumber *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_DuplicateFieldNumber', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DuplicateFieldNumber * >(argp1);
   {
@@ -16836,9 +17396,13 @@ SWIGINTERN PyObject *_wrap_delete_InvalidMessageType(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__InvalidMessageType, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__InvalidMessageType, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_InvalidMessageType" "', argument " "1"" of type '" "FIX::InvalidMessageType *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_InvalidMessageType" "', argument " "1"" of type '" "FIX::InvalidMessageType *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_InvalidMessageType', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::InvalidMessageType * >(argp1);
   {
@@ -17003,9 +17567,13 @@ SWIGINTERN PyObject *_wrap_delete_UnsupportedMessageType(PyObject *self, PyObjec
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UnsupportedMessageType, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UnsupportedMessageType, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UnsupportedMessageType" "', argument " "1"" of type '" "FIX::UnsupportedMessageType *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UnsupportedMessageType" "', argument " "1"" of type '" "FIX::UnsupportedMessageType *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_UnsupportedMessageType', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UnsupportedMessageType * >(argp1);
   {
@@ -17170,9 +17738,13 @@ SWIGINTERN PyObject *_wrap_delete_UnsupportedVersion(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UnsupportedVersion, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UnsupportedVersion, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UnsupportedVersion" "', argument " "1"" of type '" "FIX::UnsupportedVersion *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UnsupportedVersion" "', argument " "1"" of type '" "FIX::UnsupportedVersion *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_UnsupportedVersion', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UnsupportedVersion * >(argp1);
   {
@@ -17401,9 +17973,13 @@ SWIGINTERN PyObject *_wrap_TagOutOfOrder_field_set(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "TagOutOfOrder_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__TagOutOfOrder, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__TagOutOfOrder, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "TagOutOfOrder_field_set" "', argument " "1"" of type '" "FIX::TagOutOfOrder *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "TagOutOfOrder_field_set" "', argument " "1"" of type '" "FIX::TagOutOfOrder *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'TagOutOfOrder_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::TagOutOfOrder * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -17434,9 +18010,13 @@ SWIGINTERN PyObject *_wrap_TagOutOfOrder_field_get(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__TagOutOfOrder, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__TagOutOfOrder, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "TagOutOfOrder_field_get" "', argument " "1"" of type '" "FIX::TagOutOfOrder *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "TagOutOfOrder_field_get" "', argument " "1"" of type '" "FIX::TagOutOfOrder *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'TagOutOfOrder_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::TagOutOfOrder * >(argp1);
   {
@@ -17461,9 +18041,13 @@ SWIGINTERN PyObject *_wrap_delete_TagOutOfOrder(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__TagOutOfOrder, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__TagOutOfOrder, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_TagOutOfOrder" "', argument " "1"" of type '" "FIX::TagOutOfOrder *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_TagOutOfOrder" "', argument " "1"" of type '" "FIX::TagOutOfOrder *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_TagOutOfOrder', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::TagOutOfOrder * >(argp1);
   {
@@ -17692,9 +18276,13 @@ SWIGINTERN PyObject *_wrap_EmbeddedSOH_field_set(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "EmbeddedSOH_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__EmbeddedSOH, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__EmbeddedSOH, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EmbeddedSOH_field_set" "', argument " "1"" of type '" "FIX::EmbeddedSOH *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EmbeddedSOH_field_set" "', argument " "1"" of type '" "FIX::EmbeddedSOH *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'EmbeddedSOH_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::EmbeddedSOH * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -17725,9 +18313,13 @@ SWIGINTERN PyObject *_wrap_EmbeddedSOH_field_get(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__EmbeddedSOH, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__EmbeddedSOH, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EmbeddedSOH_field_get" "', argument " "1"" of type '" "FIX::EmbeddedSOH *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EmbeddedSOH_field_get" "', argument " "1"" of type '" "FIX::EmbeddedSOH *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'EmbeddedSOH_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::EmbeddedSOH * >(argp1);
   {
@@ -17752,9 +18344,13 @@ SWIGINTERN PyObject *_wrap_delete_EmbeddedSOH(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__EmbeddedSOH, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__EmbeddedSOH, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_EmbeddedSOH" "', argument " "1"" of type '" "FIX::EmbeddedSOH *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_EmbeddedSOH" "', argument " "1"" of type '" "FIX::EmbeddedSOH *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_EmbeddedSOH', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::EmbeddedSOH * >(argp1);
   {
@@ -17983,9 +18579,13 @@ SWIGINTERN PyObject *_wrap_OutOfOrderGroupMembers_field_set(PyObject *self, PyOb
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "OutOfOrderGroupMembers_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__OutOfOrderGroupMembers, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__OutOfOrderGroupMembers, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "OutOfOrderGroupMembers_field_set" "', argument " "1"" of type '" "FIX::OutOfOrderGroupMembers *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "OutOfOrderGroupMembers_field_set" "', argument " "1"" of type '" "FIX::OutOfOrderGroupMembers *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'OutOfOrderGroupMembers_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::OutOfOrderGroupMembers * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -18016,9 +18616,13 @@ SWIGINTERN PyObject *_wrap_OutOfOrderGroupMembers_field_get(PyObject *self, PyOb
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__OutOfOrderGroupMembers, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__OutOfOrderGroupMembers, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "OutOfOrderGroupMembers_field_get" "', argument " "1"" of type '" "FIX::OutOfOrderGroupMembers *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "OutOfOrderGroupMembers_field_get" "', argument " "1"" of type '" "FIX::OutOfOrderGroupMembers *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'OutOfOrderGroupMembers_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::OutOfOrderGroupMembers * >(argp1);
   {
@@ -18043,9 +18647,13 @@ SWIGINTERN PyObject *_wrap_delete_OutOfOrderGroupMembers(PyObject *self, PyObjec
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__OutOfOrderGroupMembers, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__OutOfOrderGroupMembers, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_OutOfOrderGroupMembers" "', argument " "1"" of type '" "FIX::OutOfOrderGroupMembers *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_OutOfOrderGroupMembers" "', argument " "1"" of type '" "FIX::OutOfOrderGroupMembers *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_OutOfOrderGroupMembers', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::OutOfOrderGroupMembers * >(argp1);
   {
@@ -18274,9 +18882,13 @@ SWIGINTERN PyObject *_wrap_RepeatedTag_field_set(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "RepeatedTag_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RepeatedTag, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RepeatedTag, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RepeatedTag_field_set" "', argument " "1"" of type '" "FIX::RepeatedTag *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RepeatedTag_field_set" "', argument " "1"" of type '" "FIX::RepeatedTag *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'RepeatedTag_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RepeatedTag * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -18307,9 +18919,13 @@ SWIGINTERN PyObject *_wrap_RepeatedTag_field_get(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RepeatedTag, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RepeatedTag, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RepeatedTag_field_get" "', argument " "1"" of type '" "FIX::RepeatedTag *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RepeatedTag_field_get" "', argument " "1"" of type '" "FIX::RepeatedTag *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'RepeatedTag_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RepeatedTag * >(argp1);
   {
@@ -18334,9 +18950,13 @@ SWIGINTERN PyObject *_wrap_delete_RepeatedTag(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RepeatedTag, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RepeatedTag, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_RepeatedTag" "', argument " "1"" of type '" "FIX::RepeatedTag *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_RepeatedTag" "', argument " "1"" of type '" "FIX::RepeatedTag *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_RepeatedTag', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RepeatedTag * >(argp1);
   {
@@ -18565,9 +19185,13 @@ SWIGINTERN PyObject *_wrap_RepeatingGroupCountMismatch_field_set(PyObject *self,
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "RepeatingGroupCountMismatch_field_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RepeatingGroupCountMismatch, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RepeatingGroupCountMismatch, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RepeatingGroupCountMismatch_field_set" "', argument " "1"" of type '" "FIX::RepeatingGroupCountMismatch *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RepeatingGroupCountMismatch_field_set" "', argument " "1"" of type '" "FIX::RepeatingGroupCountMismatch *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'RepeatingGroupCountMismatch_field_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RepeatingGroupCountMismatch * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -18598,9 +19222,13 @@ SWIGINTERN PyObject *_wrap_RepeatingGroupCountMismatch_field_get(PyObject *self,
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RepeatingGroupCountMismatch, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RepeatingGroupCountMismatch, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RepeatingGroupCountMismatch_field_get" "', argument " "1"" of type '" "FIX::RepeatingGroupCountMismatch *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RepeatingGroupCountMismatch_field_get" "', argument " "1"" of type '" "FIX::RepeatingGroupCountMismatch *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'RepeatingGroupCountMismatch_field_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RepeatingGroupCountMismatch * >(argp1);
   {
@@ -18625,9 +19253,13 @@ SWIGINTERN PyObject *_wrap_delete_RepeatingGroupCountMismatch(PyObject *self, Py
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RepeatingGroupCountMismatch, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RepeatingGroupCountMismatch, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_RepeatingGroupCountMismatch" "', argument " "1"" of type '" "FIX::RepeatingGroupCountMismatch *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_RepeatingGroupCountMismatch" "', argument " "1"" of type '" "FIX::RepeatingGroupCountMismatch *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_RepeatingGroupCountMismatch', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RepeatingGroupCountMismatch * >(argp1);
   {
@@ -18792,9 +19424,13 @@ SWIGINTERN PyObject *_wrap_delete_DoNotSend(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DoNotSend, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DoNotSend, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DoNotSend" "', argument " "1"" of type '" "FIX::DoNotSend *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DoNotSend" "', argument " "1"" of type '" "FIX::DoNotSend *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_DoNotSend', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DoNotSend * >(argp1);
   {
@@ -18959,9 +19595,13 @@ SWIGINTERN PyObject *_wrap_delete_RejectLogon(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__RejectLogon, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__RejectLogon, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_RejectLogon" "', argument " "1"" of type '" "FIX::RejectLogon *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_RejectLogon" "', argument " "1"" of type '" "FIX::RejectLogon *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_RejectLogon', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::RejectLogon * >(argp1);
   {
@@ -19126,9 +19766,13 @@ SWIGINTERN PyObject *_wrap_delete_SessionNotFound(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionNotFound, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionNotFound, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SessionNotFound" "', argument " "1"" of type '" "FIX::SessionNotFound *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SessionNotFound" "', argument " "1"" of type '" "FIX::SessionNotFound *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SessionNotFound', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionNotFound * >(argp1);
   {
@@ -19293,9 +19937,13 @@ SWIGINTERN PyObject *_wrap_delete_IOException(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IOException, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IOException, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IOException" "', argument " "1"" of type '" "FIX::IOException *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IOException" "', argument " "1"" of type '" "FIX::IOException *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_IOException', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IOException * >(argp1);
   {
@@ -19489,9 +20137,13 @@ SWIGINTERN PyObject *_wrap_delete_SocketException(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SocketException, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SocketException, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketException" "', argument " "1"" of type '" "FIX::SocketException *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketException" "', argument " "1"" of type '" "FIX::SocketException *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SocketException', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SocketException * >(argp1);
   {
@@ -19656,9 +20308,13 @@ SWIGINTERN PyObject *_wrap_delete_SocketSendFailed(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SocketSendFailed, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SocketSendFailed, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketSendFailed" "', argument " "1"" of type '" "FIX::SocketSendFailed *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketSendFailed" "', argument " "1"" of type '" "FIX::SocketSendFailed *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SocketSendFailed', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SocketSendFailed * >(argp1);
   {
@@ -19844,9 +20500,13 @@ SWIGINTERN PyObject *_wrap_delete_SocketRecvFailed(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SocketRecvFailed, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SocketRecvFailed, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketRecvFailed" "', argument " "1"" of type '" "FIX::SocketRecvFailed *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketRecvFailed" "', argument " "1"" of type '" "FIX::SocketRecvFailed *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SocketRecvFailed', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SocketRecvFailed * >(argp1);
   {
@@ -20011,9 +20671,13 @@ SWIGINTERN PyObject *_wrap_delete_SocketCloseFailed(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SocketCloseFailed, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SocketCloseFailed, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketCloseFailed" "', argument " "1"" of type '" "FIX::SocketCloseFailed *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketCloseFailed" "', argument " "1"" of type '" "FIX::SocketCloseFailed *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SocketCloseFailed', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SocketCloseFailed * >(argp1);
   {
@@ -20076,9 +20740,13 @@ SWIGINTERN PyObject *_wrap_DateTime_m_date_set(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_m_date_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_m_date_set" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_m_date_set" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_m_date_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -20109,9 +20777,13 @@ SWIGINTERN PyObject *_wrap_DateTime_m_date_get(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_m_date_get" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_m_date_get" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_m_date_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20138,9 +20810,13 @@ SWIGINTERN PyObject *_wrap_DateTime_m_time_set(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_m_time_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_m_time_set" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_m_time_set" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_m_time_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_long_SS_long(swig_obj[1], &val2);
@@ -20171,9 +20847,13 @@ SWIGINTERN PyObject *_wrap_DateTime_m_time_get(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_m_time_get" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_m_time_get" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_m_time_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20587,9 +21267,13 @@ SWIGINTERN PyObject *_wrap_delete_DateTime(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DateTime" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DateTime" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_DateTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20626,9 +21310,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getYear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getYear" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getYear" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getYear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20665,9 +21353,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getMonth(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getMonth" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getMonth" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getMonth', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20704,9 +21396,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getDay(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getDay" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getDay" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getDay', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20743,9 +21439,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getDate(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getDate" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getDate" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getDate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20782,9 +21482,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getJulianDate(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getJulianDate" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getJulianDate" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getJulianDate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20821,9 +21525,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getHour(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getHour" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getHour" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getHour', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20860,9 +21568,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getMinute(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getMinute" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getMinute" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getMinute', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20899,9 +21611,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getSecond(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getSecond" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getSecond" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getSecond', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20938,9 +21654,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getMillisecond(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getMillisecond" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getMillisecond" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getMillisecond', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -20977,9 +21697,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getMicrosecond(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getMicrosecond" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getMicrosecond" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getMicrosecond', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -21016,9 +21740,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getNanosecond(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getNanosecond" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getNanosecond" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getNanosecond', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -21057,9 +21785,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getFraction(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_getFraction", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getFraction" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getFraction" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getFraction', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21101,9 +21833,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getWeekDay(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getWeekDay" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getWeekDay" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getWeekDay', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -21140,9 +21876,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getTimeT(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getTimeT" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getTimeT" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getTimeT', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -21179,9 +21919,13 @@ SWIGINTERN PyObject *_wrap_DateTime_getTmUtc(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getTmUtc" "', argument " "1"" of type '" "FIX::DateTime const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_getTmUtc" "', argument " "1"" of type '" "FIX::DateTime const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_getTmUtc', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -21225,9 +21969,13 @@ SWIGINTERN PyObject *_wrap_DateTime_setYMD(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_setYMD", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setYMD" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setYMD" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_setYMD', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21288,9 +22036,13 @@ SWIGINTERN PyObject *_wrap_DateTime_setHMS__SWIG_0(PyObject *self, Py_ssize_t no
   
   (void)self;
   if ((nobjs < 5) || (nobjs > 5)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setHMS" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setHMS" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_setHMS', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21359,9 +22111,13 @@ SWIGINTERN PyObject *_wrap_DateTime_setHMS__SWIG_1(PyObject *self, Py_ssize_t no
   
   (void)self;
   if ((nobjs < 6) || (nobjs > 6)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setHMS" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setHMS" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_setHMS', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21514,9 +22270,13 @@ SWIGINTERN PyObject *_wrap_DateTime_setHour(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_setHour", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setHour" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setHour" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_setHour', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21559,9 +22319,13 @@ SWIGINTERN PyObject *_wrap_DateTime_setMinute(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_setMinute", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setMinute" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setMinute" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_setMinute', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21604,9 +22368,13 @@ SWIGINTERN PyObject *_wrap_DateTime_setSecond(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_setSecond", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setSecond" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setSecond" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_setSecond', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21649,9 +22417,13 @@ SWIGINTERN PyObject *_wrap_DateTime_setMillisecond(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_setMillisecond", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setMillisecond" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setMillisecond" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_setMillisecond', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21694,9 +22466,13 @@ SWIGINTERN PyObject *_wrap_DateTime_setMicrosecond(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_setMicrosecond", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setMicrosecond" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setMicrosecond" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_setMicrosecond', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21739,9 +22515,13 @@ SWIGINTERN PyObject *_wrap_DateTime_setNanosecond(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_setNanosecond", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setNanosecond" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setNanosecond" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_setNanosecond', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21787,9 +22567,13 @@ SWIGINTERN PyObject *_wrap_DateTime_setFraction(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime_setFraction", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setFraction" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_setFraction" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_setFraction', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21835,9 +22619,13 @@ SWIGINTERN PyObject *_wrap_DateTime_clearDate(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_clearDate" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_clearDate" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_clearDate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -21873,9 +22661,13 @@ SWIGINTERN PyObject *_wrap_DateTime_clearTime(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_clearTime" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_clearTime" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_clearTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   {
@@ -21915,9 +22707,13 @@ SWIGINTERN PyObject *_wrap_DateTime_set__SWIG_0(PyObject *self, Py_ssize_t nobjs
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_set" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_set" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -21964,9 +22760,13 @@ SWIGINTERN PyObject *_wrap_DateTime_set__SWIG_1(PyObject *self, Py_ssize_t nobjs
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_set" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime_set" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__DateTime,  0  | 0);
@@ -22064,9 +22864,13 @@ SWIGINTERN PyObject *_wrap_DateTime___iadd__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DateTime___iadd__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime___iadd__" "', argument " "1"" of type '" "FIX::DateTime *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DateTime___iadd__" "', argument " "1"" of type '" "FIX::DateTime *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DateTime___iadd__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DateTime * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -24078,9 +24882,13 @@ SWIGINTERN PyObject *_wrap_new_UtcTimeStamp__SWIG_11(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeStamp" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeStamp" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_UtcTimeStamp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -24120,9 +24928,13 @@ SWIGINTERN PyObject *_wrap_new_UtcTimeStamp__SWIG_12(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeStamp" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeStamp" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_UtcTimeStamp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
@@ -24163,9 +24975,13 @@ SWIGINTERN PyObject *_wrap_new_UtcTimeStamp__SWIG_13(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeStamp" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeStamp" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_UtcTimeStamp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -24561,9 +25377,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeStamp_setCurrent(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeStamp, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeStamp, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStamp_setCurrent" "', argument " "1"" of type '" "FIX::UtcTimeStamp *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStamp_setCurrent" "', argument " "1"" of type '" "FIX::UtcTimeStamp *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeStamp_setCurrent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStamp * >(argp1);
   {
@@ -24600,9 +25420,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeStamp_getDateTime(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeStamp, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeStamp, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStamp_getDateTime" "', argument " "1"" of type '" "FIX::UtcTimeStamp *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStamp_getDateTime" "', argument " "1"" of type '" "FIX::UtcTimeStamp *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeStamp_getDateTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStamp * >(argp1);
   {
@@ -24638,9 +25462,13 @@ SWIGINTERN PyObject *_wrap_delete_UtcTimeStamp(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcTimeStamp" "', argument " "1"" of type '" "FIX::UtcTimeStamp *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcTimeStamp" "', argument " "1"" of type '" "FIX::UtcTimeStamp *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_UtcTimeStamp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStamp * >(argp1);
   {
@@ -25315,9 +26143,13 @@ SWIGINTERN PyObject *_wrap_new_LocalTimeStamp__SWIG_10(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeStamp" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeStamp" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_LocalTimeStamp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -25357,9 +26189,13 @@ SWIGINTERN PyObject *_wrap_new_LocalTimeStamp__SWIG_11(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeStamp" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeStamp" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_LocalTimeStamp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
@@ -25400,9 +26236,13 @@ SWIGINTERN PyObject *_wrap_new_LocalTimeStamp__SWIG_12(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeStamp" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeStamp" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_LocalTimeStamp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -25789,9 +26629,13 @@ SWIGINTERN PyObject *_wrap_LocalTimeStamp_setCurrent(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LocalTimeStamp, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LocalTimeStamp, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LocalTimeStamp_setCurrent" "', argument " "1"" of type '" "FIX::LocalTimeStamp *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LocalTimeStamp_setCurrent" "', argument " "1"" of type '" "FIX::LocalTimeStamp *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'LocalTimeStamp_setCurrent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LocalTimeStamp * >(argp1);
   {
@@ -25827,9 +26671,13 @@ SWIGINTERN PyObject *_wrap_delete_LocalTimeStamp(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LocalTimeStamp, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LocalTimeStamp, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_LocalTimeStamp" "', argument " "1"" of type '" "FIX::LocalTimeStamp *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_LocalTimeStamp" "', argument " "1"" of type '" "FIX::LocalTimeStamp *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_LocalTimeStamp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LocalTimeStamp * >(argp1);
   {
@@ -26289,9 +27137,13 @@ SWIGINTERN PyObject *_wrap_new_UtcTimeOnly__SWIG_8(PyObject *self, Py_ssize_t no
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeOnly" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeOnly" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_UtcTimeOnly', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -26331,9 +27183,13 @@ SWIGINTERN PyObject *_wrap_new_UtcTimeOnly__SWIG_9(PyObject *self, Py_ssize_t no
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeOnly" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeOnly" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_UtcTimeOnly', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
@@ -26374,9 +27230,13 @@ SWIGINTERN PyObject *_wrap_new_UtcTimeOnly__SWIG_10(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeOnly" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcTimeOnly" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_UtcTimeOnly', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -26631,9 +27491,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeOnly_setCurrent(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeOnly, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeOnly, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnly_setCurrent" "', argument " "1"" of type '" "FIX::UtcTimeOnly *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnly_setCurrent" "', argument " "1"" of type '" "FIX::UtcTimeOnly *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeOnly_setCurrent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeOnly * >(argp1);
   {
@@ -26669,9 +27533,13 @@ SWIGINTERN PyObject *_wrap_delete_UtcTimeOnly(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeOnly, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeOnly, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcTimeOnly" "', argument " "1"" of type '" "FIX::UtcTimeOnly *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcTimeOnly" "', argument " "1"" of type '" "FIX::UtcTimeOnly *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_UtcTimeOnly', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeOnly * >(argp1);
   {
@@ -27131,9 +27999,13 @@ SWIGINTERN PyObject *_wrap_new_LocalTimeOnly__SWIG_8(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeOnly" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeOnly" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_LocalTimeOnly', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -27173,9 +28045,13 @@ SWIGINTERN PyObject *_wrap_new_LocalTimeOnly__SWIG_9(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeOnly" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeOnly" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_LocalTimeOnly', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
@@ -27216,9 +28092,13 @@ SWIGINTERN PyObject *_wrap_new_LocalTimeOnly__SWIG_10(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeOnly" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalTimeOnly" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_LocalTimeOnly', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -27473,9 +28353,13 @@ SWIGINTERN PyObject *_wrap_LocalTimeOnly_setCurrent(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LocalTimeOnly, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LocalTimeOnly, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LocalTimeOnly_setCurrent" "', argument " "1"" of type '" "FIX::LocalTimeOnly *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LocalTimeOnly_setCurrent" "', argument " "1"" of type '" "FIX::LocalTimeOnly *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'LocalTimeOnly_setCurrent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LocalTimeOnly * >(argp1);
   {
@@ -27511,9 +28395,13 @@ SWIGINTERN PyObject *_wrap_delete_LocalTimeOnly(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LocalTimeOnly, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LocalTimeOnly, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_LocalTimeOnly" "', argument " "1"" of type '" "FIX::LocalTimeOnly *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_LocalTimeOnly" "', argument " "1"" of type '" "FIX::LocalTimeOnly *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_LocalTimeOnly', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LocalTimeOnly * >(argp1);
   {
@@ -27718,9 +28606,13 @@ SWIGINTERN PyObject *_wrap_new_UtcDate__SWIG_4(PyObject *self, Py_ssize_t nobjs,
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcDate" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_UtcDate" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_UtcDate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
@@ -27829,9 +28721,13 @@ SWIGINTERN PyObject *_wrap_UtcDate_setCurrent(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcDate, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcDate, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDate_setCurrent" "', argument " "1"" of type '" "FIX::UtcDate *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDate_setCurrent" "', argument " "1"" of type '" "FIX::UtcDate *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcDate_setCurrent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcDate * >(argp1);
   {
@@ -27867,9 +28763,13 @@ SWIGINTERN PyObject *_wrap_delete_UtcDate(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcDate, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcDate, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcDate" "', argument " "1"" of type '" "FIX::UtcDate *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcDate" "', argument " "1"" of type '" "FIX::UtcDate *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_UtcDate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcDate * >(argp1);
   {
@@ -28074,9 +28974,13 @@ SWIGINTERN PyObject *_wrap_new_LocalDate__SWIG_4(PyObject *self, Py_ssize_t nobj
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_tm, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_tm, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalDate" "', argument " "1"" of type '" "tm const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_LocalDate" "', argument " "1"" of type '" "tm const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_LocalDate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< tm * >(argp1);
   {
@@ -28185,9 +29089,13 @@ SWIGINTERN PyObject *_wrap_LocalDate_setCurrent(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LocalDate, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LocalDate, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LocalDate_setCurrent" "', argument " "1"" of type '" "FIX::LocalDate *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LocalDate_setCurrent" "', argument " "1"" of type '" "FIX::LocalDate *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'LocalDate_setCurrent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LocalDate * >(argp1);
   {
@@ -28223,9 +29131,13 @@ SWIGINTERN PyObject *_wrap_delete_LocalDate(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LocalDate, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LocalDate, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_LocalDate" "', argument " "1"" of type '" "FIX::LocalDate *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_LocalDate" "', argument " "1"" of type '" "FIX::LocalDate *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_LocalDate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LocalDate * >(argp1);
   {
@@ -28422,9 +29334,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_swap(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldBase_swap", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_swap" "', argument " "1"" of type '" "FIX::FieldBase *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_swap" "', argument " "1"" of type '" "FIX::FieldBase *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_swap', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__FieldBase,  0 );
@@ -28470,9 +29386,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_setTag(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldBase_setTag", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_setTag" "', argument " "1"" of type '" "FIX::FieldBase *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_setTag" "', argument " "1"" of type '" "FIX::FieldBase *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_setTag', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -28515,9 +29435,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_setField(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldBase_setField", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_setField" "', argument " "1"" of type '" "FIX::FieldBase *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_setField" "', argument " "1"" of type '" "FIX::FieldBase *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_setField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -28559,9 +29483,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_setString(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldBase_setString", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_setString" "', argument " "1"" of type '" "FIX::FieldBase *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_setString" "', argument " "1"" of type '" "FIX::FieldBase *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_setString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
@@ -28627,9 +29555,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_getTag(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getTag" "', argument " "1"" of type '" "FIX::FieldBase const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getTag" "', argument " "1"" of type '" "FIX::FieldBase const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_getTag', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
@@ -28666,9 +29598,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_getField(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getField" "', argument " "1"" of type '" "FIX::FieldBase const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getField" "', argument " "1"" of type '" "FIX::FieldBase const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_getField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
@@ -28705,9 +29641,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_getString(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getString" "', argument " "1"" of type '" "FIX::FieldBase const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getString" "', argument " "1"" of type '" "FIX::FieldBase const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_getString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
@@ -28744,9 +29684,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_appendTo(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldBase_appendTo", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_appendTo" "', argument " "1"" of type '" "FIX::FieldBase const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_appendTo" "', argument " "1"" of type '" "FIX::FieldBase const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_appendTo', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
@@ -28808,9 +29752,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_getFixString(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getFixString" "', argument " "1"" of type '" "FIX::FieldBase const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getFixString" "', argument " "1"" of type '" "FIX::FieldBase const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_getFixString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
@@ -28847,9 +29795,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_getLength(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getLength" "', argument " "1"" of type '" "FIX::FieldBase const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getLength" "', argument " "1"" of type '" "FIX::FieldBase const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_getLength', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
@@ -28886,9 +29838,13 @@ SWIGINTERN PyObject *_wrap_FieldBase_getTotal(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getTotal" "', argument " "1"" of type '" "FIX::FieldBase const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase_getTotal" "', argument " "1"" of type '" "FIX::FieldBase const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase_getTotal', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
@@ -28927,9 +29883,13 @@ SWIGINTERN PyObject *_wrap_FieldBase___lt__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldBase___lt__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase___lt__" "', argument " "1"" of type '" "FIX::FieldBase const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase___lt__" "', argument " "1"" of type '" "FIX::FieldBase const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase___lt__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__FieldBase,  0  | 0);
@@ -28979,9 +29939,13 @@ SWIGINTERN PyObject *_wrap_FieldBase___str__(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase___str__" "', argument " "1"" of type '" "FIX::FieldBase *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldBase___str__" "', argument " "1"" of type '" "FIX::FieldBase *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldBase___str__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
@@ -29017,9 +29981,13 @@ SWIGINTERN PyObject *_wrap_delete_FieldBase(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FieldBase" "', argument " "1"" of type '" "FIX::FieldBase *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FieldBase" "', argument " "1"" of type '" "FIX::FieldBase *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_FieldBase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
   {
@@ -29321,9 +30289,13 @@ SWIGINTERN PyObject *_wrap_StringField_setValue(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "StringField_setValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__StringField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__StringField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField_setValue" "', argument " "1"" of type '" "FIX::StringField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField_setValue" "', argument " "1"" of type '" "FIX::StringField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'StringField_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::StringField * >(argp1);
   {
@@ -29431,9 +30403,13 @@ SWIGINTERN PyObject *_wrap_StringField_getValue(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__StringField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__StringField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField_getValue" "', argument " "1"" of type '" "FIX::StringField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField_getValue" "', argument " "1"" of type '" "FIX::StringField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'StringField_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::StringField * >(argp1);
   {
@@ -29472,9 +30448,13 @@ SWIGINTERN PyObject *_wrap_StringField___lt__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "StringField___lt__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__StringField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__StringField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___lt__" "', argument " "1"" of type '" "FIX::StringField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___lt__" "', argument " "1"" of type '" "FIX::StringField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'StringField___lt__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::StringField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__StringField,  0  | 0);
@@ -29526,9 +30506,13 @@ SWIGINTERN PyObject *_wrap_StringField___gt__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "StringField___gt__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__StringField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__StringField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___gt__" "', argument " "1"" of type '" "FIX::StringField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___gt__" "', argument " "1"" of type '" "FIX::StringField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'StringField___gt__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::StringField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__StringField,  0  | 0);
@@ -29580,9 +30564,13 @@ SWIGINTERN PyObject *_wrap_StringField___eq__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "StringField___eq__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__StringField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__StringField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___eq__" "', argument " "1"" of type '" "FIX::StringField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___eq__" "', argument " "1"" of type '" "FIX::StringField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'StringField___eq__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::StringField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__StringField,  0  | 0);
@@ -29634,9 +30622,13 @@ SWIGINTERN PyObject *_wrap_StringField___ne__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "StringField___ne__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__StringField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__StringField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___ne__" "', argument " "1"" of type '" "FIX::StringField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___ne__" "', argument " "1"" of type '" "FIX::StringField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'StringField___ne__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::StringField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__StringField,  0  | 0);
@@ -29688,9 +30680,13 @@ SWIGINTERN PyObject *_wrap_StringField___le__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "StringField___le__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__StringField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__StringField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___le__" "', argument " "1"" of type '" "FIX::StringField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___le__" "', argument " "1"" of type '" "FIX::StringField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'StringField___le__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::StringField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__StringField,  0  | 0);
@@ -29742,9 +30738,13 @@ SWIGINTERN PyObject *_wrap_StringField___ge__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "StringField___ge__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__StringField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__StringField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___ge__" "', argument " "1"" of type '" "FIX::StringField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringField___ge__" "', argument " "1"" of type '" "FIX::StringField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'StringField___ge__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::StringField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__StringField,  0  | 0);
@@ -31602,9 +32602,13 @@ SWIGINTERN PyObject *_wrap_delete_StringField(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__StringField, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_StringField" "', argument " "1"" of type '" "FIX::StringField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_StringField" "', argument " "1"" of type '" "FIX::StringField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_StringField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::StringField * >(argp1);
   {
@@ -31779,9 +32783,13 @@ SWIGINTERN PyObject *_wrap_CharField_setValue(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "CharField_setValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__CharField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__CharField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CharField_setValue" "', argument " "1"" of type '" "FIX::CharField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CharField_setValue" "', argument " "1"" of type '" "FIX::CharField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'CharField_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::CharField * >(argp1);
   ecode2 = SWIG_AsVal_char(swig_obj[1], &val2);
@@ -31865,9 +32873,13 @@ SWIGINTERN PyObject *_wrap_CharField_getValue(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__CharField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__CharField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CharField_getValue" "', argument " "1"" of type '" "FIX::CharField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CharField_getValue" "', argument " "1"" of type '" "FIX::CharField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'CharField_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::CharField * >(argp1);
   {
@@ -31903,9 +32915,13 @@ SWIGINTERN PyObject *_wrap_delete_CharField(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__CharField, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__CharField, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_CharField" "', argument " "1"" of type '" "FIX::CharField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_CharField" "', argument " "1"" of type '" "FIX::CharField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_CharField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::CharField * >(argp1);
   {
@@ -32158,9 +33174,13 @@ SWIGINTERN PyObject *_wrap_DoubleField_setValue__SWIG_0(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DoubleField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DoubleField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DoubleField_setValue" "', argument " "1"" of type '" "FIX::DoubleField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DoubleField_setValue" "', argument " "1"" of type '" "FIX::DoubleField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DoubleField_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DoubleField * >(argp1);
   ecode2 = SWIG_AsVal_double(swig_obj[1], &val2);
@@ -32207,9 +33227,13 @@ SWIGINTERN PyObject *_wrap_DoubleField_setValue__SWIG_1(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DoubleField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DoubleField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DoubleField_setValue" "', argument " "1"" of type '" "FIX::DoubleField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DoubleField_setValue" "', argument " "1"" of type '" "FIX::DoubleField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DoubleField_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DoubleField * >(argp1);
   ecode2 = SWIG_AsVal_double(swig_obj[1], &val2);
@@ -32347,9 +33371,13 @@ SWIGINTERN PyObject *_wrap_DoubleField_getValue(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DoubleField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DoubleField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DoubleField_getValue" "', argument " "1"" of type '" "FIX::DoubleField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DoubleField_getValue" "', argument " "1"" of type '" "FIX::DoubleField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DoubleField_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DoubleField * >(argp1);
   {
@@ -32385,9 +33413,13 @@ SWIGINTERN PyObject *_wrap_delete_DoubleField(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DoubleField, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DoubleField, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DoubleField" "', argument " "1"" of type '" "FIX::DoubleField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DoubleField" "', argument " "1"" of type '" "FIX::DoubleField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_DoubleField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DoubleField * >(argp1);
   {
@@ -32562,9 +33594,13 @@ SWIGINTERN PyObject *_wrap_IntField_setValue(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "IntField_setValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IntField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IntField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntField_setValue" "', argument " "1"" of type '" "FIX::IntField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntField_setValue" "', argument " "1"" of type '" "FIX::IntField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'IntField_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IntField * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -32648,9 +33684,13 @@ SWIGINTERN PyObject *_wrap_IntField_getValue(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IntField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IntField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntField_getValue" "', argument " "1"" of type '" "FIX::IntField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntField_getValue" "', argument " "1"" of type '" "FIX::IntField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'IntField_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IntField * >(argp1);
   {
@@ -32686,9 +33726,13 @@ SWIGINTERN PyObject *_wrap_delete_IntField(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__IntField, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__IntField, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IntField" "', argument " "1"" of type '" "FIX::IntField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_IntField" "', argument " "1"" of type '" "FIX::IntField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_IntField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::IntField * >(argp1);
   {
@@ -32863,9 +33907,13 @@ SWIGINTERN PyObject *_wrap_Int64Field_setValue(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Int64Field_setValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Int64Field, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Int64Field, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Int64Field_setValue" "', argument " "1"" of type '" "FIX::Int64Field *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Int64Field_setValue" "', argument " "1"" of type '" "FIX::Int64Field *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Int64Field_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Int64Field * >(argp1);
   ecode2 = SWIG_AsVal_long_SS_long(swig_obj[1], &val2);
@@ -32949,9 +33997,13 @@ SWIGINTERN PyObject *_wrap_Int64Field_getValue(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Int64Field, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Int64Field, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Int64Field_getValue" "', argument " "1"" of type '" "FIX::Int64Field const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Int64Field_getValue" "', argument " "1"" of type '" "FIX::Int64Field const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Int64Field_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Int64Field * >(argp1);
   {
@@ -32987,9 +34039,13 @@ SWIGINTERN PyObject *_wrap_delete_Int64Field(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Int64Field, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Int64Field, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Int64Field" "', argument " "1"" of type '" "FIX::Int64Field *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Int64Field" "', argument " "1"" of type '" "FIX::Int64Field *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Int64Field', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Int64Field * >(argp1);
   {
@@ -33164,9 +34220,13 @@ SWIGINTERN PyObject *_wrap_UInt64Field_setValue(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UInt64Field_setValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UInt64Field, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UInt64Field, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UInt64Field_setValue" "', argument " "1"" of type '" "FIX::UInt64Field *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UInt64Field_setValue" "', argument " "1"" of type '" "FIX::UInt64Field *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UInt64Field_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UInt64Field * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -33250,9 +34310,13 @@ SWIGINTERN PyObject *_wrap_UInt64Field_getValue(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UInt64Field, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UInt64Field, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UInt64Field_getValue" "', argument " "1"" of type '" "FIX::UInt64Field const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UInt64Field_getValue" "', argument " "1"" of type '" "FIX::UInt64Field const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UInt64Field_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UInt64Field * >(argp1);
   {
@@ -33288,9 +34352,13 @@ SWIGINTERN PyObject *_wrap_delete_UInt64Field(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UInt64Field, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UInt64Field, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UInt64Field" "', argument " "1"" of type '" "FIX::UInt64Field *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UInt64Field" "', argument " "1"" of type '" "FIX::UInt64Field *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_UInt64Field', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UInt64Field * >(argp1);
   {
@@ -33465,9 +34533,13 @@ SWIGINTERN PyObject *_wrap_BoolField_setValue(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "BoolField_setValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BoolField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__BoolField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BoolField_setValue" "', argument " "1"" of type '" "FIX::BoolField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BoolField_setValue" "', argument " "1"" of type '" "FIX::BoolField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'BoolField_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::BoolField * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -33551,9 +34623,13 @@ SWIGINTERN PyObject *_wrap_BoolField_getValue(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BoolField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__BoolField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BoolField_getValue" "', argument " "1"" of type '" "FIX::BoolField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BoolField_getValue" "', argument " "1"" of type '" "FIX::BoolField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'BoolField_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::BoolField * >(argp1);
   {
@@ -33590,9 +34666,13 @@ SWIGINTERN PyObject *_wrap_BoolField___nonzero__(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BoolField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__BoolField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BoolField___nonzero__" "', argument " "1"" of type '" "FIX::BoolField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BoolField___nonzero__" "', argument " "1"" of type '" "FIX::BoolField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'BoolField___nonzero__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::BoolField * >(argp1);
   {
@@ -33628,9 +34708,13 @@ SWIGINTERN PyObject *_wrap_delete_BoolField(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BoolField, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__BoolField, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_BoolField" "', argument " "1"" of type '" "FIX::BoolField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_BoolField" "', argument " "1"" of type '" "FIX::BoolField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_BoolField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::BoolField * >(argp1);
   {
@@ -33945,9 +35029,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeStampField_setValue(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcTimeStampField_setValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeStampField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeStampField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStampField_setValue" "', argument " "1"" of type '" "FIX::UtcTimeStampField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStampField_setValue" "', argument " "1"" of type '" "FIX::UtcTimeStampField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeStampField_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStampField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -34034,9 +35122,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeStampField_getValue(PyObject *self, PyObject *
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeStampField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeStampField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStampField_getValue" "', argument " "1"" of type '" "FIX::UtcTimeStampField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStampField_getValue" "', argument " "1"" of type '" "FIX::UtcTimeStampField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeStampField_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStampField * >(argp1);
   {
@@ -34075,9 +35167,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeStampField___lt__(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcTimeStampField___lt__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeStampField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeStampField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStampField___lt__" "', argument " "1"" of type '" "FIX::UtcTimeStampField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStampField___lt__" "', argument " "1"" of type '" "FIX::UtcTimeStampField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeStampField___lt__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStampField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStampField,  0  | 0);
@@ -34129,9 +35225,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeStampField___eq__(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcTimeStampField___eq__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeStampField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeStampField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStampField___eq__" "', argument " "1"" of type '" "FIX::UtcTimeStampField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStampField___eq__" "', argument " "1"" of type '" "FIX::UtcTimeStampField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeStampField___eq__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStampField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStampField,  0  | 0);
@@ -34183,9 +35283,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeStampField___ne__(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcTimeStampField___ne__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeStampField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeStampField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStampField___ne__" "', argument " "1"" of type '" "FIX::UtcTimeStampField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeStampField___ne__" "', argument " "1"" of type '" "FIX::UtcTimeStampField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeStampField___ne__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStampField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStampField,  0  | 0);
@@ -34234,9 +35338,13 @@ SWIGINTERN PyObject *_wrap_delete_UtcTimeStampField(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeStampField, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeStampField, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcTimeStampField" "', argument " "1"" of type '" "FIX::UtcTimeStampField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcTimeStampField" "', argument " "1"" of type '" "FIX::UtcTimeStampField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_UtcTimeStampField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeStampField * >(argp1);
   {
@@ -34412,9 +35520,13 @@ SWIGINTERN PyObject *_wrap_UtcDateField_setValue(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcDateField_setValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcDateField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcDateField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDateField_setValue" "', argument " "1"" of type '" "FIX::UtcDateField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDateField_setValue" "', argument " "1"" of type '" "FIX::UtcDateField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcDateField_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcDateField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcDate,  0  | 0);
@@ -34501,9 +35613,13 @@ SWIGINTERN PyObject *_wrap_UtcDateField_getValue(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcDateField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcDateField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDateField_getValue" "', argument " "1"" of type '" "FIX::UtcDateField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDateField_getValue" "', argument " "1"" of type '" "FIX::UtcDateField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcDateField_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcDateField * >(argp1);
   {
@@ -34542,9 +35658,13 @@ SWIGINTERN PyObject *_wrap_UtcDateField___lt__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcDateField___lt__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcDateField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcDateField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDateField___lt__" "', argument " "1"" of type '" "FIX::UtcDateField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDateField___lt__" "', argument " "1"" of type '" "FIX::UtcDateField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcDateField___lt__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcDateField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcDateField,  0  | 0);
@@ -34596,9 +35716,13 @@ SWIGINTERN PyObject *_wrap_UtcDateField___eq__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcDateField___eq__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcDateField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcDateField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDateField___eq__" "', argument " "1"" of type '" "FIX::UtcDateField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDateField___eq__" "', argument " "1"" of type '" "FIX::UtcDateField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcDateField___eq__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcDateField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcDateField,  0  | 0);
@@ -34650,9 +35774,13 @@ SWIGINTERN PyObject *_wrap_UtcDateField___ne__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcDateField___ne__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcDateField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcDateField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDateField___ne__" "', argument " "1"" of type '" "FIX::UtcDateField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcDateField___ne__" "', argument " "1"" of type '" "FIX::UtcDateField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcDateField___ne__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcDateField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcDateField,  0  | 0);
@@ -34701,9 +35829,13 @@ SWIGINTERN PyObject *_wrap_delete_UtcDateField(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcDateField, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcDateField, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcDateField" "', argument " "1"" of type '" "FIX::UtcDateField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcDateField" "', argument " "1"" of type '" "FIX::UtcDateField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_UtcDateField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcDateField * >(argp1);
   {
@@ -35018,9 +36150,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeOnlyField_setValue(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcTimeOnlyField_setValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeOnlyField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeOnlyField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnlyField_setValue" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnlyField_setValue" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeOnlyField_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeOnlyField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeOnly,  0  | 0);
@@ -35107,9 +36243,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeOnlyField_getValue(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeOnlyField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeOnlyField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnlyField_getValue" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnlyField_getValue" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeOnlyField_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeOnlyField * >(argp1);
   {
@@ -35148,9 +36288,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeOnlyField___lt__(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcTimeOnlyField___lt__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeOnlyField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeOnlyField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnlyField___lt__" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnlyField___lt__" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeOnlyField___lt__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeOnlyField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeOnlyField,  0  | 0);
@@ -35202,9 +36346,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeOnlyField___eq__(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcTimeOnlyField___eq__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeOnlyField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeOnlyField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnlyField___eq__" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnlyField___eq__" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeOnlyField___eq__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeOnlyField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeOnlyField,  0  | 0);
@@ -35256,9 +36404,13 @@ SWIGINTERN PyObject *_wrap_UtcTimeOnlyField___ne__(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "UtcTimeOnlyField___ne__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeOnlyField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeOnlyField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnlyField___ne__" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UtcTimeOnlyField___ne__" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'UtcTimeOnlyField___ne__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeOnlyField * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeOnlyField,  0  | 0);
@@ -35307,9 +36459,13 @@ SWIGINTERN PyObject *_wrap_delete_UtcTimeOnlyField(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__UtcTimeOnlyField, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__UtcTimeOnlyField, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcTimeOnlyField" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_UtcTimeOnlyField" "', argument " "1"" of type '" "FIX::UtcTimeOnlyField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_UtcTimeOnlyField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::UtcTimeOnlyField * >(argp1);
   {
@@ -35484,9 +36640,13 @@ SWIGINTERN PyObject *_wrap_CheckSumField_setValue(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "CheckSumField_setValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__CheckSumField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__CheckSumField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CheckSumField_setValue" "', argument " "1"" of type '" "FIX::CheckSumField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CheckSumField_setValue" "', argument " "1"" of type '" "FIX::CheckSumField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'CheckSumField_setValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::CheckSumField * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -35570,9 +36730,13 @@ SWIGINTERN PyObject *_wrap_CheckSumField_getValue(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__CheckSumField, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__CheckSumField, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CheckSumField_getValue" "', argument " "1"" of type '" "FIX::CheckSumField const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CheckSumField_getValue" "', argument " "1"" of type '" "FIX::CheckSumField const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'CheckSumField_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::CheckSumField * >(argp1);
   {
@@ -35608,9 +36772,13 @@ SWIGINTERN PyObject *_wrap_delete_CheckSumField(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__CheckSumField, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__CheckSumField, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_CheckSumField" "', argument " "1"" of type '" "FIX::CheckSumField *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_CheckSumField" "', argument " "1"" of type '" "FIX::CheckSumField *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_CheckSumField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::CheckSumField * >(argp1);
   {
@@ -35907,9 +37075,13 @@ SWIGINTERN PyObject *_wrap_delete_FieldMap(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FieldMap" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FieldMap" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_FieldMap', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -35949,9 +37121,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_setField__SWIG_0(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_setField" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_setField" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_setField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__FieldBase,  0  | 0);
@@ -36001,9 +37177,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_setField__SWIG_1(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_setField" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_setField" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_setField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__FieldBase,  0  | 0);
@@ -36050,9 +37230,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_setField__SWIG_2(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_setField" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_setField" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_setField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -36195,9 +37379,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_getFieldIfSet(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_getFieldIfSet", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getFieldIfSet" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getFieldIfSet" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_getFieldIfSet', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__FieldBase,  0 );
@@ -36243,9 +37431,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_getField__SWIG_0(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getField" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getField" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_getField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__FieldBase,  0 );
@@ -36291,9 +37483,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_getField__SWIG_1(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getField" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getField" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_getField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -36384,9 +37580,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_getFieldRef(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_getFieldRef", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getFieldRef" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getFieldRef" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_getFieldRef', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -36430,9 +37630,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_getFieldPtr(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_getFieldPtr", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getFieldPtr" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getFieldPtr" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_getFieldPtr', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -36475,9 +37679,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_isSetField__SWIG_0(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_isSetField" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_isSetField" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_isSetField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__FieldBase,  0  | 0);
@@ -36523,9 +37731,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_isSetField__SWIG_1(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_isSetField" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_isSetField" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_isSetField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -36614,9 +37826,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_removeField(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_removeField", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_removeField" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_removeField" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_removeField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -36664,9 +37880,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_addGroup__SWIG_0(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_addGroup" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_addGroup" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_addGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -36724,9 +37944,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_addGroup__SWIG_1(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_addGroup" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_addGroup" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_addGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -36844,9 +38068,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_addGroupPtr__SWIG_0(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_addGroupPtr" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_addGroupPtr" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_addGroupPtr', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -36854,9 +38082,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_addGroupPtr__SWIG_0(PyObject *self, Py_ssize
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "FieldMap_addGroupPtr" "', argument " "2"" of type '" "int""'");
   } 
   arg2 = static_cast< int >(val2);
-  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "FieldMap_addGroupPtr" "', argument " "3"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "FieldMap_addGroupPtr" "', argument " "3"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp3 && swig_obj[2] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_addGroupPtr', argument 3: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg3 = reinterpret_cast< FIX::FieldMap * >(argp3);
   ecode4 = SWIG_AsVal_bool(swig_obj[3], &val4);
@@ -36901,9 +38133,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_addGroupPtr__SWIG_1(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_addGroupPtr" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_addGroupPtr" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_addGroupPtr', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -36911,9 +38147,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_addGroupPtr__SWIG_1(PyObject *self, Py_ssize
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "FieldMap_addGroupPtr" "', argument " "2"" of type '" "int""'");
   } 
   arg2 = static_cast< int >(val2);
-  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "FieldMap_addGroupPtr" "', argument " "3"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "FieldMap_addGroupPtr" "', argument " "3"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp3 && swig_obj[2] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_addGroupPtr', argument 3: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg3 = reinterpret_cast< FIX::FieldMap * >(argp3);
   {
@@ -37021,9 +38261,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_replaceGroup(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_replaceGroup", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_replaceGroup" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_replaceGroup" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_replaceGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37086,9 +38330,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_getGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_getGroup", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getGroup" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getGroup" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_getGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37148,9 +38396,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_getGroupRef(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_getGroupRef", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getGroupRef" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getGroupRef" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_getGroupRef', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37202,9 +38454,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_getGroupPtr(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_getGroupPtr", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getGroupPtr" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_getGroupPtr" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_getGroupPtr', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37254,9 +38510,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_removeGroup__SWIG_0(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_removeGroup" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_removeGroup" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_removeGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37303,9 +38563,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_removeGroup__SWIG_1(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_removeGroup" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_removeGroup" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_removeGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37402,9 +38666,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_hasGroup__SWIG_0(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_hasGroup" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_hasGroup" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_hasGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37450,9 +38718,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_hasGroup__SWIG_1(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_hasGroup" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_hasGroup" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_hasGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37555,9 +38827,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_groupCount(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_groupCount", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_groupCount" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_groupCount" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_groupCount', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37598,9 +38874,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_clear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_clear" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_clear" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_clear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -37638,9 +38918,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_swap(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_swap", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_swap" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_swap" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_swap', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__FieldMap,  0 );
@@ -37685,9 +38969,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_isEmpty(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_isEmpty" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_isEmpty" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_isEmpty', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -37724,9 +39012,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_totalFields(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_totalFields" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_totalFields" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_totalFields', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -37764,9 +39056,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_calculateString(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FieldMap_calculateString", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateString" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateString" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_calculateString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -37835,9 +39131,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_calculateLength__SWIG_0(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateLength" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateLength" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_calculateLength', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37893,9 +39193,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_calculateLength__SWIG_1(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateLength" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateLength" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_calculateLength', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37943,9 +39247,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_calculateLength__SWIG_2(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateLength" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateLength" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_calculateLength', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -37985,9 +39293,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_calculateLength__SWIG_3(PyObject *self, Py_s
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateLength" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateLength" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_calculateLength', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -38117,9 +39429,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_calculateTotal__SWIG_0(PyObject *self, Py_ss
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateTotal" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateTotal" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_calculateTotal', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -38159,9 +39475,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_calculateTotal__SWIG_1(PyObject *self, Py_ss
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateTotal" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_calculateTotal" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_calculateTotal', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -38238,9 +39558,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_begin__SWIG_0(PyObject *self, Py_ssize_t nob
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_begin" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_begin" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_begin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -38275,9 +39599,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_end__SWIG_0(PyObject *self, Py_ssize_t nobjs
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_end" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_end" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_end', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -38312,9 +39640,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_begin__SWIG_1(PyObject *self, Py_ssize_t nob
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_begin" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_begin" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_begin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -38385,9 +39717,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_end__SWIG_1(PyObject *self, Py_ssize_t nobjs
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_end" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_end" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_end', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -38458,9 +39794,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_g_begin__SWIG_0(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_g_begin" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_g_begin" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_g_begin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -38495,9 +39835,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_g_end__SWIG_0(PyObject *self, Py_ssize_t nob
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_g_end" "', argument " "1"" of type '" "FIX::FieldMap *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_g_end" "', argument " "1"" of type '" "FIX::FieldMap *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_g_end', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -38532,9 +39876,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_g_begin__SWIG_1(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_g_begin" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_g_begin" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_g_begin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -38605,9 +39953,13 @@ SWIGINTERN PyObject *_wrap_FieldMap_g_end__SWIG_1(PyObject *self, Py_ssize_t nob
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_g_end" "', argument " "1"" of type '" "FIX::FieldMap const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap_g_end" "', argument " "1"" of type '" "FIX::FieldMap const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FieldMap_g_end', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
@@ -38790,9 +40142,13 @@ SWIGINTERN PyObject *_wrap_Header_addGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Header_addGroup", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Header, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Header, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_addGroup" "', argument " "1"" of type '" "FIX::Header *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_addGroup" "', argument " "1"" of type '" "FIX::Header *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Header_addGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Header * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -38841,9 +40197,13 @@ SWIGINTERN PyObject *_wrap_Header_replaceGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Header_replaceGroup", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Header, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Header, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_replaceGroup" "', argument " "1"" of type '" "FIX::Header *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_replaceGroup" "', argument " "1"" of type '" "FIX::Header *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Header_replaceGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Header * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -38898,9 +40258,13 @@ SWIGINTERN PyObject *_wrap_Header_getGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Header_getGroup", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Header, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Header, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_getGroup" "', argument " "1"" of type '" "FIX::Header const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_getGroup" "', argument " "1"" of type '" "FIX::Header const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Header_getGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Header * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -38953,9 +40317,13 @@ SWIGINTERN PyObject *_wrap_Header_removeGroup__SWIG_0(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Header, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Header, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_removeGroup" "', argument " "1"" of type '" "FIX::Header *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_removeGroup" "', argument " "1"" of type '" "FIX::Header *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Header_removeGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Header * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -39005,9 +40373,13 @@ SWIGINTERN PyObject *_wrap_Header_removeGroup__SWIG_1(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Header, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Header, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_removeGroup" "', argument " "1"" of type '" "FIX::Header *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_removeGroup" "', argument " "1"" of type '" "FIX::Header *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Header_removeGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Header * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -39103,9 +40475,13 @@ SWIGINTERN PyObject *_wrap_Header_hasGroup__SWIG_0(PyObject *self, Py_ssize_t no
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Header, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Header, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_hasGroup" "', argument " "1"" of type '" "FIX::Header const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_hasGroup" "', argument " "1"" of type '" "FIX::Header const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Header_hasGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Header * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -39154,9 +40530,13 @@ SWIGINTERN PyObject *_wrap_Header_hasGroup__SWIG_1(PyObject *self, Py_ssize_t no
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Header, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Header, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_hasGroup" "', argument " "1"" of type '" "FIX::Header const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Header_hasGroup" "', argument " "1"" of type '" "FIX::Header const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Header_hasGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Header * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -39255,9 +40635,13 @@ SWIGINTERN PyObject *_wrap_delete_Header(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Header, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Header, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Header" "', argument " "1"" of type '" "FIX::Header *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Header" "', argument " "1"" of type '" "FIX::Header *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Header', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Header * >(argp1);
   {
@@ -39404,9 +40788,13 @@ SWIGINTERN PyObject *_wrap_Trailer_addGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Trailer_addGroup", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Trailer, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Trailer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_addGroup" "', argument " "1"" of type '" "FIX::Trailer *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_addGroup" "', argument " "1"" of type '" "FIX::Trailer *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Trailer_addGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Trailer * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -39455,9 +40843,13 @@ SWIGINTERN PyObject *_wrap_Trailer_replaceGroup(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Trailer_replaceGroup", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Trailer, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Trailer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_replaceGroup" "', argument " "1"" of type '" "FIX::Trailer *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_replaceGroup" "', argument " "1"" of type '" "FIX::Trailer *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Trailer_replaceGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Trailer * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -39512,9 +40904,13 @@ SWIGINTERN PyObject *_wrap_Trailer_getGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Trailer_getGroup", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Trailer, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Trailer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_getGroup" "', argument " "1"" of type '" "FIX::Trailer const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_getGroup" "', argument " "1"" of type '" "FIX::Trailer const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Trailer_getGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Trailer * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -39567,9 +40963,13 @@ SWIGINTERN PyObject *_wrap_Trailer_removeGroup__SWIG_0(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Trailer, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Trailer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_removeGroup" "', argument " "1"" of type '" "FIX::Trailer *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_removeGroup" "', argument " "1"" of type '" "FIX::Trailer *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Trailer_removeGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Trailer * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -39619,9 +41019,13 @@ SWIGINTERN PyObject *_wrap_Trailer_removeGroup__SWIG_1(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Trailer, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Trailer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_removeGroup" "', argument " "1"" of type '" "FIX::Trailer *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_removeGroup" "', argument " "1"" of type '" "FIX::Trailer *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Trailer_removeGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Trailer * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -39717,9 +41121,13 @@ SWIGINTERN PyObject *_wrap_Trailer_hasGroup__SWIG_0(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Trailer, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Trailer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_hasGroup" "', argument " "1"" of type '" "FIX::Trailer const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_hasGroup" "', argument " "1"" of type '" "FIX::Trailer const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Trailer_hasGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Trailer * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -39768,9 +41176,13 @@ SWIGINTERN PyObject *_wrap_Trailer_hasGroup__SWIG_1(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Trailer, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Trailer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_hasGroup" "', argument " "1"" of type '" "FIX::Trailer const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trailer_hasGroup" "', argument " "1"" of type '" "FIX::Trailer const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Trailer_hasGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Trailer * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -39869,9 +41281,13 @@ SWIGINTERN PyObject *_wrap_delete_Trailer(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Trailer, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Trailer, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Trailer" "', argument " "1"" of type '" "FIX::Trailer *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Trailer" "', argument " "1"" of type '" "FIX::Trailer *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Trailer', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Trailer * >(argp1);
   {
@@ -41271,9 +42687,13 @@ SWIGINTERN PyObject *_wrap_delete_Message(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Message" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Message" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Message', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -41373,9 +42793,13 @@ SWIGINTERN PyObject *_wrap_Message_addGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Message_addGroup", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_addGroup" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_addGroup" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_addGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -41424,9 +42848,13 @@ SWIGINTERN PyObject *_wrap_Message_replaceGroup(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Message_replaceGroup", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_replaceGroup" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_replaceGroup" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_replaceGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -41481,9 +42909,13 @@ SWIGINTERN PyObject *_wrap_Message_getGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Message_getGroup", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getGroup" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getGroup" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_getGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -41536,9 +42968,13 @@ SWIGINTERN PyObject *_wrap_Message_removeGroup__SWIG_0(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_removeGroup" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_removeGroup" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_removeGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -41588,9 +43024,13 @@ SWIGINTERN PyObject *_wrap_Message_removeGroup__SWIG_1(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_removeGroup" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_removeGroup" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_removeGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -41686,9 +43126,13 @@ SWIGINTERN PyObject *_wrap_Message_hasGroup__SWIG_0(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasGroup" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasGroup" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_hasGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -41737,9 +43181,13 @@ SWIGINTERN PyObject *_wrap_Message_hasGroup__SWIG_1(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasGroup" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasGroup" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_hasGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -41846,9 +43294,13 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_0(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_toString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -41904,9 +43356,13 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_1(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_toString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -41954,9 +43410,13 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_2(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_toString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -41996,9 +43456,13 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_3(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_toString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42044,9 +43508,13 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_4(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 5) || (nobjs > 5)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_toString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42129,9 +43597,13 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_5(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_toString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42206,9 +43678,13 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_6(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_toString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42275,9 +43751,13 @@ SWIGINTERN PyObject *_wrap_Message_toString__SWIG_7(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toString" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_toString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42525,9 +44005,13 @@ SWIGINTERN PyObject *_wrap_Message_toXML__SWIG_0(PyObject *self, Py_ssize_t nobj
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toXML" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toXML" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_toXML', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42564,9 +44048,13 @@ SWIGINTERN PyObject *_wrap_Message_toXML__SWIG_1(PyObject *self, Py_ssize_t nobj
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toXML" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_toXML" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_toXML', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42670,9 +44158,13 @@ SWIGINTERN PyObject *_wrap_Message_reverseRoute(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Message_reverseRoute", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_reverseRoute" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_reverseRoute" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_reverseRoute', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Header,  0  | 0);
@@ -42716,9 +44208,13 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_0(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setString" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setString" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_setString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42786,9 +44282,13 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_1(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setString" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setString" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_setString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42864,9 +44364,13 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_2(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setString" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setString" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_setString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42885,9 +44389,13 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_2(PyObject *self, Py_ssize_t 
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "Message_setString" "', argument " "3"" of type '" "bool""'");
   } 
   arg3 = static_cast< bool >(val3);
-  res4 = SWIG_ConvertPtr(swig_obj[3], &argp4,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res4 = SWIG_ConvertPtr(swig_obj[3], &argp4, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Message_setString" "', argument " "4"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Message_setString" "', argument " "4"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp4 && swig_obj[3] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_setString', argument 4: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg4 = reinterpret_cast< FIX::DataDictionary * >(argp4);
   {
@@ -42950,9 +44458,13 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_3(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 5) || (nobjs > 5)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setString" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setString" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_setString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -42971,14 +44483,22 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_3(PyObject *self, Py_ssize_t 
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "Message_setString" "', argument " "3"" of type '" "bool""'");
   } 
   arg3 = static_cast< bool >(val3);
-  res4 = SWIG_ConvertPtr(swig_obj[3], &argp4,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res4 = SWIG_ConvertPtr(swig_obj[3], &argp4, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Message_setString" "', argument " "4"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Message_setString" "', argument " "4"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp4 && swig_obj[3] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_setString', argument 4: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg4 = reinterpret_cast< FIX::DataDictionary * >(argp4);
-  res5 = SWIG_ConvertPtr(swig_obj[4], &argp5,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res5 = SWIG_ConvertPtr(swig_obj[4], &argp5, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Message_setString" "', argument " "5"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Message_setString" "', argument " "5"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp5 && swig_obj[4] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_setString', argument 5: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg5 = reinterpret_cast< FIX::DataDictionary * >(argp5);
   {
@@ -43152,9 +44672,13 @@ SWIGINTERN PyObject *_wrap_Message_setGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Message_setGroup", 7, 7, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setGroup" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setGroup" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_setGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -43282,9 +44806,13 @@ SWIGINTERN PyObject *_wrap_Message_setStringHeader(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Message_setStringHeader", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setStringHeader" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setStringHeader" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_setStringHeader', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -43348,9 +44876,13 @@ SWIGINTERN PyObject *_wrap_Message_getHeader__SWIG_0(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getHeader" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getHeader" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_getHeader', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -43385,9 +44917,13 @@ SWIGINTERN PyObject *_wrap_Message_getHeader__SWIG_1(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getHeader" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getHeader" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_getHeader', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -43458,9 +44994,13 @@ SWIGINTERN PyObject *_wrap_Message_getTrailer__SWIG_0(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getTrailer" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getTrailer" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_getTrailer', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -43495,9 +45035,13 @@ SWIGINTERN PyObject *_wrap_Message_getTrailer__SWIG_1(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getTrailer" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getTrailer" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_getTrailer', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -43571,9 +45115,13 @@ SWIGINTERN PyObject *_wrap_Message_hasValidStructure(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Message_hasValidStructure", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasValidStructure" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasValidStructure" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_hasValidStructure', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -43631,9 +45179,13 @@ SWIGINTERN PyObject *_wrap_Message_hasEmbeddedSOH(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Message_hasEmbeddedSOH", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasEmbeddedSOH" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasEmbeddedSOH" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_hasEmbeddedSOH', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -43691,9 +45243,13 @@ SWIGINTERN PyObject *_wrap_Message_hasOutOfOrderGroupMembers(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Message_hasOutOfOrderGroupMembers", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasOutOfOrderGroupMembers" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_hasOutOfOrderGroupMembers" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_hasOutOfOrderGroupMembers', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -43757,9 +45313,13 @@ SWIGINTERN PyObject *_wrap_Message_bodyLength__SWIG_0(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_bodyLength" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_bodyLength" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_bodyLength', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -43815,9 +45375,13 @@ SWIGINTERN PyObject *_wrap_Message_bodyLength__SWIG_1(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_bodyLength" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_bodyLength" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_bodyLength', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -43865,9 +45429,13 @@ SWIGINTERN PyObject *_wrap_Message_bodyLength__SWIG_2(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_bodyLength" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_bodyLength" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_bodyLength', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -43907,9 +45475,13 @@ SWIGINTERN PyObject *_wrap_Message_bodyLength__SWIG_3(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_bodyLength" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_bodyLength" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_bodyLength', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -44039,9 +45611,13 @@ SWIGINTERN PyObject *_wrap_Message_checkSum__SWIG_0(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_checkSum" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_checkSum" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_checkSum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -44081,9 +45657,13 @@ SWIGINTERN PyObject *_wrap_Message_checkSum__SWIG_1(PyObject *self, Py_ssize_t n
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_checkSum" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_checkSum" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_checkSum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -44162,9 +45742,13 @@ SWIGINTERN PyObject *_wrap_Message_isAdmin(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_isAdmin" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_isAdmin" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_isAdmin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -44201,9 +45785,13 @@ SWIGINTERN PyObject *_wrap_Message_isApp(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_isApp" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_isApp" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_isApp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -44240,9 +45828,13 @@ SWIGINTERN PyObject *_wrap_Message_isEmpty(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_isEmpty" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_isEmpty" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_isEmpty', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -44278,9 +45870,13 @@ SWIGINTERN PyObject *_wrap_Message_clear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_clear" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_clear" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_clear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -44529,9 +46125,13 @@ SWIGINTERN PyObject *_wrap_Message_isHeaderField__SWIG_1(PyObject *self, Py_ssiz
     SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "Message_isHeaderField" "', argument " "1"" of type '" "FIX::FieldBase const &""'"); 
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_DataDictionary, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Message_isHeaderField" "', argument " "2"" of type '" "DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Message_isHeaderField" "', argument " "2"" of type '" "DataDictionary const *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_isHeaderField', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< DataDictionary * >(argp2);
   {
@@ -44614,9 +46214,13 @@ SWIGINTERN PyObject *_wrap_Message_isHeaderField__SWIG_3(PyObject *self, Py_ssiz
     SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "Message_isHeaderField" "', argument " "1"" of type '" "int""'");
   } 
   arg1 = static_cast< int >(val1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_DataDictionary, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Message_isHeaderField" "', argument " "2"" of type '" "DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Message_isHeaderField" "', argument " "2"" of type '" "DataDictionary const *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_isHeaderField', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< DataDictionary * >(argp2);
   {
@@ -44765,9 +46369,13 @@ SWIGINTERN PyObject *_wrap_Message_isTrailerField__SWIG_1(PyObject *self, Py_ssi
     SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "Message_isTrailerField" "', argument " "1"" of type '" "FIX::FieldBase const &""'"); 
   }
   arg1 = reinterpret_cast< FIX::FieldBase * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_DataDictionary, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Message_isTrailerField" "', argument " "2"" of type '" "DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Message_isTrailerField" "', argument " "2"" of type '" "DataDictionary const *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_isTrailerField', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< DataDictionary * >(argp2);
   {
@@ -44850,9 +46458,13 @@ SWIGINTERN PyObject *_wrap_Message_isTrailerField__SWIG_3(PyObject *self, Py_ssi
     SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "Message_isTrailerField" "', argument " "1"" of type '" "int""'");
   } 
   arg1 = static_cast< int >(val1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_DataDictionary, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Message_isTrailerField" "', argument " "2"" of type '" "DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Message_isTrailerField" "', argument " "2"" of type '" "DataDictionary const *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_isTrailerField', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< DataDictionary * >(argp2);
   {
@@ -44955,9 +46567,13 @@ SWIGINTERN PyObject *_wrap_Message_getSessionID__SWIG_0(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getSessionID" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getSessionID" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_getSessionID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -45021,9 +46637,13 @@ SWIGINTERN PyObject *_wrap_Message_getSessionID__SWIG_1(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getSessionID" "', argument " "1"" of type '" "FIX::Message const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_getSessionID" "', argument " "1"" of type '" "FIX::Message const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_getSessionID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -45101,9 +46721,13 @@ SWIGINTERN PyObject *_wrap_Message_setSessionID(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Message_setSessionID", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setSessionID" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message_setSessionID" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message_setSessionID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_SessionID,  0  | 0);
@@ -45148,9 +46772,13 @@ SWIGINTERN PyObject *_wrap_Message___str__(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Message, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message___str__" "', argument " "1"" of type '" "FIX::Message *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message___str__" "', argument " "1"" of type '" "FIX::Message *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Message___str__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
@@ -45595,9 +47223,13 @@ SWIGINTERN PyObject *_wrap_Group_field(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Group, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Group, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_field" "', argument " "1"" of type '" "FIX::Group const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_field" "', argument " "1"" of type '" "FIX::Group const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Group_field', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   {
@@ -45634,9 +47266,13 @@ SWIGINTERN PyObject *_wrap_Group_delim(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Group, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Group, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_delim" "', argument " "1"" of type '" "FIX::Group const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_delim" "', argument " "1"" of type '" "FIX::Group const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Group_delim', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   {
@@ -45674,9 +47310,13 @@ SWIGINTERN PyObject *_wrap_Group_addGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Group_addGroup", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Group, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Group, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_addGroup" "', argument " "1"" of type '" "FIX::Group *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_addGroup" "', argument " "1"" of type '" "FIX::Group *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Group_addGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -45725,9 +47365,13 @@ SWIGINTERN PyObject *_wrap_Group_replaceGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Group_replaceGroup", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Group, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Group, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_replaceGroup" "', argument " "1"" of type '" "FIX::Group *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_replaceGroup" "', argument " "1"" of type '" "FIX::Group *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Group_replaceGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -45782,9 +47426,13 @@ SWIGINTERN PyObject *_wrap_Group_getGroup(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Group_getGroup", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Group, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Group, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_getGroup" "', argument " "1"" of type '" "FIX::Group const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_getGroup" "', argument " "1"" of type '" "FIX::Group const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Group_getGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -45837,9 +47485,13 @@ SWIGINTERN PyObject *_wrap_Group_removeGroup__SWIG_0(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Group, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Group, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_removeGroup" "', argument " "1"" of type '" "FIX::Group *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_removeGroup" "', argument " "1"" of type '" "FIX::Group *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Group_removeGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -45889,9 +47541,13 @@ SWIGINTERN PyObject *_wrap_Group_removeGroup__SWIG_1(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Group, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Group, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_removeGroup" "', argument " "1"" of type '" "FIX::Group *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_removeGroup" "', argument " "1"" of type '" "FIX::Group *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Group_removeGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -45987,9 +47643,13 @@ SWIGINTERN PyObject *_wrap_Group_hasGroup__SWIG_0(PyObject *self, Py_ssize_t nob
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Group, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Group, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_hasGroup" "', argument " "1"" of type '" "FIX::Group *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_hasGroup" "', argument " "1"" of type '" "FIX::Group *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Group_hasGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Group,  0  | 0);
@@ -46038,9 +47698,13 @@ SWIGINTERN PyObject *_wrap_Group_hasGroup__SWIG_1(PyObject *self, Py_ssize_t nob
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Group, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Group, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_hasGroup" "', argument " "1"" of type '" "FIX::Group *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Group_hasGroup" "', argument " "1"" of type '" "FIX::Group *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Group_hasGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
@@ -46139,9 +47803,13 @@ SWIGINTERN PyObject *_wrap_delete_Group(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Group, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Group, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Group" "', argument " "1"" of type '" "FIX::Group *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Group" "', argument " "1"" of type '" "FIX::Group *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Group', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Group * >(argp1);
   {
@@ -46306,9 +47974,13 @@ SWIGINTERN PyObject *_wrap_delete_BeginString(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BeginString, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__BeginString, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_BeginString" "', argument " "1"" of type '" "FIX::BeginString *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_BeginString" "', argument " "1"" of type '" "FIX::BeginString *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_BeginString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::BeginString * >(argp1);
   {
@@ -46473,9 +48145,13 @@ SWIGINTERN PyObject *_wrap_delete_SenderCompID(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SenderCompID, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SenderCompID, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SenderCompID" "', argument " "1"" of type '" "FIX::SenderCompID *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SenderCompID" "', argument " "1"" of type '" "FIX::SenderCompID *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SenderCompID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SenderCompID * >(argp1);
   {
@@ -46640,9 +48316,13 @@ SWIGINTERN PyObject *_wrap_delete_TargetCompID(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__TargetCompID, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__TargetCompID, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_TargetCompID" "', argument " "1"" of type '" "FIX::TargetCompID *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_TargetCompID" "', argument " "1"" of type '" "FIX::TargetCompID *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_TargetCompID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::TargetCompID * >(argp1);
   {
@@ -128364,9 +130044,13 @@ SWIGINTERN PyObject *_wrap_SessionID_getBeginString(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_getBeginString" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_getBeginString" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID_getBeginString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -128403,9 +130087,13 @@ SWIGINTERN PyObject *_wrap_SessionID_getSenderCompID(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_getSenderCompID" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_getSenderCompID" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID_getSenderCompID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -128442,9 +130130,13 @@ SWIGINTERN PyObject *_wrap_SessionID_getTargetCompID(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_getTargetCompID" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_getTargetCompID" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID_getTargetCompID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -128481,9 +130173,13 @@ SWIGINTERN PyObject *_wrap_SessionID_getSessionQualifier(PyObject *self, PyObjec
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_getSessionQualifier" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_getSessionQualifier" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID_getSessionQualifier', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -128520,9 +130216,13 @@ SWIGINTERN PyObject *_wrap_SessionID_isFIXT(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_isFIXT" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_isFIXT" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID_isFIXT', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -128557,9 +130257,13 @@ SWIGINTERN PyObject *_wrap_SessionID_toString__SWIG_0(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_toString" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_toString" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID_toString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -128596,9 +130300,13 @@ SWIGINTERN PyObject *_wrap_SessionID_toStringFrozen(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_toStringFrozen" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_toStringFrozen" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID_toStringFrozen', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -128635,9 +130343,13 @@ SWIGINTERN PyObject *_wrap_SessionID_fromString(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionID_fromString", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_fromString" "', argument " "1"" of type '" "FIX::SessionID *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_fromString" "', argument " "1"" of type '" "FIX::SessionID *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID_fromString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -128703,9 +130415,13 @@ SWIGINTERN PyObject *_wrap_SessionID_toString__SWIG_1(PyObject *self, Py_ssize_t
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_toString" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID_toString" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID_toString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -129088,9 +130804,13 @@ SWIGINTERN PyObject *_wrap_SessionID___invert__(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID___invert__" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID___invert__" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID___invert__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -129127,9 +130847,13 @@ SWIGINTERN PyObject *_wrap_SessionID___str__(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID___str__" "', argument " "1"" of type '" "FIX::SessionID *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID___str__" "', argument " "1"" of type '" "FIX::SessionID *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID___str__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -129168,9 +130892,13 @@ SWIGINTERN PyObject *_wrap_SessionID___eq__(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionID___eq__", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID___eq__" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID___eq__" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID___eq__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -129220,9 +130948,13 @@ SWIGINTERN PyObject *_wrap_SessionID___hash__(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID___hash__" "', argument " "1"" of type '" "FIX::SessionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionID___hash__" "', argument " "1"" of type '" "FIX::SessionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionID___hash__', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -129258,9 +130990,13 @@ SWIGINTERN PyObject *_wrap_delete_SessionID(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SessionID" "', argument " "1"" of type '" "FIX::SessionID *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SessionID" "', argument " "1"" of type '" "FIX::SessionID *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SessionID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionID * >(argp1);
   {
@@ -129425,9 +131161,13 @@ SWIGINTERN PyObject *_wrap_delete_Dictionary(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Dictionary" "', argument " "1"" of type '" "FIX::Dictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Dictionary" "', argument " "1"" of type '" "FIX::Dictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Dictionary', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -129464,9 +131204,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_getName(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getName" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getName" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_getName', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -129503,9 +131247,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_size(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_size" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_size" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_size', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -129545,9 +131293,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_getString__SWIG_0(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getString" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getString" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_getString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -129618,9 +131370,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_getString__SWIG_1(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getString" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getString" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_getString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -129737,9 +131493,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_getInt(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_getInt", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getInt" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getInt" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_getInt', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -129806,9 +131566,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_getDouble(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_getDouble", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getDouble" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getDouble" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_getDouble', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -129875,9 +131639,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_getBool(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_getBool", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getBool" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getBool" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_getBool', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -129944,9 +131712,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_getDay(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_getDay", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getDay" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_getDay" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_getDay', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -130014,9 +131786,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_setString(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_setString", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_setString" "', argument " "1"" of type '" "FIX::Dictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_setString" "', argument " "1"" of type '" "FIX::Dictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_setString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -130114,9 +131890,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_setInt(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_setInt", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_setInt" "', argument " "1"" of type '" "FIX::Dictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_setInt" "', argument " "1"" of type '" "FIX::Dictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_setInt', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -130190,9 +131970,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_setDouble(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_setDouble", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_setDouble" "', argument " "1"" of type '" "FIX::Dictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_setDouble" "', argument " "1"" of type '" "FIX::Dictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_setDouble', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -130266,9 +132050,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_setBool(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_setBool", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_setBool" "', argument " "1"" of type '" "FIX::Dictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_setBool" "', argument " "1"" of type '" "FIX::Dictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_setBool', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -130342,9 +132130,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_setDay(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_setDay", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_setDay" "', argument " "1"" of type '" "FIX::Dictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_setDay" "', argument " "1"" of type '" "FIX::Dictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_setDay', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -130416,9 +132208,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_has(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_has", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_has" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_has" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_has', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -130485,9 +132281,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_merge(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Dictionary_merge", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_merge" "', argument " "1"" of type '" "FIX::Dictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_merge" "', argument " "1"" of type '" "FIX::Dictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_merge', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Dictionary,  0  | 0);
@@ -130532,9 +132332,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_begin(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_begin" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_begin" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_begin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -130571,9 +132375,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_end(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_end" "', argument " "1"" of type '" "FIX::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_end" "', argument " "1"" of type '" "FIX::Dictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Dictionary_end', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Dictionary * >(argp1);
   {
@@ -132604,9 +134412,13 @@ SWIGINTERN PyObject *_wrap_SessionSettings_has(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionSettings_has", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_has" "', argument " "1"" of type '" "FIX::SessionSettings const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_has" "', argument " "1"" of type '" "FIX::SessionSettings const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionSettings_has', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -132652,9 +134464,13 @@ SWIGINTERN PyObject *_wrap_SessionSettings_get__SWIG_0(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_get" "', argument " "1"" of type '" "FIX::SessionSettings const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_get" "', argument " "1"" of type '" "FIX::SessionSettings const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionSettings_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -132702,9 +134518,13 @@ SWIGINTERN PyObject *_wrap_SessionSettings_set__SWIG_0(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_set" "', argument " "1"" of type '" "FIX::SessionSettings *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_set" "', argument " "1"" of type '" "FIX::SessionSettings *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionSettings_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -132760,9 +134580,13 @@ SWIGINTERN PyObject *_wrap_SessionSettings_get__SWIG_1(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_get" "', argument " "1"" of type '" "FIX::SessionSettings const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_get" "', argument " "1"" of type '" "FIX::SessionSettings const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionSettings_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
@@ -132839,9 +134663,13 @@ SWIGINTERN PyObject *_wrap_SessionSettings_set__SWIG_1(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_set" "', argument " "1"" of type '" "FIX::SessionSettings *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_set" "', argument " "1"" of type '" "FIX::SessionSettings *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionSettings_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Dictionary,  0  | 0);
@@ -132934,9 +134762,13 @@ SWIGINTERN PyObject *_wrap_SessionSettings_size(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_size" "', argument " "1"" of type '" "FIX::SessionSettings const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_size" "', argument " "1"" of type '" "FIX::SessionSettings const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionSettings_size', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
@@ -132973,9 +134805,13 @@ SWIGINTERN PyObject *_wrap_SessionSettings_getSessions(PyObject *self, PyObject 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_getSessions" "', argument " "1"" of type '" "FIX::SessionSettings const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_getSessions" "', argument " "1"" of type '" "FIX::SessionSettings const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionSettings_getSessions', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
@@ -133234,9 +135070,13 @@ SWIGINTERN PyObject *_wrap_SessionSettings_setFromString(PyObject *self, PyObjec
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SessionSettings_setFromString", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionSettings, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_setFromString" "', argument " "1"" of type '" "FIX::SessionSettings *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SessionSettings_setFromString" "', argument " "1"" of type '" "FIX::SessionSettings *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SessionSettings_setFromString', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
@@ -133301,9 +135141,13 @@ SWIGINTERN PyObject *_wrap_delete_SessionSettings(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SessionSettings" "', argument " "1"" of type '" "FIX::SessionSettings *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SessionSettings" "', argument " "1"" of type '" "FIX::SessionSettings *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SessionSettings', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SessionSettings * >(argp1);
   {
@@ -133350,9 +135194,13 @@ SWIGINTERN PyObject *_wrap_delete_Session(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Session" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Session" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Session', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133388,9 +135236,13 @@ SWIGINTERN PyObject *_wrap_Session_logon(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_logon" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_logon" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_logon', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133426,9 +135278,13 @@ SWIGINTERN PyObject *_wrap_Session_logout__SWIG_0(PyObject *self, Py_ssize_t nob
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_logout" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_logout" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_logout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133491,9 +135347,13 @@ SWIGINTERN PyObject *_wrap_Session_logout__SWIG_1(PyObject *self, Py_ssize_t nob
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_logout" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_logout" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_logout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133570,9 +135430,13 @@ SWIGINTERN PyObject *_wrap_Session_isEnabled(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isEnabled" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isEnabled" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_isEnabled', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133609,9 +135473,13 @@ SWIGINTERN PyObject *_wrap_Session_sentLogon(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_sentLogon" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_sentLogon" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_sentLogon', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133648,9 +135516,13 @@ SWIGINTERN PyObject *_wrap_Session_sentLogout(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_sentLogout" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_sentLogout" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_sentLogout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133687,9 +135559,13 @@ SWIGINTERN PyObject *_wrap_Session_receivedLogon(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_receivedLogon" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_receivedLogon" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_receivedLogon', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133726,9 +135602,13 @@ SWIGINTERN PyObject *_wrap_Session_isLoggedOn(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isLoggedOn" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isLoggedOn" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_isLoggedOn', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133764,9 +135644,13 @@ SWIGINTERN PyObject *_wrap_Session_reset(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_reset" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_reset" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_reset', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133802,9 +135686,13 @@ SWIGINTERN PyObject *_wrap_Session_refresh(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_refresh" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_refresh" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_refresh', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133842,9 +135730,13 @@ SWIGINTERN PyObject *_wrap_Session_setNextSenderMsgSeqNum(PyObject *self, PyObje
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setNextSenderMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -133887,9 +135779,13 @@ SWIGINTERN PyObject *_wrap_Session_setNextTargetMsgSeqNum(PyObject *self, PyObje
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setNextTargetMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -133931,9 +135827,13 @@ SWIGINTERN PyObject *_wrap_Session_getSessionID(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getSessionID" "', argument " "1"" of type '" "FIX::Session const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getSessionID" "', argument " "1"" of type '" "FIX::Session const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getSessionID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -133971,9 +135871,13 @@ SWIGINTERN PyObject *_wrap_Session_setDataDictionaryProvider(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setDataDictionaryProvider", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setDataDictionaryProvider" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setDataDictionaryProvider" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setDataDictionaryProvider', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_DataDictionaryProvider,  0  | 0);
@@ -134018,9 +135922,13 @@ SWIGINTERN PyObject *_wrap_Session_getDataDictionaryProvider(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getDataDictionaryProvider" "', argument " "1"" of type '" "FIX::Session const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getDataDictionaryProvider" "', argument " "1"" of type '" "FIX::Session const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getDataDictionaryProvider', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135187,9 +137095,13 @@ SWIGINTERN PyObject *_wrap_Session_isSessionTime(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_isSessionTime", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isSessionTime" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isSessionTime" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_isSessionTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -135236,9 +137148,13 @@ SWIGINTERN PyObject *_wrap_Session_isLogonTime(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_isLogonTime", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isLogonTime" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isLogonTime" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_isLogonTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -135283,9 +137199,13 @@ SWIGINTERN PyObject *_wrap_Session_isInitiator(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isInitiator" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isInitiator" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_isInitiator', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135322,9 +137242,13 @@ SWIGINTERN PyObject *_wrap_Session_isAcceptor(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isAcceptor" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_isAcceptor" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_isAcceptor', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135361,9 +137285,13 @@ SWIGINTERN PyObject *_wrap_Session_getLogonTime(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getLogonTime" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getLogonTime" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getLogonTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135401,9 +137329,13 @@ SWIGINTERN PyObject *_wrap_Session_setLogonTime(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setLogonTime", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setLogonTime" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setLogonTime" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setLogonTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_TimeRange,  0  | 0);
@@ -135448,9 +137380,13 @@ SWIGINTERN PyObject *_wrap_Session_getSenderDefaultApplVerID(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getSenderDefaultApplVerID" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getSenderDefaultApplVerID" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getSenderDefaultApplVerID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135487,9 +137423,13 @@ SWIGINTERN PyObject *_wrap_Session_setSenderDefaultApplVerID(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setSenderDefaultApplVerID", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setSenderDefaultApplVerID" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setSenderDefaultApplVerID" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setSenderDefaultApplVerID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135555,9 +137495,13 @@ SWIGINTERN PyObject *_wrap_Session_getTargetDefaultApplVerID(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getTargetDefaultApplVerID" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getTargetDefaultApplVerID" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getTargetDefaultApplVerID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135594,9 +137538,13 @@ SWIGINTERN PyObject *_wrap_Session_setTargetDefaultApplVerID(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setTargetDefaultApplVerID", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setTargetDefaultApplVerID" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setTargetDefaultApplVerID" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setTargetDefaultApplVerID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135662,9 +137610,13 @@ SWIGINTERN PyObject *_wrap_Session_getSendRedundantResendRequests(PyObject *self
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getSendRedundantResendRequests" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getSendRedundantResendRequests" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getSendRedundantResendRequests', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135702,9 +137654,13 @@ SWIGINTERN PyObject *_wrap_Session_setSendRedundantResendRequests(PyObject *self
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setSendRedundantResendRequests", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setSendRedundantResendRequests" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setSendRedundantResendRequests" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setSendRedundantResendRequests', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -135746,9 +137702,13 @@ SWIGINTERN PyObject *_wrap_Session_getCheckCompId(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getCheckCompId" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getCheckCompId" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getCheckCompId', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135786,9 +137746,13 @@ SWIGINTERN PyObject *_wrap_Session_setCheckCompId(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setCheckCompId", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setCheckCompId" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setCheckCompId" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setCheckCompId', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -135830,9 +137794,13 @@ SWIGINTERN PyObject *_wrap_Session_getCheckLatency(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getCheckLatency" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getCheckLatency" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getCheckLatency', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135870,9 +137838,13 @@ SWIGINTERN PyObject *_wrap_Session_setCheckLatency(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setCheckLatency", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setCheckLatency" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setCheckLatency" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setCheckLatency', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -135914,9 +137886,13 @@ SWIGINTERN PyObject *_wrap_Session_getMaxLatency(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getMaxLatency" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getMaxLatency" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getMaxLatency', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -135954,9 +137930,13 @@ SWIGINTERN PyObject *_wrap_Session_setMaxLatency(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setMaxLatency", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setMaxLatency" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setMaxLatency" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setMaxLatency', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -135998,9 +137978,13 @@ SWIGINTERN PyObject *_wrap_Session_getLogonTimeout(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getLogonTimeout" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getLogonTimeout" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getLogonTimeout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136038,9 +138022,13 @@ SWIGINTERN PyObject *_wrap_Session_setLogonTimeout(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setLogonTimeout", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setLogonTimeout" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setLogonTimeout" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setLogonTimeout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -136082,9 +138070,13 @@ SWIGINTERN PyObject *_wrap_Session_getLogoutTimeout(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getLogoutTimeout" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getLogoutTimeout" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getLogoutTimeout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136122,9 +138114,13 @@ SWIGINTERN PyObject *_wrap_Session_setLogoutTimeout(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setLogoutTimeout", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setLogoutTimeout" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setLogoutTimeout" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setLogoutTimeout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -136166,9 +138162,13 @@ SWIGINTERN PyObject *_wrap_Session_getResetOnLogon(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getResetOnLogon" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getResetOnLogon" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getResetOnLogon', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136206,9 +138206,13 @@ SWIGINTERN PyObject *_wrap_Session_setResetOnLogon(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setResetOnLogon", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setResetOnLogon" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setResetOnLogon" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setResetOnLogon', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -136250,9 +138254,13 @@ SWIGINTERN PyObject *_wrap_Session_getResetOnLogout(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getResetOnLogout" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getResetOnLogout" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getResetOnLogout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136290,9 +138298,13 @@ SWIGINTERN PyObject *_wrap_Session_setResetOnLogout(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setResetOnLogout", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setResetOnLogout" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setResetOnLogout" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setResetOnLogout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -136334,9 +138346,13 @@ SWIGINTERN PyObject *_wrap_Session_getResetOnDisconnect(PyObject *self, PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getResetOnDisconnect" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getResetOnDisconnect" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getResetOnDisconnect', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136374,9 +138390,13 @@ SWIGINTERN PyObject *_wrap_Session_setResetOnDisconnect(PyObject *self, PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setResetOnDisconnect", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setResetOnDisconnect" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setResetOnDisconnect" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setResetOnDisconnect', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -136418,9 +138438,13 @@ SWIGINTERN PyObject *_wrap_Session_getRefreshOnLogon(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getRefreshOnLogon" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getRefreshOnLogon" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getRefreshOnLogon', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136458,9 +138482,13 @@ SWIGINTERN PyObject *_wrap_Session_setRefreshOnLogon(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setRefreshOnLogon", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setRefreshOnLogon" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setRefreshOnLogon" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setRefreshOnLogon', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -136502,9 +138530,13 @@ SWIGINTERN PyObject *_wrap_Session_getMillisecondsInTimeStamp(PyObject *self, Py
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getMillisecondsInTimeStamp" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getMillisecondsInTimeStamp" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getMillisecondsInTimeStamp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136542,9 +138574,13 @@ SWIGINTERN PyObject *_wrap_Session_setMillisecondsInTimeStamp(PyObject *self, Py
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setMillisecondsInTimeStamp", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setMillisecondsInTimeStamp" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setMillisecondsInTimeStamp" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setMillisecondsInTimeStamp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -136586,9 +138622,13 @@ SWIGINTERN PyObject *_wrap_Session_getTimestampPrecision(PyObject *self, PyObjec
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getTimestampPrecision" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getTimestampPrecision" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getTimestampPrecision', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136626,9 +138666,13 @@ SWIGINTERN PyObject *_wrap_Session_setTimestampPrecision(PyObject *self, PyObjec
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setTimestampPrecision", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setTimestampPrecision" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setTimestampPrecision" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setTimestampPrecision', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -136670,9 +138714,13 @@ SWIGINTERN PyObject *_wrap_Session_getSupportedTimestampPrecision(PyObject *self
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getSupportedTimestampPrecision" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getSupportedTimestampPrecision" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getSupportedTimestampPrecision', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136771,9 +138819,13 @@ SWIGINTERN PyObject *_wrap_Session_getPersistMessages(PyObject *self, PyObject *
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getPersistMessages" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getPersistMessages" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getPersistMessages', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136811,9 +138863,13 @@ SWIGINTERN PyObject *_wrap_Session_setPersistMessages(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setPersistMessages", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setPersistMessages" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setPersistMessages" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setPersistMessages', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -136855,9 +138911,13 @@ SWIGINTERN PyObject *_wrap_Session_getValidateLengthAndChecksum(PyObject *self, 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getValidateLengthAndChecksum" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getValidateLengthAndChecksum" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getValidateLengthAndChecksum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136895,9 +138955,13 @@ SWIGINTERN PyObject *_wrap_Session_setValidateLengthAndChecksum(PyObject *self, 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setValidateLengthAndChecksum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setValidateLengthAndChecksum" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setValidateLengthAndChecksum" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setValidateLengthAndChecksum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -136939,9 +139003,13 @@ SWIGINTERN PyObject *_wrap_Session_getSendNextExpectedMsgSeqNum(PyObject *self, 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getSendNextExpectedMsgSeqNum" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getSendNextExpectedMsgSeqNum" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getSendNextExpectedMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -136979,9 +139047,13 @@ SWIGINTERN PyObject *_wrap_Session_setSendNextExpectedMsgSeqNum(PyObject *self, 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setSendNextExpectedMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setSendNextExpectedMsgSeqNum" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setSendNextExpectedMsgSeqNum" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setSendNextExpectedMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -137023,9 +139095,13 @@ SWIGINTERN PyObject *_wrap_Session_getIsNonStopSession(PyObject *self, PyObject 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getIsNonStopSession" "', argument " "1"" of type '" "FIX::Session const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getIsNonStopSession" "', argument " "1"" of type '" "FIX::Session const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getIsNonStopSession', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -137063,9 +139139,13 @@ SWIGINTERN PyObject *_wrap_Session_setIsNonStopSession(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setIsNonStopSession", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setIsNonStopSession" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setIsNonStopSession" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setIsNonStopSession', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -137107,9 +139187,13 @@ SWIGINTERN PyObject *_wrap_Session_getAllowedRemoteAddresses(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getAllowedRemoteAddresses" "', argument " "1"" of type '" "FIX::Session const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getAllowedRemoteAddresses" "', argument " "1"" of type '" "FIX::Session const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getAllowedRemoteAddresses', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -137147,9 +139231,13 @@ SWIGINTERN PyObject *_wrap_Session_setAllowedRemoteAddresses(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setAllowedRemoteAddresses", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setAllowedRemoteAddresses" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setAllowedRemoteAddresses" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setAllowedRemoteAddresses', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t,  0  | 0);
@@ -137195,9 +139283,13 @@ SWIGINTERN PyObject *_wrap_Session_inAllowedRemoteAddresses(PyObject *self, PyOb
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_inAllowedRemoteAddresses", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_inAllowedRemoteAddresses" "', argument " "1"" of type '" "FIX::Session const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_inAllowedRemoteAddresses" "', argument " "1"" of type '" "FIX::Session const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_inAllowedRemoteAddresses', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -137264,14 +139356,22 @@ SWIGINTERN PyObject *_wrap_Session_setResponder(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_setResponder", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setResponder" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_setResponder" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setResponder', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_Responder, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_Responder, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Session_setResponder" "', argument " "2"" of type '" "Responder *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Session_setResponder" "', argument " "2"" of type '" "Responder *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_setResponder', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< Responder * >(argp2);
   {
@@ -137310,9 +139410,13 @@ SWIGINTERN PyObject *_wrap_Session_send(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Session_send", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_send" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_send" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_send', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0 );
@@ -137357,9 +139461,13 @@ SWIGINTERN PyObject *_wrap_Session_next__SWIG_0(PyObject *self, Py_ssize_t nobjs
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_next" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_next" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_next', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -137409,9 +139517,13 @@ SWIGINTERN PyObject *_wrap_Session_next__SWIG_1(PyObject *self, Py_ssize_t nobjs
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_next" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_next" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_next', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -137492,9 +139604,13 @@ SWIGINTERN PyObject *_wrap_Session_next__SWIG_2(PyObject *self, Py_ssize_t nobjs
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_next" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_next" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_next', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -137574,9 +139690,13 @@ SWIGINTERN PyObject *_wrap_Session_next__SWIG_3(PyObject *self, Py_ssize_t nobjs
   
   (void)self;
   if ((nobjs < 4) || (nobjs > 4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_next" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_next" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_next', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0  | 0);
@@ -137637,9 +139757,13 @@ SWIGINTERN PyObject *_wrap_Session_next__SWIG_4(PyObject *self, Py_ssize_t nobjs
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_next" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_next" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_next', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0  | 0);
@@ -137805,9 +139929,13 @@ SWIGINTERN PyObject *_wrap_Session_disconnect(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_disconnect" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_disconnect" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_disconnect', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -137844,9 +139972,13 @@ SWIGINTERN PyObject *_wrap_Session_getExpectedSenderNum(PyObject *self, PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getExpectedSenderNum" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getExpectedSenderNum" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getExpectedSenderNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -137883,9 +140015,13 @@ SWIGINTERN PyObject *_wrap_Session_getExpectedTargetNum(PyObject *self, PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getExpectedTargetNum" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getExpectedTargetNum" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getExpectedTargetNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -137922,9 +140058,13 @@ SWIGINTERN PyObject *_wrap_Session_getLog(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getLog" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getLog" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getLog', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -137961,9 +140101,13 @@ SWIGINTERN PyObject *_wrap_Session_getStore(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Session, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getStore" "', argument " "1"" of type '" "FIX::Session *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getStore" "', argument " "1"" of type '" "FIX::Session *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getStore', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Session * >(argp1);
   {
@@ -138006,9 +140150,13 @@ SWIGINTERN PyObject *_wrap_delete_LogFactory(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LogFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LogFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_LogFactory" "', argument " "1"" of type '" "FIX::LogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_LogFactory" "', argument " "1"" of type '" "FIX::LogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_LogFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LogFactory * >(argp1);
   {
@@ -138045,9 +140193,13 @@ SWIGINTERN PyObject *_wrap_LogFactory_create__SWIG_0(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LogFactory_create" "', argument " "1"" of type '" "FIX::LogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LogFactory_create" "', argument " "1"" of type '" "FIX::LogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'LogFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LogFactory * >(argp1);
   director = SWIG_DIRECTOR_CAST(arg1);
@@ -138096,9 +140248,13 @@ SWIGINTERN PyObject *_wrap_LogFactory_create__SWIG_1(PyObject *self, Py_ssize_t 
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LogFactory_create" "', argument " "1"" of type '" "FIX::LogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LogFactory_create" "', argument " "1"" of type '" "FIX::LogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'LogFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LogFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -138195,14 +140351,22 @@ SWIGINTERN PyObject *_wrap_LogFactory_destroy(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "LogFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LogFactory_destroy" "', argument " "1"" of type '" "FIX::LogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LogFactory_destroy" "', argument " "1"" of type '" "FIX::LogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'LogFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LogFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "LogFactory_destroy" "', argument " "2"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "LogFactory_destroy" "', argument " "2"" of type '" "FIX::Log *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'LogFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::Log * >(argp2);
   director = SWIG_DIRECTOR_CAST(arg1);
@@ -138284,9 +140448,13 @@ SWIGINTERN PyObject *_wrap_disown_LogFactory(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__LogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__LogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "disown_LogFactory" "', argument " "1"" of type '" "FIX::LogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "disown_LogFactory" "', argument " "1"" of type '" "FIX::LogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'disown_LogFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::LogFactory * >(argp1);
   {
@@ -138471,9 +140639,13 @@ SWIGINTERN PyObject *_wrap_ScreenLogFactory_create__SWIG_0(PyObject *self, Py_ss
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ScreenLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ScreenLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLogFactory_create" "', argument " "1"" of type '" "FIX::ScreenLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLogFactory_create" "', argument " "1"" of type '" "FIX::ScreenLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ScreenLogFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ScreenLogFactory * >(argp1);
   {
@@ -138511,9 +140683,13 @@ SWIGINTERN PyObject *_wrap_ScreenLogFactory_create__SWIG_1(PyObject *self, Py_ss
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ScreenLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ScreenLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLogFactory_create" "', argument " "1"" of type '" "FIX::ScreenLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLogFactory_create" "', argument " "1"" of type '" "FIX::ScreenLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ScreenLogFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ScreenLogFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -138599,14 +140775,22 @@ SWIGINTERN PyObject *_wrap_ScreenLogFactory_destroy(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "ScreenLogFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ScreenLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ScreenLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLogFactory_destroy" "', argument " "1"" of type '" "FIX::ScreenLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLogFactory_destroy" "', argument " "1"" of type '" "FIX::ScreenLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ScreenLogFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ScreenLogFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ScreenLogFactory_destroy" "', argument " "2"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ScreenLogFactory_destroy" "', argument " "2"" of type '" "FIX::Log *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ScreenLogFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::Log * >(argp2);
   {
@@ -138642,9 +140826,13 @@ SWIGINTERN PyObject *_wrap_delete_ScreenLogFactory(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ScreenLogFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ScreenLogFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ScreenLogFactory" "', argument " "1"" of type '" "FIX::ScreenLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ScreenLogFactory" "', argument " "1"" of type '" "FIX::ScreenLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_ScreenLogFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ScreenLogFactory * >(argp1);
   {
@@ -138691,9 +140879,13 @@ SWIGINTERN PyObject *_wrap_delete_Log(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Log, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Log, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Log" "', argument " "1"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Log" "', argument " "1"" of type '" "FIX::Log *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Log', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Log * >(argp1);
   {
@@ -138731,9 +140923,13 @@ SWIGINTERN PyObject *_wrap_Log_clear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log_clear" "', argument " "1"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log_clear" "', argument " "1"" of type '" "FIX::Log *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Log_clear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Log * >(argp1);
   director = SWIG_DIRECTOR_CAST(arg1);
@@ -138777,9 +140973,13 @@ SWIGINTERN PyObject *_wrap_Log_backup(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log_backup" "', argument " "1"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log_backup" "', argument " "1"" of type '" "FIX::Log *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Log_backup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Log * >(argp1);
   director = SWIG_DIRECTOR_CAST(arg1);
@@ -138824,9 +141024,13 @@ SWIGINTERN PyObject *_wrap_Log_onIncoming(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Log_onIncoming", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log_onIncoming" "', argument " "1"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log_onIncoming" "', argument " "1"" of type '" "FIX::Log *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Log_onIncoming', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Log * >(argp1);
   {
@@ -138900,9 +141104,13 @@ SWIGINTERN PyObject *_wrap_Log_onOutgoing(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Log_onOutgoing", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log_onOutgoing" "', argument " "1"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log_onOutgoing" "', argument " "1"" of type '" "FIX::Log *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Log_onOutgoing', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Log * >(argp1);
   {
@@ -138976,9 +141184,13 @@ SWIGINTERN PyObject *_wrap_Log_onEvent(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Log_onEvent", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log_onEvent" "', argument " "1"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log_onEvent" "', argument " "1"" of type '" "FIX::Log *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Log_onEvent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Log * >(argp1);
   {
@@ -139089,9 +141301,13 @@ SWIGINTERN PyObject *_wrap_disown_Log(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "disown_Log" "', argument " "1"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "disown_Log" "', argument " "1"" of type '" "FIX::Log *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'disown_Log', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Log * >(argp1);
   {
@@ -139131,9 +141347,13 @@ SWIGINTERN PyObject *_wrap_NullLog_clear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullLog_clear" "', argument " "1"" of type '" "FIX::NullLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullLog_clear" "', argument " "1"" of type '" "FIX::NullLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullLog_clear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullLog * >(argp1);
   {
@@ -139169,9 +141389,13 @@ SWIGINTERN PyObject *_wrap_NullLog_backup(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullLog_backup" "', argument " "1"" of type '" "FIX::NullLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullLog_backup" "', argument " "1"" of type '" "FIX::NullLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullLog_backup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullLog * >(argp1);
   {
@@ -139208,9 +141432,13 @@ SWIGINTERN PyObject *_wrap_NullLog_onIncoming(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullLog_onIncoming", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullLog_onIncoming" "', argument " "1"" of type '" "FIX::NullLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullLog_onIncoming" "', argument " "1"" of type '" "FIX::NullLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullLog_onIncoming', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullLog * >(argp1);
   {
@@ -139276,9 +141504,13 @@ SWIGINTERN PyObject *_wrap_NullLog_onOutgoing(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullLog_onOutgoing", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullLog_onOutgoing" "', argument " "1"" of type '" "FIX::NullLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullLog_onOutgoing" "', argument " "1"" of type '" "FIX::NullLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullLog_onOutgoing', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullLog * >(argp1);
   {
@@ -139344,9 +141576,13 @@ SWIGINTERN PyObject *_wrap_NullLog_onEvent(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullLog_onEvent", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullLog_onEvent" "', argument " "1"" of type '" "FIX::NullLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullLog_onEvent" "', argument " "1"" of type '" "FIX::NullLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullLog_onEvent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullLog * >(argp1);
   {
@@ -139440,9 +141676,13 @@ SWIGINTERN PyObject *_wrap_delete_NullLog(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullLog, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullLog, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NullLog" "', argument " "1"" of type '" "FIX::NullLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NullLog" "', argument " "1"" of type '" "FIX::NullLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_NullLog', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullLog * >(argp1);
   {
@@ -139672,9 +141912,13 @@ SWIGINTERN PyObject *_wrap_ScreenLog_clear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ScreenLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ScreenLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLog_clear" "', argument " "1"" of type '" "FIX::ScreenLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLog_clear" "', argument " "1"" of type '" "FIX::ScreenLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ScreenLog_clear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ScreenLog * >(argp1);
   {
@@ -139710,9 +141954,13 @@ SWIGINTERN PyObject *_wrap_ScreenLog_backup(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ScreenLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ScreenLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLog_backup" "', argument " "1"" of type '" "FIX::ScreenLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLog_backup" "', argument " "1"" of type '" "FIX::ScreenLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ScreenLog_backup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ScreenLog * >(argp1);
   {
@@ -139749,9 +141997,13 @@ SWIGINTERN PyObject *_wrap_ScreenLog_onIncoming(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "ScreenLog_onIncoming", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ScreenLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ScreenLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLog_onIncoming" "', argument " "1"" of type '" "FIX::ScreenLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLog_onIncoming" "', argument " "1"" of type '" "FIX::ScreenLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ScreenLog_onIncoming', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ScreenLog * >(argp1);
   {
@@ -139817,9 +142069,13 @@ SWIGINTERN PyObject *_wrap_ScreenLog_onOutgoing(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "ScreenLog_onOutgoing", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ScreenLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ScreenLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLog_onOutgoing" "', argument " "1"" of type '" "FIX::ScreenLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLog_onOutgoing" "', argument " "1"" of type '" "FIX::ScreenLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ScreenLog_onOutgoing', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ScreenLog * >(argp1);
   {
@@ -139885,9 +142141,13 @@ SWIGINTERN PyObject *_wrap_ScreenLog_onEvent(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "ScreenLog_onEvent", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ScreenLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ScreenLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLog_onEvent" "', argument " "1"" of type '" "FIX::ScreenLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ScreenLog_onEvent" "', argument " "1"" of type '" "FIX::ScreenLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ScreenLog_onEvent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ScreenLog * >(argp1);
   {
@@ -139952,9 +142212,13 @@ SWIGINTERN PyObject *_wrap_delete_ScreenLog(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ScreenLog, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ScreenLog, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ScreenLog" "', argument " "1"" of type '" "FIX::ScreenLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ScreenLog" "', argument " "1"" of type '" "FIX::ScreenLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_ScreenLog', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ScreenLog * >(argp1);
   {
@@ -140239,9 +142503,13 @@ SWIGINTERN PyObject *_wrap_FileLogFactory_create__SWIG_0(PyObject *self, Py_ssiz
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLogFactory_create" "', argument " "1"" of type '" "FIX::FileLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLogFactory_create" "', argument " "1"" of type '" "FIX::FileLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileLogFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileLogFactory * >(argp1);
   {
@@ -140286,9 +142554,13 @@ SWIGINTERN PyObject *_wrap_FileLogFactory_create__SWIG_1(PyObject *self, Py_ssiz
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLogFactory_create" "', argument " "1"" of type '" "FIX::FileLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLogFactory_create" "', argument " "1"" of type '" "FIX::FileLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileLogFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileLogFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -140380,14 +142652,22 @@ SWIGINTERN PyObject *_wrap_FileLogFactory_destroy(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileLogFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLogFactory_destroy" "', argument " "1"" of type '" "FIX::FileLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLogFactory_destroy" "', argument " "1"" of type '" "FIX::FileLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileLogFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileLogFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "FileLogFactory_destroy" "', argument " "2"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "FileLogFactory_destroy" "', argument " "2"" of type '" "FIX::Log *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileLogFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::Log * >(argp2);
   {
@@ -140423,9 +142703,13 @@ SWIGINTERN PyObject *_wrap_delete_FileLogFactory(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileLogFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileLogFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FileLogFactory" "', argument " "1"" of type '" "FIX::FileLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FileLogFactory" "', argument " "1"" of type '" "FIX::FileLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_FileLogFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileLogFactory * >(argp1);
   {
@@ -140864,9 +143148,13 @@ SWIGINTERN PyObject *_wrap_delete_FileLog(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileLog, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileLog, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FileLog" "', argument " "1"" of type '" "FIX::FileLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FileLog" "', argument " "1"" of type '" "FIX::FileLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_FileLog', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileLog * >(argp1);
   {
@@ -140902,9 +143190,13 @@ SWIGINTERN PyObject *_wrap_FileLog_clear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLog_clear" "', argument " "1"" of type '" "FIX::FileLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLog_clear" "', argument " "1"" of type '" "FIX::FileLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileLog_clear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileLog * >(argp1);
   {
@@ -140940,9 +143232,13 @@ SWIGINTERN PyObject *_wrap_FileLog_backup(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLog_backup" "', argument " "1"" of type '" "FIX::FileLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLog_backup" "', argument " "1"" of type '" "FIX::FileLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileLog_backup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileLog * >(argp1);
   {
@@ -140979,9 +143275,13 @@ SWIGINTERN PyObject *_wrap_FileLog_onIncoming(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileLog_onIncoming", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLog_onIncoming" "', argument " "1"" of type '" "FIX::FileLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLog_onIncoming" "', argument " "1"" of type '" "FIX::FileLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileLog_onIncoming', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileLog * >(argp1);
   {
@@ -141047,9 +143347,13 @@ SWIGINTERN PyObject *_wrap_FileLog_onOutgoing(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileLog_onOutgoing", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLog_onOutgoing" "', argument " "1"" of type '" "FIX::FileLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLog_onOutgoing" "', argument " "1"" of type '" "FIX::FileLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileLog_onOutgoing', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileLog * >(argp1);
   {
@@ -141115,9 +143419,13 @@ SWIGINTERN PyObject *_wrap_FileLog_onEvent(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileLog_onEvent", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLog_onEvent" "', argument " "1"" of type '" "FIX::FileLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileLog_onEvent" "', argument " "1"" of type '" "FIX::FileLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileLog_onEvent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileLog * >(argp1);
   {
@@ -141297,9 +143605,13 @@ SWIGINTERN PyObject *_wrap_BufferedFileLog_onIncoming(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "BufferedFileLog_onIncoming", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BufferedFileLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__BufferedFileLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BufferedFileLog_onIncoming" "', argument " "1"" of type '" "FIX::BufferedFileLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BufferedFileLog_onIncoming" "', argument " "1"" of type '" "FIX::BufferedFileLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'BufferedFileLog_onIncoming', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::BufferedFileLog * >(argp1);
   {
@@ -141365,9 +143677,13 @@ SWIGINTERN PyObject *_wrap_BufferedFileLog_onOutgoing(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "BufferedFileLog_onOutgoing", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BufferedFileLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__BufferedFileLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BufferedFileLog_onOutgoing" "', argument " "1"" of type '" "FIX::BufferedFileLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BufferedFileLog_onOutgoing" "', argument " "1"" of type '" "FIX::BufferedFileLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'BufferedFileLog_onOutgoing', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::BufferedFileLog * >(argp1);
   {
@@ -141432,9 +143748,13 @@ SWIGINTERN PyObject *_wrap_delete_BufferedFileLog(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__BufferedFileLog, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__BufferedFileLog, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_BufferedFileLog" "', argument " "1"" of type '" "FIX::BufferedFileLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_BufferedFileLog" "', argument " "1"" of type '" "FIX::BufferedFileLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_BufferedFileLog', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::BufferedFileLog * >(argp1);
   {
@@ -141481,9 +143801,13 @@ SWIGINTERN PyObject *_wrap_delete_MessageStoreFactory(PyObject *self, PyObject *
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MessageStoreFactory" "', argument " "1"" of type '" "FIX::MessageStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MessageStoreFactory" "', argument " "1"" of type '" "FIX::MessageStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MessageStoreFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreFactory * >(argp1);
   {
@@ -141525,9 +143849,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreFactory_create(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreFactory_create", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreFactory_create" "', argument " "1"" of type '" "FIX::MessageStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreFactory_create" "', argument " "1"" of type '" "FIX::MessageStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -141581,14 +143909,22 @@ SWIGINTERN PyObject *_wrap_MessageStoreFactory_destroy(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreFactory_destroy" "', argument " "1"" of type '" "FIX::MessageStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreFactory_destroy" "', argument " "1"" of type '" "FIX::MessageStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MessageStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MessageStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
@@ -141637,9 +143973,13 @@ SWIGINTERN PyObject *_wrap_MemoryStoreFactory_create(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MemoryStoreFactory_create", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStoreFactory_create" "', argument " "1"" of type '" "FIX::MemoryStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStoreFactory_create" "', argument " "1"" of type '" "FIX::MemoryStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStoreFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStoreFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -141693,14 +144033,22 @@ SWIGINTERN PyObject *_wrap_MemoryStoreFactory_destroy(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MemoryStoreFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStoreFactory_destroy" "', argument " "1"" of type '" "FIX::MemoryStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStoreFactory_destroy" "', argument " "1"" of type '" "FIX::MemoryStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStoreFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStoreFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MemoryStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MemoryStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStoreFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
@@ -141765,9 +144113,13 @@ SWIGINTERN PyObject *_wrap_delete_MemoryStoreFactory(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStoreFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStoreFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MemoryStoreFactory" "', argument " "1"" of type '" "FIX::MemoryStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MemoryStoreFactory" "', argument " "1"" of type '" "FIX::MemoryStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MemoryStoreFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStoreFactory * >(argp1);
   {
@@ -141814,9 +144166,13 @@ SWIGINTERN PyObject *_wrap_delete_MessageStore(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MessageStore" "', argument " "1"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MessageStore" "', argument " "1"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MessageStore', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
@@ -141857,9 +144213,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_set(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStore_set", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_set" "', argument " "1"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_set" "', argument " "1"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -141937,9 +144297,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_get(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStore_get", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_get" "', argument " "1"" of type '" "FIX::MessageStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_get" "', argument " "1"" of type '" "FIX::MessageStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -141994,9 +144358,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_getNextSenderMsgSeqNum(PyObject *self, P
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_getNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
@@ -142033,9 +144401,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_getNextTargetMsgSeqNum(PyObject *self, P
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_getNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
@@ -142073,9 +144445,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_setNextSenderMsgSeqNum(PyObject *self, P
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStore_setNextSenderMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_setNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -142118,9 +144494,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_setNextTargetMsgSeqNum(PyObject *self, P
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStore_setNextTargetMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_setNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -142161,9 +144541,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_incrNextSenderMsgSeqNum(PyObject *self, 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_incrNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
@@ -142199,9 +144583,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_incrNextTargetMsgSeqNum(PyObject *self, 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_incrNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
@@ -142238,9 +144626,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_getCreationTime(PyObject *self, PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_getCreationTime" "', argument " "1"" of type '" "FIX::MessageStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_getCreationTime" "', argument " "1"" of type '" "FIX::MessageStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_getCreationTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
@@ -142278,9 +144670,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_reset(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStore_reset", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_reset" "', argument " "1"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_reset" "', argument " "1"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_reset', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -142324,9 +144720,13 @@ SWIGINTERN PyObject *_wrap_MessageStore_refresh(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_refresh" "', argument " "1"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStore_refresh" "', argument " "1"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStore_refresh', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
@@ -142416,9 +144816,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_set(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MemoryStore_set", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_set" "', argument " "1"" of type '" "FIX::MemoryStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_set" "', argument " "1"" of type '" "FIX::MemoryStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -142496,9 +144900,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_get(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MemoryStore_get", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_get" "', argument " "1"" of type '" "FIX::MemoryStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_get" "', argument " "1"" of type '" "FIX::MemoryStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -142553,9 +144961,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_getNextSenderMsgSeqNum(PyObject *self, Py
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_getNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
@@ -142592,9 +145004,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_getNextTargetMsgSeqNum(PyObject *self, Py
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_getNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
@@ -142632,9 +145048,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_setNextSenderMsgSeqNum(PyObject *self, Py
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MemoryStore_setNextSenderMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_setNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -142677,9 +145097,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_setNextTargetMsgSeqNum(PyObject *self, Py
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MemoryStore_setNextTargetMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_setNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -142720,9 +145144,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_incrNextSenderMsgSeqNum(PyObject *self, P
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_incrNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
@@ -142758,9 +145186,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_incrNextTargetMsgSeqNum(PyObject *self, P
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MemoryStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_incrNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
@@ -142798,9 +145230,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_setCreationTime(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MemoryStore_setCreationTime", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_setCreationTime" "', argument " "1"" of type '" "FIX::MemoryStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_setCreationTime" "', argument " "1"" of type '" "FIX::MemoryStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_setCreationTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -142845,9 +145281,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_getCreationTime(PyObject *self, PyObject 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_getCreationTime" "', argument " "1"" of type '" "FIX::MemoryStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_getCreationTime" "', argument " "1"" of type '" "FIX::MemoryStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_getCreationTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
@@ -142885,9 +145325,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_reset(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MemoryStore_reset", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_reset" "', argument " "1"" of type '" "FIX::MemoryStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_reset" "', argument " "1"" of type '" "FIX::MemoryStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_reset', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -142931,9 +145375,13 @@ SWIGINTERN PyObject *_wrap_MemoryStore_refresh(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_refresh" "', argument " "1"" of type '" "FIX::MemoryStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MemoryStore_refresh" "', argument " "1"" of type '" "FIX::MemoryStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MemoryStore_refresh', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
@@ -142969,9 +145417,13 @@ SWIGINTERN PyObject *_wrap_delete_MemoryStore(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MemoryStore, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MemoryStore, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MemoryStore" "', argument " "1"" of type '" "FIX::MemoryStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MemoryStore" "', argument " "1"" of type '" "FIX::MemoryStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MemoryStore', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MemoryStore * >(argp1);
   {
@@ -143019,9 +145471,13 @@ SWIGINTERN PyObject *_wrap_new_MessageStoreFactoryExceptionWrapper(PyObject *sel
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_MessageStoreFactoryExceptionWrapper" "', argument " "1"" of type '" "FIX::MessageStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_MessageStoreFactoryExceptionWrapper" "', argument " "1"" of type '" "FIX::MessageStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_MessageStoreFactoryExceptionWrapper', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreFactory * >(argp1);
   {
@@ -143069,9 +145525,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreFactoryExceptionWrapper_create(PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreFactoryExceptionWrapper_create", 5, 5, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreFactoryExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreFactoryExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreFactoryExceptionWrapper_create" "', argument " "1"" of type '" "FIX::MessageStoreFactoryExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreFactoryExceptionWrapper_create" "', argument " "1"" of type '" "FIX::MessageStoreFactoryExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreFactoryExceptionWrapper_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreFactoryExceptionWrapper * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -143141,14 +145601,22 @@ SWIGINTERN PyObject *_wrap_MessageStoreFactoryExceptionWrapper_destroy(PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreFactoryExceptionWrapper_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreFactoryExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreFactoryExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreFactoryExceptionWrapper_destroy" "', argument " "1"" of type '" "FIX::MessageStoreFactoryExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreFactoryExceptionWrapper_destroy" "', argument " "1"" of type '" "FIX::MessageStoreFactoryExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreFactoryExceptionWrapper_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreFactoryExceptionWrapper * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MessageStoreFactoryExceptionWrapper_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MessageStoreFactoryExceptionWrapper_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreFactoryExceptionWrapper_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
@@ -143184,9 +145652,13 @@ SWIGINTERN PyObject *_wrap_delete_MessageStoreFactoryExceptionWrapper(PyObject *
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreFactoryExceptionWrapper, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreFactoryExceptionWrapper, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MessageStoreFactoryExceptionWrapper" "', argument " "1"" of type '" "FIX::MessageStoreFactoryExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MessageStoreFactoryExceptionWrapper" "', argument " "1"" of type '" "FIX::MessageStoreFactoryExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MessageStoreFactoryExceptionWrapper', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreFactoryExceptionWrapper * >(argp1);
   {
@@ -143234,9 +145706,13 @@ SWIGINTERN PyObject *_wrap_new_MessageStoreExceptionWrapper(PyObject *self, PyOb
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_MessageStoreExceptionWrapper" "', argument " "1"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_MessageStoreExceptionWrapper" "', argument " "1"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_MessageStoreExceptionWrapper', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStore * >(argp1);
   {
@@ -143272,9 +145748,13 @@ SWIGINTERN PyObject *_wrap_delete_MessageStoreExceptionWrapper(PyObject *self, P
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MessageStoreExceptionWrapper" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MessageStoreExceptionWrapper" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MessageStoreExceptionWrapper', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   {
@@ -143321,9 +145801,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_set(PyObject *self, PyOb
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_set", 5, 5, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_set" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_set" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -143423,9 +145907,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_get(PyObject *self, PyOb
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_get", 6, 6, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_get" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_get" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -143501,9 +145989,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_getNextSenderMsgSeqNum(P
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_getNextSenderMsgSeqNum", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_getNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_bool,  0 );
@@ -143561,9 +146053,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_getNextTargetMsgSeqNum(P
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_getNextTargetMsgSeqNum", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_getNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_bool,  0 );
@@ -143623,9 +146119,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_setNextSenderMsgSeqNum(P
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_setNextSenderMsgSeqNum", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_setNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -143690,9 +146190,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_setNextTargetMsgSeqNum(P
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_setNextTargetMsgSeqNum", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_setNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -143754,9 +146258,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_incrNextSenderMsgSeqNum(
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_incrNextSenderMsgSeqNum", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_incrNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_bool,  0 );
@@ -143813,9 +146321,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_incrNextTargetMsgSeqNum(
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_incrNextTargetMsgSeqNum", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_incrNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_bool,  0 );
@@ -143873,9 +146385,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_getCreationTime(PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_getCreationTime", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_getCreationTime" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_getCreationTime" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_getCreationTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_bool,  0 );
@@ -143935,9 +146451,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_reset(PyObject *self, Py
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_reset", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_reset" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_reset" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_reset', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -144002,9 +146522,13 @@ SWIGINTERN PyObject *_wrap_MessageStoreExceptionWrapper_refresh(PyObject *self, 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MessageStoreExceptionWrapper_refresh", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MessageStoreExceptionWrapper, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_refresh" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MessageStoreExceptionWrapper_refresh" "', argument " "1"" of type '" "FIX::MessageStoreExceptionWrapper *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MessageStoreExceptionWrapper_refresh', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MessageStoreExceptionWrapper * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_bool,  0 );
@@ -144207,9 +146731,13 @@ SWIGINTERN PyObject *_wrap_FileStoreFactory_create(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileStoreFactory_create", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStoreFactory_create" "', argument " "1"" of type '" "FIX::FileStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStoreFactory_create" "', argument " "1"" of type '" "FIX::FileStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStoreFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStoreFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -144263,14 +146791,22 @@ SWIGINTERN PyObject *_wrap_FileStoreFactory_destroy(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileStoreFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStoreFactory_destroy" "', argument " "1"" of type '" "FIX::FileStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStoreFactory_destroy" "', argument " "1"" of type '" "FIX::FileStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStoreFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStoreFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "FileStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "FileStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStoreFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
@@ -144306,9 +146842,13 @@ SWIGINTERN PyObject *_wrap_delete_FileStoreFactory(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStoreFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStoreFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FileStoreFactory" "', argument " "1"" of type '" "FIX::FileStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FileStoreFactory" "', argument " "1"" of type '" "FIX::FileStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_FileStoreFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStoreFactory * >(argp1);
   {
@@ -144417,9 +146957,13 @@ SWIGINTERN PyObject *_wrap_delete_FileStore(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FileStore" "', argument " "1"" of type '" "FIX::FileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_FileStore" "', argument " "1"" of type '" "FIX::FileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_FileStore', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
@@ -144460,9 +147004,13 @@ SWIGINTERN PyObject *_wrap_FileStore_set(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileStore_set", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_set" "', argument " "1"" of type '" "FIX::FileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_set" "', argument " "1"" of type '" "FIX::FileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -144540,9 +147088,13 @@ SWIGINTERN PyObject *_wrap_FileStore_get(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileStore_get", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_get" "', argument " "1"" of type '" "FIX::FileStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_get" "', argument " "1"" of type '" "FIX::FileStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -144597,9 +147149,13 @@ SWIGINTERN PyObject *_wrap_FileStore_getNextSenderMsgSeqNum(PyObject *self, PyOb
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_getNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
@@ -144636,9 +147192,13 @@ SWIGINTERN PyObject *_wrap_FileStore_getNextTargetMsgSeqNum(PyObject *self, PyOb
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_getNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
@@ -144676,9 +147236,13 @@ SWIGINTERN PyObject *_wrap_FileStore_setNextSenderMsgSeqNum(PyObject *self, PyOb
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileStore_setNextSenderMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_setNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -144721,9 +147285,13 @@ SWIGINTERN PyObject *_wrap_FileStore_setNextTargetMsgSeqNum(PyObject *self, PyOb
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileStore_setNextTargetMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_setNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -144764,9 +147332,13 @@ SWIGINTERN PyObject *_wrap_FileStore_incrNextSenderMsgSeqNum(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_incrNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
@@ -144802,9 +147374,13 @@ SWIGINTERN PyObject *_wrap_FileStore_incrNextTargetMsgSeqNum(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::FileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_incrNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
@@ -144841,9 +147417,13 @@ SWIGINTERN PyObject *_wrap_FileStore_getCreationTime(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_getCreationTime" "', argument " "1"" of type '" "FIX::FileStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_getCreationTime" "', argument " "1"" of type '" "FIX::FileStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_getCreationTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
@@ -144881,9 +147461,13 @@ SWIGINTERN PyObject *_wrap_FileStore_reset(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "FileStore_reset", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_reset" "', argument " "1"" of type '" "FIX::FileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_reset" "', argument " "1"" of type '" "FIX::FileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_reset', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -144927,9 +147511,13 @@ SWIGINTERN PyObject *_wrap_FileStore_refresh(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__FileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_refresh" "', argument " "1"" of type '" "FIX::FileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FileStore_refresh" "', argument " "1"" of type '" "FIX::FileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'FileStore_refresh', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::FileStore * >(argp1);
   {
@@ -145043,9 +147631,13 @@ SWIGINTERN PyObject *_wrap_SyncFileStore_set(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SyncFileStore_set", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_set" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_set" "', argument " "1"" of type '" "FIX::SyncFileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SyncFileStore_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -145117,9 +147709,13 @@ SWIGINTERN PyObject *_wrap_SyncFileStore_setNextSenderMsgSeqNum(PyObject *self, 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SyncFileStore_setNextSenderMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SyncFileStore_setNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -145162,9 +147758,13 @@ SWIGINTERN PyObject *_wrap_SyncFileStore_setNextTargetMsgSeqNum(PyObject *self, 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SyncFileStore_setNextTargetMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SyncFileStore_setNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -145205,9 +147805,13 @@ SWIGINTERN PyObject *_wrap_SyncFileStore_incrNextSenderMsgSeqNum(PyObject *self,
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SyncFileStore_incrNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
   {
@@ -145243,9 +147847,13 @@ SWIGINTERN PyObject *_wrap_SyncFileStore_incrNextTargetMsgSeqNum(PyObject *self,
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::SyncFileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SyncFileStore_incrNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
   {
@@ -145283,9 +147891,13 @@ SWIGINTERN PyObject *_wrap_SyncFileStore_reset(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SyncFileStore_reset", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SyncFileStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_reset" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SyncFileStore_reset" "', argument " "1"" of type '" "FIX::SyncFileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SyncFileStore_reset', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -145329,9 +147941,13 @@ SWIGINTERN PyObject *_wrap_delete_SyncFileStore(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SyncFileStore, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SyncFileStore, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SyncFileStore" "', argument " "1"" of type '" "FIX::SyncFileStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SyncFileStore" "', argument " "1"" of type '" "FIX::SyncFileStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SyncFileStore', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SyncFileStore * >(argp1);
   {
@@ -145378,9 +147994,13 @@ SWIGINTERN PyObject *_wrap_delete_Application(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Application, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Application, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Application" "', argument " "1"" of type '" "FIX::Application *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Application" "', argument " "1"" of type '" "FIX::Application *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Application', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Application * >(argp1);
   {
@@ -145420,9 +148040,13 @@ SWIGINTERN PyObject *_wrap_Application_onCreate(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Application_onCreate", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Application, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Application, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_onCreate" "', argument " "1"" of type '" "FIX::Application *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_onCreate" "', argument " "1"" of type '" "FIX::Application *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Application_onCreate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -145476,9 +148100,13 @@ SWIGINTERN PyObject *_wrap_Application_onLogon(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Application_onLogon", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Application, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Application, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_onLogon" "', argument " "1"" of type '" "FIX::Application *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_onLogon" "', argument " "1"" of type '" "FIX::Application *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Application_onLogon', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -145532,9 +148160,13 @@ SWIGINTERN PyObject *_wrap_Application_onLogout(PyObject *self, PyObject *args) 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Application_onLogout", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Application, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Application, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_onLogout" "', argument " "1"" of type '" "FIX::Application *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_onLogout" "', argument " "1"" of type '" "FIX::Application *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Application_onLogout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -145591,9 +148223,13 @@ SWIGINTERN PyObject *_wrap_Application_toAdmin(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Application_toAdmin", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Application, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Application, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_toAdmin" "', argument " "1"" of type '" "FIX::Application *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_toAdmin" "', argument " "1"" of type '" "FIX::Application *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Application_toAdmin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0 );
@@ -145658,9 +148294,13 @@ SWIGINTERN PyObject *_wrap_Application_toApp(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Application_toApp", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Application, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Application, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_toApp" "', argument " "1"" of type '" "FIX::Application *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_toApp" "', argument " "1"" of type '" "FIX::Application *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Application_toApp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0 );
@@ -145725,9 +148365,13 @@ SWIGINTERN PyObject *_wrap_Application_fromAdmin(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Application_fromAdmin", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Application, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Application, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_fromAdmin" "', argument " "1"" of type '" "FIX::Application *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_fromAdmin" "', argument " "1"" of type '" "FIX::Application *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Application_fromAdmin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0  | 0);
@@ -145792,9 +148436,13 @@ SWIGINTERN PyObject *_wrap_Application_fromApp(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Application_fromApp", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Application, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Application, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_fromApp" "', argument " "1"" of type '" "FIX::Application *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Application_fromApp" "', argument " "1"" of type '" "FIX::Application *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Application_fromApp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Application * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0  | 0);
@@ -145892,9 +148540,13 @@ SWIGINTERN PyObject *_wrap_disown_Application(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Application, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Application, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "disown_Application" "', argument " "1"" of type '" "FIX::Application *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "disown_Application" "', argument " "1"" of type '" "FIX::Application *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'disown_Application', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Application * >(argp1);
   {
@@ -145978,9 +148630,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_onCreate(PyObject *self, PyOb
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SynchronizedApplication_onCreate", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_onCreate" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_onCreate" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_onCreate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -146026,9 +148682,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_onLogon(PyObject *self, PyObj
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SynchronizedApplication_onLogon", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_onLogon" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_onLogon" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_onLogon', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -146074,9 +148734,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_onLogout(PyObject *self, PyOb
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SynchronizedApplication_onLogout", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_onLogout" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_onLogout" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_onLogout', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -146125,9 +148789,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_toAdmin(PyObject *self, PyObj
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SynchronizedApplication_toAdmin", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_toAdmin" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_toAdmin" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_toAdmin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0 );
@@ -146184,9 +148852,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_toApp(PyObject *self, PyObjec
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SynchronizedApplication_toApp", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_toApp" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_toApp" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_toApp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0 );
@@ -146243,9 +148915,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_fromAdmin(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SynchronizedApplication_fromAdmin", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_fromAdmin" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_fromAdmin" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_fromAdmin', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0  | 0);
@@ -146302,9 +148978,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_fromApp(PyObject *self, PyObj
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SynchronizedApplication_fromApp", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_fromApp" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_fromApp" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_fromApp', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0  | 0);
@@ -146358,9 +149038,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_m_mutex_set(PyObject *self, P
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SynchronizedApplication_m_mutex_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_m_mutex_set" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_m_mutex_set" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_m_mutex_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   {
@@ -146399,9 +149083,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_m_mutex_get(PyObject *self, P
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_m_mutex_get" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_m_mutex_get" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_m_mutex_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   {
@@ -146428,9 +149116,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_app(PyObject *self, PyObject 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_app" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_app" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_app', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   {
@@ -146474,9 +149166,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_m_app_set(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SynchronizedApplication_m_app_set", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_m_app_set" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_m_app_set" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_m_app_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Application,  0 );
@@ -146511,9 +149207,13 @@ SWIGINTERN PyObject *_wrap_SynchronizedApplication_m_app_get(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_m_app_get" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SynchronizedApplication_m_app_get" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SynchronizedApplication_m_app_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   {
@@ -146544,9 +149244,13 @@ SWIGINTERN PyObject *_wrap_delete_SynchronizedApplication(PyObject *self, PyObje
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SynchronizedApplication, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SynchronizedApplication, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SynchronizedApplication" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SynchronizedApplication" "', argument " "1"" of type '" "FIX::SynchronizedApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SynchronizedApplication', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SynchronizedApplication * >(argp1);
   {
@@ -146622,9 +149326,13 @@ SWIGINTERN PyObject *_wrap_delete_NullApplication(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullApplication, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullApplication, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NullApplication" "', argument " "1"" of type '" "FIX::NullApplication *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NullApplication" "', argument " "1"" of type '" "FIX::NullApplication *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_NullApplication', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullApplication * >(argp1);
   {
@@ -146671,9 +149379,13 @@ SWIGINTERN PyObject *_wrap_delete_Initiator(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Initiator" "', argument " "1"" of type '" "FIX::Initiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Initiator" "', argument " "1"" of type '" "FIX::Initiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Initiator', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -146709,9 +149421,13 @@ SWIGINTERN PyObject *_wrap_Initiator_start(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_start" "', argument " "1"" of type '" "FIX::Initiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_start" "', argument " "1"" of type '" "FIX::Initiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_start', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -146747,9 +149463,13 @@ SWIGINTERN PyObject *_wrap_Initiator_block(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_block" "', argument " "1"" of type '" "FIX::Initiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_block" "', argument " "1"" of type '" "FIX::Initiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_block', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -146786,9 +149506,13 @@ SWIGINTERN PyObject *_wrap_Initiator_poll(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_poll" "', argument " "1"" of type '" "FIX::Initiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_poll" "', argument " "1"" of type '" "FIX::Initiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_poll', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -146825,9 +149549,13 @@ SWIGINTERN PyObject *_wrap_Initiator_stop__SWIG_0(PyObject *self, Py_ssize_t nob
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_stop" "', argument " "1"" of type '" "FIX::Initiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_stop" "', argument " "1"" of type '" "FIX::Initiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_stop', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -146866,9 +149594,13 @@ SWIGINTERN PyObject *_wrap_Initiator_stop__SWIG_1(PyObject *self, Py_ssize_t nob
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_stop" "', argument " "1"" of type '" "FIX::Initiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_stop" "', argument " "1"" of type '" "FIX::Initiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_stop', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -146947,9 +149679,13 @@ SWIGINTERN PyObject *_wrap_Initiator_isLoggedOn(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_isLoggedOn" "', argument " "1"" of type '" "FIX::Initiator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_isLoggedOn" "', argument " "1"" of type '" "FIX::Initiator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_isLoggedOn', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -146990,9 +149726,13 @@ SWIGINTERN PyObject *_wrap_Initiator_getSession__SWIG_0(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getSession" "', argument " "1"" of type '" "FIX::Initiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getSession" "', argument " "1"" of type '" "FIX::Initiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_getSession', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -147045,9 +149785,13 @@ SWIGINTERN PyObject *_wrap_Initiator_getSessions(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getSessions" "', argument " "1"" of type '" "FIX::Initiator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getSessions" "', argument " "1"" of type '" "FIX::Initiator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_getSessions', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -147085,9 +149829,13 @@ SWIGINTERN PyObject *_wrap_Initiator_getSession__SWIG_1(PyObject *self, Py_ssize
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getSession" "', argument " "1"" of type '" "FIX::Initiator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getSession" "', argument " "1"" of type '" "FIX::Initiator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_getSession', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -147183,9 +149931,13 @@ SWIGINTERN PyObject *_wrap_Initiator_getSessionSettings(PyObject *self, PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Initiator_getSessionSettings", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getSessionSettings" "', argument " "1"" of type '" "FIX::Initiator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getSessionSettings" "', argument " "1"" of type '" "FIX::Initiator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_getSessionSettings', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -147232,9 +149984,13 @@ SWIGINTERN PyObject *_wrap_Initiator_has(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Initiator_has", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_has" "', argument " "1"" of type '" "FIX::Initiator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_has" "', argument " "1"" of type '" "FIX::Initiator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_has', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -147279,9 +150035,13 @@ SWIGINTERN PyObject *_wrap_Initiator_isStopped(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_isStopped" "', argument " "1"" of type '" "FIX::Initiator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_isStopped" "', argument " "1"" of type '" "FIX::Initiator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_isStopped', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -147319,9 +150079,13 @@ SWIGINTERN PyObject *_wrap_Initiator_getApplication(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getApplication" "', argument " "1"" of type '" "FIX::Initiator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getApplication" "', argument " "1"" of type '" "FIX::Initiator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_getApplication', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -147364,9 +150128,13 @@ SWIGINTERN PyObject *_wrap_Initiator_getMessageStoreFactory(PyObject *self, PyOb
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getMessageStoreFactory" "', argument " "1"" of type '" "FIX::Initiator const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getMessageStoreFactory" "', argument " "1"" of type '" "FIX::Initiator const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_getMessageStoreFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -147404,9 +150172,13 @@ SWIGINTERN PyObject *_wrap_Initiator_getLog(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getLog" "', argument " "1"" of type '" "FIX::Initiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Initiator_getLog" "', argument " "1"" of type '" "FIX::Initiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Initiator_getLog', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
@@ -147649,9 +150421,13 @@ SWIGINTERN PyObject *_wrap_delete_SocketInitiatorBase(PyObject *self, PyObject *
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SocketInitiator, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SocketInitiator, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketInitiatorBase" "', argument " "1"" of type '" "FIX::SocketInitiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketInitiatorBase" "', argument " "1"" of type '" "FIX::SocketInitiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SocketInitiatorBase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SocketInitiator * >(argp1);
   {
@@ -147698,9 +150474,13 @@ SWIGINTERN PyObject *_wrap_delete_Acceptor(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Acceptor" "', argument " "1"" of type '" "FIX::Acceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_Acceptor" "', argument " "1"" of type '" "FIX::Acceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_Acceptor', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -147738,9 +150518,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_getLog(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getLog" "', argument " "1"" of type '" "FIX::Acceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getLog" "', argument " "1"" of type '" "FIX::Acceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_getLog', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -147782,9 +150566,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_start(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_start" "', argument " "1"" of type '" "FIX::Acceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_start" "', argument " "1"" of type '" "FIX::Acceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_start', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -147820,9 +150608,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_block(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_block" "', argument " "1"" of type '" "FIX::Acceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_block" "', argument " "1"" of type '" "FIX::Acceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_block', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -147859,9 +150651,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_poll(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_poll" "', argument " "1"" of type '" "FIX::Acceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_poll" "', argument " "1"" of type '" "FIX::Acceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_poll', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -147898,9 +150694,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_stop__SWIG_0(PyObject *self, Py_ssize_t nobj
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_stop" "', argument " "1"" of type '" "FIX::Acceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_stop" "', argument " "1"" of type '" "FIX::Acceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_stop', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -147939,9 +150739,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_stop__SWIG_1(PyObject *self, Py_ssize_t nobj
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_stop" "', argument " "1"" of type '" "FIX::Acceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_stop" "', argument " "1"" of type '" "FIX::Acceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_stop', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -148020,9 +150824,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_isLoggedOn(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_isLoggedOn" "', argument " "1"" of type '" "FIX::Acceptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_isLoggedOn" "', argument " "1"" of type '" "FIX::Acceptor const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_isLoggedOn', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -148062,9 +150870,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_getSession__SWIG_0(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getSession" "', argument " "1"" of type '" "FIX::Acceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getSession" "', argument " "1"" of type '" "FIX::Acceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_getSession', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -148138,9 +150950,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_getSessions(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getSessions" "', argument " "1"" of type '" "FIX::Acceptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getSessions" "', argument " "1"" of type '" "FIX::Acceptor const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_getSessions', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -148178,9 +150994,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_getSession__SWIG_1(PyObject *self, Py_ssize_
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getSession" "', argument " "1"" of type '" "FIX::Acceptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getSession" "', argument " "1"" of type '" "FIX::Acceptor const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_getSession', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -148276,9 +151096,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_getSessionSettings(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Acceptor_getSessionSettings", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getSessionSettings" "', argument " "1"" of type '" "FIX::Acceptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getSessionSettings" "', argument " "1"" of type '" "FIX::Acceptor const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_getSessionSettings', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -148325,9 +151149,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_has(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "Acceptor_has", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_has" "', argument " "1"" of type '" "FIX::Acceptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_has" "', argument " "1"" of type '" "FIX::Acceptor const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_has', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -148372,9 +151200,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_isStopped(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_isStopped" "', argument " "1"" of type '" "FIX::Acceptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_isStopped" "', argument " "1"" of type '" "FIX::Acceptor const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_isStopped', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -148411,9 +151243,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_getMaxPendingConnections(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getMaxPendingConnections" "', argument " "1"" of type '" "FIX::Acceptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getMaxPendingConnections" "', argument " "1"" of type '" "FIX::Acceptor const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_getMaxPendingConnections', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -148451,9 +151287,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_getApplication(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getApplication" "', argument " "1"" of type '" "FIX::Acceptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getApplication" "', argument " "1"" of type '" "FIX::Acceptor const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_getApplication', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -148496,9 +151336,13 @@ SWIGINTERN PyObject *_wrap_Acceptor_getMessageStoreFactory(PyObject *self, PyObj
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getMessageStoreFactory" "', argument " "1"" of type '" "FIX::Acceptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Acceptor_getMessageStoreFactory" "', argument " "1"" of type '" "FIX::Acceptor const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'Acceptor_getMessageStoreFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
@@ -148735,9 +151579,13 @@ SWIGINTERN PyObject *_wrap_delete_SocketAcceptorBase(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SocketAcceptor, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SocketAcceptor, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketAcceptorBase" "', argument " "1"" of type '" "FIX::SocketAcceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SocketAcceptorBase" "', argument " "1"" of type '" "FIX::SocketAcceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SocketAcceptorBase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SocketAcceptor * >(argp1);
   {
@@ -149148,9 +151996,13 @@ SWIGINTERN PyObject *_wrap_delete_DataDictionary(PyObject *self, PyObject *args)
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DataDictionary" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DataDictionary" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_DataDictionary', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -149187,9 +152039,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_readFromURL(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_readFromURL", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_readFromURL" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_readFromURL" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_readFromURL', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -149256,9 +152112,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_readFromDocument(PyObject *self, PyObj
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_readFromDocument", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_readFromDocument" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_readFromDocument" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_readFromDocument', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_DOMDocumentPtr,  0  | 0);
@@ -149304,9 +152164,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_readFromStream(PyObject *self, PyObjec
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_readFromStream", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_readFromStream" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_readFromStream" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_readFromStream', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_std__istream,  0 );
@@ -149351,9 +152215,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_setVersion(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_setVersion", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_setVersion" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_setVersion" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_setVersion', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -149419,9 +152287,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getVersion(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getVersion" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getVersion" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_getVersion', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -149459,9 +152331,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addField(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addField", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addField" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addField" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -149506,9 +152382,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addFieldName(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addFieldName", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addFieldName" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addFieldName" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addFieldName', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -149583,9 +152463,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getFieldName(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_getFieldName", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getFieldName" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getFieldName" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_getFieldName', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -149663,9 +152547,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getFieldTag(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_getFieldTag", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getFieldTag" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getFieldTag" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_getFieldTag', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -149764,9 +152652,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addValueName(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addValueName", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addValueName" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addValueName" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addValueName', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -149872,9 +152764,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getValueName(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_getValueName", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getValueName" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getValueName" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_getValueName', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -149984,9 +152880,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getNameValue(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_getNameValue", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getNameValue" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getNameValue" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_getNameValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -150092,9 +152992,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isField(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_isField", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -150136,9 +153040,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addMsgType(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addMsgType", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addMsgType" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addMsgType" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addMsgType', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -150205,9 +153113,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isMsgType(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_isMsgType", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isMsgType" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isMsgType" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isMsgType', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -150276,9 +153188,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addMsgField(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addMsgField", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addMsgField" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addMsgField" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addMsgField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -150353,9 +153269,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isMsgField(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_isMsgField", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isMsgField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isMsgField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isMsgField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -150430,9 +153350,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addHeaderField(PyObject *self, PyObjec
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addHeaderField", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addHeaderField" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addHeaderField" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addHeaderField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -150481,9 +153405,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isHeaderField(PyObject *self, PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_isHeaderField", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isHeaderField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isHeaderField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isHeaderField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -150529,9 +153457,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addTrailerField(PyObject *self, PyObje
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addTrailerField", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addTrailerField" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addTrailerField" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addTrailerField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -150580,9 +153512,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isTrailerField(PyObject *self, PyObjec
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_isTrailerField", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isTrailerField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isTrailerField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isTrailerField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -150628,9 +153564,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addFieldType(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addFieldType", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addFieldType" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addFieldType" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addFieldType', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -150682,9 +153622,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getFieldType(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_getFieldType", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getFieldType" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getFieldType" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_getFieldType', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -150737,9 +153681,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addRequiredField(PyObject *self, PyObj
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addRequiredField", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addRequiredField" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addRequiredField" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addRequiredField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -150814,9 +153762,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isRequiredField(PyObject *self, PyObje
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_isRequiredField", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isRequiredField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isRequiredField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isRequiredField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -150890,9 +153842,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addFieldValue(PyObject *self, PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addFieldValue", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addFieldValue" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addFieldValue" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addFieldValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -150965,9 +153921,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_hasFieldValue(PyObject *self, PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_hasFieldValue", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_hasFieldValue" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_hasFieldValue" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_hasFieldValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -151013,9 +153973,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isFieldValue(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_isFieldValue", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isFieldValue" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isFieldValue" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isFieldValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -151095,9 +154059,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_addGroup(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_addGroup", 5, 5, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addGroup" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_addGroup" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_addGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -151185,9 +154153,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isGroup(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_isGroup", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isGroup" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isGroup" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -151265,9 +154237,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_getGroup(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_getGroup", 5, 5, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getGroup" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_getGroup" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_getGroup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -151389,9 +154365,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isDataField(PyObject *self, PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_isDataField", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isDataField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isDataField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isDataField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -151435,9 +154415,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isMultipleValueField(PyObject *self, P
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_isMultipleValueField", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isMultipleValueField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isMultipleValueField" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isMultipleValueField', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -151480,9 +154464,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_checkFieldsOutOfOrder(PyObject *self, 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_checkFieldsOutOfOrder", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_checkFieldsOutOfOrder" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_checkFieldsOutOfOrder" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_checkFieldsOutOfOrder', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -151525,9 +154513,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_checkFieldsHaveValues(PyObject *self, 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_checkFieldsHaveValues", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_checkFieldsHaveValues" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_checkFieldsHaveValues" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_checkFieldsHaveValues', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -151570,9 +154562,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_checkUserDefinedFields(PyObject *self,
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_checkUserDefinedFields", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_checkUserDefinedFields" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_checkUserDefinedFields" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_checkUserDefinedFields', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -151615,9 +154611,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_allowUnknownMsgFields(PyObject *self, 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_allowUnknownMsgFields", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_allowUnknownMsgFields" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_allowUnknownMsgFields" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_allowUnknownMsgFields', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -151660,9 +154660,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_preserveMessageFieldsOrder(PyObject *s
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "DataDictionary_preserveMessageFieldsOrder", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_preserveMessageFieldsOrder" "', argument " "1"" of type '" "FIX::DataDictionary *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_preserveMessageFieldsOrder" "', argument " "1"" of type '" "FIX::DataDictionary *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_preserveMessageFieldsOrder', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
@@ -151704,9 +154708,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_isMessageFieldsOrderPreserved(PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isMessageFieldsOrderPreserved" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_isMessageFieldsOrderPreserved" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_isMessageFieldsOrderPreserved', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   {
@@ -151798,9 +154806,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_validate__SWIG_1(PyObject *self, Py_ss
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_validate" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_validate" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_validate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0  | 0);
@@ -151848,9 +154860,13 @@ SWIGINTERN PyObject *_wrap_DataDictionary_validate__SWIG_2(PyObject *self, Py_ss
   
   (void)self;
   if ((nobjs < 3) || (nobjs > 3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DataDictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_validate" "', argument " "1"" of type '" "FIX::DataDictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DataDictionary_validate" "', argument " "1"" of type '" "FIX::DataDictionary const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DataDictionary_validate', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DataDictionary * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Message,  0  | 0);
@@ -152173,9 +155189,13 @@ SWIGINTERN PyObject *_wrap_delete_SSLSocketAcceptorBase(PyObject *self, PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SSLSocketAcceptor, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SSLSocketAcceptor, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SSLSocketAcceptorBase" "', argument " "1"" of type '" "FIX::SSLSocketAcceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SSLSocketAcceptorBase" "', argument " "1"" of type '" "FIX::SSLSocketAcceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SSLSocketAcceptorBase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SSLSocketAcceptor * >(argp1);
   {
@@ -152212,9 +155232,13 @@ SWIGINTERN PyObject *_wrap_SSLSocketAcceptorBase_setPassword(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SSLSocketAcceptorBase_setPassword", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SSLSocketAcceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SSLSocketAcceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SSLSocketAcceptorBase_setPassword" "', argument " "1"" of type '" "FIX::SSLSocketAcceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SSLSocketAcceptorBase_setPassword" "', argument " "1"" of type '" "FIX::SSLSocketAcceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SSLSocketAcceptorBase_setPassword', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SSLSocketAcceptor * >(argp1);
   {
@@ -152289,9 +155313,13 @@ SWIGINTERN PyObject *_wrap_SSLSocketAcceptorBase_passwordHandleCallback(PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SSLSocketAcceptorBase_passwordHandleCallback", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SSLSocketAcceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SSLSocketAcceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SSLSocketAcceptorBase_passwordHandleCallback" "', argument " "1"" of type '" "FIX::SSLSocketAcceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SSLSocketAcceptorBase_passwordHandleCallback" "', argument " "1"" of type '" "FIX::SSLSocketAcceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SSLSocketAcceptorBase_passwordHandleCallback', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SSLSocketAcceptor * >(argp1);
   res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
@@ -152612,9 +155640,13 @@ SWIGINTERN PyObject *_wrap_delete_SSLSocketInitiatorBase(PyObject *self, PyObjec
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SSLSocketInitiator, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SSLSocketInitiator, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SSLSocketInitiatorBase" "', argument " "1"" of type '" "FIX::SSLSocketInitiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SSLSocketInitiatorBase" "', argument " "1"" of type '" "FIX::SSLSocketInitiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_SSLSocketInitiatorBase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SSLSocketInitiator * >(argp1);
   {
@@ -152651,9 +155683,13 @@ SWIGINTERN PyObject *_wrap_SSLSocketInitiatorBase_setPassword(PyObject *self, Py
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SSLSocketInitiatorBase_setPassword", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SSLSocketInitiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SSLSocketInitiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SSLSocketInitiatorBase_setPassword" "', argument " "1"" of type '" "FIX::SSLSocketInitiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SSLSocketInitiatorBase_setPassword" "', argument " "1"" of type '" "FIX::SSLSocketInitiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SSLSocketInitiatorBase_setPassword', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SSLSocketInitiator * >(argp1);
   {
@@ -152723,19 +155759,31 @@ SWIGINTERN PyObject *_wrap_SSLSocketInitiatorBase_setCertAndKey(PyObject *self, 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SSLSocketInitiatorBase_setCertAndKey", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SSLSocketInitiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SSLSocketInitiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SSLSocketInitiatorBase_setCertAndKey" "', argument " "1"" of type '" "FIX::SSLSocketInitiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SSLSocketInitiatorBase_setCertAndKey" "', argument " "1"" of type '" "FIX::SSLSocketInitiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SSLSocketInitiatorBase_setCertAndKey', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SSLSocketInitiator * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_X509, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_X509, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SSLSocketInitiatorBase_setCertAndKey" "', argument " "2"" of type '" "X509 *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SSLSocketInitiatorBase_setCertAndKey" "', argument " "2"" of type '" "X509 *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SSLSocketInitiatorBase_setCertAndKey', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< X509 * >(argp2);
-  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3,SWIGTYPE_p_RSA, 0 |  0 );
+  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3, SWIGTYPE_p_RSA, 0 |  0 );
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "SSLSocketInitiatorBase_setCertAndKey" "', argument " "3"" of type '" "RSA *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "SSLSocketInitiatorBase_setCertAndKey" "', argument " "3"" of type '" "RSA *""'");
+  }
+  if (!argp3 && swig_obj[2] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SSLSocketInitiatorBase_setCertAndKey', argument 3: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg3 = reinterpret_cast< RSA * >(argp3);
   {
@@ -152781,9 +155829,13 @@ SWIGINTERN PyObject *_wrap_SSLSocketInitiatorBase_passwordHandleCallback(PyObjec
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "SSLSocketInitiatorBase_passwordHandleCallback", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__SSLSocketInitiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__SSLSocketInitiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SSLSocketInitiatorBase_passwordHandleCallback" "', argument " "1"" of type '" "FIX::SSLSocketInitiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SSLSocketInitiatorBase_passwordHandleCallback" "', argument " "1"" of type '" "FIX::SSLSocketInitiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'SSLSocketInitiatorBase_passwordHandleCallback', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::SSLSocketInitiator * >(argp1);
   res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
@@ -153538,9 +156590,13 @@ SWIGINTERN PyObject *_wrap_DatabaseConnectionID_getDatabase(PyObject *self, PyOb
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DatabaseConnectionID_getDatabase" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DatabaseConnectionID_getDatabase" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DatabaseConnectionID_getDatabase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
@@ -153577,9 +156633,13 @@ SWIGINTERN PyObject *_wrap_DatabaseConnectionID_getUser(PyObject *self, PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DatabaseConnectionID_getUser" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DatabaseConnectionID_getUser" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DatabaseConnectionID_getUser', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
@@ -153616,9 +156676,13 @@ SWIGINTERN PyObject *_wrap_DatabaseConnectionID_getPassword(PyObject *self, PyOb
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DatabaseConnectionID_getPassword" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DatabaseConnectionID_getPassword" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DatabaseConnectionID_getPassword', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
@@ -153655,9 +156719,13 @@ SWIGINTERN PyObject *_wrap_DatabaseConnectionID_getHost(PyObject *self, PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DatabaseConnectionID_getHost" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DatabaseConnectionID_getHost" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DatabaseConnectionID_getHost', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
@@ -153694,9 +156762,13 @@ SWIGINTERN PyObject *_wrap_DatabaseConnectionID_getPort(PyObject *self, PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DatabaseConnectionID, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DatabaseConnectionID_getPort" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DatabaseConnectionID_getPort" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'DatabaseConnectionID_getPort', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
@@ -153732,9 +156804,13 @@ SWIGINTERN PyObject *_wrap_delete_DatabaseConnectionID(PyObject *self, PyObject 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DatabaseConnectionID" "', argument " "1"" of type '" "FIX::DatabaseConnectionID *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_DatabaseConnectionID" "', argument " "1"" of type '" "FIX::DatabaseConnectionID *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_DatabaseConnectionID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
   {
@@ -153843,9 +156919,13 @@ SWIGINTERN PyObject *_wrap_delete_MySQLQuery(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLQuery, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLQuery, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLQuery" "', argument " "1"" of type '" "FIX::MySQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLQuery" "', argument " "1"" of type '" "FIX::MySQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MySQLQuery', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
   {
@@ -153884,14 +156964,22 @@ SWIGINTERN PyObject *_wrap_MySQLQuery_execute(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLQuery_execute", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_execute" "', argument " "1"" of type '" "FIX::MySQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_execute" "', argument " "1"" of type '" "FIX::MySQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLQuery_execute', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_MYSQL, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_MYSQL, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MySQLQuery_execute" "', argument " "2"" of type '" "MYSQL *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MySQLQuery_execute" "', argument " "2"" of type '" "MYSQL *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLQuery_execute', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< MYSQL * >(argp2);
   {
@@ -153928,9 +157016,13 @@ SWIGINTERN PyObject *_wrap_MySQLQuery_success(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_success" "', argument " "1"" of type '" "FIX::MySQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_success" "', argument " "1"" of type '" "FIX::MySQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLQuery_success', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
   {
@@ -153967,9 +157059,13 @@ SWIGINTERN PyObject *_wrap_MySQLQuery_rows(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_rows" "', argument " "1"" of type '" "FIX::MySQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_rows" "', argument " "1"" of type '" "FIX::MySQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLQuery_rows', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
   {
@@ -154006,9 +157102,13 @@ SWIGINTERN PyObject *_wrap_MySQLQuery_reason(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_reason" "', argument " "1"" of type '" "FIX::MySQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_reason" "', argument " "1"" of type '" "FIX::MySQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLQuery_reason', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
   {
@@ -154050,9 +157150,13 @@ SWIGINTERN PyObject *_wrap_MySQLQuery_getValue(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLQuery_getValue", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_getValue" "', argument " "1"" of type '" "FIX::MySQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_getValue" "', argument " "1"" of type '" "FIX::MySQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLQuery_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -154098,9 +157202,13 @@ SWIGINTERN PyObject *_wrap_MySQLQuery_throwException(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_throwException" "', argument " "1"" of type '" "FIX::MySQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLQuery_throwException" "', argument " "1"" of type '" "FIX::MySQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLQuery_throwException', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLQuery * >(argp1);
   {
@@ -154400,9 +157508,13 @@ SWIGINTERN PyObject *_wrap_delete_MySQLConnection(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLConnection, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLConnection, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLConnection" "', argument " "1"" of type '" "FIX::MySQLConnection *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLConnection" "', argument " "1"" of type '" "FIX::MySQLConnection *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MySQLConnection', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLConnection * >(argp1);
   {
@@ -154439,9 +157551,13 @@ SWIGINTERN PyObject *_wrap_MySQLConnection_connectionID(PyObject *self, PyObject
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLConnection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLConnection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLConnection_connectionID" "', argument " "1"" of type '" "FIX::MySQLConnection *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLConnection_connectionID" "', argument " "1"" of type '" "FIX::MySQLConnection *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLConnection_connectionID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLConnection * >(argp1);
   {
@@ -154478,9 +157594,13 @@ SWIGINTERN PyObject *_wrap_MySQLConnection_connected(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLConnection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLConnection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLConnection_connected" "', argument " "1"" of type '" "FIX::MySQLConnection *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLConnection_connected" "', argument " "1"" of type '" "FIX::MySQLConnection *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLConnection_connected', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLConnection * >(argp1);
   {
@@ -154517,9 +157637,13 @@ SWIGINTERN PyObject *_wrap_MySQLConnection_reconnect(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLConnection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLConnection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLConnection_reconnect" "', argument " "1"" of type '" "FIX::MySQLConnection *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLConnection_reconnect" "', argument " "1"" of type '" "FIX::MySQLConnection *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLConnection_reconnect', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLConnection * >(argp1);
   {
@@ -154558,9 +157682,13 @@ SWIGINTERN PyObject *_wrap_MySQLConnection_execute(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLConnection_execute", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLConnection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLConnection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLConnection_execute" "', argument " "1"" of type '" "FIX::MySQLConnection *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLConnection_execute" "', argument " "1"" of type '" "FIX::MySQLConnection *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLConnection_execute', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLConnection * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__MySQLQuery,  0 );
@@ -155026,9 +158154,13 @@ SWIGINTERN PyObject *_wrap_MySQLStoreFactory_create(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLStoreFactory_create", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStoreFactory_create" "', argument " "1"" of type '" "FIX::MySQLStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStoreFactory_create" "', argument " "1"" of type '" "FIX::MySQLStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStoreFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStoreFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -155082,14 +158214,22 @@ SWIGINTERN PyObject *_wrap_MySQLStoreFactory_destroy(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLStoreFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStoreFactory_destroy" "', argument " "1"" of type '" "FIX::MySQLStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStoreFactory_destroy" "', argument " "1"" of type '" "FIX::MySQLStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStoreFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStoreFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MySQLStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MySQLStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStoreFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
@@ -155125,9 +158265,13 @@ SWIGINTERN PyObject *_wrap_delete_MySQLStoreFactory(PyObject *self, PyObject *ar
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStoreFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStoreFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLStoreFactory" "', argument " "1"" of type '" "FIX::MySQLStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLStoreFactory" "', argument " "1"" of type '" "FIX::MySQLStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MySQLStoreFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStoreFactory * >(argp1);
   {
@@ -155206,9 +158350,13 @@ SWIGINTERN PyObject *_wrap_new_MySQLStore__SWIG_0(PyObject *self, Py_ssize_t nob
     SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_MySQLStore" "', argument " "3"" of type '" "FIX::DatabaseConnectionID const &""'"); 
   }
   arg3 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp3);
-  res4 = SWIG_ConvertPtr(swig_obj[3], &argp4,SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t, 0 |  0 );
+  res4 = SWIG_ConvertPtr(swig_obj[3], &argp4, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t, 0 |  0 );
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_MySQLStore" "', argument " "4"" of type '" "FIX::MySQLConnectionPool *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_MySQLStore" "', argument " "4"" of type '" "FIX::MySQLConnectionPool *""'");
+  }
+  if (!argp4 && swig_obj[3] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_MySQLStore', argument 4: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg4 = reinterpret_cast< FIX::MySQLConnectionPool * >(argp4);
   {
@@ -155500,9 +158648,13 @@ SWIGINTERN PyObject *_wrap_delete_MySQLStore(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLStore" "', argument " "1"" of type '" "FIX::MySQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLStore" "', argument " "1"" of type '" "FIX::MySQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MySQLStore', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
@@ -155543,9 +158695,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_set(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLStore_set", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_set" "', argument " "1"" of type '" "FIX::MySQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_set" "', argument " "1"" of type '" "FIX::MySQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -155623,9 +158779,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_get(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLStore_get", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_get" "', argument " "1"" of type '" "FIX::MySQLStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_get" "', argument " "1"" of type '" "FIX::MySQLStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -155680,9 +158840,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_getNextSenderMsgSeqNum(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_getNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
@@ -155719,9 +158883,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_getNextTargetMsgSeqNum(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_getNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
@@ -155759,9 +158927,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_setNextSenderMsgSeqNum(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLStore_setNextSenderMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_setNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -155804,9 +158976,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_setNextTargetMsgSeqNum(PyObject *self, PyO
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLStore_setNextTargetMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_setNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -155847,9 +159023,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_incrNextSenderMsgSeqNum(PyObject *self, Py
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_incrNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
@@ -155885,9 +159065,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_incrNextTargetMsgSeqNum(PyObject *self, Py
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::MySQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_incrNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
@@ -155924,9 +159108,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_getCreationTime(PyObject *self, PyObject *
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_getCreationTime" "', argument " "1"" of type '" "FIX::MySQLStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_getCreationTime" "', argument " "1"" of type '" "FIX::MySQLStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_getCreationTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
@@ -155964,9 +159152,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_reset(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLStore_reset", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_reset" "', argument " "1"" of type '" "FIX::MySQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_reset" "', argument " "1"" of type '" "FIX::MySQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_reset', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -156010,9 +159202,13 @@ SWIGINTERN PyObject *_wrap_MySQLStore_refresh(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_refresh" "', argument " "1"" of type '" "FIX::MySQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLStore_refresh" "', argument " "1"" of type '" "FIX::MySQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLStore_refresh', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLStore * >(argp1);
   {
@@ -156080,9 +159276,13 @@ SWIGINTERN PyObject *_wrap_new_MySQLLog__SWIG_0(PyObject *self, Py_ssize_t nobjs
     SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_MySQLLog" "', argument " "2"" of type '" "FIX::DatabaseConnectionID const &""'"); 
   }
   arg2 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp2);
-  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3,SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t, 0 |  0 );
+  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t, 0 |  0 );
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_MySQLLog" "', argument " "3"" of type '" "FIX::MySQLConnectionPool *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_MySQLLog" "', argument " "3"" of type '" "FIX::MySQLConnectionPool *""'");
+  }
+  if (!argp3 && swig_obj[2] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_MySQLLog', argument 3: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg3 = reinterpret_cast< FIX::MySQLConnectionPool * >(argp3);
   {
@@ -156128,9 +159328,13 @@ SWIGINTERN PyObject *_wrap_new_MySQLLog__SWIG_1(PyObject *self, Py_ssize_t nobjs
     SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_MySQLLog" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const &""'"); 
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_MySQLLog" "', argument " "2"" of type '" "FIX::MySQLConnectionPool *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_MySQLLog" "', argument " "2"" of type '" "FIX::MySQLConnectionPool *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_MySQLLog', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::MySQLConnectionPool * >(argp2);
   {
@@ -156605,9 +159809,13 @@ SWIGINTERN PyObject *_wrap_delete_MySQLLog(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLog, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLog, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLLog" "', argument " "1"" of type '" "FIX::MySQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLLog" "', argument " "1"" of type '" "FIX::MySQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MySQLLog', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
@@ -156643,9 +159851,13 @@ SWIGINTERN PyObject *_wrap_MySQLLog_clear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_clear" "', argument " "1"" of type '" "FIX::MySQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_clear" "', argument " "1"" of type '" "FIX::MySQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLog_clear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
@@ -156681,9 +159893,13 @@ SWIGINTERN PyObject *_wrap_MySQLLog_backup(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_backup" "', argument " "1"" of type '" "FIX::MySQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_backup" "', argument " "1"" of type '" "FIX::MySQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLog_backup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
@@ -156720,9 +159936,13 @@ SWIGINTERN PyObject *_wrap_MySQLLog_setIncomingTable(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLLog_setIncomingTable", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_setIncomingTable" "', argument " "1"" of type '" "FIX::MySQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_setIncomingTable" "', argument " "1"" of type '" "FIX::MySQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLog_setIncomingTable', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
@@ -156788,9 +160008,13 @@ SWIGINTERN PyObject *_wrap_MySQLLog_setOutgoingTable(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLLog_setOutgoingTable", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_setOutgoingTable" "', argument " "1"" of type '" "FIX::MySQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_setOutgoingTable" "', argument " "1"" of type '" "FIX::MySQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLog_setOutgoingTable', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
@@ -156856,9 +160080,13 @@ SWIGINTERN PyObject *_wrap_MySQLLog_setEventTable(PyObject *self, PyObject *args
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLLog_setEventTable", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_setEventTable" "', argument " "1"" of type '" "FIX::MySQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_setEventTable" "', argument " "1"" of type '" "FIX::MySQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLog_setEventTable', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
@@ -156924,9 +160152,13 @@ SWIGINTERN PyObject *_wrap_MySQLLog_onIncoming(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLLog_onIncoming", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_onIncoming" "', argument " "1"" of type '" "FIX::MySQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_onIncoming" "', argument " "1"" of type '" "FIX::MySQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLog_onIncoming', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
@@ -156992,9 +160224,13 @@ SWIGINTERN PyObject *_wrap_MySQLLog_onOutgoing(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLLog_onOutgoing", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_onOutgoing" "', argument " "1"" of type '" "FIX::MySQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_onOutgoing" "', argument " "1"" of type '" "FIX::MySQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLog_onOutgoing', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
@@ -157060,9 +160296,13 @@ SWIGINTERN PyObject *_wrap_MySQLLog_onEvent(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLLog_onEvent", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_onEvent" "', argument " "1"" of type '" "FIX::MySQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLog_onEvent" "', argument " "1"" of type '" "FIX::MySQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLog_onEvent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLog * >(argp1);
   {
@@ -157494,9 +160734,13 @@ SWIGINTERN PyObject *_wrap_MySQLLogFactory_create__SWIG_0(PyObject *self, Py_ssi
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLogFactory_create" "', argument " "1"" of type '" "FIX::MySQLLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLogFactory_create" "', argument " "1"" of type '" "FIX::MySQLLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLogFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLogFactory * >(argp1);
   {
@@ -157541,9 +160785,13 @@ SWIGINTERN PyObject *_wrap_MySQLLogFactory_create__SWIG_1(PyObject *self, Py_ssi
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLogFactory_create" "', argument " "1"" of type '" "FIX::MySQLLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLogFactory_create" "', argument " "1"" of type '" "FIX::MySQLLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLogFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLogFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -157635,14 +160883,22 @@ SWIGINTERN PyObject *_wrap_MySQLLogFactory_destroy(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "MySQLLogFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLogFactory_destroy" "', argument " "1"" of type '" "FIX::MySQLLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MySQLLogFactory_destroy" "', argument " "1"" of type '" "FIX::MySQLLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLogFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLogFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MySQLLogFactory_destroy" "', argument " "2"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MySQLLogFactory_destroy" "', argument " "2"" of type '" "FIX::Log *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'MySQLLogFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::Log * >(argp2);
   {
@@ -157678,9 +160934,13 @@ SWIGINTERN PyObject *_wrap_delete_MySQLLogFactory(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__MySQLLogFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__MySQLLogFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLLogFactory" "', argument " "1"" of type '" "FIX::MySQLLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MySQLLogFactory" "', argument " "1"" of type '" "FIX::MySQLLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_MySQLLogFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::MySQLLogFactory * >(argp1);
   {
@@ -157789,9 +161049,13 @@ SWIGINTERN PyObject *_wrap_delete_PostgreSQLQuery(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLQuery, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLQuery, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLQuery" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLQuery" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_PostgreSQLQuery', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
   {
@@ -157830,14 +161094,22 @@ SWIGINTERN PyObject *_wrap_PostgreSQLQuery_execute(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLQuery_execute", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_execute" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_execute" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLQuery_execute', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_PGconn, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_PGconn, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "PostgreSQLQuery_execute" "', argument " "2"" of type '" "PGconn *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "PostgreSQLQuery_execute" "', argument " "2"" of type '" "PGconn *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLQuery_execute', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< PGconn * >(argp2);
   {
@@ -157874,9 +161146,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLQuery_success(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_success" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_success" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLQuery_success', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
   {
@@ -157913,9 +161189,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLQuery_rows(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_rows" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_rows" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLQuery_rows', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
   {
@@ -157952,9 +161232,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLQuery_reason(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_reason" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_reason" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLQuery_reason', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
   {
@@ -157996,9 +161280,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLQuery_getValue(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLQuery_getValue", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_getValue" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_getValue" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLQuery_getValue', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
   ecode2 = SWIG_AsVal_int(swig_obj[1], &val2);
@@ -158044,9 +161332,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLQuery_throwException(PyObject *self, PyObje
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLQuery, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_throwException" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLQuery_throwException" "', argument " "1"" of type '" "FIX::PostgreSQLQuery *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLQuery_throwException', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLQuery * >(argp1);
   {
@@ -158346,9 +161638,13 @@ SWIGINTERN PyObject *_wrap_delete_PostgreSQLConnection(PyObject *self, PyObject 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLConnection, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLConnection, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLConnection" "', argument " "1"" of type '" "FIX::PostgreSQLConnection *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLConnection" "', argument " "1"" of type '" "FIX::PostgreSQLConnection *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_PostgreSQLConnection', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLConnection * >(argp1);
   {
@@ -158385,9 +161681,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLConnection_connectionID(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLConnection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLConnection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLConnection_connectionID" "', argument " "1"" of type '" "FIX::PostgreSQLConnection *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLConnection_connectionID" "', argument " "1"" of type '" "FIX::PostgreSQLConnection *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLConnection_connectionID', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLConnection * >(argp1);
   {
@@ -158424,9 +161724,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLConnection_connected(PyObject *self, PyObje
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLConnection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLConnection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLConnection_connected" "', argument " "1"" of type '" "FIX::PostgreSQLConnection *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLConnection_connected" "', argument " "1"" of type '" "FIX::PostgreSQLConnection *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLConnection_connected', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLConnection * >(argp1);
   {
@@ -158463,9 +161767,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLConnection_reconnect(PyObject *self, PyObje
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLConnection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLConnection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLConnection_reconnect" "', argument " "1"" of type '" "FIX::PostgreSQLConnection *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLConnection_reconnect" "', argument " "1"" of type '" "FIX::PostgreSQLConnection *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLConnection_reconnect', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLConnection * >(argp1);
   {
@@ -158504,9 +161812,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLConnection_execute(PyObject *self, PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLConnection_execute", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLConnection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLConnection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLConnection_execute" "', argument " "1"" of type '" "FIX::PostgreSQLConnection *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLConnection_execute" "', argument " "1"" of type '" "FIX::PostgreSQLConnection *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLConnection_execute', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLConnection * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__PostgreSQLQuery,  0 );
@@ -158972,9 +162284,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStoreFactory_create(PyObject *self, PyObjec
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLStoreFactory_create", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStoreFactory_create" "', argument " "1"" of type '" "FIX::PostgreSQLStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStoreFactory_create" "', argument " "1"" of type '" "FIX::PostgreSQLStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStoreFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStoreFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -159028,14 +162344,22 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStoreFactory_destroy(PyObject *self, PyObje
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLStoreFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStoreFactory_destroy" "', argument " "1"" of type '" "FIX::PostgreSQLStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStoreFactory_destroy" "', argument " "1"" of type '" "FIX::PostgreSQLStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStoreFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStoreFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "PostgreSQLStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "PostgreSQLStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStoreFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
@@ -159071,9 +162395,13 @@ SWIGINTERN PyObject *_wrap_delete_PostgreSQLStoreFactory(PyObject *self, PyObjec
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStoreFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStoreFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLStoreFactory" "', argument " "1"" of type '" "FIX::PostgreSQLStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLStoreFactory" "', argument " "1"" of type '" "FIX::PostgreSQLStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_PostgreSQLStoreFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStoreFactory * >(argp1);
   {
@@ -159152,9 +162480,13 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLStore__SWIG_0(PyObject *self, Py_ssize_
     SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_PostgreSQLStore" "', argument " "3"" of type '" "FIX::DatabaseConnectionID const &""'"); 
   }
   arg3 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp3);
-  res4 = SWIG_ConvertPtr(swig_obj[3], &argp4,SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t, 0 |  0 );
+  res4 = SWIG_ConvertPtr(swig_obj[3], &argp4, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t, 0 |  0 );
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_PostgreSQLStore" "', argument " "4"" of type '" "FIX::PostgreSQLConnectionPool *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_PostgreSQLStore" "', argument " "4"" of type '" "FIX::PostgreSQLConnectionPool *""'");
+  }
+  if (!argp4 && swig_obj[3] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_PostgreSQLStore', argument 4: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg4 = reinterpret_cast< FIX::PostgreSQLConnectionPool * >(argp4);
   {
@@ -159446,9 +162778,13 @@ SWIGINTERN PyObject *_wrap_delete_PostgreSQLStore(PyObject *self, PyObject *args
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLStore" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLStore" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_PostgreSQLStore', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
@@ -159489,9 +162825,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_set(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLStore_set", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_set" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_set" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -159569,9 +162909,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_get(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLStore_get", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_get" "', argument " "1"" of type '" "FIX::PostgreSQLStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_get" "', argument " "1"" of type '" "FIX::PostgreSQLStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -159626,9 +162970,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_getNextSenderMsgSeqNum(PyObject *self
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_getNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
@@ -159665,9 +163013,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_getNextTargetMsgSeqNum(PyObject *self
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_getNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
@@ -159705,9 +163057,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_setNextSenderMsgSeqNum(PyObject *self
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLStore_setNextSenderMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_setNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -159750,9 +163106,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_setNextTargetMsgSeqNum(PyObject *self
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLStore_setNextTargetMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_setNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -159793,9 +163153,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_incrNextSenderMsgSeqNum(PyObject *sel
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_incrNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
@@ -159831,9 +163195,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_incrNextTargetMsgSeqNum(PyObject *sel
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_incrNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
@@ -159870,9 +163238,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_getCreationTime(PyObject *self, PyObj
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_getCreationTime" "', argument " "1"" of type '" "FIX::PostgreSQLStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_getCreationTime" "', argument " "1"" of type '" "FIX::PostgreSQLStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_getCreationTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
@@ -159910,9 +163282,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_reset(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLStore_reset", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_reset" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_reset" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_reset', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -159956,9 +163332,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLStore_refresh(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_refresh" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLStore_refresh" "', argument " "1"" of type '" "FIX::PostgreSQLStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLStore_refresh', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLStore * >(argp1);
   {
@@ -160026,9 +163406,13 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLog__SWIG_0(PyObject *self, Py_ssize_t 
     SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_PostgreSQLLog" "', argument " "2"" of type '" "FIX::DatabaseConnectionID const &""'"); 
   }
   arg2 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp2);
-  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3,SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t, 0 |  0 );
+  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t, 0 |  0 );
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_PostgreSQLLog" "', argument " "3"" of type '" "FIX::PostgreSQLConnectionPool *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_PostgreSQLLog" "', argument " "3"" of type '" "FIX::PostgreSQLConnectionPool *""'");
+  }
+  if (!argp3 && swig_obj[2] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_PostgreSQLLog', argument 3: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg3 = reinterpret_cast< FIX::PostgreSQLConnectionPool * >(argp3);
   {
@@ -160074,9 +163458,13 @@ SWIGINTERN PyObject *_wrap_new_PostgreSQLLog__SWIG_1(PyObject *self, Py_ssize_t 
     SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_PostgreSQLLog" "', argument " "1"" of type '" "FIX::DatabaseConnectionID const &""'"); 
   }
   arg1 = reinterpret_cast< FIX::DatabaseConnectionID * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_PostgreSQLLog" "', argument " "2"" of type '" "FIX::PostgreSQLConnectionPool *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "new_PostgreSQLLog" "', argument " "2"" of type '" "FIX::PostgreSQLConnectionPool *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'new_PostgreSQLLog', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::PostgreSQLConnectionPool * >(argp2);
   {
@@ -160551,9 +163939,13 @@ SWIGINTERN PyObject *_wrap_delete_PostgreSQLLog(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLog, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLog, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLLog" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLLog" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_PostgreSQLLog', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
@@ -160589,9 +163981,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_clear(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_clear" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_clear" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLog_clear', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
@@ -160627,9 +164023,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_backup(PyObject *self, PyObject *args) 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_backup" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_backup" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLog_backup', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
@@ -160666,9 +164066,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_setIncomingTable(PyObject *self, PyObje
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLLog_setIncomingTable", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_setIncomingTable" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_setIncomingTable" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLog_setIncomingTable', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
@@ -160734,9 +164138,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_setOutgoingTable(PyObject *self, PyObje
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLLog_setOutgoingTable", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_setOutgoingTable" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_setOutgoingTable" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLog_setOutgoingTable', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
@@ -160802,9 +164210,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_setEventTable(PyObject *self, PyObject 
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLLog_setEventTable", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_setEventTable" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_setEventTable" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLog_setEventTable', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
@@ -160870,9 +164282,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_onIncoming(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLLog_onIncoming", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_onIncoming" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_onIncoming" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLog_onIncoming', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
@@ -160938,9 +164354,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_onOutgoing(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLLog_onOutgoing", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_onOutgoing" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_onOutgoing" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLog_onOutgoing', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
@@ -161006,9 +164426,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLog_onEvent(PyObject *self, PyObject *args)
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLLog_onEvent", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLog, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_onEvent" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLog_onEvent" "', argument " "1"" of type '" "FIX::PostgreSQLLog *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLog_onEvent', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLog * >(argp1);
   {
@@ -161440,9 +164864,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLogFactory_create__SWIG_0(PyObject *self, P
   
   (void)self;
   if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLogFactory_create" "', argument " "1"" of type '" "FIX::PostgreSQLLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLogFactory_create" "', argument " "1"" of type '" "FIX::PostgreSQLLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLogFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLogFactory * >(argp1);
   {
@@ -161487,9 +164915,13 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLogFactory_create__SWIG_1(PyObject *self, P
   
   (void)self;
   if ((nobjs < 2) || (nobjs > 2)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLogFactory_create" "', argument " "1"" of type '" "FIX::PostgreSQLLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLogFactory_create" "', argument " "1"" of type '" "FIX::PostgreSQLLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLogFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLogFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__SessionID,  0  | 0);
@@ -161581,14 +165013,22 @@ SWIGINTERN PyObject *_wrap_PostgreSQLLogFactory_destroy(PyObject *self, PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "PostgreSQLLogFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLogFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLogFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLogFactory_destroy" "', argument " "1"" of type '" "FIX::PostgreSQLLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PostgreSQLLogFactory_destroy" "', argument " "1"" of type '" "FIX::PostgreSQLLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLogFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLogFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__Log, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__Log, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "PostgreSQLLogFactory_destroy" "', argument " "2"" of type '" "FIX::Log *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "PostgreSQLLogFactory_destroy" "', argument " "2"" of type '" "FIX::Log *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'PostgreSQLLogFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::Log * >(argp2);
   {
@@ -161624,9 +165064,13 @@ SWIGINTERN PyObject *_wrap_delete_PostgreSQLLogFactory(PyObject *self, PyObject 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__PostgreSQLLogFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__PostgreSQLLogFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLLogFactory" "', argument " "1"" of type '" "FIX::PostgreSQLLogFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_PostgreSQLLogFactory" "', argument " "1"" of type '" "FIX::PostgreSQLLogFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_PostgreSQLLogFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::PostgreSQLLogFactory * >(argp1);
   {
@@ -161867,9 +165311,13 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSocketAcceptorBase(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ThreadedSocketAcceptor, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ThreadedSocketAcceptor, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ThreadedSocketAcceptorBase" "', argument " "1"" of type '" "FIX::ThreadedSocketAcceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ThreadedSocketAcceptorBase" "', argument " "1"" of type '" "FIX::ThreadedSocketAcceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_ThreadedSocketAcceptorBase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ThreadedSocketAcceptor * >(argp1);
   {
@@ -162110,9 +165558,13 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSocketInitiatorBase(PyObject *self, Py
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ThreadedSocketInitiator, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ThreadedSocketInitiator, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ThreadedSocketInitiatorBase" "', argument " "1"" of type '" "FIX::ThreadedSocketInitiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ThreadedSocketInitiatorBase" "', argument " "1"" of type '" "FIX::ThreadedSocketInitiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_ThreadedSocketInitiatorBase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ThreadedSocketInitiator * >(argp1);
   {
@@ -162353,9 +165805,13 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSSLSocketAcceptorBase(PyObject *self, 
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ThreadedSSLSocketAcceptor, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ThreadedSSLSocketAcceptor, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ThreadedSSLSocketAcceptorBase" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketAcceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ThreadedSSLSocketAcceptorBase" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketAcceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_ThreadedSSLSocketAcceptorBase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ThreadedSSLSocketAcceptor * >(argp1);
   {
@@ -162392,9 +165848,13 @@ SWIGINTERN PyObject *_wrap_ThreadedSSLSocketAcceptorBase_setPassword(PyObject *s
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "ThreadedSSLSocketAcceptorBase_setPassword", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ThreadedSSLSocketAcceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ThreadedSSLSocketAcceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ThreadedSSLSocketAcceptorBase_setPassword" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketAcceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ThreadedSSLSocketAcceptorBase_setPassword" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketAcceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ThreadedSSLSocketAcceptorBase_setPassword', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ThreadedSSLSocketAcceptor * >(argp1);
   {
@@ -162469,9 +165929,13 @@ SWIGINTERN PyObject *_wrap_ThreadedSSLSocketAcceptorBase_passwordHandleCallback(
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "ThreadedSSLSocketAcceptorBase_passwordHandleCallback", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ThreadedSSLSocketAcceptor, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ThreadedSSLSocketAcceptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ThreadedSSLSocketAcceptorBase_passwordHandleCallback" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketAcceptor *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ThreadedSSLSocketAcceptorBase_passwordHandleCallback" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketAcceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ThreadedSSLSocketAcceptorBase_passwordHandleCallback', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ThreadedSSLSocketAcceptor * >(argp1);
   res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
@@ -162792,9 +166256,13 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSSLSocketInitiatorBase(PyObject *self,
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ThreadedSSLSocketInitiatorBase" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketInitiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_ThreadedSSLSocketInitiatorBase" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketInitiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_ThreadedSSLSocketInitiatorBase', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ThreadedSSLSocketInitiator * >(argp1);
   {
@@ -162831,9 +166299,13 @@ SWIGINTERN PyObject *_wrap_ThreadedSSLSocketInitiatorBase_setPassword(PyObject *
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "ThreadedSSLSocketInitiatorBase_setPassword", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ThreadedSSLSocketInitiatorBase_setPassword" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketInitiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ThreadedSSLSocketInitiatorBase_setPassword" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketInitiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ThreadedSSLSocketInitiatorBase_setPassword', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ThreadedSSLSocketInitiator * >(argp1);
   {
@@ -162903,19 +166375,31 @@ SWIGINTERN PyObject *_wrap_ThreadedSSLSocketInitiatorBase_setCertAndKey(PyObject
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "ThreadedSSLSocketInitiatorBase_setCertAndKey", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ThreadedSSLSocketInitiatorBase_setCertAndKey" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketInitiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ThreadedSSLSocketInitiatorBase_setCertAndKey" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketInitiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ThreadedSSLSocketInitiatorBase_setCertAndKey', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ThreadedSSLSocketInitiator * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_X509, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_X509, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ThreadedSSLSocketInitiatorBase_setCertAndKey" "', argument " "2"" of type '" "X509 *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ThreadedSSLSocketInitiatorBase_setCertAndKey" "', argument " "2"" of type '" "X509 *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ThreadedSSLSocketInitiatorBase_setCertAndKey', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< X509 * >(argp2);
-  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3,SWIGTYPE_p_RSA, 0 |  0 );
+  res3 = SWIG_ConvertPtr(swig_obj[2], &argp3, SWIGTYPE_p_RSA, 0 |  0 );
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "ThreadedSSLSocketInitiatorBase_setCertAndKey" "', argument " "3"" of type '" "RSA *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "ThreadedSSLSocketInitiatorBase_setCertAndKey" "', argument " "3"" of type '" "RSA *""'");
+  }
+  if (!argp3 && swig_obj[2] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ThreadedSSLSocketInitiatorBase_setCertAndKey', argument 3: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg3 = reinterpret_cast< RSA * >(argp3);
   {
@@ -162961,9 +166445,13 @@ SWIGINTERN PyObject *_wrap_ThreadedSSLSocketInitiatorBase_passwordHandleCallback
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "ThreadedSSLSocketInitiatorBase_passwordHandleCallback", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__ThreadedSSLSocketInitiator, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ThreadedSSLSocketInitiatorBase_passwordHandleCallback" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketInitiator *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ThreadedSSLSocketInitiatorBase_passwordHandleCallback" "', argument " "1"" of type '" "FIX::ThreadedSSLSocketInitiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'ThreadedSSLSocketInitiatorBase_passwordHandleCallback', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::ThreadedSSLSocketInitiator * >(argp1);
   res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
@@ -163096,9 +166584,13 @@ SWIGINTERN PyObject *_wrap_NullStoreFactory_create(PyObject *self, PyObject *arg
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullStoreFactory_create", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStoreFactory_create" "', argument " "1"" of type '" "FIX::NullStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStoreFactory_create" "', argument " "1"" of type '" "FIX::NullStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStoreFactory_create', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStoreFactory * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -163152,14 +166644,22 @@ SWIGINTERN PyObject *_wrap_NullStoreFactory_destroy(PyObject *self, PyObject *ar
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullStoreFactory_destroy", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStoreFactory, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStoreFactory, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStoreFactory_destroy" "', argument " "1"" of type '" "FIX::NullStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStoreFactory_destroy" "', argument " "1"" of type '" "FIX::NullStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStoreFactory_destroy', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStoreFactory * >(argp1);
-  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__MessageStore, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NullStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NullStoreFactory_destroy" "', argument " "2"" of type '" "FIX::MessageStore *""'");
+  }
+  if (!argp2 && swig_obj[1] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStoreFactory_destroy', argument 2: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg2 = reinterpret_cast< FIX::MessageStore * >(argp2);
   {
@@ -163224,9 +166724,13 @@ SWIGINTERN PyObject *_wrap_delete_NullStoreFactory(PyObject *self, PyObject *arg
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStoreFactory, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStoreFactory, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NullStoreFactory" "', argument " "1"" of type '" "FIX::NullStoreFactory *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NullStoreFactory" "', argument " "1"" of type '" "FIX::NullStoreFactory *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_NullStoreFactory', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStoreFactory * >(argp1);
   {
@@ -163320,9 +166824,13 @@ SWIGINTERN PyObject *_wrap_NullStore_set(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullStore_set", 3, 3, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_set" "', argument " "1"" of type '" "FIX::NullStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_set" "', argument " "1"" of type '" "FIX::NullStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_set', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -163400,9 +166908,13 @@ SWIGINTERN PyObject *_wrap_NullStore_get(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullStore_get", 4, 4, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_get" "', argument " "1"" of type '" "FIX::NullStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_get" "', argument " "1"" of type '" "FIX::NullStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_get', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -163457,9 +166969,13 @@ SWIGINTERN PyObject *_wrap_NullStore_getNextSenderMsgSeqNum(PyObject *self, PyOb
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_getNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_getNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
@@ -163496,9 +167012,13 @@ SWIGINTERN PyObject *_wrap_NullStore_getNextTargetMsgSeqNum(PyObject *self, PyOb
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_getNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_getNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
@@ -163536,9 +167056,13 @@ SWIGINTERN PyObject *_wrap_NullStore_setNextSenderMsgSeqNum(PyObject *self, PyOb
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullStore_setNextSenderMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_setNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_setNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -163581,9 +167105,13 @@ SWIGINTERN PyObject *_wrap_NullStore_setNextTargetMsgSeqNum(PyObject *self, PyOb
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullStore_setNextTargetMsgSeqNum", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_setNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_setNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[1], &val2);
@@ -163624,9 +167152,13 @@ SWIGINTERN PyObject *_wrap_NullStore_incrNextSenderMsgSeqNum(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_incrNextSenderMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_incrNextSenderMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
@@ -163662,9 +167194,13 @@ SWIGINTERN PyObject *_wrap_NullStore_incrNextTargetMsgSeqNum(PyObject *self, PyO
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_incrNextTargetMsgSeqNum" "', argument " "1"" of type '" "FIX::NullStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_incrNextTargetMsgSeqNum', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
@@ -163702,9 +167238,13 @@ SWIGINTERN PyObject *_wrap_NullStore_setCreationTime(PyObject *self, PyObject *a
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullStore_setCreationTime", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_setCreationTime" "', argument " "1"" of type '" "FIX::NullStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_setCreationTime" "', argument " "1"" of type '" "FIX::NullStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_setCreationTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -163749,9 +167289,13 @@ SWIGINTERN PyObject *_wrap_NullStore_getCreationTime(PyObject *self, PyObject *a
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_getCreationTime" "', argument " "1"" of type '" "FIX::NullStore const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_getCreationTime" "', argument " "1"" of type '" "FIX::NullStore const *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_getCreationTime', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
@@ -163789,9 +167333,13 @@ SWIGINTERN PyObject *_wrap_NullStore_reset(PyObject *self, PyObject *args) {
   
   (void)self;
   if (!SWIG_Python_UnpackTuple(args, "NullStore_reset", 2, 2, swig_obj)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_reset" "', argument " "1"" of type '" "FIX::NullStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_reset" "', argument " "1"" of type '" "FIX::NullStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_reset', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_FIX__UtcTimeStamp,  0  | 0);
@@ -163835,9 +167383,13 @@ SWIGINTERN PyObject *_wrap_NullStore_refresh(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, 0 |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_refresh" "', argument " "1"" of type '" "FIX::NullStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NullStore_refresh" "', argument " "1"" of type '" "FIX::NullStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'NullStore_refresh', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
@@ -163873,9 +167425,13 @@ SWIGINTERN PyObject *_wrap_delete_NullStore(PyObject *self, PyObject *args) {
   (void)self;
   if (!args) SWIG_fail;
   swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_FIX__NullStore, SWIG_POINTER_DISOWN |  0 );
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__NullStore, SWIG_POINTER_DISOWN |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NullStore" "', argument " "1"" of type '" "FIX::NullStore *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_NullStore" "', argument " "1"" of type '" "FIX::NullStore *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method 'delete_NullStore', argument 1: what it refers to was destroyed");
+    SWIG_fail;
   }
   arg1 = reinterpret_cast< FIX::NullStore * >(argp1);
   {
@@ -163913,6 +167469,7 @@ SWIGINTERN PyObject *NullStore_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObject
 }
 
 static PyMethodDef SwigMethods[] = {
+	 { "_endView", _wrap__endView, METH_O, NULL},
 	 { "delete_SwigPyIterator", _wrap_delete_SwigPyIterator, METH_O, NULL},
 	 { "SwigPyIterator_value", _wrap_SwigPyIterator_value, METH_O, NULL},
 	 { "SwigPyIterator_incr", _wrap_SwigPyIterator_incr, METH_VARARGS, NULL},

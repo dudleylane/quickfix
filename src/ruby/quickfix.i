@@ -770,6 +770,49 @@ private:
   $result = SWIG_NewPointerObj(SWIG_as_voidptr($1), $descriptor, 0);
   rb_iv_set($result, "@quickfixOwner", self);
 }
+%{
+// Ends a view: a proxy that owns nothing, of an object that is destroyed or about to be. Its pointer becomes null,
+// and SWIG raises ObjectPreviouslyDeleted for it wherever it is passed afterwards, as self or as an argument of any
+// kind. An owner is never ended: its pointer is what frees its object. SWIG gives a proxy that owns its object a
+// free function, and every proxy it makes the @__swigtype__ variable.
+bool quickfixEndView(VALUE view)
+{
+  if (TYPE(view) != T_DATA || RTYPEDDATA_P(view) || !RTEST(rb_ivar_defined(view, rb_intern("@__swigtype__"))) ||
+      RDATA(view)->dfree)
+    return false;
+  DATA_PTR(view) = 0;
+  return true;
+}
+
+// For the tests: Quickfix._endView(view) ends view, and says whether it could.
+VALUE quickfixTestEndView(VALUE, VALUE view) { return quickfixEndView(view) ? Qtrue : Qfalse; }
+%}
+// A method with overloads first asks each overload's typecheck whether it takes the arguments, and SWIG's took a
+// proxy with a null pointer for an argument of no type, so the call raised ArgumentError ("Wrong arguments for
+// overloaded method") where a method without overloads raises ObjectPreviouslyDeleted. The proxy is still of its
+// class: these count it as one, and the overload chosen raises ObjectPreviouslyDeleted from its own conversion.
+// SWIG's typemaps (typemaps/swigtype.swg), with that one test added; rvalue references take no proxy here.
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER, noblock=1) SWIGTYPE * {
+  void *vptr = 0;
+  int res = SWIG_ConvertPtr($input, &vptr, $descriptor, 0);
+  $1 = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
+}
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER, noblock=1) SWIGTYPE *const& {
+  void *vptr = 0;
+  int res = SWIG_ConvertPtr($input, &vptr, $*descriptor, 0);
+  $1 = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
+}
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER, noblock=1) SWIGTYPE &, const SWIGTYPE & {
+  void *vptr = 0;
+  int res = SWIG_ConvertPtr($input, &vptr, $descriptor, SWIG_POINTER_NO_NULL);
+  $1 = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
+}
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER, noblock=1) SWIGTYPE {
+  void *vptr = 0;
+  int res = SWIG_ConvertPtr($input, &vptr, $&descriptor, SWIG_POINTER_NO_NULL);
+  $1 = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
+}
+
 %typemap(out, noblock=1) FIX::FieldBase &getField { $result = argv[0]; }
 %typemap(out, noblock=1) FIX::FieldMap &getGroup { $result = argv[2]; }
 %typemap(out, noblock=1) FIX::Group &getGroup, Group &getGroup { $result = argv[1]; }
@@ -906,4 +949,5 @@ QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::LogFactory::destroy)
   rb_define_module_function(mQuickfix, "_initiatorBlocking", RUBY_METHOD_FUNC(isInitiatorBlocking), 1);
   rb_define_module_function(mQuickfix, "_acceptorBlocking", RUBY_METHOD_FUNC(isAcceptorBlocking), 1);
   rb_define_module_function(mQuickfix, "_callbackThread", RUBY_METHOD_FUNC(callbackThread), 0);
+  rb_define_module_function(mQuickfix, "_endView", RUBY_METHOD_FUNC(quickfixTestEndView), 1);
 %}

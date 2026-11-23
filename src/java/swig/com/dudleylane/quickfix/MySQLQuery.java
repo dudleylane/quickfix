@@ -53,7 +53,7 @@ public class MySQLQuery {
   }
 
   public boolean execute(SWIGTYPE_p_MYSQL pConnection) {
-    return quickfixJNI.MySQLQuery_execute(swigCPtr, this, SWIGTYPE_p_MYSQL.getCPtr(pConnection));
+    return quickfixJNI.MySQLQuery_execute(swigCPtr, this, Proxies.cPtr(SWIGTYPE_p_MYSQL.getCPtr(pConnection), pConnection));
   }
 
   public boolean success() {

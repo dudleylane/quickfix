@@ -71,7 +71,7 @@ public class FileLogFactory extends LogFactory {
   }
 
   public void destroy(Log log) {
-    quickfixJNI.FileLogFactory_destroy(swigCPtr, this, Log.getCPtr(log), log);
+    quickfixJNI.FileLogFactory_destroy(swigCPtr, this, Proxies.cPtr(Log.getCPtr(log), log), log);
   }
 
 }

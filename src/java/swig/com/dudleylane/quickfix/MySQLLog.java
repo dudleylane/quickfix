@@ -49,11 +49,11 @@ public class MySQLLog extends Log {
   }
 
   public MySQLLog(SessionID sessionID, DatabaseConnectionID connectionID, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t pool) {
-    this(quickfixJNI.new_MySQLLog__SWIG_0(SessionID.getCPtr(sessionID), sessionID, DatabaseConnectionID.getCPtr(connectionID), connectionID, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t.getCPtr(pool)), true);
+    this(quickfixJNI.new_MySQLLog__SWIG_0(SessionID.getCPtr(sessionID), sessionID, DatabaseConnectionID.getCPtr(connectionID), connectionID, Proxies.cPtr(SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t.getCPtr(pool), pool)), true);
   }
 
   public MySQLLog(DatabaseConnectionID connectionID, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t pool) {
-    this(quickfixJNI.new_MySQLLog__SWIG_1(DatabaseConnectionID.getCPtr(connectionID), connectionID, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t.getCPtr(pool)), true);
+    this(quickfixJNI.new_MySQLLog__SWIG_1(DatabaseConnectionID.getCPtr(connectionID), connectionID, Proxies.cPtr(SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t.getCPtr(pool), pool)), true);
   }
 
   public MySQLLog(SessionID sessionID, String database, String user, String password, String host, int port) {

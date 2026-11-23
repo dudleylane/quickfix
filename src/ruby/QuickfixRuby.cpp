@@ -3149,6 +3149,23 @@ private:
 };
 
 
+// Ends a view: a proxy that owns nothing, of an object that is destroyed or about to be. Its pointer becomes null,
+// and SWIG raises ObjectPreviouslyDeleted for it wherever it is passed afterwards, as self or as an argument of any
+// kind. An owner is never ended: its pointer is what frees its object. SWIG gives a proxy that owns its object a
+// free function, and every proxy it makes the @__swigtype__ variable.
+bool quickfixEndView(VALUE view)
+{
+  if (TYPE(view) != T_DATA || RTYPEDDATA_P(view) || !RTEST(rb_ivar_defined(view, rb_intern("@__swigtype__"))) ||
+      RDATA(view)->dfree)
+    return false;
+  DATA_PTR(view) = 0;
+  return true;
+}
+
+// For the tests: Quickfix._endView(view) ends view, and says whether it could.
+VALUE quickfixTestEndView(VALUE, VALUE view) { return quickfixEndView(view) ? Qtrue : Qfalse; }
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -7912,7 +7929,7 @@ SWIGINTERN VALUE _wrap_ConstIterator_next(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__ConstIterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_ConstIterator_next__SWIG_1(nargs, args, self);
     }
@@ -7921,7 +7938,7 @@ SWIGINTERN VALUE _wrap_ConstIterator_next(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__ConstIterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_size_t(argv[1], NULL);
@@ -8045,7 +8062,7 @@ SWIGINTERN VALUE _wrap_ConstIterator_previous(int nargs, VALUE *args, VALUE self
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__ConstIterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_ConstIterator_previous__SWIG_1(nargs, args, self);
     }
@@ -8054,7 +8071,7 @@ SWIGINTERN VALUE _wrap_ConstIterator_previous(int nargs, VALUE *args, VALUE self
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__ConstIterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_size_t(argv[1], NULL);
@@ -8313,11 +8330,11 @@ SWIGINTERN VALUE _wrap_ConstIterator___sub__(int nargs, VALUE *args, VALUE self)
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__ConstIterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_swig__ConstIterator, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_ConstIterator___sub____SWIG_1(nargs, args, self);
       }
@@ -8327,7 +8344,7 @@ SWIGINTERN VALUE _wrap_ConstIterator___sub__(int nargs, VALUE *args, VALUE self)
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__ConstIterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_ptrdiff_t(argv[1], NULL);
@@ -8537,7 +8554,7 @@ SWIGINTERN VALUE _wrap_Iterator_next(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__Iterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Iterator_next__SWIG_1(nargs, args, self);
     }
@@ -8546,7 +8563,7 @@ SWIGINTERN VALUE _wrap_Iterator_next(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__Iterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_size_t(argv[1], NULL);
@@ -8670,7 +8687,7 @@ SWIGINTERN VALUE _wrap_Iterator_previous(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__Iterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Iterator_previous__SWIG_1(nargs, args, self);
     }
@@ -8679,7 +8696,7 @@ SWIGINTERN VALUE _wrap_Iterator_previous(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__Iterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_size_t(argv[1], NULL);
@@ -9026,11 +9043,11 @@ SWIGINTERN VALUE _wrap_Iterator___sub__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__Iterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_swig__Iterator, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Iterator___sub____SWIG_1(nargs, args, self);
       }
@@ -9040,7 +9057,7 @@ SWIGINTERN VALUE _wrap_Iterator___sub__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_swig__Iterator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_ptrdiff_t(argv[1], NULL);
@@ -12956,7 +12973,7 @@ SWIGINTERN VALUE _wrap_new_SessionIDSet(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__lessT_FIX__SessionID_t, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_SessionIDSet__SWIG_0(nargs, args, self);
     }
@@ -13569,7 +13586,7 @@ SWIGINTERN VALUE _wrap_SessionIDSet_erase(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_SessionIDSet_erase__SWIG_0(nargs, args, self);
       }
@@ -19615,7 +19632,7 @@ SWIGINTERN VALUE _wrap_new_SocketRecvFailed(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_ssize_t, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_SocketRecvFailed__SWIG_0(nargs, args, self);
     }
@@ -21061,7 +21078,7 @@ SWIGINTERN VALUE _wrap_DateTime_setHMS(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -21094,7 +21111,7 @@ SWIGINTERN VALUE _wrap_DateTime_setHMS(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -21608,11 +21625,11 @@ SWIGINTERN VALUE _wrap_DateTime_set(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_DateTime_set__SWIG_1(nargs, args, self);
       }
@@ -21622,7 +21639,7 @@ SWIGINTERN VALUE _wrap_DateTime_set(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -22354,7 +22371,7 @@ SWIGINTERN VALUE _wrap_DateTime_fromTm(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_DateTime_fromTm__SWIG_1(nargs, args, self);
     }
@@ -22363,7 +22380,7 @@ SWIGINTERN VALUE _wrap_DateTime_fromTm(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -22378,7 +22395,7 @@ SWIGINTERN VALUE _wrap_DateTime_fromTm(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -23655,7 +23672,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeStamp(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_UtcTimeStamp__SWIG_1(nargs, args, self);
     }
@@ -23664,7 +23681,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeStamp(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_UtcTimeStamp__SWIG_12(nargs, args, self);
     }
@@ -23682,7 +23699,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeStamp(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -23712,7 +23729,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeStamp(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -24788,7 +24805,7 @@ SWIGINTERN VALUE _wrap_new_LocalTimeStamp(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_LocalTimeStamp__SWIG_11(nargs, args, self);
     }
@@ -24806,7 +24823,7 @@ SWIGINTERN VALUE _wrap_new_LocalTimeStamp(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -24836,7 +24853,7 @@ SWIGINTERN VALUE _wrap_new_LocalTimeStamp(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -25698,7 +25715,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeOnly(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_UtcTimeOnly__SWIG_1(nargs, args, self);
     }
@@ -25707,7 +25724,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeOnly(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_UtcTimeOnly__SWIG_9(nargs, args, self);
     }
@@ -25725,7 +25742,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeOnly(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -25755,7 +25772,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeOnly(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -26477,7 +26494,7 @@ SWIGINTERN VALUE _wrap_new_LocalTimeOnly(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_LocalTimeOnly__SWIG_1(nargs, args, self);
     }
@@ -26486,7 +26503,7 @@ SWIGINTERN VALUE _wrap_new_LocalTimeOnly(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_LocalTimeOnly__SWIG_9(nargs, args, self);
     }
@@ -26504,7 +26521,7 @@ SWIGINTERN VALUE _wrap_new_LocalTimeOnly(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -26534,7 +26551,7 @@ SWIGINTERN VALUE _wrap_new_LocalTimeOnly(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -26939,7 +26956,7 @@ SWIGINTERN VALUE _wrap_new_UtcDate(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_UtcDate__SWIG_1(nargs, args, self);
     }
@@ -26948,7 +26965,7 @@ SWIGINTERN VALUE _wrap_new_UtcDate(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_UtcDate__SWIG_4(nargs, args, self);
     }
@@ -27262,7 +27279,7 @@ SWIGINTERN VALUE _wrap_new_LocalDate(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_LocalDate__SWIG_1(nargs, args, self);
     }
@@ -27271,7 +27288,7 @@ SWIGINTERN VALUE _wrap_new_LocalDate(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_tm, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_LocalDate__SWIG_4(nargs, args, self);
     }
@@ -27488,7 +27505,7 @@ SWIGINTERN VALUE _wrap_new_FieldBase(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_FieldBase__SWIG_1(nargs, args, self);
     }
@@ -29576,11 +29593,11 @@ SWIGINTERN VALUE _wrap___gt__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___gt____SWIG_0(nargs, args, self);
       }
@@ -29590,7 +29607,7 @@ SWIGINTERN VALUE _wrap___gt__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -29603,7 +29620,7 @@ SWIGINTERN VALUE _wrap___gt__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsCharPtrAndSize(argv[1], 0, NULL, 0);
       _v = SWIG_CheckState(res);
@@ -29619,7 +29636,7 @@ SWIGINTERN VALUE _wrap___gt__(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___gt____SWIG_4(nargs, args, self);
       }
@@ -29632,7 +29649,7 @@ SWIGINTERN VALUE _wrap___gt__(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___gt____SWIG_2(nargs, args, self);
       }
@@ -29935,11 +29952,11 @@ SWIGINTERN VALUE _wrap___le__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___le____SWIG_0(nargs, args, self);
       }
@@ -29949,7 +29966,7 @@ SWIGINTERN VALUE _wrap___le__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -29962,7 +29979,7 @@ SWIGINTERN VALUE _wrap___le__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsCharPtrAndSize(argv[1], 0, NULL, 0);
       _v = SWIG_CheckState(res);
@@ -29978,7 +29995,7 @@ SWIGINTERN VALUE _wrap___le__(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___le____SWIG_4(nargs, args, self);
       }
@@ -29991,7 +30008,7 @@ SWIGINTERN VALUE _wrap___le__(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___le____SWIG_2(nargs, args, self);
       }
@@ -30158,11 +30175,11 @@ SWIGINTERN VALUE _wrap___ge__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___ge____SWIG_0(nargs, args, self);
       }
@@ -30172,7 +30189,7 @@ SWIGINTERN VALUE _wrap___ge__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -30185,7 +30202,7 @@ SWIGINTERN VALUE _wrap___ge__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsCharPtrAndSize(argv[1], 0, NULL, 0);
       _v = SWIG_CheckState(res);
@@ -30201,7 +30218,7 @@ SWIGINTERN VALUE _wrap___ge__(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___ge____SWIG_4(nargs, args, self);
       }
@@ -30214,7 +30231,7 @@ SWIGINTERN VALUE _wrap___ge__(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___ge____SWIG_2(nargs, args, self);
       }
@@ -30827,7 +30844,7 @@ SWIGINTERN VALUE _wrap_DoubleField_setValue(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DoubleField, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_double(argv[1], NULL);
@@ -30842,7 +30859,7 @@ SWIGINTERN VALUE _wrap_DoubleField_setValue(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DoubleField, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_double(argv[1], NULL);
@@ -32238,7 +32255,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeStampField(int nargs, VALUE *args, VALUE self)
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_new_UtcTimeStampField__SWIG_1(nargs, args, self);
       }
@@ -32269,7 +32286,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeStampField(int nargs, VALUE *args, VALUE self)
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         {
           int res = SWIG_AsVal_int(argv[2], NULL);
@@ -32657,7 +32674,7 @@ SWIGINTERN VALUE _wrap_new_UtcDateField(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__UtcDate, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_new_UtcDateField__SWIG_0(nargs, args, self);
       }
@@ -33136,7 +33153,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeOnlyField(int nargs, VALUE *args, VALUE self) 
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__UtcTimeOnly, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_new_UtcTimeOnlyField__SWIG_1(nargs, args, self);
       }
@@ -33167,7 +33184,7 @@ SWIGINTERN VALUE _wrap_new_UtcTimeOnlyField(int nargs, VALUE *args, VALUE self) 
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__UtcTimeOnly, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         {
           int res = SWIG_AsVal_int(argv[2], NULL);
@@ -33912,7 +33929,7 @@ SWIGINTERN VALUE _wrap_new_FieldMap(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_FieldMap__SWIG_1(nargs, args, self);
     }
@@ -33921,7 +33938,7 @@ SWIGINTERN VALUE _wrap_new_FieldMap(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_int, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_FieldMap__SWIG_3(nargs, args, self);
     }
@@ -33930,7 +33947,7 @@ SWIGINTERN VALUE _wrap_new_FieldMap(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_FieldMap__SWIG_4(nargs, args, self);
     }
@@ -34138,11 +34155,11 @@ SWIGINTERN VALUE _wrap_FieldMap_setField(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_FieldMap_setField__SWIG_1(nargs, args, self);
       }
@@ -34152,11 +34169,11 @@ SWIGINTERN VALUE _wrap_FieldMap_setField(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         {
           int res = SWIG_AsVal_bool(argv[2], NULL);
@@ -34172,7 +34189,7 @@ SWIGINTERN VALUE _wrap_FieldMap_setField(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -34351,11 +34368,11 @@ SWIGINTERN VALUE _wrap_FieldMap_getField(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_FieldMap_getField__SWIG_0(nargs, args, self);
       }
@@ -34365,7 +34382,7 @@ SWIGINTERN VALUE _wrap_FieldMap_getField(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -34580,11 +34597,11 @@ SWIGINTERN VALUE _wrap_FieldMap_isSetField(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_FieldMap_isSetField__SWIG_0(nargs, args, self);
       }
@@ -34594,7 +34611,7 @@ SWIGINTERN VALUE _wrap_FieldMap_isSetField(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -34783,7 +34800,7 @@ SWIGINTERN VALUE _wrap_FieldMap_addGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -34792,7 +34809,7 @@ SWIGINTERN VALUE _wrap_FieldMap_addGroup(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__FieldMap, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_FieldMap_addGroup__SWIG_1(nargs, args, self);
         }
@@ -34803,7 +34820,7 @@ SWIGINTERN VALUE _wrap_FieldMap_addGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -34812,7 +34829,7 @@ SWIGINTERN VALUE _wrap_FieldMap_addGroup(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__FieldMap, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           {
             int res = SWIG_AsVal_bool(argv[3], NULL);
@@ -34956,7 +34973,7 @@ SWIGINTERN VALUE _wrap_FieldMap_addGroupPtr(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -34965,7 +34982,7 @@ SWIGINTERN VALUE _wrap_FieldMap_addGroupPtr(int nargs, VALUE *args, VALUE self) 
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_FieldMap_addGroupPtr__SWIG_1(nargs, args, self);
         }
@@ -34976,7 +34993,7 @@ SWIGINTERN VALUE _wrap_FieldMap_addGroupPtr(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -34985,7 +35002,7 @@ SWIGINTERN VALUE _wrap_FieldMap_addGroupPtr(int nargs, VALUE *args, VALUE self) 
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           {
             int res = SWIG_AsVal_bool(argv[3], NULL);
@@ -35342,7 +35359,7 @@ SWIGINTERN VALUE _wrap_FieldMap_removeGroup(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -35357,7 +35374,7 @@ SWIGINTERN VALUE _wrap_FieldMap_removeGroup(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -35495,7 +35512,7 @@ SWIGINTERN VALUE _wrap_FieldMap_hasGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -35510,7 +35527,7 @@ SWIGINTERN VALUE _wrap_FieldMap_hasGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -35994,7 +36011,7 @@ SWIGINTERN VALUE _wrap_FieldMap_calculateLength(int nargs, VALUE *args, VALUE se
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FieldMap_calculateLength__SWIG_3(nargs, args, self);
     }
@@ -36003,7 +36020,7 @@ SWIGINTERN VALUE _wrap_FieldMap_calculateLength(int nargs, VALUE *args, VALUE se
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -36018,7 +36035,7 @@ SWIGINTERN VALUE _wrap_FieldMap_calculateLength(int nargs, VALUE *args, VALUE se
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -36039,7 +36056,7 @@ SWIGINTERN VALUE _wrap_FieldMap_calculateLength(int nargs, VALUE *args, VALUE se
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -36169,7 +36186,7 @@ SWIGINTERN VALUE _wrap_FieldMap_calculateTotal(int nargs, VALUE *args, VALUE sel
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FieldMap_calculateTotal__SWIG_1(nargs, args, self);
     }
@@ -36178,7 +36195,7 @@ SWIGINTERN VALUE _wrap_FieldMap_calculateTotal(int nargs, VALUE *args, VALUE sel
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -36349,7 +36366,7 @@ SWIGINTERN VALUE _wrap_FieldMap_begin(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FieldMap_begin__SWIG_0(nargs, args, self);
     }
@@ -36358,7 +36375,7 @@ SWIGINTERN VALUE _wrap_FieldMap_begin(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FieldMap_begin__SWIG_1(nargs, args, self);
     }
@@ -36433,7 +36450,7 @@ SWIGINTERN VALUE _wrap_FieldMap_end(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FieldMap_end__SWIG_0(nargs, args, self);
     }
@@ -36442,7 +36459,7 @@ SWIGINTERN VALUE _wrap_FieldMap_end(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FieldMap_end__SWIG_1(nargs, args, self);
     }
@@ -36580,7 +36597,7 @@ SWIGINTERN VALUE _wrap_FieldMap_g_begin(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FieldMap_g_begin__SWIG_0(nargs, args, self);
     }
@@ -36589,7 +36606,7 @@ SWIGINTERN VALUE _wrap_FieldMap_g_begin(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FieldMap_g_begin__SWIG_1(nargs, args, self);
     }
@@ -36655,7 +36672,7 @@ SWIGINTERN VALUE _wrap_FieldMap_g_end(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FieldMap_g_end__SWIG_0(nargs, args, self);
     }
@@ -36664,7 +36681,7 @@ SWIGINTERN VALUE _wrap_FieldMap_g_end(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FieldMap_g_end__SWIG_1(nargs, args, self);
     }
@@ -36780,7 +36797,7 @@ SWIGINTERN VALUE _wrap_new_Header(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_Header__SWIG_1(nargs, args, self);
     }
@@ -37057,11 +37074,11 @@ SWIGINTERN VALUE _wrap_Header_removeGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Header, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Header_removeGroup__SWIG_1(nargs, args, self);
       }
@@ -37071,7 +37088,7 @@ SWIGINTERN VALUE _wrap_Header_removeGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Header, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_unsigned_SS_int(argv[1], NULL);
@@ -37080,7 +37097,7 @@ SWIGINTERN VALUE _wrap_Header_removeGroup(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Header_removeGroup__SWIG_0(nargs, args, self);
         }
@@ -37214,11 +37231,11 @@ SWIGINTERN VALUE _wrap_Header_hasGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Header, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Header_hasGroup__SWIG_0(nargs, args, self);
       }
@@ -37228,7 +37245,7 @@ SWIGINTERN VALUE _wrap_Header_hasGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Header, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_unsigned_SS_int(argv[1], NULL);
@@ -37237,7 +37254,7 @@ SWIGINTERN VALUE _wrap_Header_hasGroup(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Header_hasGroup__SWIG_1(nargs, args, self);
         }
@@ -37361,7 +37378,7 @@ SWIGINTERN VALUE _wrap_new_Trailer(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_Trailer__SWIG_1(nargs, args, self);
     }
@@ -37638,11 +37655,11 @@ SWIGINTERN VALUE _wrap_Trailer_removeGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Trailer, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Trailer_removeGroup__SWIG_1(nargs, args, self);
       }
@@ -37652,7 +37669,7 @@ SWIGINTERN VALUE _wrap_Trailer_removeGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Trailer, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_unsigned_SS_int(argv[1], NULL);
@@ -37661,7 +37678,7 @@ SWIGINTERN VALUE _wrap_Trailer_removeGroup(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Trailer_removeGroup__SWIG_0(nargs, args, self);
         }
@@ -37795,11 +37812,11 @@ SWIGINTERN VALUE _wrap_Trailer_hasGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Trailer, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Trailer_hasGroup__SWIG_0(nargs, args, self);
       }
@@ -37809,7 +37826,7 @@ SWIGINTERN VALUE _wrap_Trailer_hasGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Trailer, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_unsigned_SS_int(argv[1], NULL);
@@ -37818,7 +37835,7 @@ SWIGINTERN VALUE _wrap_Trailer_hasGroup(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Trailer_hasGroup__SWIG_1(nargs, args, self);
         }
@@ -38852,7 +38869,7 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_Message__SWIG_12(nargs, args, self);
     }
@@ -38881,7 +38898,7 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_new_Message__SWIG_5(nargs, args, self);
       }
@@ -38905,15 +38922,15 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_Message__SWIG_1(nargs, args, self);
         }
@@ -38927,11 +38944,11 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_Message__SWIG_7(nargs, args, self);
         }
@@ -38945,7 +38962,7 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         {
           int res = SWIG_AsVal_bool(argv[2], NULL);
@@ -38964,11 +38981,11 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           {
             int res = SWIG_AsVal_bool(argv[3], NULL);
@@ -38985,22 +39002,22 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           int res = SWIG_AsPtr_std_string(argv[3], (std::string**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
             void *vptr = 0;
             int res = SWIG_ConvertPtr(argv[4], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-            _v = SWIG_CheckState(res);
+            _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
             if (_v) {
               return _wrap_new_Message__SWIG_9(nargs, args, self);
             }
@@ -39013,26 +39030,26 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           int res = SWIG_AsPtr_std_string(argv[3], (std::string**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
             void *vptr = 0;
             int res = SWIG_ConvertPtr(argv[4], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-            _v = SWIG_CheckState(res);
+            _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
             if (_v) {
               void *vptr = 0;
               int res = SWIG_ConvertPtr(argv[5], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-              _v = SWIG_CheckState(res);
+              _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
               if (_v) {
                 return _wrap_new_Message__SWIG_11(nargs, args, self);
               }
@@ -39046,22 +39063,22 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           int res = SWIG_AsPtr_std_string(argv[3], (std::string**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
             void *vptr = 0;
             int res = SWIG_ConvertPtr(argv[4], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-            _v = SWIG_CheckState(res);
+            _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
             if (_v) {
               {
                 int res = SWIG_AsVal_bool(argv[5], NULL);
@@ -39080,26 +39097,26 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           int res = SWIG_AsPtr_std_string(argv[3], (std::string**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
             void *vptr = 0;
             int res = SWIG_ConvertPtr(argv[4], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-            _v = SWIG_CheckState(res);
+            _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
             if (_v) {
               void *vptr = 0;
               int res = SWIG_ConvertPtr(argv[5], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-              _v = SWIG_CheckState(res);
+              _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
               if (_v) {
                 {
                   int res = SWIG_AsVal_bool(argv[6], NULL);
@@ -39455,11 +39472,11 @@ SWIGINTERN VALUE _wrap_Message_removeGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Message_removeGroup__SWIG_1(nargs, args, self);
       }
@@ -39469,7 +39486,7 @@ SWIGINTERN VALUE _wrap_Message_removeGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_unsigned_SS_int(argv[1], NULL);
@@ -39478,7 +39495,7 @@ SWIGINTERN VALUE _wrap_Message_removeGroup(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Message_removeGroup__SWIG_0(nargs, args, self);
         }
@@ -39612,11 +39629,11 @@ SWIGINTERN VALUE _wrap_Message_hasGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Message_hasGroup__SWIG_0(nargs, args, self);
       }
@@ -39626,7 +39643,7 @@ SWIGINTERN VALUE _wrap_Message_hasGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_unsigned_SS_int(argv[1], NULL);
@@ -39635,7 +39652,7 @@ SWIGINTERN VALUE _wrap_Message_hasGroup(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Message_hasGroup__SWIG_1(nargs, args, self);
         }
@@ -40103,7 +40120,7 @@ SWIGINTERN VALUE _wrap_Message_toString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_toString__SWIG_3(nargs, args, self);
     }
@@ -40112,11 +40129,11 @@ SWIGINTERN VALUE _wrap_Message_toString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_std__string, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Message_toString__SWIG_7(nargs, args, self);
       }
@@ -40126,7 +40143,7 @@ SWIGINTERN VALUE _wrap_Message_toString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -40141,11 +40158,11 @@ SWIGINTERN VALUE _wrap_Message_toString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_std__string, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         {
           int res = SWIG_AsVal_int(argv[2], NULL);
@@ -40161,7 +40178,7 @@ SWIGINTERN VALUE _wrap_Message_toString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -40182,11 +40199,11 @@ SWIGINTERN VALUE _wrap_Message_toString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_std__string, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         {
           int res = SWIG_AsVal_int(argv[2], NULL);
@@ -40208,7 +40225,7 @@ SWIGINTERN VALUE _wrap_Message_toString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -40235,11 +40252,11 @@ SWIGINTERN VALUE _wrap_Message_toString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_std__string, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         {
           int res = SWIG_AsVal_int(argv[2], NULL);
@@ -40379,7 +40396,7 @@ SWIGINTERN VALUE _wrap_Message_toXML(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_toXML__SWIG_0(nargs, args, self);
     }
@@ -40388,11 +40405,11 @@ SWIGINTERN VALUE _wrap_Message_toXML(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_std__string, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Message_toXML__SWIG_1(nargs, args, self);
       }
@@ -40739,7 +40756,7 @@ SWIGINTERN VALUE _wrap_Message_setString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -40752,7 +40769,7 @@ SWIGINTERN VALUE _wrap_Message_setString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -40771,7 +40788,7 @@ SWIGINTERN VALUE _wrap_Message_setString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -40783,7 +40800,7 @@ SWIGINTERN VALUE _wrap_Message_setString(int nargs, VALUE *args, VALUE self) {
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__DataDictionary, 0);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_Message_setString__SWIG_2(nargs, args, self);
           }
@@ -40795,7 +40812,7 @@ SWIGINTERN VALUE _wrap_Message_setString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -40807,11 +40824,11 @@ SWIGINTERN VALUE _wrap_Message_setString(int nargs, VALUE *args, VALUE self) {
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__DataDictionary, 0);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             void *vptr = 0;
             int res = SWIG_ConvertPtr(argv[4], &vptr, SWIGTYPE_p_FIX__DataDictionary, 0);
-            _v = SWIG_CheckState(res);
+            _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
             if (_v) {
               return _wrap_Message_setString__SWIG_3(nargs, args, self);
             }
@@ -41102,7 +41119,7 @@ SWIGINTERN VALUE _wrap_Message_getHeader(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_getHeader__SWIG_1(nargs, args, self);
     }
@@ -41111,7 +41128,7 @@ SWIGINTERN VALUE _wrap_Message_getHeader(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_getHeader__SWIG_0(nargs, args, self);
     }
@@ -41215,7 +41232,7 @@ SWIGINTERN VALUE _wrap_Message_getTrailer(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_getTrailer__SWIG_1(nargs, args, self);
     }
@@ -41224,7 +41241,7 @@ SWIGINTERN VALUE _wrap_Message_getTrailer(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_getTrailer__SWIG_0(nargs, args, self);
     }
@@ -41590,7 +41607,7 @@ SWIGINTERN VALUE _wrap_Message_bodyLength(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_bodyLength__SWIG_3(nargs, args, self);
     }
@@ -41599,7 +41616,7 @@ SWIGINTERN VALUE _wrap_Message_bodyLength(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -41614,7 +41631,7 @@ SWIGINTERN VALUE _wrap_Message_bodyLength(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -41635,7 +41652,7 @@ SWIGINTERN VALUE _wrap_Message_bodyLength(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -41765,7 +41782,7 @@ SWIGINTERN VALUE _wrap_Message_checkSum(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_checkSum__SWIG_1(nargs, args, self);
     }
@@ -41774,7 +41791,7 @@ SWIGINTERN VALUE _wrap_Message_checkSum(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_int(argv[1], NULL);
@@ -42263,7 +42280,7 @@ SWIGINTERN VALUE _wrap_Message_isHeaderField(int nargs, VALUE *args, VALUE self)
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_isHeaderField__SWIG_2(nargs, args, self);
     }
@@ -42282,11 +42299,11 @@ SWIGINTERN VALUE _wrap_Message_isHeaderField(int nargs, VALUE *args, VALUE self)
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_DataDictionary, 0);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Message_isHeaderField__SWIG_1(nargs, args, self);
       }
@@ -42301,7 +42318,7 @@ SWIGINTERN VALUE _wrap_Message_isHeaderField(int nargs, VALUE *args, VALUE self)
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_DataDictionary, 0);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Message_isHeaderField__SWIG_3(nargs, args, self);
       }
@@ -42499,7 +42516,7 @@ SWIGINTERN VALUE _wrap_Message_isTrailerField(int nargs, VALUE *args, VALUE self
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_isTrailerField__SWIG_2(nargs, args, self);
     }
@@ -42518,11 +42535,11 @@ SWIGINTERN VALUE _wrap_Message_isTrailerField(int nargs, VALUE *args, VALUE self
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_DataDictionary, 0);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Message_isTrailerField__SWIG_1(nargs, args, self);
       }
@@ -42537,7 +42554,7 @@ SWIGINTERN VALUE _wrap_Message_isTrailerField(int nargs, VALUE *args, VALUE self
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_DataDictionary, 0);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Message_isTrailerField__SWIG_3(nargs, args, self);
       }
@@ -42664,7 +42681,7 @@ SWIGINTERN VALUE _wrap_Message_getSessionID(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Message_getSessionID__SWIG_1(nargs, args, self);
     }
@@ -42673,7 +42690,7 @@ SWIGINTERN VALUE _wrap_Message_getSessionID(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -43104,7 +43121,7 @@ SWIGINTERN VALUE _wrap_new_Group(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_Group__SWIG_3(nargs, args, self);
     }
@@ -43139,7 +43156,7 @@ SWIGINTERN VALUE _wrap_new_Group(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_message_order, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_Group__SWIG_2(nargs, args, self);
         }
@@ -43160,7 +43177,7 @@ SWIGINTERN VALUE _wrap_new_Group(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_int, 0);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_Group__SWIG_1(nargs, args, self);
         }
@@ -43513,11 +43530,11 @@ SWIGINTERN VALUE _wrap_Group_removeGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Group, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Group_removeGroup__SWIG_1(nargs, args, self);
       }
@@ -43527,7 +43544,7 @@ SWIGINTERN VALUE _wrap_Group_removeGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Group, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_unsigned_SS_int(argv[1], NULL);
@@ -43536,7 +43553,7 @@ SWIGINTERN VALUE _wrap_Group_removeGroup(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Group_removeGroup__SWIG_0(nargs, args, self);
         }
@@ -43670,11 +43687,11 @@ SWIGINTERN VALUE _wrap_Group_hasGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Group, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Group_hasGroup__SWIG_0(nargs, args, self);
       }
@@ -43684,7 +43701,7 @@ SWIGINTERN VALUE _wrap_Group_hasGroup(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Group, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_unsigned_SS_int(argv[1], NULL);
@@ -43693,7 +43710,7 @@ SWIGINTERN VALUE _wrap_Group_hasGroup(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__Group, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Group_hasGroup__SWIG_1(nargs, args, self);
         }
@@ -97071,7 +97088,7 @@ SWIGINTERN VALUE _wrap_SessionID_toString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionID, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_SessionID_toString__SWIG_0(nargs, args, self);
     }
@@ -97080,11 +97097,11 @@ SWIGINTERN VALUE _wrap_SessionID_toString(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionID, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_std__string, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_SessionID_toString__SWIG_1(nargs, args, self);
       }
@@ -97785,7 +97802,7 @@ SWIGINTERN VALUE _wrap_Dictionary_getString(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Dictionary, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -97798,7 +97815,7 @@ SWIGINTERN VALUE _wrap_Dictionary_getString(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Dictionary, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -99907,7 +99924,7 @@ SWIGINTERN VALUE _wrap_new_SessionSettings(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__istream, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_SessionSettings__SWIG_2(nargs, args, self);
     }
@@ -99924,7 +99941,7 @@ SWIGINTERN VALUE _wrap_new_SessionSettings(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__istream, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_bool(argv[1], NULL);
@@ -100167,7 +100184,7 @@ SWIGINTERN VALUE _wrap_SessionSettings_get(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_SessionSettings_get__SWIG_1(nargs, args, self);
     }
@@ -100176,11 +100193,11 @@ SWIGINTERN VALUE _wrap_SessionSettings_get(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_SessionSettings_get__SWIG_0(nargs, args, self);
       }
@@ -100255,11 +100272,11 @@ SWIGINTERN VALUE _wrap_SessionSettings_set(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Dictionary, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_SessionSettings_set__SWIG_1(nargs, args, self);
       }
@@ -100269,15 +100286,15 @@ SWIGINTERN VALUE _wrap_SessionSettings_set(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__Dictionary, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_SessionSettings_set__SWIG_0(nargs, args, self);
         }
@@ -100447,11 +100464,11 @@ SWIGINTERN VALUE _wrap___rshift__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__istream, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___rshift____SWIG_0(nargs, args, self);
       }
@@ -100461,11 +100478,11 @@ SWIGINTERN VALUE _wrap___rshift__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__istream, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___rshift____SWIG_1(nargs, args, self);
       }
@@ -100556,11 +100573,11 @@ SWIGINTERN VALUE _wrap___lshift__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__ostream, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__FieldBase, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___lshift____SWIG_0(nargs, args, self);
       }
@@ -100570,11 +100587,11 @@ SWIGINTERN VALUE _wrap___lshift__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__ostream, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___lshift____SWIG_1(nargs, args, self);
       }
@@ -100584,11 +100601,11 @@ SWIGINTERN VALUE _wrap___lshift__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__ostream, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___lshift____SWIG_2(nargs, args, self);
       }
@@ -100598,11 +100615,11 @@ SWIGINTERN VALUE _wrap___lshift__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__ostream, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___lshift____SWIG_3(nargs, args, self);
       }
@@ -100830,7 +100847,7 @@ SWIGINTERN VALUE _wrap_Session_logout(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Session, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Session_logout__SWIG_1(nargs, args, self);
     }
@@ -100839,7 +100856,7 @@ SWIGINTERN VALUE _wrap_Session_logout(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Session, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -101817,7 +101834,7 @@ SWIGINTERN VALUE _wrap_Session_sendToTarget(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Session_sendToTarget__SWIG_1(nargs, args, self);
     }
@@ -101826,11 +101843,11 @@ SWIGINTERN VALUE _wrap_Session_sendToTarget(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Session_sendToTarget__SWIG_2(nargs, args, self);
       }
@@ -101840,7 +101857,7 @@ SWIGINTERN VALUE _wrap_Session_sendToTarget(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -101853,15 +101870,15 @@ SWIGINTERN VALUE _wrap_Session_sendToTarget(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SenderCompID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__TargetCompID, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Session_sendToTarget__SWIG_4(nargs, args, self);
         }
@@ -101872,7 +101889,7 @@ SWIGINTERN VALUE _wrap_Session_sendToTarget(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -101889,15 +101906,15 @@ SWIGINTERN VALUE _wrap_Session_sendToTarget(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SenderCompID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__TargetCompID, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           int res = SWIG_AsPtr_std_string(argv[3], (std::string**)(0));
           _v = SWIG_CheckState(res);
@@ -101912,7 +101929,7 @@ SWIGINTERN VALUE _wrap_Session_sendToTarget(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -102177,7 +102194,7 @@ SWIGINTERN VALUE _wrap_Session_lookupSession(int nargs, VALUE *args, VALUE self)
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Session_lookupSession__SWIG_0(nargs, args, self);
     }
@@ -104708,11 +104725,11 @@ SWIGINTERN VALUE _wrap_Session_next(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Session, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Session_next__SWIG_0(nargs, args, self);
       }
@@ -104722,15 +104739,15 @@ SWIGINTERN VALUE _wrap_Session_next(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Session, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Session_next__SWIG_4(nargs, args, self);
         }
@@ -104741,14 +104758,14 @@ SWIGINTERN VALUE _wrap_Session_next(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Session, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Session_next__SWIG_2(nargs, args, self);
         }
@@ -104759,15 +104776,15 @@ SWIGINTERN VALUE _wrap_Session_next(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Session, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           {
             int res = SWIG_AsVal_bool(argv[3], NULL);
@@ -104784,14 +104801,14 @@ SWIGINTERN VALUE _wrap_Session_next(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Session, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           {
             int res = SWIG_AsVal_bool(argv[3], NULL);
@@ -105137,7 +105154,7 @@ SWIGINTERN VALUE _wrap_LogFactory_create(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__LogFactory, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_LogFactory_create__SWIG_0(nargs, args, self);
     }
@@ -105146,11 +105163,11 @@ SWIGINTERN VALUE _wrap_LogFactory_create(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__LogFactory, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_LogFactory_create__SWIG_1(nargs, args, self);
       }
@@ -105422,7 +105439,7 @@ SWIGINTERN VALUE _wrap_new_ScreenLogFactory(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_ScreenLogFactory__SWIG_0(nargs, args, self);
     }
@@ -105557,7 +105574,7 @@ SWIGINTERN VALUE _wrap_ScreenLogFactory_create(int nargs, VALUE *args, VALUE sel
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__ScreenLogFactory, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_ScreenLogFactory_create__SWIG_0(nargs, args, self);
     }
@@ -105566,11 +105583,11 @@ SWIGINTERN VALUE _wrap_ScreenLogFactory_create(int nargs, VALUE *args, VALUE sel
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__ScreenLogFactory, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_ScreenLogFactory_create__SWIG_1(nargs, args, self);
       }
@@ -106486,7 +106503,7 @@ SWIGINTERN VALUE _wrap_new_ScreenLog(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_bool(argv[1], NULL);
@@ -106959,7 +106976,7 @@ SWIGINTERN VALUE _wrap_new_FileLogFactory(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_FileLogFactory__SWIG_0(nargs, args, self);
     }
@@ -107105,7 +107122,7 @@ SWIGINTERN VALUE _wrap_FileLogFactory_create(int nargs, VALUE *args, VALUE self)
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FileLogFactory, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_FileLogFactory_create__SWIG_0(nargs, args, self);
     }
@@ -107114,11 +107131,11 @@ SWIGINTERN VALUE _wrap_FileLogFactory_create(int nargs, VALUE *args, VALUE self)
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FileLogFactory, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_FileLogFactory_create__SWIG_1(nargs, args, self);
       }
@@ -107489,7 +107506,7 @@ SWIGINTERN VALUE _wrap_new_FileLog(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_new_FileLog__SWIG_2(nargs, args, self);
       }
@@ -107517,7 +107534,7 @@ SWIGINTERN VALUE _wrap_new_FileLog(int nargs, VALUE *args, VALUE self) {
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_FileLog__SWIG_3(nargs, args, self);
         }
@@ -110351,7 +110368,7 @@ SWIGINTERN VALUE _wrap_new_FileStoreFactory(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_FileStoreFactory__SWIG_0(nargs, args, self);
     }
@@ -112736,7 +112753,7 @@ SWIGINTERN VALUE _wrap_Initiator_stop(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Initiator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Initiator_stop__SWIG_1(nargs, args, self);
     }
@@ -112745,7 +112762,7 @@ SWIGINTERN VALUE _wrap_Initiator_stop(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Initiator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_bool(argv[1], NULL);
@@ -112962,11 +112979,11 @@ SWIGINTERN VALUE _wrap_Initiator_getSession(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Initiator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Initiator_getSession__SWIG_1(nargs, args, self);
       }
@@ -112976,15 +112993,15 @@ SWIGINTERN VALUE _wrap_Initiator_getSession(int nargs, VALUE *args, VALUE self) 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Initiator, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_Responder, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Initiator_getSession__SWIG_0(nargs, args, self);
         }
@@ -113432,15 +113449,15 @@ SWIGINTERN VALUE _wrap_new_SocketInitiatorBase(int nargs, VALUE *args, VALUE sel
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_SocketInitiatorBase__SWIG_0(nargs, args, self);
         }
@@ -113451,19 +113468,19 @@ SWIGINTERN VALUE _wrap_new_SocketInitiatorBase(int nargs, VALUE *args, VALUE sel
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__LogFactory, SWIG_POINTER_NO_NULL);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_new_SocketInitiatorBase__SWIG_1(nargs, args, self);
           }
@@ -113734,7 +113751,7 @@ SWIGINTERN VALUE _wrap_Acceptor_stop(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Acceptor, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_Acceptor_stop__SWIG_1(nargs, args, self);
     }
@@ -113743,7 +113760,7 @@ SWIGINTERN VALUE _wrap_Acceptor_stop(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Acceptor, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_bool(argv[1], NULL);
@@ -113971,11 +113988,11 @@ SWIGINTERN VALUE _wrap_Acceptor_getSession(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Acceptor, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_Acceptor_getSession__SWIG_1(nargs, args, self);
       }
@@ -113985,14 +114002,14 @@ SWIGINTERN VALUE _wrap_Acceptor_getSession(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Acceptor, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_Responder, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_Acceptor_getSession__SWIG_0(nargs, args, self);
         }
@@ -114434,15 +114451,15 @@ SWIGINTERN VALUE _wrap_new_SocketAcceptorBase(int nargs, VALUE *args, VALUE self
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_SocketAcceptorBase__SWIG_0(nargs, args, self);
         }
@@ -114453,19 +114470,19 @@ SWIGINTERN VALUE _wrap_new_SocketAcceptorBase(int nargs, VALUE *args, VALUE self
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__LogFactory, SWIG_POINTER_NO_NULL);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_new_SocketAcceptorBase__SWIG_1(nargs, args, self);
           }
@@ -114784,7 +114801,7 @@ SWIGINTERN VALUE _wrap_new_DataDictionary(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DataDictionary, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_DataDictionary__SWIG_1(nargs, args, self);
     }
@@ -114793,7 +114810,7 @@ SWIGINTERN VALUE _wrap_new_DataDictionary(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__istream, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_DataDictionary__SWIG_3(nargs, args, self);
     }
@@ -114810,7 +114827,7 @@ SWIGINTERN VALUE _wrap_new_DataDictionary(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__istream, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       {
         int res = SWIG_AsVal_bool(argv[1], NULL);
@@ -117191,11 +117208,11 @@ SWIGINTERN VALUE _wrap_DataDictionary_validate(int nargs, VALUE *args, VALUE sel
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DataDictionary, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_DataDictionary_validate__SWIG_1(nargs, args, self);
       }
@@ -117205,7 +117222,7 @@ SWIGINTERN VALUE _wrap_DataDictionary_validate(int nargs, VALUE *args, VALUE sel
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DataDictionary, 0);
@@ -117224,11 +117241,11 @@ SWIGINTERN VALUE _wrap_DataDictionary_validate(int nargs, VALUE *args, VALUE sel
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DataDictionary, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         {
           int res = SWIG_AsVal_bool(argv[2], NULL);
@@ -117421,15 +117438,15 @@ SWIGINTERN VALUE _wrap_new_SSLSocketAcceptorBase(int nargs, VALUE *args, VALUE s
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_SSLSocketAcceptorBase__SWIG_0(nargs, args, self);
         }
@@ -117440,19 +117457,19 @@ SWIGINTERN VALUE _wrap_new_SSLSocketAcceptorBase(int nargs, VALUE *args, VALUE s
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__LogFactory, SWIG_POINTER_NO_NULL);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_new_SSLSocketAcceptorBase__SWIG_1(nargs, args, self);
           }
@@ -117826,15 +117843,15 @@ SWIGINTERN VALUE _wrap_new_SSLSocketInitiatorBase(int nargs, VALUE *args, VALUE 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_SSLSocketInitiatorBase__SWIG_0(nargs, args, self);
         }
@@ -117845,19 +117862,19 @@ SWIGINTERN VALUE _wrap_new_SSLSocketInitiatorBase(int nargs, VALUE *args, VALUE 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__LogFactory, SWIG_POINTER_NO_NULL);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_new_SSLSocketInitiatorBase__SWIG_1(nargs, args, self);
           }
@@ -118329,11 +118346,11 @@ SWIGINTERN VALUE _wrap___lt__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___lt____SWIG_0(nargs, args, self);
       }
@@ -118343,7 +118360,7 @@ SWIGINTERN VALUE _wrap___lt__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -118356,7 +118373,7 @@ SWIGINTERN VALUE _wrap___lt__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsCharPtrAndSize(argv[1], 0, NULL, 0);
       _v = SWIG_CheckState(res);
@@ -118369,11 +118386,11 @@ SWIGINTERN VALUE _wrap___lt__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___lt____SWIG_5(nargs, args, self);
       }
@@ -118383,11 +118400,11 @@ SWIGINTERN VALUE _wrap___lt__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___lt____SWIG_6(nargs, args, self);
       }
@@ -118400,7 +118417,7 @@ SWIGINTERN VALUE _wrap___lt__(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___lt____SWIG_4(nargs, args, self);
       }
@@ -118413,7 +118430,7 @@ SWIGINTERN VALUE _wrap___lt__(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___lt____SWIG_2(nargs, args, self);
       }
@@ -118512,11 +118529,11 @@ SWIGINTERN VALUE _wrap___eq__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DateTime, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___eq____SWIG_0(nargs, args, self);
       }
@@ -118526,7 +118543,7 @@ SWIGINTERN VALUE _wrap___eq__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -118539,7 +118556,7 @@ SWIGINTERN VALUE _wrap___eq__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsCharPtrAndSize(argv[1], 0, NULL, 0);
       _v = SWIG_CheckState(res);
@@ -118552,11 +118569,11 @@ SWIGINTERN VALUE _wrap___eq__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___eq____SWIG_5(nargs, args, self);
       }
@@ -118566,11 +118583,11 @@ SWIGINTERN VALUE _wrap___eq__(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___eq____SWIG_6(nargs, args, self);
       }
@@ -118583,7 +118600,7 @@ SWIGINTERN VALUE _wrap___eq__(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___eq____SWIG_4(nargs, args, self);
       }
@@ -118596,7 +118613,7 @@ SWIGINTERN VALUE _wrap___eq__(int nargs, VALUE *args, VALUE self) {
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__StringField, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap___eq____SWIG_2(nargs, args, self);
       }
@@ -119307,7 +119324,7 @@ SWIGINTERN VALUE _wrap_new_MySQLConnection(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_MySQLConnection__SWIG_0(nargs, args, self);
     }
@@ -119818,7 +119835,7 @@ SWIGINTERN VALUE _wrap_new_MySQLStoreFactory(int nargs, VALUE *args, VALUE self)
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Dictionary, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_MySQLStoreFactory__SWIG_1(nargs, args, self);
     }
@@ -119827,7 +119844,7 @@ SWIGINTERN VALUE _wrap_new_MySQLStoreFactory(int nargs, VALUE *args, VALUE self)
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_MySQLStoreFactory__SWIG_0(nargs, args, self);
     }
@@ -120221,19 +120238,19 @@ SWIGINTERN VALUE _wrap_new_MySQLStore(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t, 0);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_new_MySQLStore__SWIG_0(nargs, args, self);
           }
@@ -120245,11 +120262,11 @@ SWIGINTERN VALUE _wrap_new_MySQLStore(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         int res = SWIG_AsPtr_std_string(argv[2], (std::string**)(0));
         _v = SWIG_CheckState(res);
@@ -121147,11 +121164,11 @@ SWIGINTERN VALUE _wrap_new_MySQLLog(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t, 0);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_new_MySQLLog__SWIG_1(nargs, args, self);
       }
@@ -121161,15 +121178,15 @@ SWIGINTERN VALUE _wrap_new_MySQLLog(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t, 0);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_MySQLLog__SWIG_0(nargs, args, self);
         }
@@ -121206,7 +121223,7 @@ SWIGINTERN VALUE _wrap_new_MySQLLog(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -121931,7 +121948,7 @@ SWIGINTERN VALUE _wrap_new_MySQLLogFactory(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_MySQLLogFactory__SWIG_0(nargs, args, self);
     }
@@ -122083,7 +122100,7 @@ SWIGINTERN VALUE _wrap_MySQLLogFactory_create(int nargs, VALUE *args, VALUE self
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__MySQLLogFactory, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_MySQLLogFactory_create__SWIG_0(nargs, args, self);
     }
@@ -122092,11 +122109,11 @@ SWIGINTERN VALUE _wrap_MySQLLogFactory_create(int nargs, VALUE *args, VALUE self
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__MySQLLogFactory, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_MySQLLogFactory_create__SWIG_1(nargs, args, self);
       }
@@ -122663,7 +122680,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLConnection(int nargs, VALUE *args, VALUE se
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_PostgreSQLConnection__SWIG_0(nargs, args, self);
     }
@@ -123174,7 +123191,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLStoreFactory(int nargs, VALUE *args, VALUE 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Dictionary, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_PostgreSQLStoreFactory__SWIG_1(nargs, args, self);
     }
@@ -123183,7 +123200,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLStoreFactory(int nargs, VALUE *args, VALUE 
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_PostgreSQLStoreFactory__SWIG_0(nargs, args, self);
     }
@@ -123577,19 +123594,19 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLStore(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t, 0);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_new_PostgreSQLStore__SWIG_0(nargs, args, self);
           }
@@ -123601,11 +123618,11 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLStore(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__UtcTimeStamp, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         int res = SWIG_AsPtr_std_string(argv[2], (std::string**)(0));
         _v = SWIG_CheckState(res);
@@ -124503,11 +124520,11 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLLog(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t, 0);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_new_PostgreSQLLog__SWIG_1(nargs, args, self);
       }
@@ -124517,15 +124534,15 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLLog(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t, 0);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_PostgreSQLLog__SWIG_0(nargs, args, self);
         }
@@ -124562,7 +124579,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLLog(int nargs, VALUE *args, VALUE self) {
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       int res = SWIG_AsPtr_std_string(argv[1], (std::string**)(0));
       _v = SWIG_CheckState(res);
@@ -125287,7 +125304,7 @@ SWIGINTERN VALUE _wrap_new_PostgreSQLLogFactory(int nargs, VALUE *args, VALUE se
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_PostgreSQLLogFactory__SWIG_0(nargs, args, self);
     }
@@ -125439,7 +125456,7 @@ SWIGINTERN VALUE _wrap_PostgreSQLLogFactory_create(int nargs, VALUE *args, VALUE
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__PostgreSQLLogFactory, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_PostgreSQLLogFactory_create__SWIG_0(nargs, args, self);
     }
@@ -125448,11 +125465,11 @@ SWIGINTERN VALUE _wrap_PostgreSQLLogFactory_create(int nargs, VALUE *args, VALUE
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__PostgreSQLLogFactory, 0);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         return _wrap_PostgreSQLLogFactory_create__SWIG_1(nargs, args, self);
       }
@@ -125685,15 +125702,15 @@ SWIGINTERN VALUE _wrap_new_ThreadedSocketAcceptorBase(int nargs, VALUE *args, VA
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_ThreadedSocketAcceptorBase__SWIG_0(nargs, args, self);
         }
@@ -125704,19 +125721,19 @@ SWIGINTERN VALUE _wrap_new_ThreadedSocketAcceptorBase(int nargs, VALUE *args, VA
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__LogFactory, SWIG_POINTER_NO_NULL);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_new_ThreadedSocketAcceptorBase__SWIG_1(nargs, args, self);
           }
@@ -125910,15 +125927,15 @@ SWIGINTERN VALUE _wrap_new_ThreadedSocketInitiatorBase(int nargs, VALUE *args, V
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_ThreadedSocketInitiatorBase__SWIG_0(nargs, args, self);
         }
@@ -125929,19 +125946,19 @@ SWIGINTERN VALUE _wrap_new_ThreadedSocketInitiatorBase(int nargs, VALUE *args, V
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__LogFactory, SWIG_POINTER_NO_NULL);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_new_ThreadedSocketInitiatorBase__SWIG_1(nargs, args, self);
           }
@@ -126135,15 +126152,15 @@ SWIGINTERN VALUE _wrap_new_ThreadedSSLSocketAcceptorBase(int nargs, VALUE *args,
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_ThreadedSSLSocketAcceptorBase__SWIG_0(nargs, args, self);
         }
@@ -126154,19 +126171,19 @@ SWIGINTERN VALUE _wrap_new_ThreadedSSLSocketAcceptorBase(int nargs, VALUE *args,
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__LogFactory, SWIG_POINTER_NO_NULL);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_new_ThreadedSSLSocketAcceptorBase__SWIG_1(nargs, args, self);
           }
@@ -126540,15 +126557,15 @@ SWIGINTERN VALUE _wrap_new_ThreadedSSLSocketInitiatorBase(int nargs, VALUE *args
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           return _wrap_new_ThreadedSSLSocketInitiatorBase__SWIG_0(nargs, args, self);
         }
@@ -126559,19 +126576,19 @@ SWIGINTERN VALUE _wrap_new_ThreadedSSLSocketInitiatorBase(int nargs, VALUE *args
     int _v = 0;
     void *vptr = 0;
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Application, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
+    _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       void *vptr = 0;
       int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_FIX__MessageStoreFactory, SWIG_POINTER_NO_NULL);
-      _v = SWIG_CheckState(res);
+      _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
       if (_v) {
         void *vptr = 0;
         int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_FIX__SessionSettings, SWIG_POINTER_NO_NULL);
-        _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
         if (_v) {
           void *vptr = 0;
           int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_FIX__LogFactory, SWIG_POINTER_NO_NULL);
-          _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
           if (_v) {
             return _wrap_new_ThreadedSSLSocketInitiatorBase__SWIG_1(nargs, args, self);
           }
@@ -136552,6 +136569,7 @@ SWIGEXPORT void Init_quickfix(void) {
   rb_define_module_function(mQuickfix, "_initiatorBlocking", RUBY_METHOD_FUNC(isInitiatorBlocking), 1);
   rb_define_module_function(mQuickfix, "_acceptorBlocking", RUBY_METHOD_FUNC(isAcceptorBlocking), 1);
   rb_define_module_function(mQuickfix, "_callbackThread", RUBY_METHOD_FUNC(callbackThread), 0);
+  rb_define_module_function(mQuickfix, "_endView", RUBY_METHOD_FUNC(quickfixTestEndView), 1);
   
 }
 

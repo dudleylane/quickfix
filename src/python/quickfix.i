@@ -177,6 +177,43 @@ QUICKFIX_PYTHON_KEEPS_OWNER(FIX::SessionSettings::get)
 %feature("pythonappend") FIX::Trailer::getGroup %{val = group%}
 %feature("pythonappend") FIX::Group::getGroup %{val = group%}
 
+// A proxy whose C++ pointer is null -- a view the binding has ended, because what it pointed at was destroyed
+// (quickfixEndView) -- raises ReferenceError wherever it is passed, as self or as a pointer argument. SWIG's own
+// typemap (typemaps/swigtype.swg, copied here with the one test added) converted it to a null pointer: a method ran
+// on nullptr, and a pointer argument read it as none, as setString does a dictionary. None still passes as a null
+// pointer, and a reference argument raises already (SWIG's null-reference check).
+%typemap(in, noblock=1) SWIGTYPE * (void *argp = 0, int res = 0) {
+  res = SWIG_ConvertPtr($input, &argp, $descriptor, $disown | %convertptr_flags);
+  if (!SWIG_IsOK(res)) {
+    %argument_fail(res, "$type", $symname, $argnum);
+  }
+  if (!argp && $input != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method '$symname', argument $argnum: what it refers to was destroyed");
+    SWIG_fail;
+  }
+  $1 = %reinterpret_cast(argp, $ltype);
+}
+
+%{
+// Ends a view: a proxy that owns nothing, of an object that is destroyed or about to be. Its pointer becomes null,
+// so any later use raises (the typemap above). An owner is never ended: its pointer is what frees its object.
+bool quickfixEndView(PyObject *view)
+{
+  SwigPyObject *proxy = SWIG_Python_GetSwigThis(view);
+  if (!proxy || proxy->own)
+    return false;
+  proxy->ptr = 0;
+  return true;
+}
+%}
+// For the tests: fix._endView(view) ends view, and says whether it could. With the GIL: finding a proxy's object
+// reads its attributes.
+%rename(_endView) quickfixTestEndView;
+%nothread quickfixTestEndView;
+%inline %{
+bool quickfixTestEndView(PyObject *view) { return quickfixEndView(view); }
+%}
+
 %include ../quickfix.i
 
 %pythoncode %{

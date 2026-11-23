@@ -49,7 +49,7 @@ public class MessageStoreExceptionWrapper {
   }
 
   public MessageStoreExceptionWrapper(MessageStore pStore) {
-    this(quickfixJNI.new_MessageStoreExceptionWrapper(MessageStore.getCPtr(pStore), pStore), true);
+    this(quickfixJNI.new_MessageStoreExceptionWrapper(Proxies.cPtr(MessageStore.getCPtr(pStore), pStore), pStore), true);
   }
 
   public boolean set(long arg0, String arg1, SWIGTYPE_p_bool arg2, SWIGTYPE_p_FIX__IOException arg3) {

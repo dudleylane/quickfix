@@ -65,7 +65,7 @@ public class SSLSocketAcceptorBase extends Acceptor {
   }
 
   public static int passPhraseHandleCB(String buf, int bufsize, int verify, SWIGTYPE_p_void instance) {
-    return quickfixJNI.SSLSocketAcceptorBase_passPhraseHandleCB(buf, bufsize, verify, SWIGTYPE_p_void.getCPtr(instance));
+    return quickfixJNI.SSLSocketAcceptorBase_passPhraseHandleCB(buf, bufsize, verify, Proxies.cPtr(SWIGTYPE_p_void.getCPtr(instance), instance));
   }
 
 }

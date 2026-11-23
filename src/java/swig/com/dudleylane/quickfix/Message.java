@@ -186,11 +186,11 @@ public class Message extends FieldMap {
   }
 
   public void setString(String string, boolean validate, DataDictionary pDataDictionary) {
-    quickfixJNI.Message_setString__SWIG_2(swigCPtr, this, string, validate, DataDictionary.getCPtr(pDataDictionary), pDataDictionary);
+    quickfixJNI.Message_setString__SWIG_2(swigCPtr, this, string, validate, Proxies.cPtr(DataDictionary.getCPtr(pDataDictionary), pDataDictionary), pDataDictionary);
   }
 
   public void setString(String string, boolean validate, DataDictionary pSessionDataDictionary, DataDictionary pApplicationDataDictionary) {
-    quickfixJNI.Message_setString__SWIG_3(swigCPtr, this, string, validate, DataDictionary.getCPtr(pSessionDataDictionary), pSessionDataDictionary, DataDictionary.getCPtr(pApplicationDataDictionary), pApplicationDataDictionary);
+    quickfixJNI.Message_setString__SWIG_3(swigCPtr, this, string, validate, Proxies.cPtr(DataDictionary.getCPtr(pSessionDataDictionary), pSessionDataDictionary), pSessionDataDictionary, Proxies.cPtr(DataDictionary.getCPtr(pApplicationDataDictionary), pApplicationDataDictionary), pApplicationDataDictionary);
   }
 
   public void setGroup(String msg, FieldBase field, String string, SWIGTYPE_p_std__string__size_type pos, FieldMap map, DataDictionary dataDictionary) {
@@ -290,7 +290,7 @@ public class Message extends FieldMap {
   }
 
   public static boolean isHeaderField(FieldBase field, DataDictionary pD) {
-    return quickfixJNI.Message_isHeaderField__SWIG_1(FieldBase.getCPtr(field), field, DataDictionary.getCPtr(pD), pD);
+    return quickfixJNI.Message_isHeaderField__SWIG_1(FieldBase.getCPtr(field), field, Proxies.cPtr(DataDictionary.getCPtr(pD), pD), pD);
   }
 
   public static boolean isHeaderField(FieldBase field) {
@@ -298,7 +298,7 @@ public class Message extends FieldMap {
   }
 
   public static boolean isHeaderField(int field, DataDictionary pD) {
-    return quickfixJNI.Message_isHeaderField__SWIG_3(field, DataDictionary.getCPtr(pD), pD);
+    return quickfixJNI.Message_isHeaderField__SWIG_3(field, Proxies.cPtr(DataDictionary.getCPtr(pD), pD), pD);
   }
 
   public static boolean isTrailerField(int field) {
@@ -306,7 +306,7 @@ public class Message extends FieldMap {
   }
 
   public static boolean isTrailerField(FieldBase field, DataDictionary pD) {
-    return quickfixJNI.Message_isTrailerField__SWIG_1(FieldBase.getCPtr(field), field, DataDictionary.getCPtr(pD), pD);
+    return quickfixJNI.Message_isTrailerField__SWIG_1(FieldBase.getCPtr(field), field, Proxies.cPtr(DataDictionary.getCPtr(pD), pD), pD);
   }
 
   public static boolean isTrailerField(FieldBase field) {
@@ -314,7 +314,7 @@ public class Message extends FieldMap {
   }
 
   public static boolean isTrailerField(int field, DataDictionary pD) {
-    return quickfixJNI.Message_isTrailerField__SWIG_3(field, DataDictionary.getCPtr(pD), pD);
+    return quickfixJNI.Message_isTrailerField__SWIG_3(field, Proxies.cPtr(DataDictionary.getCPtr(pD), pD), pD);
   }
 
   public SessionID getSessionID(String qualifier) {
@@ -342,7 +342,7 @@ public class Message extends FieldMap {
   }
 
   public void setBytes(byte[] message, boolean validate, DataDictionary dictionary) {
-    quickfixJNI.Message_setBytes__SWIG_2(swigCPtr, this, message, validate, DataDictionary.getCPtr(dictionary), dictionary);
+    quickfixJNI.Message_setBytes__SWIG_2(swigCPtr, this, message, validate, Proxies.cPtr(DataDictionary.getCPtr(dictionary), dictionary), dictionary);
   }
 
   public String __str__() {

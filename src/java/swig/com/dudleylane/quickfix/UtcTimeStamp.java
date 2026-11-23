@@ -97,15 +97,15 @@ public class UtcTimeStamp extends DateTime {
   }
 
   public UtcTimeStamp(SWIGTYPE_p_tm time, int millisecond) {
-    this(quickfixJNI.new_UtcTimeStamp__SWIG_11(SWIGTYPE_p_tm.getCPtr(time), millisecond), true);
+    this(quickfixJNI.new_UtcTimeStamp__SWIG_11(Proxies.cPtr(SWIGTYPE_p_tm.getCPtr(time), time), millisecond), true);
   }
 
   public UtcTimeStamp(SWIGTYPE_p_tm time) {
-    this(quickfixJNI.new_UtcTimeStamp__SWIG_12(SWIGTYPE_p_tm.getCPtr(time)), true);
+    this(quickfixJNI.new_UtcTimeStamp__SWIG_12(Proxies.cPtr(SWIGTYPE_p_tm.getCPtr(time), time)), true);
   }
 
   public UtcTimeStamp(SWIGTYPE_p_tm time, int fraction, int precision) {
-    this(quickfixJNI.new_UtcTimeStamp__SWIG_13(SWIGTYPE_p_tm.getCPtr(time), fraction, precision), true);
+    this(quickfixJNI.new_UtcTimeStamp__SWIG_13(Proxies.cPtr(SWIGTYPE_p_tm.getCPtr(time), time), fraction, precision), true);
   }
 
   public void setCurrent() {

@@ -90,7 +90,7 @@ public class MySQLStoreFactory extends MessageStoreFactory {
   }
 
   public void destroy(MessageStore arg0) {
-    quickfixJNI.MySQLStoreFactory_destroy(swigCPtr, this, MessageStore.getCPtr(arg0), arg0);
+    quickfixJNI.MySQLStoreFactory_destroy(swigCPtr, this, Proxies.cPtr(MessageStore.getCPtr(arg0), arg0), arg0);
   }
 
 }

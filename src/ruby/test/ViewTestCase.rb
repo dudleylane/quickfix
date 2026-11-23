@@ -113,8 +113,30 @@ class ViewTestCase < Test::Unit::TestCase
 		end
 	end
 
+	# A view whose object is destroyed is ended: its pointer becomes null, and SWIG raises for it wherever it goes.
+	# SWIG defines ObjectPreviouslyDeleted when it first raises one, so the test names it after.
+	def test_an_ended_view_raises_wherever_it_is_passed
+		message = order
+		header = message.getHeader
+		assert(Quickfix._endView(header))
+		error = assert_raise_kind_of(RuntimeError) { header.getField(35) }
+		assert_equal('ObjectPreviouslyDeleted', error.class.name)
+		error = assert_raise_kind_of(RuntimeError) { Quickfix::Message.new.reverseRoute(header) }
+		assert_equal('ObjectPreviouslyDeleted', error.class.name)
+		# Through methods with overloads too, as self and as an argument, where the overload chosen raises it.
+		error = assert_raise_kind_of(RuntimeError) { header.getField(Quickfix::MsgType.new) }
+		assert_equal('ObjectPreviouslyDeleted', error.class.name)
+		error = assert_raise_kind_of(RuntimeError) { Quickfix::FieldMap.new.addGroup(627, header) }
+		assert_equal('ObjectPreviouslyDeleted', error.class.name)
+		# An owner is never ended: its pointer is what frees its object.
+		assert(!Quickfix._endView(message))
+		assert(!Quickfix._endView(Object.new))
+		message.getHeader.setField(Quickfix::MsgType.new('D'))
+		assert_equal('D', message.getHeader.getField(35))
+	end
+
 	def test_internals_are_not_wrapped
-		{ Quickfix::FieldMap => [:groups, :cloneInto], Quickfix::Group => [:cloneInto],
+		{ Quickfix::FieldMap => [:groups, :cloneInto, :addGroupPtr], Quickfix::Group => [:cloneInto],
 		  Quickfix::DataDictionary => [:getOrderedFields, :getHeaderOrderedFields, :getTrailerOrderedFields,
 		                               :getMessageOrderedFields],
 		  Quickfix::SocketAcceptorBase => [:sessionToPort] }.each do |klass, names|

@@ -54,7 +54,7 @@ public class MemoryStoreFactory extends MessageStoreFactory {
   }
 
   public void destroy(MessageStore arg0) {
-    quickfixJNI.MemoryStoreFactory_destroy(swigCPtr, this, MessageStore.getCPtr(arg0), arg0);
+    quickfixJNI.MemoryStoreFactory_destroy(swigCPtr, this, Proxies.cPtr(MessageStore.getCPtr(arg0), arg0), arg0);
   }
 
   public MemoryStoreFactory() {

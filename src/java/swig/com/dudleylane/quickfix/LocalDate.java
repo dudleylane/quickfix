@@ -65,7 +65,7 @@ public class LocalDate extends DateTime {
   }
 
   public LocalDate(SWIGTYPE_p_tm time) {
-    this(quickfixJNI.new_LocalDate__SWIG_4(SWIGTYPE_p_tm.getCPtr(time)), true);
+    this(quickfixJNI.new_LocalDate__SWIG_4(Proxies.cPtr(SWIGTYPE_p_tm.getCPtr(time), time)), true);
   }
 
   public void setCurrent() {

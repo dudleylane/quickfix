@@ -81,15 +81,15 @@ public class LocalTimeOnly extends DateTime {
   }
 
   public LocalTimeOnly(SWIGTYPE_p_tm time, int millisecond) {
-    this(quickfixJNI.new_LocalTimeOnly__SWIG_8(SWIGTYPE_p_tm.getCPtr(time), millisecond), true);
+    this(quickfixJNI.new_LocalTimeOnly__SWIG_8(Proxies.cPtr(SWIGTYPE_p_tm.getCPtr(time), time), millisecond), true);
   }
 
   public LocalTimeOnly(SWIGTYPE_p_tm time) {
-    this(quickfixJNI.new_LocalTimeOnly__SWIG_9(SWIGTYPE_p_tm.getCPtr(time)), true);
+    this(quickfixJNI.new_LocalTimeOnly__SWIG_9(Proxies.cPtr(SWIGTYPE_p_tm.getCPtr(time), time)), true);
   }
 
   public LocalTimeOnly(SWIGTYPE_p_tm time, int fraction, int precision) {
-    this(quickfixJNI.new_LocalTimeOnly__SWIG_10(SWIGTYPE_p_tm.getCPtr(time), fraction, precision), true);
+    this(quickfixJNI.new_LocalTimeOnly__SWIG_10(Proxies.cPtr(SWIGTYPE_p_tm.getCPtr(time), time), fraction, precision), true);
   }
 
   public void setCurrent() {

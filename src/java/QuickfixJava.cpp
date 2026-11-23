@@ -3003,6 +3003,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorStrin
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::vector< std::string > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_isEmpty: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3036,6 +3040,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorString_1c
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::vector< std::string > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_clear: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -3118,6 +3126,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorString_1d
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::vector< std::string > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_doCapacity: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3158,6 +3170,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorString_1d
   (void)jarg1_;
   arg1 = *(std::vector< std::string > **)&jarg1; 
   arg2 = jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_doReserve: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -3199,6 +3215,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorString_1d
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::vector< std::string > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_doSize: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3247,6 +3267,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorString_1d
   std::vector< std::string >::value_type arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_doAdd: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -3290,6 +3314,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorString_1d
   std::vector< std::string >::value_type arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_doAdd: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -3330,6 +3358,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorString
   (void)jarg1_;
   arg1 = *(std::vector< std::string > **)&jarg1; 
   arg2 = jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_doRemove: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3372,6 +3404,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorString
   (void)jarg1_;
   arg1 = *(std::vector< std::string > **)&jarg1; 
   arg2 = jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_doGet: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3424,6 +3460,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorString
   std::vector< std::string >::value_type arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_doSet: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3466,6 +3506,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_VectorString_1d
   arg1 = *(std::vector< std::string > **)&jarg1; 
   arg2 = jarg2; 
   arg3 = jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "VectorString_doRemoveRange: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -3501,6 +3545,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1VectorS
   (void)jenv;
   (void)jcls;
   arg1 = *(std::vector< std::string > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_VectorString: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -3565,6 +3613,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1IntArra
   (void)jenv;
   (void)jcls;
   arg1 = *(IntArray **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_IntArray: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -3600,6 +3652,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_IntArray_1getit
   (void)jarg1_;
   arg1 = *(IntArray **)&jarg1; 
   arg2 = (size_t)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "IntArray_getitem: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3637,6 +3693,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_IntArray_1setit
   arg1 = *(IntArray **)&jarg1; 
   arg2 = (size_t)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "IntArray_setitem: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -3670,6 +3730,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_IntArray_1cast
   (void)jcls;
   (void)jarg1_;
   arg1 = *(IntArray **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "IntArray_cast: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3737,6 +3801,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSet_1I
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::set< FIX::SessionID >::iterator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_Iterator_incrementUnchecked: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -3770,6 +3838,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSet_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::set< FIX::SessionID >::iterator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_Iterator_derefUnchecked: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3814,6 +3886,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSe
     return 0;
   }
   arg2 = *argp2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_Iterator_isNot: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3846,6 +3922,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Session
   (void)jenv;
   (void)jcls;
   arg1 = *(std::set< FIX::SessionID >::iterator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SessionIDSet_Iterator: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -3950,6 +4030,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSe
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::set< FIX::SessionID > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_isEmpty: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -3983,6 +4067,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSet_1c
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::set< FIX::SessionID > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_clear: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -4016,6 +4104,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSet_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::set< FIX::SessionID > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_begin: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4051,6 +4143,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSet_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::set< FIX::SessionID > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_end: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4093,6 +4189,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSe
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_addImpl: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4135,6 +4235,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSe
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_containsImpl: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4177,6 +4281,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSe
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_removeImpl: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4212,6 +4320,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSet_1s
   (void)jcls;
   (void)jarg1_;
   arg1 = *(std::set< FIX::SessionID > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_sizeImpl: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4259,6 +4371,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionIDSe
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::set< FIX::SessionID >::iterator const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionIDSet_hasNextImpl: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4291,6 +4407,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Session
   (void)jenv;
   (void)jcls;
   arg1 = *(std::set< FIX::SessionID > **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SessionIDSet: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -4336,6 +4456,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1m_1da
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_m_date_set: its object was deleted, or the view ended");
+    return ;
+  }
   if (arg1) (arg1)->m_date = arg2;
 }
 
@@ -4349,6 +4473,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1m_1da
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_m_date_get: its object was deleted, or the view ended");
+    return 0;
+  }
   result = (int) ((arg1)->m_date);
   jresult = (jint)result; 
   return jresult;
@@ -4364,6 +4492,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1m_1ti
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int64_t)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_m_time_set: its object was deleted, or the view ended");
+    return ;
+  }
   if (arg1) (arg1)->m_time = arg2;
 }
 
@@ -4377,6 +4509,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1m_1t
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_m_time_get: its object was deleted, or the view ended");
+    return 0;
+  }
   result = (int64_t) ((arg1)->m_time);
   jresult = (jlong)result; 
   return jresult;
@@ -4551,6 +4687,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1DateTim
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_DateTime: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -4584,6 +4724,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getYe
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getYear: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4619,6 +4763,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getMo
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getMonth: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4654,6 +4802,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getDa
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getDay: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4689,6 +4841,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getDa
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getDate: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4724,6 +4880,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getJu
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getJulianDate: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4759,6 +4919,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getHo
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getHour: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4794,6 +4958,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getMi
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getMinute: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4829,6 +4997,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getSe
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getSecond: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4864,6 +5036,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getMi
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getMillisecond: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4899,6 +5075,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getMi
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getMicrosecond: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4934,6 +5114,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getN
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getNanosecond: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -4971,6 +5155,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getFr
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getFraction: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -5006,6 +5194,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getWe
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getWeekDay: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -5041,6 +5233,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getT
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getTimeT: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -5076,6 +5272,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1getT
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_getTmUtc: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -5115,6 +5315,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1setYM
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
   arg4 = (int)jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_setYMD: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5154,6 +5358,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1setHM
   arg3 = (int)jarg3; 
   arg4 = (int)jarg4; 
   arg5 = (int)jarg5; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_setHMS: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5195,6 +5403,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1setHM
   arg4 = (int)jarg4; 
   arg5 = (int)jarg5; 
   arg6 = (int)jarg6; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_setHMS: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5228,6 +5440,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1setHo
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_setHour: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5261,6 +5477,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1setMi
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_setMinute: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5294,6 +5514,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1setSe
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_setSecond: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5327,6 +5551,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1setMi
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_setMillisecond: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5360,6 +5588,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1setMi
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_setMicrosecond: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5393,6 +5625,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1setNa
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_setNanosecond: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5428,6 +5664,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1setFr
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_setFraction: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5459,6 +5699,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1clear
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_clearDate: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5490,6 +5734,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1clear
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DateTime **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_clearTime: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5525,6 +5773,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1set_1
   arg1 = *(FIX::DateTime **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int64_t)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_set: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -5563,6 +5815,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DateTime_1set_1
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::DateTime const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DateTime_set: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -6741,6 +6997,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UtcTimeStamp_1s
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::UtcTimeStamp **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UtcTimeStamp_setCurrent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -6771,6 +7031,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1UtcTime
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::UtcTimeStamp **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_UtcTimeStamp: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -7326,6 +7590,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_LocalTimeStamp_
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::LocalTimeStamp **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "LocalTimeStamp_setCurrent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -7356,6 +7624,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1LocalTi
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::LocalTimeStamp **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_LocalTimeStamp: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -7812,6 +8084,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UtcTimeOnly_1se
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::UtcTimeOnly **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UtcTimeOnly_setCurrent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -7842,6 +8118,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1UtcTime
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::UtcTimeOnly **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_UtcTimeOnly: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -8298,6 +8578,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_LocalTimeOnly_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::LocalTimeOnly **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "LocalTimeOnly_setCurrent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -8328,6 +8612,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1LocalTi
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::LocalTimeOnly **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_LocalTimeOnly: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -8536,6 +8824,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UtcDate_1setCur
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::UtcDate **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UtcDate_setCurrent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -8566,6 +8858,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1UtcDate
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::UtcDate **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_UtcDate: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -8774,6 +9070,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_LocalDate_1setC
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::LocalDate **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "LocalDate_setCurrent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -8804,6 +9104,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1LocalDa
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::LocalDate **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_LocalDate: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -8957,6 +9261,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1swap
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldBase & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_swap: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -8990,6 +9298,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1setT
   (void)jarg1_;
   arg1 = *(FIX::FieldBase **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_setTag: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -9023,6 +9335,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1setF
   (void)jarg1_;
   arg1 = *(FIX::FieldBase **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_setField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -9064,6 +9380,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1setS
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_setString: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -9097,6 +9417,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1getT
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldBase **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_getTag: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -9132,6 +9456,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1getF
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldBase **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_getField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -9167,6 +9495,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1g
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldBase **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_getString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -9206,6 +9538,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1appe
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::string & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_appendTo: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -9239,6 +9575,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1g
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldBase **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_getFixString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -9274,6 +9614,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1getL
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldBase **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_getLength: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -9309,6 +9653,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1getT
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldBase **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase_getTotal: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -9344,6 +9692,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldBase_1_
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldBase **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldBase___str__: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -9376,6 +9728,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1FieldBa
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::FieldBase **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_FieldBase: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -9537,6 +9893,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringField_1se
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "StringField_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -9609,6 +9969,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_StringField_
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::StringField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "StringField_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -9641,6 +10005,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1StringF
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::StringField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_StringField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -9744,6 +10112,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_CharField_1setV
   (void)jarg1_;
   arg1 = *(FIX::CharField **)&jarg1; 
   arg2 = (char)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "CharField_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -9816,6 +10188,10 @@ SWIGEXPORT jchar JNICALL Java_com_dudleylane_quickfix_quickfixJNI_CharField_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::CharField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "CharField_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -9848,6 +10224,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1CharFie
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::CharField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_CharField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -9991,6 +10371,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DoubleField_1se
   arg1 = *(FIX::DoubleField **)&jarg1; 
   arg2 = (double)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DoubleField_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -10024,6 +10408,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DoubleField_1se
   (void)jarg1_;
   arg1 = *(FIX::DoubleField **)&jarg1; 
   arg2 = (double)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DoubleField_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -10096,6 +10484,10 @@ SWIGEXPORT jdouble JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DoubleField_
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DoubleField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DoubleField_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -10128,6 +10520,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1DoubleF
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::DoubleField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_DoubleField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -10231,6 +10627,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_IntField_1setVa
   (void)jarg1_;
   arg1 = *(FIX::IntField **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "IntField_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -10303,6 +10703,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_IntField_1getVa
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::IntField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "IntField_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -10335,6 +10739,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1IntFiel
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::IntField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_IntField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -10438,6 +10846,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Int64Field_1set
   (void)jarg1_;
   arg1 = *(FIX::Int64Field **)&jarg1; 
   arg2 = (int64_t)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Int64Field_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -10510,6 +10922,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Int64Field_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Int64Field **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Int64Field_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -10542,6 +10958,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Int64Fi
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Int64Field **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Int64Field: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -10695,6 +11115,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UInt64Field_1se
     }
     jenv->ReleaseByteArrayElements(ba, bae, 0);
   }
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UInt64Field_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -10784,6 +11208,10 @@ SWIGEXPORT jobject JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UInt64Field_
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::UInt64Field **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UInt64Field_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -10833,6 +11261,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1UInt64F
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::UInt64Field **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_UInt64Field: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -10936,6 +11368,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_BoolField_1setV
   (void)jarg1_;
   arg1 = *(FIX::BoolField **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "BoolField_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -11008,6 +11444,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_BoolField_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::BoolField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "BoolField_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -11040,6 +11480,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1BoolFie
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::BoolField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_BoolField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -11232,6 +11676,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UtcTimeStampFie
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UtcTimeStampField_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -11304,6 +11752,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UtcTimeStampFi
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::UtcTimeStampField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UtcTimeStampField_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -11336,6 +11788,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1UtcTime
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::UtcTimeStampField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_UtcTimeStampField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -11449,6 +11905,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UtcDateField_1s
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcDate const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UtcDateField_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -11521,6 +11981,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UtcDateField_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::UtcDateField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UtcDateField_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -11553,6 +12017,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1UtcDate
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::UtcDateField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_UtcDateField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -11745,6 +12213,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UtcTimeOnlyFiel
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeOnly const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UtcTimeOnlyField_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -11817,6 +12289,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_UtcTimeOnlyFie
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::UtcTimeOnlyField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "UtcTimeOnlyField_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -11849,6 +12325,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1UtcTime
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::UtcTimeOnlyField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_UtcTimeOnlyField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -11952,6 +12432,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_CheckSumField_1
   (void)jarg1_;
   arg1 = *(FIX::CheckSumField **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "CheckSumField_setValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12024,6 +12508,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_CheckSumField_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::CheckSumField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "CheckSumField_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -12056,6 +12544,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1CheckSu
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::CheckSumField **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_CheckSumField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12230,6 +12722,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1FieldMa
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::FieldMap **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_FieldMap: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12270,6 +12766,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1setFi
     return ;
   } 
   arg3 = jarg3 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_setField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12308,6 +12808,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1setFi
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldBase const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_setField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12351,6 +12855,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1setFi
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_setField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12391,6 +12899,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1g
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldBase & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_getFieldIfSet: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -12433,6 +12945,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getF
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldBase & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_getField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -12470,6 +12986,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1ge
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_getField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -12507,6 +13027,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getF
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_getFieldRef: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -12544,6 +13068,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getF
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_getFieldPtr: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -12586,6 +13114,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1i
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldBase const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_isSetField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -12623,6 +13155,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1i
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_isSetField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -12658,6 +13194,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1remov
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_removeField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12700,6 +13240,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1addGr
     return ;
   } 
   arg4 = jarg4 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_addGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12740,6 +13284,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1addGr
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldMap const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_addGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12778,6 +13326,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1addGr
   arg2 = (int)jarg2; 
   arg3 = *(FIX::FieldMap **)&jarg3; 
   arg4 = jarg4 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_addGroupPtr: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12814,6 +13366,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1addGr
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = *(FIX::FieldMap **)&jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_addGroupPtr: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12856,6 +13412,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1repla
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldMap const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_replaceGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -12900,6 +13460,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getG
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldMap & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_getGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -12939,6 +13503,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getG
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_getGroupRef: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -12978,6 +13546,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getG
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_getGroupPtr: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13015,6 +13587,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1remov
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_removeGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -13048,6 +13624,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1remov
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_removeGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -13083,6 +13663,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1h
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_hasGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13122,6 +13706,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1h
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_hasGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13159,6 +13747,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1grou
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_groupCount: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13192,6 +13784,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1clear
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_clear: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -13230,6 +13826,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1swap(
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::FieldMap & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_swap: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -13263,6 +13863,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1i
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_isEmpty: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13298,6 +13902,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1tota
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_totalFields: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13339,6 +13947,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1calc
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::string & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_calculateString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13380,6 +13992,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1calcu
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
   arg4 = (int)jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_calculateLength: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13419,6 +14035,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1calcu
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_calculateLength: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13456,6 +14076,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1calcu
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_calculateLength: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13491,6 +14115,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1calcu
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_calculateLength: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13528,6 +14156,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1calcu
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_calculateTotal: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13563,6 +14195,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1calcu
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_calculateTotal: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13598,6 +14234,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1begi
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_begin: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13633,6 +14273,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1end_
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_end: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13668,6 +14312,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1g_1b
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_g_begin: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13703,6 +14351,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1g_1e
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_g_end: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13740,6 +14392,10 @@ SWIGEXPORT jbyteArray JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_
   (void)jarg1_;
   arg1 = *(FIX::FieldMap **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_getFieldBytes: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -13791,6 +14447,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1setFi
     temp3.resize(static_cast<size_t>(length));
     jenv->GetByteArrayRegion(jarg3, 0, length, reinterpret_cast<jbyte *>(temp3.data()));
     arg3 = &temp3;
+  }
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FieldMap_setFieldBytes: its object was deleted, or the view ended");
+    return ;
   }
   {
     try
@@ -13900,6 +14560,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1addGrou
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Header_addGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -13940,6 +14604,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1replace
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Header_replaceGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -13982,6 +14650,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1getGro
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Header_getGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -14024,6 +14696,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1removeG
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Header_removeGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -14062,6 +14738,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1removeG
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Header_removeGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -14102,6 +14782,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1has
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Header_hasGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -14146,6 +14830,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1has
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Header_hasGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -14178,6 +14866,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Header(
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Header **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Header: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -14286,6 +14978,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1addGro
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Trailer_addGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -14326,6 +15022,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1replac
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Trailer_replaceGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -14368,6 +15068,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1getGr
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Trailer_getGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -14410,6 +15114,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1remove
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Trailer_removeGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -14448,6 +15156,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1remove
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Trailer_removeGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -14488,6 +15200,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1ha
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Trailer_hasGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -14532,6 +15248,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1ha
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Trailer_hasGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -14564,6 +15284,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Trailer
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Trailer **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Trailer: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -15301,6 +16025,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Message
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Message: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -15381,6 +16109,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1addGro
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_addGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -15421,6 +16153,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1replac
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_replaceGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -15463,6 +16199,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getGr
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_getGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15505,6 +16245,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1remove
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_removeGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -15543,6 +16287,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1remove
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_removeGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -15583,6 +16331,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1ha
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_hasGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15627,6 +16379,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1ha
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_hasGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15668,6 +16424,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toS
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
   arg4 = (int)jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15707,6 +16467,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toS
   arg1 = *(FIX::Message **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15744,6 +16508,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toS
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15779,6 +16547,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toS
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15826,6 +16598,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toStr
   arg3 = (int)jarg3; 
   arg4 = (int)jarg4; 
   arg5 = (int)jarg5; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15871,6 +16647,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toStr
   } 
   arg3 = (int)jarg3; 
   arg4 = (int)jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15914,6 +16694,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toStr
     return 0;
   } 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15955,6 +16739,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toStr
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::string & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -15990,6 +16778,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toX
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toXML: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16031,6 +16823,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1toXML
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::string & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toXML: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16071,6 +16867,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1revers
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Header const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_reverseRoute: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -16112,6 +16912,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setStr
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setString: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -16155,6 +16959,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setStr
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = jarg3 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setString: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -16201,6 +17009,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setStr
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = jarg3 ? true : false; 
   arg4 = *(FIX::DataDictionary **)&jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setString: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -16250,6 +17062,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setStr
   arg3 = jarg3 ? true : false; 
   arg4 = *(FIX::DataDictionary **)&jarg4; 
   arg5 = *(FIX::DataDictionary **)&jarg5; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setString: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -16328,6 +17144,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setGro
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::DataDictionary const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -16371,6 +17191,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1se
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setStringHeader: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16406,6 +17230,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getHe
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_getHeader: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16441,6 +17269,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getTr
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_getTrailer: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16482,6 +17314,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1ha
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "int & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_hasValidStructure: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16523,6 +17359,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1ha
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "int & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_hasEmbeddedSOH: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16564,6 +17404,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1ha
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "int & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_hasOutOfOrderGroupMembers: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16605,6 +17449,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1bodyLe
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
   arg4 = (int)jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_bodyLength: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16644,6 +17492,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1bodyLe
   arg1 = *(FIX::Message **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_bodyLength: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16681,6 +17533,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1bodyLe
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_bodyLength: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16716,6 +17572,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1bodyLe
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_bodyLength: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16753,6 +17613,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1checkS
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_checkSum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16788,6 +17652,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1checkS
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_checkSum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16823,6 +17691,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1is
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_isAdmin: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16858,6 +17730,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1is
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_isApp: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16893,6 +17769,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1is
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_isEmpty: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -16926,6 +17806,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1clear(
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_clear: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -17395,6 +18279,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getSe
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_getSessionID: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -17430,6 +18318,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getSe
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_getSessionID: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -17470,6 +18362,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setSes
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setSessionID: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -17503,6 +18399,10 @@ SWIGEXPORT jbyteArray JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_toBytes: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -17555,6 +18455,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setByt
     arg2 = &temp2;
   }
   arg3 = jarg3 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setBytes: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -17597,6 +18501,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setByt
     temp2.resize(static_cast<size_t>(length));
     jenv->GetByteArrayRegion(jarg2, 0, length, reinterpret_cast<jbyte *>(temp2.data()));
     arg2 = &temp2;
+  }
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setBytes: its object was deleted, or the view ended");
+    return ;
   }
   {
     try
@@ -17646,6 +18554,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setByt
   }
   arg3 = jarg3 ? true : false; 
   arg4 = *(FIX::DataDictionary **)&jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setBytes: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -17679,6 +18591,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1_1_
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Message **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message___str__: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -17912,6 +18828,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1field(JN
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Group **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Group_field: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -17947,6 +18867,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1delim(JN
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Group **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Group_delim: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -17987,6 +18911,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1addGroup
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Group_addGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -18027,6 +18955,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1replaceG
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Group_replaceGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -18069,6 +19001,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1getGrou
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Group_getGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -18111,6 +19047,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1removeGr
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Group_removeGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -18149,6 +19089,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1removeGr
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Group_removeGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -18189,6 +19133,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1hasG
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Group_hasGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -18233,6 +19181,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1hasG
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Group const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Group_hasGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -18265,6 +19217,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Group(J
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Group **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Group: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -18381,6 +19337,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1BeginSt
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::BeginString **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_BeginStringField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -18497,6 +19457,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1SenderC
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::SenderCompID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SenderCompIDField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -18613,6 +19577,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1TargetC
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::TargetCompID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_TargetCompIDField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -88508,6 +89476,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID_getBeginString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -88543,6 +89515,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID_getSenderCompID: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -88578,6 +89554,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID_getTargetCompID: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -88613,6 +89593,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1g
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID_getSessionQualifier: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -88648,6 +89632,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID_isFIXT: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -88683,6 +89671,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1t
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID_toString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -88718,6 +89710,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1t
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID_toStringFrozen: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -88761,6 +89757,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1from
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID_fromStringUnchecked: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -88800,6 +89800,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1toS
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::string & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID_toString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -88835,6 +89839,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionID_1_
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionID___str__: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -88867,6 +89875,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Session
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::SessionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SessionID: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -88971,6 +89983,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Diction
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Dictionary **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Dictionary: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -89004,6 +90020,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Dictionary **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_getName: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -89039,6 +90059,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1si
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Dictionary **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_size: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -89086,6 +90110,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = jarg3 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_getString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -89131,6 +90159,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_getString: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -89176,6 +90208,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1get
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_getInt: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -89221,6 +90257,10 @@ SWIGEXPORT jdouble JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_getDouble: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -89266,6 +90306,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_getBool: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -89311,6 +90355,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1get
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_getDay: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -89364,6 +90412,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1set
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_setString: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -89407,6 +90459,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1set
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_setInt: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -89450,6 +90506,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1set
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = (double)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_setDouble: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -89493,6 +90553,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1set
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = jarg3 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_setBool: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -89536,6 +90600,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1set
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_setDay: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -89579,6 +90647,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_has: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -89619,6 +90691,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1mer
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Dictionary const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_merge: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -89652,6 +90728,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1be
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Dictionary **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_begin: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -89687,6 +90767,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Dictionary_1en
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Dictionary **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Dictionary_end: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91353,6 +92437,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionSett
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionSettings_has: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91395,6 +92483,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionSetting
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionSettings_get: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91444,6 +92536,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionSettings
     return ;
   }
   arg3 = *argp3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionSettings_set: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -91477,6 +92573,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionSetting
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionSettings **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionSettings_get: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91517,6 +92617,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionSettings
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Dictionary const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionSettings_set: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -91550,6 +92654,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionSetting
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionSettings **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionSettings_size: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91585,6 +92693,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionSetting
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SessionSettings **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionSettings_getSessions: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91628,6 +92740,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SessionSettings
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SessionSettings_setFromString: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -91658,6 +92774,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Session
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::SessionSettings **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SessionSettings: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -91688,6 +92808,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Session
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Session: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -91719,6 +92843,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1logon(
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_logon: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -91760,6 +92888,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1logout
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_logout: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -91791,6 +92923,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1logout
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_logout: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -91824,6 +92960,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1is
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_isEnabled: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91859,6 +92999,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_sentLogon: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91894,6 +93038,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_sentLogout: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91929,6 +93077,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1re
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_receivedLogon: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91964,6 +93116,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1is
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_isLoggedOn: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -91997,6 +93153,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1reset(
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_reset: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -92028,6 +93188,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1refres
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_refresh: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -92061,6 +93225,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setNex
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -92094,6 +93262,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setNex
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -92127,6 +93299,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getSe
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getSessionID: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -92166,6 +93342,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setDat
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionaryProvider const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setDataDictionaryProvider: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -92199,6 +93379,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getDa
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getDataDictionaryProvider: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -92960,6 +94144,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1is
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_isSessionTime: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93002,6 +94190,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1is
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_isLogonTime: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93037,6 +94229,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1is
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_isInitiator: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93072,6 +94268,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1is
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_isAcceptor: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93107,6 +94307,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getLo
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getLogonTime: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93146,6 +94350,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setLog
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "TimeRange const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setLogonTime: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93179,6 +94387,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getSenderDefaultApplVerID: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93222,6 +94434,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setSen
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setSenderDefaultApplVerID: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93255,6 +94471,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getTargetDefaultApplVerID: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93298,6 +94518,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setTar
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setTargetDefaultApplVerID: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93331,6 +94555,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getSendRedundantResendRequests: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93366,6 +94594,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setSen
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setSendRedundantResendRequests: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93399,6 +94631,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getCheckCompId: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93434,6 +94670,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setChe
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setCheckCompId: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93467,6 +94707,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getCheckLatency: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93502,6 +94746,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setChe
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setCheckLatency: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93535,6 +94783,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getMax
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getMaxLatency: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93570,6 +94822,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setMax
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setMaxLatency: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93603,6 +94859,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getLog
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getLogonTimeout: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93638,6 +94898,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setLog
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setLogonTimeout: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93671,6 +94935,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getLog
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getLogoutTimeout: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93706,6 +94974,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setLog
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setLogoutTimeout: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93739,6 +95011,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getResetOnLogon: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93774,6 +95050,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setRes
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setResetOnLogon: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93807,6 +95087,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getResetOnLogout: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93842,6 +95126,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setRes
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setResetOnLogout: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93875,6 +95163,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getResetOnDisconnect: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93910,6 +95202,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setRes
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setResetOnDisconnect: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -93943,6 +95239,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getRefreshOnLogon: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -93978,6 +95278,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setRef
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setRefreshOnLogon: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94011,6 +95315,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getMillisecondsInTimeStamp: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94046,6 +95354,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setMil
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setMillisecondsInTimeStamp: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94079,6 +95391,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getTim
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getTimestampPrecision: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94114,6 +95430,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setTim
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setTimestampPrecision: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94147,6 +95467,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getSup
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getSupportedTimestampPrecision: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94224,6 +95548,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getPersistMessages: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94259,6 +95587,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setPer
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setPersistMessages: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94292,6 +95624,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getValidateLengthAndChecksum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94327,6 +95663,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setVal
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setValidateLengthAndChecksum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94360,6 +95700,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getSendNextExpectedMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94395,6 +95739,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setSen
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setSendNextExpectedMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94428,6 +95776,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getIsNonStopSession: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94463,6 +95815,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setIsN
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setIsNonStopSession: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94496,6 +95852,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getAl
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getAllowedRemoteAddresses: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94536,6 +95896,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setAll
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::set< std::string > const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setAllowedRemoteAddresses: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94579,6 +95943,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1in
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_inAllowedRemoteAddresses: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94614,6 +95982,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setRes
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
   arg2 = *(Responder **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_setResponder: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94654,6 +96026,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Message & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_send: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94694,6 +96070,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1next_1
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_next: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94744,6 +96124,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1next_1
     return ;
   } 
   arg4 = jarg4 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_next: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94792,6 +96176,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1next_1
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_next: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94839,6 +96227,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1next_1
     return ;
   } 
   arg4 = jarg4 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_next: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94884,6 +96276,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1next_1
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_next: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94915,6 +96311,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1discon
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_disconnect: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -94948,6 +96348,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getEx
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getExpectedSenderNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -94983,6 +96387,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getEx
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getExpectedTargetNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -95018,6 +96426,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getLo
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getLog: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -95053,6 +96465,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getSt
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Session **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getStore: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -95085,6 +96501,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1LogFact
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::LogFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_LogFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95118,6 +96538,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_LogFactory_1cr
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::LogFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "LogFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -95160,6 +96584,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_LogFactory_1cr
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "LogFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -95196,6 +96624,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_LogFactory_1des
   (void)jarg2_;
   arg1 = *(FIX::LogFactory **)&jarg1; 
   arg2 = *(FIX::Log **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "LogFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95358,6 +96790,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ScreenLogFacto
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::ScreenLogFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ScreenLogFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -95400,6 +96836,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ScreenLogFacto
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ScreenLogFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -95436,6 +96876,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ScreenLogFactor
   (void)jarg2_;
   arg1 = *(FIX::ScreenLogFactory **)&jarg1; 
   arg2 = *(FIX::Log **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ScreenLogFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95466,6 +96910,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1ScreenL
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::ScreenLogFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_ScreenLogFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95496,6 +96944,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Log(JNI
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Log **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Log: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95527,6 +96979,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Log_1clear(JNIE
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Log **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Log_clear: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95558,6 +97014,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Log_1backup(JNI
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Log **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Log_backup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95599,6 +97059,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Log_1onIncoming
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Log_onIncoming: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95640,6 +97104,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Log_1onOutgoing
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Log_onOutgoing: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95681,6 +97149,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Log_1onEvent(JN
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Log_onEvent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95762,6 +97234,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullLog_1clear(
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::NullLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullLog_clear: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95793,6 +97269,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullLog_1backup
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::NullLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullLog_backup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95834,6 +97314,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullLog_1onInco
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullLog_onIncoming: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95875,6 +97359,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullLog_1onOutg
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullLog_onOutgoing: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95916,6 +97404,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullLog_1onEven
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullLog_onEvent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -95978,6 +97470,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1NullLog
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::NullLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_NullLog: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96092,6 +97588,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ScreenLog_1clea
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::ScreenLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ScreenLog_clear: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96123,6 +97623,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ScreenLog_1back
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::ScreenLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ScreenLog_backup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96164,6 +97668,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ScreenLog_1onIn
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ScreenLog_onIncoming: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96205,6 +97713,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ScreenLog_1onOu
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ScreenLog_onOutgoing: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96246,6 +97758,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ScreenLog_1onEv
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ScreenLog_onEvent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96276,6 +97792,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1ScreenL
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::ScreenLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_ScreenLog: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96442,6 +97962,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileLogFactory
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FileLogFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileLogFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -96484,6 +98008,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileLogFactory
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileLogFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -96520,6 +98048,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileLogFactory_
   (void)jarg2_;
   arg1 = *(FIX::FileLogFactory **)&jarg1; 
   arg2 = *(FIX::Log **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileLogFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96550,6 +98082,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1FileLog
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::FileLogFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_FileLogFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96782,6 +98318,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1FileLog
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::FileLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_FileLog: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96813,6 +98353,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileLog_1clear(
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FileLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileLog_clear: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96844,6 +98388,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileLog_1backup
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FileLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileLog_backup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96885,6 +98433,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileLog_1onInco
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileLog_onIncoming: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96926,6 +98478,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileLog_1onOutg
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileLog_onOutgoing: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -96967,6 +98523,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileLog_1onEven
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileLog_onEvent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97067,6 +98627,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_BufferedFileLog
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "BufferedFileLog_onIncoming: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97108,6 +98672,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_BufferedFileLog
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "BufferedFileLog_onOutgoing: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97138,6 +98706,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Buffere
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::BufferedFileLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_BufferedFileLog: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97168,6 +98740,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Message
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MessageStoreFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MessageStoreFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97215,6 +98791,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreFa
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -97251,6 +98831,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreFac
   (void)jarg2_;
   arg1 = *(FIX::MessageStoreFactory **)&jarg1; 
   arg2 = *(FIX::MessageStore **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97298,6 +98882,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStoreFac
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStoreFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -97334,6 +98922,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStoreFact
   (void)jarg2_;
   arg1 = *(FIX::MemoryStoreFactory **)&jarg1; 
   arg2 = *(FIX::MessageStore **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStoreFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97396,6 +98988,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1MemoryS
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MemoryStoreFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MemoryStoreFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97426,6 +99022,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Message
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MessageStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MessageStore: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97471,6 +99071,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStor
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_set: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -97515,6 +99119,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStore_1g
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< std::string > & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_get: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97548,6 +99156,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStore_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MessageStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_getNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -97583,6 +99195,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStore_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MessageStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_getNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -97618,6 +99234,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStore_1s
   (void)jarg1_;
   arg1 = *(FIX::MessageStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_setNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97651,6 +99271,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStore_1s
   (void)jarg1_;
   arg1 = *(FIX::MessageStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_setNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97682,6 +99306,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStore_1i
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MessageStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_incrNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97713,6 +99341,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStore_1i
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MessageStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_incrNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97746,6 +99378,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStore_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MessageStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_getCreationTime: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -97786,6 +99422,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStore_1r
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_reset: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97817,6 +99457,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStore_1r
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MessageStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStore_refresh: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97901,6 +99545,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_set: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -97945,6 +99593,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1ge
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< std::string > & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_get: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -97978,6 +99630,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1g
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MemoryStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_getNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -98013,6 +99669,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1g
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MemoryStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_getNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -98048,6 +99708,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1se
   (void)jarg1_;
   arg1 = *(FIX::MemoryStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_setNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98081,6 +99745,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1se
   (void)jarg1_;
   arg1 = *(FIX::MemoryStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_setNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98112,6 +99780,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1in
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MemoryStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_incrNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98143,6 +99815,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1in
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MemoryStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_incrNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98181,6 +99857,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1se
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_setCreationTime: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98214,6 +99894,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1g
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MemoryStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_getCreationTime: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -98254,6 +99938,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1re
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_reset: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98285,6 +99973,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MemoryStore_1re
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MemoryStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MemoryStore_refresh: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98315,6 +100007,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1MemoryS
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MemoryStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MemoryStore: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98409,6 +100105,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreFa
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::ConfigError & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreFactoryExceptionWrapper_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -98445,6 +100145,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreFac
   (void)jarg2_;
   arg1 = *(FIX::MessageStoreFactoryExceptionWrapper **)&jarg1; 
   arg2 = *(FIX::MessageStore **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreFactoryExceptionWrapper_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98475,6 +100179,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Message
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MessageStoreFactoryExceptionWrapper **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MessageStoreFactoryExceptionWrapper: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98540,6 +100248,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Message
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MessageStoreExceptionWrapper **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MessageStoreExceptionWrapper: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98597,6 +100309,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStor
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_set: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -98653,6 +100369,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreExc
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_get: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98698,6 +100418,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreEx
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_getNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -98745,6 +100469,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreEx
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_getNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -98792,6 +100520,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreExc
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_setNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98837,6 +100569,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreExc
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_setNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98880,6 +100616,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreExc
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_incrNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98923,6 +100663,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreExc
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_incrNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -98968,6 +100712,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreEx
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_getCreationTime: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -99020,6 +100768,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreExc
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_reset: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99063,6 +100815,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MessageStoreExc
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::IOException & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MessageStoreExceptionWrapper_refresh: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99191,6 +100947,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStoreFacto
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStoreFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -99227,6 +100987,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStoreFactor
   (void)jarg2_;
   arg1 = *(FIX::FileStoreFactory **)&jarg1; 
   arg2 = *(FIX::MessageStore **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStoreFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99257,6 +101021,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1FileSto
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::FileStoreFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_FileStoreFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99342,6 +101110,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1FileSto
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::FileStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_FileStore: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99387,6 +101159,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_set: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -99431,6 +101207,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1get(
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< std::string > & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_get: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99464,6 +101244,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FileStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_getNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -99499,6 +101283,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FileStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_getNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -99534,6 +101322,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1setN
   (void)jarg1_;
   arg1 = *(FIX::FileStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_setNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99567,6 +101359,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1setN
   (void)jarg1_;
   arg1 = *(FIX::FileStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_setNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99598,6 +101394,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1incr
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FileStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_incrNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99629,6 +101429,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1incr
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FileStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_incrNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99662,6 +101466,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FileStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_getCreationTime: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -99702,6 +101510,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1rese
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_reset: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99733,6 +101545,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FileStore_1refr
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::FileStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FileStore_refresh: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99833,6 +101649,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SyncFileSto
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SyncFileStore_set: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -99868,6 +101688,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SyncFileStore_1
   (void)jarg1_;
   arg1 = *(FIX::SyncFileStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SyncFileStore_setNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99901,6 +101725,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SyncFileStore_1
   (void)jarg1_;
   arg1 = *(FIX::SyncFileStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SyncFileStore_setNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99932,6 +101760,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SyncFileStore_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SyncFileStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SyncFileStore_incrNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -99963,6 +101795,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SyncFileStore_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SyncFileStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SyncFileStore_incrNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100001,6 +101837,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SyncFileStore_1
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SyncFileStore_reset: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100031,6 +101871,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1SyncFil
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::SyncFileStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SyncFileStore: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100061,6 +101905,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Applica
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Application **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Application: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100099,6 +101947,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Application_1on
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Application_onCreate: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100137,6 +101989,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Application_1on
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Application_onLogon: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100175,6 +102031,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Application_1on
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Application_onLogout: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100220,6 +102080,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Application_1to
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Application_toAdmin: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100265,6 +102129,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Application_1to
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Application_toApp: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100310,6 +102178,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Application_1fr
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Application_fromAdmin: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100355,6 +102227,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Application_1fr
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Application_fromApp: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100482,6 +102358,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedApp
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_onCreate: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100520,6 +102400,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedApp
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_onLogon: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100558,6 +102442,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedApp
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_onLogout: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100603,6 +102491,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedApp
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_toAdmin: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100648,6 +102540,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedApp
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_toApp: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100693,6 +102589,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedApp
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_fromAdmin: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100738,6 +102638,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedApp
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_fromApp: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100777,6 +102681,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedApp
     return ;
   }
   arg2 = *argp2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_m_mutex_set: its object was deleted, or the view ended");
+    return ;
+  }
   if (arg1) (arg1)->m_mutex = arg2;
 }
 
@@ -100790,6 +102698,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedAp
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SynchronizedApplication **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_m_mutex_get: its object was deleted, or the view ended");
+    return 0;
+  }
   result =  ((arg1)->m_mutex);
   *(Mutex **)&jresult = new Mutex(result); 
   return jresult;
@@ -100805,6 +102717,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedAp
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SynchronizedApplication **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_app: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -100845,6 +102761,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedApp
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Application & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_m_app_set: its object was deleted, or the view ended");
+    return ;
+  }
   if (arg1) (arg1)->m_app = *arg2;
 }
 
@@ -100858,6 +102778,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SynchronizedAp
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::SynchronizedApplication **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SynchronizedApplication_m_app_get: its object was deleted, or the view ended");
+    return 0;
+  }
   result = (FIX::Application *) &(FIX::Application &) ((arg1)->m_app);
   *(FIX::Application **)&jresult = result; 
   return jresult;
@@ -100870,6 +102794,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Synchro
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::SynchronizedApplication **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SynchronizedApplication: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100932,6 +102860,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1NullApp
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::NullApplication **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_NullApplication: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100962,6 +102894,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Initiat
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Initiator: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -100993,6 +102929,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1star
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_start: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -101024,6 +102964,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1bloc
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_block: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -101057,6 +103001,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_poll: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101092,6 +103040,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1stop
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_stop: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -101123,6 +103075,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1stop
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_stop: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -101156,6 +103112,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_isLoggedOn: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101204,6 +103164,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1get
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Responder & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_getSession: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101239,6 +103203,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_getSessions: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101281,6 +103249,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1get
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_getSession: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101323,6 +103295,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1get
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_getSessionSettings: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101365,6 +103341,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_has: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101400,6 +103380,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_isStopped: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101435,6 +103419,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_getApplication: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101470,6 +103458,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_getMessageStoreFactory: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101505,6 +103497,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Initiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Initiator_getLog: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101650,6 +103646,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1SocketI
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::SocketInitiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SocketInitiatorBase: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -101680,6 +103680,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Accepto
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_Acceptor: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -101713,6 +103717,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1getL
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_getLog: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101746,6 +103754,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1start
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_start: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -101777,6 +103789,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1block
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_block: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -101810,6 +103826,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1p
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_poll: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101845,6 +103865,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1stop_
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_stop: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -101876,6 +103900,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1stop_
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_stop: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -101909,6 +103937,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1i
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_isLoggedOn: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101960,6 +103992,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1getS
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Responder & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_getSession: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -101995,6 +104031,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1getS
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_getSessions: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -102037,6 +104077,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1getS
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_getSession: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -102079,6 +104123,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1getS
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_getSessionSettings: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -102121,6 +104169,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1h
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_has: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -102156,6 +104208,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1i
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_isStopped: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -102191,6 +104247,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1getMa
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_getMaxPendingConnections: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -102226,6 +104286,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1getA
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_getApplication: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -102261,6 +104325,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1getM
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::Acceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Acceptor_getMessageStoreFactory: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -102406,6 +104474,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1SocketA
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::SocketAcceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SocketAcceptorBase: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -102671,6 +104743,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1DataDic
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_DataDictionary: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -102712,6 +104788,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_readFromURL: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -102749,6 +104829,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DOMDocumentPtr const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_readFromDocument: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -102786,6 +104870,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::istream & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_readFromStream: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -102827,6 +104915,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_setVersion: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -102860,6 +104952,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictiona
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_getVersion: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -102895,6 +104991,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -102938,6 +105038,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addFieldName: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -102991,6 +105095,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   std::string arg4_str(arg4_pstr);
   arg4 = &arg4_str;
   jenv->ReleaseStringUTFChars(jarg4, arg4_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addValueName: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103026,6 +105134,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103069,6 +105181,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addMsgType: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103112,6 +105228,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isMsgType: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103157,6 +105277,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addMsgField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103202,6 +105326,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isMsgField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103239,6 +105367,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = jarg3 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addHeaderField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103274,6 +105406,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isHeaderField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103311,6 +105447,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = jarg3 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addTrailerField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103346,6 +105486,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isTrailerField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103383,6 +105527,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (FIX::TYPE::Type)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addFieldType: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103424,6 +105572,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::TYPE::Type & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_getFieldType: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103469,6 +105621,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addRequiredField: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103514,6 +105670,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isRequiredField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103559,6 +105719,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addFieldValue: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103594,6 +105758,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_hasFieldValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103641,6 +105809,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isFieldValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103695,6 +105867,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::DataDictionary const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_addGroup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103740,6 +105916,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isGroup: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103777,6 +105957,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isDataField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103814,6 +105998,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isMultipleValueField: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -103849,6 +106037,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_checkFieldsOutOfOrder: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103882,6 +106074,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_checkFieldsHaveValues: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103915,6 +106111,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_checkUserDefinedFields: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103948,6 +106148,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_allowUnknownMsgFields: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -103981,6 +106185,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = jarg2 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_preserveMessageFieldsOrder: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -104014,6 +106222,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDiction
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_isMessageFieldsOrderPreserved: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -104095,6 +106307,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::Message const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_validate: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -104135,6 +106351,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
     return ;
   } 
   arg3 = jarg3 ? true : false; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_validate: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -104170,6 +106390,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictiona
   (void)jarg1_;
   arg1 = *(FIX::DataDictionary **)&jarg1; 
   arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_getFieldName: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -104215,6 +106439,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_getFieldTag: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -104262,6 +106490,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictiona
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_getValueName: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -104309,6 +106541,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictiona
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_getNameValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -104356,6 +106592,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_getGroupDelimiter: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -104403,6 +106643,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DataDictionary_getGroupDictionary: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -104548,6 +106792,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1SSLSock
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::SSLSocketAcceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SSLSocketAcceptorBase: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -104589,6 +106837,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SSLSocketAccept
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SSLSocketAcceptorBase_setPassword: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -104632,6 +106884,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SSLSocketAccept
   }
   arg3 = (size_t)jarg3; 
   arg4 = (int)jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SSLSocketAcceptorBase_passwordHandleCallback: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -104919,6 +107175,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1SSLSock
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::SSLSocketInitiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_SSLSocketInitiatorBase: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -104960,6 +107220,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SSLSocketInitia
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SSLSocketInitiatorBase_setPassword: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -104995,6 +107259,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SSLSocketInitia
   arg1 = *(FIX::SSLSocketInitiator **)&jarg1; 
   arg2 = *(X509 **)&jarg2; 
   arg3 = *(RSA **)&jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SSLSocketInitiatorBase_setCertAndKey: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -105038,6 +107306,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SSLSocketInitia
   }
   arg3 = (size_t)jarg3; 
   arg4 = (int)jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "SSLSocketInitiatorBase_passwordHandleCallback: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105193,6 +107465,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DatabaseConn
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DatabaseConnectionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DatabaseConnectionID_getDatabase: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105228,6 +107504,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DatabaseConn
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DatabaseConnectionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DatabaseConnectionID_getUser: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105263,6 +107543,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DatabaseConn
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DatabaseConnectionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DatabaseConnectionID_getPassword: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105298,6 +107582,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DatabaseConn
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DatabaseConnectionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DatabaseConnectionID_getHost: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105333,6 +107621,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DatabaseConnect
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::DatabaseConnectionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "DatabaseConnectionID_getPort: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105365,6 +107657,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Databas
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::DatabaseConnectionID **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_DatabaseConnectionID: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -105437,6 +107733,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1MySQLQu
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MySQLQuery **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MySQLQuery: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -105472,6 +107772,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLQuery_
   (void)jarg1_;
   arg1 = *(FIX::MySQLQuery **)&jarg1; 
   arg2 = *(MYSQL **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLQuery_execute: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105507,6 +107811,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLQuery_
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLQuery **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLQuery_success: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105542,6 +107850,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLQuery_1row
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLQuery **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLQuery_rows: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105577,6 +107889,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLQuery_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLQuery **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLQuery_reason: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105616,6 +107932,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLQuery_1
   arg1 = *(FIX::MySQLQuery **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLQuery_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105649,6 +107969,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLQuery_1thr
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLQuery **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLQuery_throwException: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -105792,6 +108116,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1MySQLCo
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MySQLConnection **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MySQLConnection: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -105825,6 +108153,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLConnectio
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLConnection **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLConnection_connectionID: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105860,6 +108192,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLConnec
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLConnection **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLConnection_connected: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105895,6 +108231,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLConnec
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLConnection **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLConnection_reconnect: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -105937,6 +108277,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLConnec
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::MySQLQuery & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLConnection_execute: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -106230,6 +108574,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStoreFact
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStoreFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -106266,6 +108614,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStoreFacto
   (void)jarg2_;
   arg1 = *(FIX::MySQLStoreFactory **)&jarg1; 
   arg2 = *(FIX::MessageStore **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStoreFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -106296,6 +108648,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1MySQLSt
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MySQLStoreFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MySQLStoreFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -106469,6 +108825,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1MySQLSt
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MySQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MySQLStore: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -106514,6 +108874,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_set: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -106558,6 +108922,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_1get
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< std::string > & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_get: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -106591,6 +108959,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_getNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -106626,6 +108998,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_getNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -106661,6 +109037,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_1set
   (void)jarg1_;
   arg1 = *(FIX::MySQLStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_setNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -106694,6 +109074,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_1set
   (void)jarg1_;
   arg1 = *(FIX::MySQLStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_setNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -106725,6 +109109,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_1inc
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_incrNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -106756,6 +109144,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_1inc
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_incrNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -106789,6 +109181,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_1ge
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_getCreationTime: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -106829,6 +109225,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_1res
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_reset: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -106860,6 +109260,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLStore_1ref
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLStore_refresh: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107134,6 +109538,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1MySQLLo
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MySQLLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MySQLLog: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107165,6 +109573,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLog_1clear
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLog_clear: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107196,6 +109608,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLog_1backu
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLog_backup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107237,6 +109653,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLog_1setIn
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLog_setIncomingTable: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107278,6 +109698,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLog_1setOu
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLog_setOutgoingTable: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107319,6 +109743,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLog_1setEv
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLog_setEventTable: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107360,6 +109788,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLog_1onInc
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLog_onIncoming: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107401,6 +109833,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLog_1onOut
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLog_onOutgoing: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107442,6 +109878,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLog_1onEve
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLog_onEvent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107680,6 +110120,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLogFactor
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::MySQLLogFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLogFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -107722,6 +110166,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLogFactor
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLogFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -107758,6 +110206,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_MySQLLogFactory
   (void)jarg2_;
   arg1 = *(FIX::MySQLLogFactory **)&jarg1; 
   arg2 = *(FIX::Log **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "MySQLLogFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107788,6 +110240,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1MySQLLo
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::MySQLLogFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_MySQLLogFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107860,6 +110316,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Postgre
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::PostgreSQLQuery **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_PostgreSQLQuery: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -107895,6 +110355,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLQ
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLQuery **)&jarg1; 
   arg2 = *(PGconn **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLQuery_execute: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -107930,6 +110394,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLQ
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLQuery **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLQuery_success: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -107965,6 +110433,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLQuery
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLQuery **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLQuery_rows: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -108000,6 +110472,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLQu
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLQuery **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLQuery_reason: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -108039,6 +110515,10 @@ SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLQu
   arg1 = *(FIX::PostgreSQLQuery **)&jarg1; 
   arg2 = (int)jarg2; 
   arg3 = (int)jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLQuery_getValue: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -108072,6 +110552,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLQuery
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLQuery **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLQuery_throwException: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -108215,6 +110699,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Postgre
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::PostgreSQLConnection **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_PostgreSQLConnection: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -108248,6 +110736,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLConn
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLConnection **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLConnection_connectionID: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -108283,6 +110775,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLC
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLConnection **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLConnection_connected: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -108318,6 +110814,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLC
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLConnection **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLConnection_reconnect: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -108360,6 +110860,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLC
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::PostgreSQLQuery & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLConnection_execute: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -108653,6 +111157,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStor
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStoreFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -108689,6 +111197,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStore
   (void)jarg2_;
   arg1 = *(FIX::PostgreSQLStoreFactory **)&jarg1; 
   arg2 = *(FIX::MessageStore **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStoreFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -108719,6 +111231,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Postgre
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::PostgreSQLStoreFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_PostgreSQLStoreFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -108892,6 +111408,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Postgre
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::PostgreSQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_PostgreSQLStore: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -108937,6 +111457,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLS
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_set: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -108981,6 +111505,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStore
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< std::string > & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_get: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109014,6 +111542,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStor
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_getNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -109049,6 +111581,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStor
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_getNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -109084,6 +111620,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStore
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_setNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109117,6 +111657,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStore
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_setNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109148,6 +111692,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStore
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_incrNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109179,6 +111727,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStore
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_incrNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109212,6 +111764,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStor
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_getCreationTime: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -109252,6 +111808,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStore
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_reset: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109283,6 +111843,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLStore
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLStore_refresh: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109557,6 +112121,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Postgre
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::PostgreSQLLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_PostgreSQLLog: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109588,6 +112156,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLog_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLog_clear: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109619,6 +112191,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLog_1
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLLog **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLog_backup: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109660,6 +112236,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLog_1
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLog_setIncomingTable: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109701,6 +112281,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLog_1
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLog_setOutgoingTable: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109742,6 +112326,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLog_1
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLog_setEventTable: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109783,6 +112371,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLog_1
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLog_onIncoming: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109824,6 +112416,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLog_1
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLog_onOutgoing: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -109865,6 +112461,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLog_1
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLog_onEvent: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -110103,6 +112703,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLogF
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::PostgreSQLLogFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLogFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -110145,6 +112749,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLogF
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLogFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -110181,6 +112789,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_PostgreSQLLogFa
   (void)jarg2_;
   arg1 = *(FIX::PostgreSQLLogFactory **)&jarg1; 
   arg2 = *(FIX::Log **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "PostgreSQLLogFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -110211,6 +112823,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Postgre
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::PostgreSQLLogFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_PostgreSQLLogFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -110354,6 +112970,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Threade
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::ThreadedSocketAcceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_ThreadedSocketAcceptorBase: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -110497,6 +113117,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Threade
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::ThreadedSocketInitiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_ThreadedSocketInitiatorBase: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -110640,6 +113264,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Threade
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::ThreadedSSLSocketAcceptor **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_ThreadedSSLSocketAcceptorBase: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -110681,6 +113309,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ThreadedSSLSock
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ThreadedSSLSocketAcceptorBase_setPassword: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -110724,6 +113356,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ThreadedSSLSock
   }
   arg3 = (size_t)jarg3; 
   arg4 = (int)jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ThreadedSSLSocketAcceptorBase_passwordHandleCallback: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -110915,6 +113551,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Threade
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::ThreadedSSLSocketInitiator **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_ThreadedSSLSocketInitiatorBase: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -110956,6 +113596,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ThreadedSSLSock
   std::string arg2_str(arg2_pstr);
   arg2 = &arg2_str;
   jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ThreadedSSLSocketInitiatorBase_setPassword: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -110991,6 +113635,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ThreadedSSLSock
   arg1 = *(FIX::ThreadedSSLSocketInitiator **)&jarg1; 
   arg2 = *(X509 **)&jarg2; 
   arg3 = *(RSA **)&jarg3; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ThreadedSSLSocketInitiatorBase_setCertAndKey: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111034,6 +113682,10 @@ SWIGEXPORT jint JNICALL Java_com_dudleylane_quickfix_quickfixJNI_ThreadedSSLSock
   }
   arg3 = (size_t)jarg3; 
   arg4 = (int)jarg4; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ThreadedSSLSocketInitiatorBase_passwordHandleCallback: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -111129,6 +113781,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStoreFacto
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::SessionID const & is null");
     return 0;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStoreFactory_create: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -111165,6 +113821,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStoreFactor
   (void)jarg2_;
   arg1 = *(FIX::NullStoreFactory **)&jarg1; 
   arg2 = *(FIX::MessageStore **)&jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStoreFactory_destroy: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111227,6 +113887,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1NullSto
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::NullStoreFactory **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_NullStoreFactory: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111311,6 +113975,10 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1
   std::string arg3_str(arg3_pstr);
   arg3 = &arg3_str;
   jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_set: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -111355,6 +114023,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1get(
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "std::vector< std::string > & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_get: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111388,6 +114060,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::NullStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_getNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -111423,6 +114099,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::NullStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_getNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -111458,6 +114138,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1setN
   (void)jarg1_;
   arg1 = *(FIX::NullStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_setNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111491,6 +114175,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1setN
   (void)jarg1_;
   arg1 = *(FIX::NullStore **)&jarg1; 
   arg2 = (FIX::SEQNUM)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_setNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111522,6 +114210,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1incr
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::NullStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_incrNextSenderMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111553,6 +114245,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1incr
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::NullStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_incrNextTargetMsgSeqNum: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111591,6 +114287,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1setC
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_setCreationTime: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111624,6 +114324,10 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1get
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::NullStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_getCreationTime: its object was deleted, or the view ended");
+    return 0;
+  }
   {
     try
     {
@@ -111664,6 +114368,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1rese
     SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::UtcTimeStamp const & is null");
     return ;
   } 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_reset: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111695,6 +114403,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_NullStore_1refr
   (void)jcls;
   (void)jarg1_;
   arg1 = *(FIX::NullStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "NullStore_refresh: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
@@ -111725,6 +114437,10 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1NullSto
   (void)jenv;
   (void)jcls;
   arg1 = *(FIX::NullStore **)&jarg1; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "delete_NullStore: its object was deleted, or the view ended");
+    return ;
+  }
   {
     try
     {
