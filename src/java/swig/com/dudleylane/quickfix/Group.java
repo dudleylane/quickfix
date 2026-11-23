@@ -81,7 +81,8 @@ public class Group extends FieldMap {
   }
 
   public Group getGroup(long num, Group group) {
-    return new Group(quickfixJNI.Group_getGroup(swigCPtr, this, num, Group.getCPtr(group), group), false);
+    quickfixJNI.Group_getGroup(swigCPtr, this, num, Group.getCPtr(group), group);
+    return group;
   }
 
   public void removeGroup(long num, Group group) {
@@ -98,11 +99,6 @@ public class Group extends FieldMap {
 
   public boolean hasGroup(long num, Group group) {
     return quickfixJNI.Group_hasGroup__SWIG_1(swigCPtr, this, num, Group.getCPtr(group), group);
-  }
-
-  public FieldMap cloneInto(GroupArena arena) {
-    long cPtr = quickfixJNI.Group_cloneInto(swigCPtr, this, GroupArena.getCPtr(arena), arena);
-    return (cPtr == 0) ? null : new FieldMap(cPtr, false);
   }
 
 }

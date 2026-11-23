@@ -159,6 +159,24 @@
 
 %rename(FIXException) FIX::Exception;
 
+// A view holds its owner in an attribute, and a call whose result is its argument returns the argument, so
+// neither outlives what it points into (#194; ../quickfix.i). SWIG calls the result val. Features go before the
+// %include: one declared after the class has been read does not apply.
+%define QUICKFIX_PYTHON_KEEPS_OWNER(method)
+%feature("pythonappend") method %{val._quickfixOwner = self%}
+%enddef
+QUICKFIX_PYTHON_KEEPS_OWNER(FIX::Message::getHeader)
+QUICKFIX_PYTHON_KEEPS_OWNER(FIX::Message::getTrailer)
+QUICKFIX_PYTHON_KEEPS_OWNER(FIX::FieldMap::getGroupRef)
+QUICKFIX_PYTHON_KEEPS_OWNER(FIX::FieldMap::getGroupPtr)
+QUICKFIX_PYTHON_KEEPS_OWNER(FIX::SessionSettings::get)
+%feature("pythonappend") FIX::FieldMap::getField %{if len(args) == 1 and isinstance(args[0], FieldBase): val = args[0]%}
+%feature("pythonappend") FIX::FieldMap::getGroup %{val = group%}
+%feature("pythonappend") FIX::Message::getGroup %{val = group%}
+%feature("pythonappend") FIX::Header::getGroup %{val = group%}
+%feature("pythonappend") FIX::Trailer::getGroup %{val = group%}
+%feature("pythonappend") FIX::Group::getGroup %{val = group%}
+
 %include ../quickfix.i
 
 %pythoncode %{

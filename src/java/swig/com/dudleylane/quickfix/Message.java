@@ -113,7 +113,8 @@ public class Message extends FieldMap {
   }
 
   public Group getGroup(long num, Group group) {
-    return new Group(quickfixJNI.Message_getGroup(swigCPtr, this, num, Group.getCPtr(group), group), false);
+    quickfixJNI.Message_getGroup(swigCPtr, this, num, Group.getCPtr(group), group);
+    return group;
   }
 
   public void removeGroup(long num, Group group) {
@@ -201,11 +202,23 @@ public class Message extends FieldMap {
   }
 
   public Header getHeader() {
-    return new Header(quickfixJNI.Message_getHeader__SWIG_0(swigCPtr, this), false);
+    long cPtr = quickfixJNI.Message_getHeader__SWIG_0(swigCPtr, this);
+    if (cPtr == 0) {
+      return null;
+    }
+    Header view = new Header(cPtr, false);
+    view.swigOwner = this;
+    return view;
   }
 
   public Trailer getTrailer() {
-    return new Trailer(quickfixJNI.Message_getTrailer__SWIG_0(swigCPtr, this), false);
+    long cPtr = quickfixJNI.Message_getTrailer__SWIG_0(swigCPtr, this);
+    if (cPtr == 0) {
+      return null;
+    }
+    Trailer view = new Trailer(cPtr, false);
+    view.swigOwner = this;
+    return view;
   }
 
   public boolean hasValidStructure(SWIGTYPE_p_int tag) {

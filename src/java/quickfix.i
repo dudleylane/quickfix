@@ -579,4 +579,39 @@ typedef std::string QuickfixBytes;
   }
 }
 
+// What a call returns from inside another object (#194; ../quickfix.i). A view holds its owner in swigOwner, so the
+// owner is not finalized while the view is reachable; a const view is a copy its proxy owns; a call whose result
+// is its argument returns the argument. The proxies' parameters keep their C++ names, field and group.
+%typemap(javacode) FIX::FieldMap, FIX::Dictionary, FIX::DataDictionary %{
+  // What this proxy is a view into, if anything: kept reachable while this is (#194).
+  protected Object swigOwner;
+%}
+%typemap(javaout) FIX::Header &getHeader, const FIX::Header &getHeader, FIX::Trailer &getTrailer,
+                  const FIX::Trailer &getTrailer, FIX::FieldMap &getGroupRef, FIX::FieldMap *getGroupPtr,
+                  const FIX::Dictionary &get, const FIX::DataDictionary *getGroupDictionary {
+    long cPtr = $jnicall;
+    if (cPtr == 0) {
+      return null;
+    }
+    $javaclassname view = new $javaclassname(cPtr, false);
+    view.swigOwner = this;
+    return view;
+  }
+%typemap(out) const FIX::FieldBase &getFieldRef, const FIX::FieldBase *const getFieldPtr
+%{ *(FIX::FieldBase **)&$result = new FIX::FieldBase(*$1); %}
+%typemap(out) const std::set<FIX::SessionID> &getSessions
+%{ *(std::set<FIX::SessionID> **)&$result = new std::set<FIX::SessionID>(*$1); %}
+%typemap(javaout) const FIX::FieldBase &getFieldRef, const FIX::FieldBase *const getFieldPtr,
+                  const std::set<FIX::SessionID> &getSessions {
+    return new $javaclassname($jnicall, true);
+  }
+%typemap(javaout) FIX::FieldBase &getField {
+    $jnicall;
+    return field;
+  }
+%typemap(javaout) FIX::FieldMap &getGroup, FIX::Group &getGroup, Group &getGroup {
+    $jnicall;
+    return group;
+  }
+
 %include ../quickfix.i

@@ -73,7 +73,13 @@ public class SessionSettings {
   }
 
   public Dictionary get(SessionID arg0) {
-    return new Dictionary(quickfixJNI.SessionSettings_get__SWIG_0(swigCPtr, this, SessionID.getCPtr(arg0), arg0), false);
+    long cPtr = quickfixJNI.SessionSettings_get__SWIG_0(swigCPtr, this, SessionID.getCPtr(arg0), arg0);
+    if (cPtr == 0) {
+      return null;
+    }
+    Dictionary view = new Dictionary(cPtr, false);
+    view.swigOwner = this;
+    return view;
   }
 
   public void set(SessionID arg0, Dictionary arg1) {
@@ -81,7 +87,13 @@ public class SessionSettings {
   }
 
   public Dictionary get() {
-    return new Dictionary(quickfixJNI.SessionSettings_get__SWIG_1(swigCPtr, this), false);
+    long cPtr = quickfixJNI.SessionSettings_get__SWIG_1(swigCPtr, this);
+    if (cPtr == 0) {
+      return null;
+    }
+    Dictionary view = new Dictionary(cPtr, false);
+    view.swigOwner = this;
+    return view;
   }
 
   public void set(Dictionary defaults) {

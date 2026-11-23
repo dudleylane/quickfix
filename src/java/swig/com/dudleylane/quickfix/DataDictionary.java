@@ -48,6 +48,9 @@ public class DataDictionary {
     }
   }
 
+  // What this proxy is a view into, if anything: kept reachable while this is (#194).
+  protected Object swigOwner;
+
   public DataDictionary() {
     this(quickfixJNI.new_DataDictionary__SWIG_0(), true);
   }
@@ -82,22 +85,6 @@ public class DataDictionary {
 
   public void readFromStream(SWIGTYPE_p_std__istream stream) {
     quickfixJNI.DataDictionary_readFromStream(swigCPtr, this, SWIGTYPE_p_std__istream.getCPtr(stream));
-  }
-
-  public SWIGTYPE_p_message_order getOrderedFields() {
-    return new SWIGTYPE_p_message_order(quickfixJNI.DataDictionary_getOrderedFields(swigCPtr, this), false);
-  }
-
-  public SWIGTYPE_p_message_order getHeaderOrderedFields() {
-    return new SWIGTYPE_p_message_order(quickfixJNI.DataDictionary_getHeaderOrderedFields(swigCPtr, this), false);
-  }
-
-  public SWIGTYPE_p_message_order getTrailerOrderedFields() {
-    return new SWIGTYPE_p_message_order(quickfixJNI.DataDictionary_getTrailerOrderedFields(swigCPtr, this), false);
-  }
-
-  public SWIGTYPE_p_message_order getMessageOrderedFields(String msgType) {
-    return new SWIGTYPE_p_message_order(quickfixJNI.DataDictionary_getMessageOrderedFields(swigCPtr, this, msgType), false);
   }
 
   public void setVersion(String beginString) {
@@ -258,7 +245,12 @@ public class DataDictionary {
 
   public DataDictionary getGroupDictionary(String msg, int field) {
     long cPtr = quickfixJNI.DataDictionary_getGroupDictionary(swigCPtr, this, msg, field);
-    return (cPtr == 0) ? null : new DataDictionary(cPtr, false);
+    if (cPtr == 0) {
+      return null;
+    }
+    DataDictionary view = new DataDictionary(cPtr, false);
+    view.swigOwner = this;
+    return view;
   }
 
 }

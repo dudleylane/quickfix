@@ -48,6 +48,9 @@ public class Dictionary {
     }
   }
 
+  // What this proxy is a view into, if anything: kept reachable while this is (#194).
+  protected Object swigOwner;
+
   public Dictionary(String name) {
     this(quickfixJNI.new_Dictionary__SWIG_0(name), true);
   }

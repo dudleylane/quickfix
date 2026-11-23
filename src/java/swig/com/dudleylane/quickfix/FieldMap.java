@@ -48,6 +48,9 @@ public class FieldMap {
     }
   }
 
+  // What this proxy is a view into, if anything: kept reachable while this is (#194).
+  protected Object swigOwner;
+
   public FieldMap(SWIGTYPE_p_message_order order) {
     this(quickfixJNI.new_FieldMap__SWIG_1(SWIGTYPE_p_message_order.getCPtr(order)), true);
   }
@@ -81,7 +84,8 @@ public class FieldMap {
   }
 
   public FieldBase getField(FieldBase field) {
-    return new FieldBase(quickfixJNI.FieldMap_getField__SWIG_0(swigCPtr, this, FieldBase.getCPtr(field), field), false);
+    quickfixJNI.FieldMap_getField__SWIG_0(swigCPtr, this, FieldBase.getCPtr(field), field);
+    return field;
   }
 
   public String getField(int tag) {
@@ -89,12 +93,11 @@ public class FieldMap {
   }
 
   public FieldBase getFieldRef(int tag) {
-    return new FieldBase(quickfixJNI.FieldMap_getFieldRef(swigCPtr, this, tag), false);
+    return new FieldBase(quickfixJNI.FieldMap_getFieldRef(swigCPtr, this, tag), true);
   }
 
   public FieldBase getFieldPtr(int tag) {
-    long cPtr = quickfixJNI.FieldMap_getFieldPtr(swigCPtr, this, tag);
-    return (cPtr == 0) ? null : new FieldBase(cPtr, false);
+    return new FieldBase(quickfixJNI.FieldMap_getFieldPtr(swigCPtr, this, tag), true);
   }
 
   public boolean isSetField(FieldBase field) {
@@ -130,20 +133,28 @@ public class FieldMap {
   }
 
   public FieldMap getGroup(int num, int tag, FieldMap group) {
-    return new FieldMap(quickfixJNI.FieldMap_getGroup(swigCPtr, this, num, tag, FieldMap.getCPtr(group), group), false);
+    quickfixJNI.FieldMap_getGroup(swigCPtr, this, num, tag, FieldMap.getCPtr(group), group);
+    return group;
   }
 
   public FieldMap getGroupRef(int num, int tag) {
-    return new FieldMap(quickfixJNI.FieldMap_getGroupRef(swigCPtr, this, num, tag), false);
+    long cPtr = quickfixJNI.FieldMap_getGroupRef(swigCPtr, this, num, tag);
+    if (cPtr == 0) {
+      return null;
+    }
+    FieldMap view = new FieldMap(cPtr, false);
+    view.swigOwner = this;
+    return view;
   }
 
   public FieldMap getGroupPtr(int num, int tag) {
     long cPtr = quickfixJNI.FieldMap_getGroupPtr(swigCPtr, this, num, tag);
-    return (cPtr == 0) ? null : new FieldMap(cPtr, false);
-  }
-
-  public SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_t_t groups() {
-    return new SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_t_t(quickfixJNI.FieldMap_groups(swigCPtr, this), false);
+    if (cPtr == 0) {
+      return null;
+    }
+    FieldMap view = new FieldMap(cPtr, false);
+    view.swigOwner = this;
+    return view;
   }
 
   public void removeGroup(int num, int tag) {
@@ -224,11 +235,6 @@ public class FieldMap {
 
   public SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_t_t__iterator g_end() {
     return new SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_t_t__iterator(quickfixJNI.FieldMap_g_end__SWIG_0(swigCPtr, this), true);
-  }
-
-  public FieldMap cloneInto(GroupArena arena) {
-    long cPtr = quickfixJNI.FieldMap_cloneInto(swigCPtr, this, GroupArena.getCPtr(arena), arena);
-    return (cPtr == 0) ? null : new FieldMap(cPtr, false);
   }
 
   public byte[] getFieldBytes(int tag) {

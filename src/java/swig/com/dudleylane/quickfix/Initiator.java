@@ -78,7 +78,7 @@ public class Initiator {
   }
 
   public SessionIDSet getSessions() {
-    return new SessionIDSet(quickfixJNI.Initiator_getSessions(swigCPtr, this), false);
+    return new SessionIDSet(quickfixJNI.Initiator_getSessions(swigCPtr, this), true);
   }
 
   public Session getSession(SessionID sessionID) {

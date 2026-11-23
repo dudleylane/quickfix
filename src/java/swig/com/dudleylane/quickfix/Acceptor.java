@@ -83,7 +83,7 @@ public class Acceptor {
   }
 
   public SessionIDSet getSessions() {
-    return new SessionIDSet(quickfixJNI.Acceptor_getSessions(swigCPtr, this), false);
+    return new SessionIDSet(quickfixJNI.Acceptor_getSessions(swigCPtr, this), true);
   }
 
   public Session getSession(SessionID sessionID) {

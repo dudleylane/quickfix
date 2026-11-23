@@ -377,6 +377,28 @@ try (var acceptor = new ThreadedSocketAcceptor(new Orders(), new MemoryStoreFact
   NewOrderSingle, almost all of it string conversion; building a 20-field message and `toString()` is
   3.1 μs. A latency-critical path is better kept in C++, with Java on the control plane.
 
+### What a binding call returns from inside another object
+
+In Python, Ruby and Java, such a call returns one of these, and each was once a bare view that a script could
+keep past its owner and so read freed memory (#194):
+
+- **A view that keeps its owner**: `Message.getHeader()` and `getTrailer()`, `getGroupRef` and `getGroupPtr`,
+  `SessionSettings.get`, and Java's `DataDictionary.getGroupDictionary`. It is the owner's object in place, so a
+  write through it reaches the owner, and the owner lives as long as the view. As with a C++ reference, a
+  group's view ends when its group is removed or its message cleared or set from a string (#196), a view of
+  a callback's message ends when the callback returns, and in Java one ends when its owner is `delete()`d.
+- **A copy** where C++ returns `const`: `getFieldRef`, `getFieldPtr`, a `SessionID`'s getters, and Java's
+  `getSessions()`. Writing it changes nothing else.
+- **The argument itself** where that is the result: `getField(field)` and `getGroup(..., group)`, as its own
+  class.
+- **A `Session`, and anything a transport or session returns** -- `lookupSession`, `getSession`, a session's
+  log and store, a transport's settings -- lives until the transport is destroyed, as in C++: in Python when
+  its last reference goes, in Ruby when it is collected or at exit, in Java at `close()` (#197).
+
+`FieldMap.groups()` and `cloneInto()`, `GroupArena`, `DataDictionary.getOrderedFields` and its header,
+trailer and message forms, and `sessionToPort()` are not wrapped: they returned engine internals and opaque
+types nothing in a binding could use.
+
 ## Testing
 
 ```bash

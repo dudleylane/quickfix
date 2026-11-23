@@ -759,7 +759,20 @@ private:
       SWIG_exception_fail(SWIG_TypeError, "getGroup needs a DataDictionary to copy the group's dictionary into");
     *reinterpret_cast<FIX::DataDictionary *>(argp) = *(*$1);
   }
-} 	 
+}
+
+// A view holds its owner in an instance variable, which the GC marks, and a call whose result is its argument
+// returns the argument's own object, so neither outlives what it points into (#194; ../quickfix.i). A wrapper's
+// self is the receiver and argv the arguments after it. Message's getGroup returns a Group SWIG has not read yet.
+%typemap(out, noblock=1) FIX::Header &getHeader, const FIX::Header &getHeader, FIX::Trailer &getTrailer,
+                         const FIX::Trailer &getTrailer, FIX::FieldMap &getGroupRef, FIX::FieldMap *getGroupPtr,
+                         const FIX::Dictionary &get {
+  $result = SWIG_NewPointerObj(SWIG_as_voidptr($1), $descriptor, 0);
+  rb_iv_set($result, "@quickfixOwner", self);
+}
+%typemap(out, noblock=1) FIX::FieldBase &getField { $result = argv[0]; }
+%typemap(out, noblock=1) FIX::FieldMap &getGroup { $result = argv[2]; }
+%typemap(out, noblock=1) FIX::Group &getGroup, Group &getGroup { $result = argv[1]; }
 
 %include ../quickfix.i
 	  	 

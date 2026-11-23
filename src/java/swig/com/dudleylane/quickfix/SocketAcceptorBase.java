@@ -56,8 +56,4 @@ public class SocketAcceptorBase extends Acceptor {
     this(quickfixJNI.new_SocketAcceptorBase__SWIG_1(Application.getCPtr(arg0), arg0, MessageStoreFactory.getCPtr(arg1), arg1, SessionSettings.getCPtr(arg2), arg2, LogFactory.getCPtr(arg3), arg3), true);
   }
 
-  public SWIGTYPE_p_std__mapT_FIX__SessionID_unsigned_short_t sessionToPort() {
-    return new SWIGTYPE_p_std__mapT_FIX__SessionID_unsigned_short_t(quickfixJNI.SocketAcceptorBase_sessionToPort(swigCPtr, this), false);
-  }
-
 }

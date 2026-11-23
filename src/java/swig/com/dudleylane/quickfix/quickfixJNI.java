@@ -286,16 +286,6 @@ public class quickfixJNI {
   public final static native int CheckSumField_valueOf(long jarg1, FieldBase jarg1_);
   public final static native int CheckSumField_getValue(long jarg1, CheckSumField jarg1_);
   public final static native void delete_CheckSumField(long jarg1);
-  public final static native long GroupArena_SLOT_SIZE_get();
-  public final static native long GroupArena_DEFAULT_CAPACITY_get();
-  public final static native long new_GroupArena__SWIG_0();
-  public final static native long new_GroupArena__SWIG_1(long jarg1);
-  public final static native long GroupArena_allocate(long jarg1, GroupArena jarg1_);
-  public final static native void GroupArena_deallocate(long jarg1, GroupArena jarg1_, long jarg2);
-  public final static native boolean GroupArena_owns(long jarg1, GroupArena jarg1_, long jarg2);
-  public final static native void GroupArena_reset(long jarg1, GroupArena jarg1_);
-  public final static native long GroupArena_count(long jarg1, GroupArena jarg1_);
-  public final static native void delete_GroupArena(long jarg1);
   public final static native long new_FieldMap__SWIG_1(long jarg1);
   public final static native long new_FieldMap__SWIG_2();
   public final static native long new_FieldMap__SWIG_3(long jarg1);
@@ -320,7 +310,6 @@ public class quickfixJNI {
   public final static native long FieldMap_getGroup(long jarg1, FieldMap jarg1_, int jarg2, int jarg3, long jarg4, FieldMap jarg4_);
   public final static native long FieldMap_getGroupRef(long jarg1, FieldMap jarg1_, int jarg2, int jarg3);
   public final static native long FieldMap_getGroupPtr(long jarg1, FieldMap jarg1_, int jarg2, int jarg3);
-  public final static native long FieldMap_groups(long jarg1, FieldMap jarg1_);
   public final static native void FieldMap_removeGroup__SWIG_0(long jarg1, FieldMap jarg1_, int jarg2, int jarg3);
   public final static native void FieldMap_removeGroup__SWIG_1(long jarg1, FieldMap jarg1_, int jarg2);
   public final static native boolean FieldMap_hasGroup__SWIG_0(long jarg1, FieldMap jarg1_, int jarg2);
@@ -341,7 +330,6 @@ public class quickfixJNI {
   public final static native long FieldMap_end__SWIG_0(long jarg1, FieldMap jarg1_);
   public final static native long FieldMap_g_begin__SWIG_0(long jarg1, FieldMap jarg1_);
   public final static native long FieldMap_g_end__SWIG_0(long jarg1, FieldMap jarg1_);
-  public final static native long FieldMap_cloneInto(long jarg1, FieldMap jarg1_, long jarg2, GroupArena jarg2_);
   public final static native byte[] FieldMap_getFieldBytes(long jarg1, FieldMap jarg1_, int jarg2);
   public final static native void FieldMap_setFieldBytes(long jarg1, FieldMap jarg1_, int jarg2, byte[] jarg3);
   public final static native long new_Header__SWIG_0();
@@ -451,7 +439,6 @@ public class quickfixJNI {
   public final static native void Group_removeGroup__SWIG_1(long jarg1, Group jarg1_, long jarg2, Group jarg2_);
   public final static native boolean Group_hasGroup__SWIG_0(long jarg1, Group jarg1_, long jarg2, Group jarg2_);
   public final static native boolean Group_hasGroup__SWIG_1(long jarg1, Group jarg1_, long jarg2, long jarg3, Group jarg3_);
-  public final static native long Group_cloneInto(long jarg1, Group jarg1_, long jarg2, GroupArena jarg2_);
   public final static native void delete_Group(long jarg1);
   public final static native int BeginStringField_tag_get();
   public final static native long new_BeginStringField__SWIG_0();
@@ -6731,7 +6718,6 @@ public class quickfixJNI {
   public final static native long new_SocketAcceptorBase__SWIG_0(long jarg1, Application jarg1_, long jarg2, MessageStoreFactory jarg2_, long jarg3, SessionSettings jarg3_);
   public final static native long new_SocketAcceptorBase__SWIG_1(long jarg1, Application jarg1_, long jarg2, MessageStoreFactory jarg2_, long jarg3, SessionSettings jarg3_, long jarg4, LogFactory jarg4_);
   public final static native void delete_SocketAcceptorBase(long jarg1);
-  public final static native long SocketAcceptorBase_sessionToPort(long jarg1, SocketAcceptorBase jarg1_);
   public final static native long new_DataDictionary__SWIG_0();
   public final static native long new_DataDictionary__SWIG_1(long jarg1, DataDictionary jarg1_);
   public final static native long new_DataDictionary__SWIG_2(long jarg1, boolean jarg2);
@@ -6742,10 +6728,6 @@ public class quickfixJNI {
   public final static native void DataDictionary_readFromURL(long jarg1, DataDictionary jarg1_, String jarg2);
   public final static native void DataDictionary_readFromDocument(long jarg1, DataDictionary jarg1_, long jarg2);
   public final static native void DataDictionary_readFromStream(long jarg1, DataDictionary jarg1_, long jarg2);
-  public final static native long DataDictionary_getOrderedFields(long jarg1, DataDictionary jarg1_);
-  public final static native long DataDictionary_getHeaderOrderedFields(long jarg1, DataDictionary jarg1_);
-  public final static native long DataDictionary_getTrailerOrderedFields(long jarg1, DataDictionary jarg1_);
-  public final static native long DataDictionary_getMessageOrderedFields(long jarg1, DataDictionary jarg1_, String jarg2);
   public final static native void DataDictionary_setVersion(long jarg1, DataDictionary jarg1_, String jarg2);
   public final static native String DataDictionary_getVersion(long jarg1, DataDictionary jarg1_);
   public final static native void DataDictionary_addField(long jarg1, DataDictionary jarg1_, int jarg2);

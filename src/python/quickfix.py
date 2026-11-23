@@ -1262,33 +1262,6 @@ class CheckSumField(FieldBase):
 
 # Register CheckSumField in _quickfix:
 _quickfix.CheckSumField_swigregister(CheckSumField)
-class GroupArena(object):
-    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
-    __repr__ = _swig_repr
-    SLOT_SIZE = _quickfix.GroupArena_SLOT_SIZE
-    DEFAULT_CAPACITY = _quickfix.GroupArena_DEFAULT_CAPACITY
-
-    def __init__(self, *args):
-        _quickfix.GroupArena_swiginit(self, _quickfix.new_GroupArena(*args))
-
-    def allocate(self):
-        return _quickfix.GroupArena_allocate(self)
-
-    def deallocate(self, p):
-        return _quickfix.GroupArena_deallocate(self, p)
-
-    def owns(self, p):
-        return _quickfix.GroupArena_owns(self, p)
-
-    def reset(self):
-        return _quickfix.GroupArena_reset(self)
-
-    def count(self):
-        return _quickfix.GroupArena_count(self)
-    __swig_destroy__ = _quickfix.delete_GroupArena
-
-# Register GroupArena in _quickfix:
-_quickfix.GroupArena_swigregister(GroupArena)
 class FieldMap(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -1304,7 +1277,11 @@ class FieldMap(object):
         return _quickfix.FieldMap_getFieldIfSet(self, field)
 
     def getField(self, *args):
-        return _quickfix.FieldMap_getField(self, *args)
+        val = _quickfix.FieldMap_getField(self, *args)
+        if len(args) == 1 and isinstance(args[0], FieldBase): val = args[0]
+
+        return val
+
 
     def getFieldRef(self, tag):
         return _quickfix.FieldMap_getFieldRef(self, tag)
@@ -1328,16 +1305,25 @@ class FieldMap(object):
         return _quickfix.FieldMap_replaceGroup(self, num, tag, group)
 
     def getGroup(self, num, tag, group):
-        return _quickfix.FieldMap_getGroup(self, num, tag, group)
+        val = _quickfix.FieldMap_getGroup(self, num, tag, group)
+        val = group
+
+        return val
+
 
     def getGroupRef(self, num, tag):
-        return _quickfix.FieldMap_getGroupRef(self, num, tag)
+        val = _quickfix.FieldMap_getGroupRef(self, num, tag)
+        val._quickfixOwner = self
+
+        return val
+
 
     def getGroupPtr(self, num, tag):
-        return _quickfix.FieldMap_getGroupPtr(self, num, tag)
+        val = _quickfix.FieldMap_getGroupPtr(self, num, tag)
+        val._quickfixOwner = self
 
-    def groups(self):
-        return _quickfix.FieldMap_groups(self)
+        return val
+
 
     def removeGroup(self, *args):
         return _quickfix.FieldMap_removeGroup(self, *args)
@@ -1381,9 +1367,6 @@ class FieldMap(object):
     def g_end(self, *args):
         return _quickfix.FieldMap_g_end(self, *args)
 
-    def cloneInto(self, arena):
-        return _quickfix.FieldMap_cloneInto(self, arena)
-
 # Register FieldMap in _quickfix:
 _quickfix.FieldMap_swigregister(FieldMap)
 class Header(FieldMap):
@@ -1400,7 +1383,11 @@ class Header(FieldMap):
         return _quickfix.Header_replaceGroup(self, num, group)
 
     def getGroup(self, num, group):
-        return _quickfix.Header_getGroup(self, num, group)
+        val = _quickfix.Header_getGroup(self, num, group)
+        val = group
+
+        return val
+
 
     def removeGroup(self, *args):
         return _quickfix.Header_removeGroup(self, *args)
@@ -1425,7 +1412,11 @@ class Trailer(FieldMap):
         return _quickfix.Trailer_replaceGroup(self, num, group)
 
     def getGroup(self, num, group):
-        return _quickfix.Trailer_getGroup(self, num, group)
+        val = _quickfix.Trailer_getGroup(self, num, group)
+        val = group
+
+        return val
+
 
     def removeGroup(self, *args):
         return _quickfix.Trailer_removeGroup(self, *args)
@@ -1455,7 +1446,11 @@ class Message(FieldMap):
         return _quickfix.Message_replaceGroup(self, num, group)
 
     def getGroup(self, num, group):
-        return _quickfix.Message_getGroup(self, num, group)
+        val = _quickfix.Message_getGroup(self, num, group)
+        val = group
+
+        return val
+
 
     def removeGroup(self, *args):
         return _quickfix.Message_removeGroup(self, *args)
@@ -1482,10 +1477,18 @@ class Message(FieldMap):
         return _quickfix.Message_setStringHeader(self, string)
 
     def getHeader(self, *args):
-        return _quickfix.Message_getHeader(self, *args)
+        val = _quickfix.Message_getHeader(self, *args)
+        val._quickfixOwner = self
+
+        return val
+
 
     def getTrailer(self, *args):
-        return _quickfix.Message_getTrailer(self, *args)
+        val = _quickfix.Message_getTrailer(self, *args)
+        val._quickfixOwner = self
+
+        return val
+
 
     def hasValidStructure(self, tag):
         return _quickfix.Message_hasValidStructure(self, tag)
@@ -1568,16 +1571,17 @@ class Group(FieldMap):
         return _quickfix.Group_replaceGroup(self, num, group)
 
     def getGroup(self, num, group):
-        return _quickfix.Group_getGroup(self, num, group)
+        val = _quickfix.Group_getGroup(self, num, group)
+        val = group
+
+        return val
+
 
     def removeGroup(self, *args):
         return _quickfix.Group_removeGroup(self, *args)
 
     def hasGroup(self, *args):
         return _quickfix.Group_hasGroup(self, *args)
-
-    def cloneInto(self, arena):
-        return _quickfix.Group_cloneInto(self, arena)
     __swig_destroy__ = _quickfix.delete_Group
 
 # Register Group in _quickfix:
@@ -7539,7 +7543,11 @@ class SessionSettings(object):
         return _quickfix.SessionSettings_has(self, arg2)
 
     def get(self, *args):
-        return _quickfix.SessionSettings_get(self, *args)
+        val = _quickfix.SessionSettings_get(self, *args)
+        val._quickfixOwner = self
+
+        return val
+
 
     def set(self, *args):
         return _quickfix.SessionSettings_set(self, *args)
@@ -8583,9 +8591,6 @@ class SocketAcceptorBase(Acceptor):
         _quickfix.SocketAcceptorBase_swiginit(self, _quickfix.new_SocketAcceptorBase(*args))
     __swig_destroy__ = _quickfix.delete_SocketAcceptorBase
 
-    def sessionToPort(self):
-        return _quickfix.SocketAcceptorBase_sessionToPort(self)
-
 # Register SocketAcceptorBase in _quickfix:
 _quickfix.SocketAcceptorBase_swigregister(SocketAcceptorBase)
 class DataDictionary(object):
@@ -8604,18 +8609,6 @@ class DataDictionary(object):
 
     def readFromStream(self, stream):
         return _quickfix.DataDictionary_readFromStream(self, stream)
-
-    def getOrderedFields(self):
-        return _quickfix.DataDictionary_getOrderedFields(self)
-
-    def getHeaderOrderedFields(self):
-        return _quickfix.DataDictionary_getHeaderOrderedFields(self)
-
-    def getTrailerOrderedFields(self):
-        return _quickfix.DataDictionary_getTrailerOrderedFields(self)
-
-    def getMessageOrderedFields(self, msgType):
-        return _quickfix.DataDictionary_getMessageOrderedFields(self, msgType)
 
     def setVersion(self, beginString):
         return _quickfix.DataDictionary_setVersion(self, beginString)

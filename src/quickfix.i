@@ -549,6 +549,42 @@ typedef FIX::SessionSettings SessionSettings;
 }
 #endif
 
+// What a call returns from inside another object (#194). SWIG returns a reference or pointer as a proxy that owns
+// nothing and keeps nothing alive, so one kept past its owner -- which Python frees when its last reference goes,
+// Ruby at a GC sweep and Java in a finalizer -- read and wrote freed memory. Such a call now returns one of:
+// - a copy, where C++ returns const: getFieldRef, getFieldPtr and SessionID's getters (below; java/quickfix.i).
+//   A field's view was also moved by any setField that grew its message.
+// - the view, holding its owner, where an application writes through it: getHeader, getTrailer, getGroupRef,
+//   getGroupPtr and SessionSettings.get (python/, ruby/ and java/quickfix.i). Like C++'s reference, a group's
+//   view ends when the group is removed or the message cleared or set from a string.
+// - the argument itself, where the result is the argument: getField(field) and getGroup(..., group), likewise.
+// A Session and what a transport or session returns live until the transport is destroyed, as in C++ (README).
+// These return an engine internal, or an opaque type nothing in a binding can use, so they are not wrapped:
+%ignore FIX::FieldMap::groups;
+%ignore FIX::FieldMap::cloneInto;
+%ignore FIX::Group::cloneInto;
+%ignore FIX::GroupArena;
+%ignore FIX::DataDictionary::getOrderedFields;
+%ignore FIX::DataDictionary::getHeaderOrderedFields;
+%ignore FIX::DataDictionary::getTrailerOrderedFields;
+%ignore FIX::DataDictionary::getMessageOrderedFields;
+%ignore FIX::SocketAcceptor::sessionToPort;
+
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
+%typemap(out, noblock=1) const FIX::FieldBase &getFieldRef, const FIX::FieldBase *const getFieldPtr {
+  $result = SWIG_NewPointerObj(SWIG_as_voidptr(new FIX::FieldBase(*$1)), $descriptor(FIX::FieldBase *), SWIG_POINTER_OWN);
+}
+%typemap(out, noblock=1) const FIX::BeginString &getBeginString {
+  $result = SWIG_NewPointerObj(SWIG_as_voidptr(new FIX::BeginString(*$1)), $descriptor(FIX::BeginString *), SWIG_POINTER_OWN);
+}
+%typemap(out, noblock=1) const FIX::SenderCompID &getSenderCompID {
+  $result = SWIG_NewPointerObj(SWIG_as_voidptr(new FIX::SenderCompID(*$1)), $descriptor(FIX::SenderCompID *), SWIG_POINTER_OWN);
+}
+%typemap(out, noblock=1) const FIX::TargetCompID &getTargetCompID {
+  $result = SWIG_NewPointerObj(SWIG_as_voidptr(new FIX::TargetCompID(*$1)), $descriptor(FIX::TargetCompID *), SWIG_POINTER_OWN);
+}
+#endif
+
 %extend FIX::FieldBase {
   std::string __str__() {
     return self->getFixString();

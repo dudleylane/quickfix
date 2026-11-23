@@ -12080,297 +12080,6 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1CheckSu
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_GroupArena_1SLOT_1SIZE_1get(JNIEnv *jenv, jclass jcls) {
-  jlong jresult = 0 ;
-  size_t result;
-  
-  (void)jenv;
-  (void)jcls;
-  result = FIX::GroupArena::SLOT_SIZE;
-  jresult = (jlong)result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_GroupArena_1DEFAULT_1CAPACITY_1get(JNIEnv *jenv, jclass jcls) {
-  jlong jresult = 0 ;
-  size_t result;
-  
-  (void)jenv;
-  (void)jcls;
-  result = FIX::GroupArena::DEFAULT_CAPACITY;
-  jresult = (jlong)result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1GroupArena_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
-  jlong jresult = 0 ;
-  FIX::GroupArena *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  {
-    try
-    {
-      result = (FIX::GroupArena *)new FIX::GroupArena();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(FIX::GroupArena **)&jresult = result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1GroupArena_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1) {
-  jlong jresult = 0 ;
-  size_t arg1 ;
-  FIX::GroupArena *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  arg1 = (size_t)jarg1; 
-  {
-    try
-    {
-      result = (FIX::GroupArena *)new FIX::GroupArena(SWIG_STD_MOVE(arg1));
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(FIX::GroupArena **)&jresult = result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_GroupArena_1allocate(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  jlong jresult = 0 ;
-  FIX::GroupArena *arg1 = (FIX::GroupArena *) 0 ;
-  void *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::GroupArena **)&jarg1; 
-  {
-    try
-    {
-      result = (void *)(arg1)->allocate();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(void **)&jresult = result; 
-  return jresult;
-}
-
-
-SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_GroupArena_1deallocate(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2) {
-  FIX::GroupArena *arg1 = (FIX::GroupArena *) 0 ;
-  void *arg2 = (void *) 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::GroupArena **)&jarg1; 
-  arg2 = *(void **)&jarg2; 
-  {
-    try
-    {
-      (arg1)->deallocate(arg2);
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return ;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return ;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return ;
-    }
-  }
-}
-
-
-SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_GroupArena_1owns(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2) {
-  jboolean jresult = 0 ;
-  FIX::GroupArena *arg1 = (FIX::GroupArena *) 0 ;
-  void *arg2 = (void *) 0 ;
-  bool result;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::GroupArena **)&jarg1; 
-  arg2 = *(void **)&jarg2; 
-  {
-    try
-    {
-      result = (bool)((FIX::GroupArena const *)arg1)->owns((void const *)arg2);
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  jresult = (jboolean)result; 
-  return jresult;
-}
-
-
-SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_GroupArena_1reset(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  FIX::GroupArena *arg1 = (FIX::GroupArena *) 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::GroupArena **)&jarg1; 
-  {
-    try
-    {
-      (arg1)->reset();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return ;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return ;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return ;
-    }
-  }
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_GroupArena_1count(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  jlong jresult = 0 ;
-  FIX::GroupArena *arg1 = (FIX::GroupArena *) 0 ;
-  size_t result;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::GroupArena **)&jarg1; 
-  {
-    try
-    {
-      result = ((FIX::GroupArena const *)arg1)->count();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  jresult = (jlong)result; 
-  return jresult;
-}
-
-
-SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1GroupArena(JNIEnv *jenv, jclass jcls, jlong jarg1) {
-  FIX::GroupArena *arg1 = (FIX::GroupArena *) 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  arg1 = *(FIX::GroupArena **)&jarg1; 
-  {
-    try
-    {
-      delete arg1;
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return ;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return ;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return ;
-    }
-  }
-}
-
-
 SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1FieldMap_1_1SWIG_11(JNIEnv *jenv, jclass jcls, jlong jarg1) {
   jlong jresult = 0 ;
   message_order *arg1 = 0 ;
@@ -12819,7 +12528,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getF
       return 0;
     }
   }
-  *(FIX::FieldBase **)&jresult = result; 
+  *(FIX::FieldBase **)&jresult = new FIX::FieldBase(*result); 
   return jresult;
 }
 
@@ -12856,7 +12565,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getF
       return 0;
     }
   }
-  *(FIX::FieldBase **)&jresult = result; 
+  *(FIX::FieldBase **)&jresult = new FIX::FieldBase(*result); 
   return jresult;
 }
 
@@ -13291,41 +13000,6 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getG
     }
   }
   *(FIX::FieldMap **)&jresult = result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1groups(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  jlong jresult = 0 ;
-  FIX::FieldMap *arg1 = (FIX::FieldMap *) 0 ;
-  FIX::FieldMap::Groups *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::FieldMap **)&jarg1; 
-  {
-    try
-    {
-      result = (FIX::FieldMap::Groups *) &((FIX::FieldMap const *)arg1)->groups();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(FIX::FieldMap::Groups **)&jresult = result; 
   return jresult;
 }
 
@@ -14051,48 +13725,6 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1g_1e
     }
   }
   *(FIX::FieldMap::g_iterator **)&jresult = new FIX::FieldMap::g_iterator(result); 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1cloneInto(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
-  jlong jresult = 0 ;
-  FIX::FieldMap *arg1 = (FIX::FieldMap *) 0 ;
-  FIX::GroupArena *arg2 = 0 ;
-  FIX::FieldMap *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  (void)jarg2_;
-  arg1 = *(FIX::FieldMap **)&jarg1; 
-  arg2 = *(FIX::GroupArena **)&jarg2;
-  if (!arg2) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::GroupArena & is null");
-    return 0;
-  } 
-  {
-    try
-    {
-      result = (FIX::FieldMap *)((FIX::FieldMap const *)arg1)->cloneInto(*arg2);
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(FIX::FieldMap **)&jresult = result; 
   return jresult;
 }
 
@@ -18623,48 +18255,6 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1hasG
     }
   }
   jresult = (jboolean)result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1cloneInto(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
-  jlong jresult = 0 ;
-  FIX::Group *arg1 = (FIX::Group *) 0 ;
-  FIX::GroupArena *arg2 = 0 ;
-  FIX::FieldMap *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  (void)jarg2_;
-  arg1 = *(FIX::Group **)&jarg1; 
-  arg2 = *(FIX::GroupArena **)&jarg2;
-  if (!arg2) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "FIX::GroupArena & is null");
-    return 0;
-  } 
-  {
-    try
-    {
-      result = (FIX::FieldMap *)((FIX::Group const *)arg1)->cloneInto(*arg2);
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(FIX::FieldMap **)&jresult = result; 
   return jresult;
 }
 
@@ -101670,7 +101260,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1get
       return 0;
     }
   }
-  *(std::set< FIX::SessionID > **)&jresult = result; 
+  *(std::set<FIX::SessionID> **)&jresult = new std::set<FIX::SessionID>(*result); 
   return jresult;
 }
 
@@ -102426,7 +102016,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1getS
       return 0;
     }
   }
-  *(std::set< FIX::SessionID > **)&jresult = result; 
+  *(std::set<FIX::SessionID> **)&jresult = new std::set<FIX::SessionID>(*result); 
   return jresult;
 }
 
@@ -102840,41 +102430,6 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1SocketA
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_SocketAcceptorBase_1sessionToPort(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  jlong jresult = 0 ;
-  FIX::SocketAcceptor *arg1 = (FIX::SocketAcceptor *) 0 ;
-  FIX::SocketAcceptor::SessionToPort *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::SocketAcceptor **)&jarg1; 
-  {
-    try
-    {
-      result = (FIX::SocketAcceptor::SessionToPort *) &(arg1)->sessionToPort();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(FIX::SocketAcceptor::SessionToPort **)&jresult = result; 
-  return jresult;
-}
-
-
 SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_new_1DataDictionary_1_1SWIG_10(JNIEnv *jenv, jclass jcls) {
   jlong jresult = 0 ;
   FIX::DataDictionary *result = 0 ;
@@ -103252,156 +102807,6 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_
       return ;
     }
   }
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getOrderedFields(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  jlong jresult = 0 ;
-  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
-  message_order *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::DataDictionary **)&jarg1; 
-  {
-    try
-    {
-      result = (message_order *) &((FIX::DataDictionary const *)arg1)->getOrderedFields();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(message_order **)&jresult = result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getHeaderOrderedFields(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  jlong jresult = 0 ;
-  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
-  message_order *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::DataDictionary **)&jarg1; 
-  {
-    try
-    {
-      result = (message_order *) &((FIX::DataDictionary const *)arg1)->getHeaderOrderedFields();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(message_order **)&jresult = result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getTrailerOrderedFields(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  jlong jresult = 0 ;
-  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
-  message_order *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::DataDictionary **)&jarg1; 
-  {
-    try
-    {
-      result = (message_order *) &((FIX::DataDictionary const *)arg1)->getTrailerOrderedFields();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(message_order **)&jresult = result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_DataDictionary_1getMessageOrderedFields(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2) {
-  jlong jresult = 0 ;
-  FIX::DataDictionary *arg1 = (FIX::DataDictionary *) 0 ;
-  std::string *arg2 = 0 ;
-  message_order *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::DataDictionary **)&jarg1; 
-  if(!jarg2) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
-    return 0;
-  }
-  const char *arg2_pstr = (const char *)jenv->GetStringUTFChars(jarg2, 0); 
-  if (!arg2_pstr) return 0;
-  std::string arg2_str(arg2_pstr);
-  arg2 = &arg2_str;
-  jenv->ReleaseStringUTFChars(jarg2, arg2_pstr); 
-  {
-    try
-    {
-      result = (message_order *) &((FIX::DataDictionary const *)arg1)->getMessageOrderedFields((std::string const &)*arg2);
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(message_order **)&jresult = result; 
-  return jresult;
 }
 
 
