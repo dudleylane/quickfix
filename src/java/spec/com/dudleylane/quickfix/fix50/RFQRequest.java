@@ -5,7 +5,7 @@ public class RFQRequest extends Message {
     public static final String MSGTYPE = "AH";
 
     public RFQRequest() {
-        getHeader().setField(35, MSGTYPE);
+        setHeaderField(35, MSGTYPE);
     }
 
     private RFQRequest(long cPtr) {
@@ -14,16 +14,12 @@ public class RFQRequest extends Message {
 
     /**
      * message as a RFQRequest, without copying it: the same engine object, and the view keeps message from being
-     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
-     * the view; copy it (new Message(message)) to keep it.
+     * collected. message.delete() ends the view of a message Java made, and a call through it then throws. A
+     * callback's message is the engine's, and the engine reuses it once the callback returns, so the view must
+     * not outlive the callback; copy it (new Message(message)) to keep it.
      */
     public static RFQRequest view(com.dudleylane.quickfix.Message message) {
-        if (!MSGTYPE.equals(message.getHeader().getField(35))) {
-            throw new IllegalArgumentException("not a RFQRequest (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
-        }
-        RFQRequest view = new RFQRequest(getCPtr(message));
-        view.swigOwner = message;
-        return view;
+        return typedView(message, MSGTYPE, "RFQRequest", RFQRequest::new);
     }
 
     /** A new NoRelatedSym group, as this one holds it. */

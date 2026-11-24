@@ -5,7 +5,7 @@ public class NetworkCounterpartySystemStatusRequest extends Message {
     public static final String MSGTYPE = "BC";
 
     public NetworkCounterpartySystemStatusRequest() {
-        getHeader().setField(35, MSGTYPE);
+        setHeaderField(35, MSGTYPE);
     }
 
     private NetworkCounterpartySystemStatusRequest(long cPtr) {
@@ -14,16 +14,12 @@ public class NetworkCounterpartySystemStatusRequest extends Message {
 
     /**
      * message as a NetworkCounterpartySystemStatusRequest, without copying it: the same engine object, and the view keeps message from being
-     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
-     * the view; copy it (new Message(message)) to keep it.
+     * collected. message.delete() ends the view of a message Java made, and a call through it then throws. A
+     * callback's message is the engine's, and the engine reuses it once the callback returns, so the view must
+     * not outlive the callback; copy it (new Message(message)) to keep it.
      */
     public static NetworkCounterpartySystemStatusRequest view(com.dudleylane.quickfix.Message message) {
-        if (!MSGTYPE.equals(message.getHeader().getField(35))) {
-            throw new IllegalArgumentException("not a NetworkCounterpartySystemStatusRequest (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
-        }
-        NetworkCounterpartySystemStatusRequest view = new NetworkCounterpartySystemStatusRequest(getCPtr(message));
-        view.swigOwner = message;
-        return view;
+        return typedView(message, MSGTYPE, "NetworkCounterpartySystemStatusRequest", NetworkCounterpartySystemStatusRequest::new);
     }
 
     /** A new NoCompIDs group, as this one holds it. */

@@ -5,7 +5,7 @@ public class SequenceReset extends Message {
     public static final String MSGTYPE = "4";
 
     public SequenceReset() {
-        getHeader().setField(35, MSGTYPE);
+        setHeaderField(35, MSGTYPE);
     }
 
     private SequenceReset(long cPtr) {
@@ -14,15 +14,11 @@ public class SequenceReset extends Message {
 
     /**
      * message as a SequenceReset, without copying it: the same engine object, and the view keeps message from being
-     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
-     * the view; copy it (new Message(message)) to keep it.
+     * collected. message.delete() ends the view of a message Java made, and a call through it then throws. A
+     * callback's message is the engine's, and the engine reuses it once the callback returns, so the view must
+     * not outlive the callback; copy it (new Message(message)) to keep it.
      */
     public static SequenceReset view(com.dudleylane.quickfix.Message message) {
-        if (!MSGTYPE.equals(message.getHeader().getField(35))) {
-            throw new IllegalArgumentException("not a SequenceReset (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
-        }
-        SequenceReset view = new SequenceReset(getCPtr(message));
-        view.swigOwner = message;
-        return view;
+        return typedView(message, MSGTYPE, "SequenceReset", SequenceReset::new);
     }
 }

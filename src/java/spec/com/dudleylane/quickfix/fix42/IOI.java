@@ -5,7 +5,7 @@ public class IOI extends Message {
     public static final String MSGTYPE = "6";
 
     public IOI() {
-        getHeader().setField(35, MSGTYPE);
+        setHeaderField(35, MSGTYPE);
     }
 
     private IOI(long cPtr) {
@@ -14,16 +14,12 @@ public class IOI extends Message {
 
     /**
      * message as a IOI, without copying it: the same engine object, and the view keeps message from being
-     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
-     * the view; copy it (new Message(message)) to keep it.
+     * collected. message.delete() ends the view of a message Java made, and a call through it then throws. A
+     * callback's message is the engine's, and the engine reuses it once the callback returns, so the view must
+     * not outlive the callback; copy it (new Message(message)) to keep it.
      */
     public static IOI view(com.dudleylane.quickfix.Message message) {
-        if (!MSGTYPE.equals(message.getHeader().getField(35))) {
-            throw new IllegalArgumentException("not a IOI (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
-        }
-        IOI view = new IOI(getCPtr(message));
-        view.swigOwner = message;
-        return view;
+        return typedView(message, MSGTYPE, "IOI", IOI::new);
     }
 
     /** A new NoIOIQualifiers group, as this one holds it. */

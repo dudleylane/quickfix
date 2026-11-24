@@ -5,7 +5,7 @@ public class PartyRiskLimitsReport extends Message {
     public static final String MSGTYPE = "CM";
 
     public PartyRiskLimitsReport() {
-        getHeader().setField(35, MSGTYPE);
+        setHeaderField(35, MSGTYPE);
     }
 
     private PartyRiskLimitsReport(long cPtr) {
@@ -14,16 +14,12 @@ public class PartyRiskLimitsReport extends Message {
 
     /**
      * message as a PartyRiskLimitsReport, without copying it: the same engine object, and the view keeps message from being
-     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
-     * the view; copy it (new Message(message)) to keep it.
+     * collected. message.delete() ends the view of a message Java made, and a call through it then throws. A
+     * callback's message is the engine's, and the engine reuses it once the callback returns, so the view must
+     * not outlive the callback; copy it (new Message(message)) to keep it.
      */
     public static PartyRiskLimitsReport view(com.dudleylane.quickfix.Message message) {
-        if (!MSGTYPE.equals(message.getHeader().getField(35))) {
-            throw new IllegalArgumentException("not a PartyRiskLimitsReport (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
-        }
-        PartyRiskLimitsReport view = new PartyRiskLimitsReport(getCPtr(message));
-        view.swigOwner = message;
-        return view;
+        return typedView(message, MSGTYPE, "PartyRiskLimitsReport", PartyRiskLimitsReport::new);
     }
 
     /** A new NoPartyRiskLimits group, as this one holds it. */

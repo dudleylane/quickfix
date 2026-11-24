@@ -5,7 +5,7 @@ public class SecurityDefinitionRequest extends Message {
     public static final String MSGTYPE = "c";
 
     public SecurityDefinitionRequest() {
-        getHeader().setField(35, MSGTYPE);
+        setHeaderField(35, MSGTYPE);
     }
 
     private SecurityDefinitionRequest(long cPtr) {
@@ -14,16 +14,12 @@ public class SecurityDefinitionRequest extends Message {
 
     /**
      * message as a SecurityDefinitionRequest, without copying it: the same engine object, and the view keeps message from being
-     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
-     * the view; copy it (new Message(message)) to keep it.
+     * collected. message.delete() ends the view of a message Java made, and a call through it then throws. A
+     * callback's message is the engine's, and the engine reuses it once the callback returns, so the view must
+     * not outlive the callback; copy it (new Message(message)) to keep it.
      */
     public static SecurityDefinitionRequest view(com.dudleylane.quickfix.Message message) {
-        if (!MSGTYPE.equals(message.getHeader().getField(35))) {
-            throw new IllegalArgumentException("not a SecurityDefinitionRequest (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
-        }
-        SecurityDefinitionRequest view = new SecurityDefinitionRequest(getCPtr(message));
-        view.swigOwner = message;
-        return view;
+        return typedView(message, MSGTYPE, "SecurityDefinitionRequest", SecurityDefinitionRequest::new);
     }
 
     /** A new NoSecurityAltID group, as this one holds it. */

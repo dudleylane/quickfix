@@ -94,6 +94,42 @@ public class GeneratedTests {
         Check.equal("ORDER1", ClOrdID.get(view), "reads the message it keeps");
     }
 
+    /** view() of a message Java made is registered, so that message's delete() ends it (#196). */
+    public void testAViewEndsWithItsMessage() {
+        Message generic = new Message(order().toString());
+        var view = com.dudleylane.quickfix.fix44.NewOrderSingle.view(generic);
+        var header = view.getHeader();
+        generic.delete();
+        Check.raises(NullPointerException.class, () -> ClOrdID.get(view));
+        Check.raises(NullPointerException.class, () -> header.getField(35));
+    }
+
+    /** What view() refuses, it refuses as it did: the same exception and text for another type of message,
+     *  FieldNotFound for a message with no MsgType, and NullPointerException for null or a deleted message. */
+    public void testWhatAViewRefuses() {
+        Message logon = new Message();
+        logon.getHeader().setField(MsgType.FIELD, "A");
+        var refused = Check.raises(IllegalArgumentException.class,
+                                   () -> com.dudleylane.quickfix.fix44.NewOrderSingle.view(logon));
+        Check.equal("not a NewOrderSingle (35=D): 35=A", refused.getMessage(), "its text");
+        Check.raises(FieldNotFound.class, () -> com.dudleylane.quickfix.fix44.NewOrderSingle.view(new Message()));
+        Check.raises(NullPointerException.class, () -> com.dudleylane.quickfix.fix44.NewOrderSingle.view(null));
+        Message deleted = new Message(order().toString());
+        deleted.delete();
+        Check.raises(NullPointerException.class, () -> com.dudleylane.quickfix.fix44.NewOrderSingle.view(deleted));
+    }
+
+    /** A generated constructor sets its header's fields without a header proxy, so making a message registers no
+     *  view: a header proxy of a message Java owns would be registered, and its delete() would then end it. */
+    public void testMakingAMessageRegistersNothing() {
+        var order = new com.dudleylane.quickfix.fix50sp2.NewOrderSingle();
+        // The header's address, read through a proxy that owns nothing, whose getHeader() registers nothing.
+        long header = EndedViewTests.cPtr(new EndedViewTests.Unowned(order).getHeader());
+        Check.equal(0L, EndedViewTests.countAt(header), "no view of its header");
+        Check.equal(0L, EndedViewTests.countAt(EndedViewTests.cPtr(order)), "nor of the message");
+        Check.equal("D", order.getHeader().getField(MsgType.FIELD), "MsgType, set");
+    }
+
     public void testFix5MessagesCarryTheirApplVerID() {
         var order = new com.dudleylane.quickfix.fix50sp2.NewOrderSingle();
         Check.equal("FIXT.1.1", order.getHeader().getField(BeginString.FIELD), "BeginString");

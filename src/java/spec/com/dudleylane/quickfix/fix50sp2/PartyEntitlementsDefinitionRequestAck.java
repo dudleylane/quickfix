@@ -5,7 +5,7 @@ public class PartyEntitlementsDefinitionRequestAck extends Message {
     public static final String MSGTYPE = "DB";
 
     public PartyEntitlementsDefinitionRequestAck() {
-        getHeader().setField(35, MSGTYPE);
+        setHeaderField(35, MSGTYPE);
     }
 
     private PartyEntitlementsDefinitionRequestAck(long cPtr) {
@@ -14,16 +14,12 @@ public class PartyEntitlementsDefinitionRequestAck extends Message {
 
     /**
      * message as a PartyEntitlementsDefinitionRequestAck, without copying it: the same engine object, and the view keeps message from being
-     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
-     * the view; copy it (new Message(message)) to keep it.
+     * collected. message.delete() ends the view of a message Java made, and a call through it then throws. A
+     * callback's message is the engine's, and the engine reuses it once the callback returns, so the view must
+     * not outlive the callback; copy it (new Message(message)) to keep it.
      */
     public static PartyEntitlementsDefinitionRequestAck view(com.dudleylane.quickfix.Message message) {
-        if (!MSGTYPE.equals(message.getHeader().getField(35))) {
-            throw new IllegalArgumentException("not a PartyEntitlementsDefinitionRequestAck (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
-        }
-        PartyEntitlementsDefinitionRequestAck view = new PartyEntitlementsDefinitionRequestAck(getCPtr(message));
-        view.swigOwner = message;
-        return view;
+        return typedView(message, MSGTYPE, "PartyEntitlementsDefinitionRequestAck", PartyEntitlementsDefinitionRequestAck::new);
     }
 
     /** A new NoRequestingPartyIDs group, as this one holds it. */

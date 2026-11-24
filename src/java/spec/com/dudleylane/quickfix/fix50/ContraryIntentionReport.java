@@ -5,7 +5,7 @@ public class ContraryIntentionReport extends Message {
     public static final String MSGTYPE = "BO";
 
     public ContraryIntentionReport() {
-        getHeader().setField(35, MSGTYPE);
+        setHeaderField(35, MSGTYPE);
     }
 
     private ContraryIntentionReport(long cPtr) {
@@ -14,16 +14,12 @@ public class ContraryIntentionReport extends Message {
 
     /**
      * message as a ContraryIntentionReport, without copying it: the same engine object, and the view keeps message from being
-     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
-     * the view; copy it (new Message(message)) to keep it.
+     * collected. message.delete() ends the view of a message Java made, and a call through it then throws. A
+     * callback's message is the engine's, and the engine reuses it once the callback returns, so the view must
+     * not outlive the callback; copy it (new Message(message)) to keep it.
      */
     public static ContraryIntentionReport view(com.dudleylane.quickfix.Message message) {
-        if (!MSGTYPE.equals(message.getHeader().getField(35))) {
-            throw new IllegalArgumentException("not a ContraryIntentionReport (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
-        }
-        ContraryIntentionReport view = new ContraryIntentionReport(getCPtr(message));
-        view.swigOwner = message;
-        return view;
+        return typedView(message, MSGTYPE, "ContraryIntentionReport", ContraryIntentionReport::new);
     }
 
     /** A new NoPartyIDs group, as this one holds it. */

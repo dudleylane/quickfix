@@ -5,7 +5,7 @@ public class OrderMassCancelReport extends Message {
     public static final String MSGTYPE = "r";
 
     public OrderMassCancelReport() {
-        getHeader().setField(35, MSGTYPE);
+        setHeaderField(35, MSGTYPE);
     }
 
     private OrderMassCancelReport(long cPtr) {
@@ -14,16 +14,12 @@ public class OrderMassCancelReport extends Message {
 
     /**
      * message as a OrderMassCancelReport, without copying it: the same engine object, and the view keeps message from being
-     * collected. A callback's message is the engine's and lasts only for the callback, and message.delete() ends
-     * the view; copy it (new Message(message)) to keep it.
+     * collected. message.delete() ends the view of a message Java made, and a call through it then throws. A
+     * callback's message is the engine's, and the engine reuses it once the callback returns, so the view must
+     * not outlive the callback; copy it (new Message(message)) to keep it.
      */
     public static OrderMassCancelReport view(com.dudleylane.quickfix.Message message) {
-        if (!MSGTYPE.equals(message.getHeader().getField(35))) {
-            throw new IllegalArgumentException("not a OrderMassCancelReport (35=" + MSGTYPE + "): 35=" + message.getHeader().getField(35));
-        }
-        OrderMassCancelReport view = new OrderMassCancelReport(getCPtr(message));
-        view.swigOwner = message;
-        return view;
+        return typedView(message, MSGTYPE, "OrderMassCancelReport", OrderMassCancelReport::new);
     }
 
     /** A new NoAffectedOrders group, as this one holds it. */
