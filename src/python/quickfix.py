@@ -7737,9 +7737,6 @@ class Session(object):
     def setDataDictionaryProvider(self, dataDictionaryProvider):
         return _quickfix.Session_setDataDictionaryProvider(self, dataDictionaryProvider)
 
-    def getDataDictionaryProvider(self):
-        return _quickfix.Session_getDataDictionaryProvider(self)
-
     @staticmethod
     def sendToTarget(*args):
         return _quickfix.Session_sendToTarget(*args)
@@ -7783,9 +7780,6 @@ class Session(object):
 
     def isAcceptor(self):
         return _quickfix.Session_isAcceptor(self)
-
-    def getLogonTime(self):
-        return _quickfix.Session_getLogonTime(self)
 
     def setLogonTime(self, value):
         return _quickfix.Session_setLogonTime(self, value)
@@ -7905,9 +7899,6 @@ class Session(object):
     def setIsNonStopSession(self, value):
         return _quickfix.Session_setIsNonStopSession(self, value)
 
-    def getAllowedRemoteAddresses(self):
-        return _quickfix.Session_getAllowedRemoteAddresses(self)
-
     def setAllowedRemoteAddresses(self, value):
         return _quickfix.Session_setAllowedRemoteAddresses(self, value)
 
@@ -7931,12 +7922,6 @@ class Session(object):
 
     def getExpectedTargetNum(self):
         return _quickfix.Session_getExpectedTargetNum(self)
-
-    def getLog(self):
-        return _quickfix.Session_getLog(self)
-
-    def getStore(self):
-        return _quickfix.Session_getStore(self)
 
 # Register Session in _quickfix:
 _quickfix.Session_swigregister(Session)
@@ -9275,6 +9260,9 @@ _quickfix.NullStore_swigregister(NullStore)
 def _viewCount():
     return _quickfix._viewCount()
 
+def _transportViewCount():
+    return _quickfix._transportViewCount()
+
 try:
   import thread
 except ImportError:
@@ -9420,6 +9408,17 @@ def _transportClasses(base):
 
 for _cls in set(_transportClasses(Initiator)) | set(_transportClasses(Acceptor)):
   _keepArguments(_cls)
+del _cls
+
+# What a transport was made with is the script's own object, kept above. SWIG returned a second proxy of it that
+# owned nothing, and kept nothing alive once the transport had gone (#197).
+def _keptArgument(transport, index, name):
+  args, kwargs = transport._quickfixArguments
+  return args[index] if len(args) > index else kwargs[name]
+
+for _cls in (Initiator, Acceptor):
+  _cls.getApplication = lambda self: _keptArgument(self, 0, 'application')
+  _cls.getMessageStoreFactory = lambda self: _keptArgument(self, 1, 'storeFactory')
 del _cls
 
 

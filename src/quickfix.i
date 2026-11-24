@@ -565,7 +565,7 @@ typedef FIX::SessionSettings SessionSettings;
 //   getGroupPtr and SessionSettings.get (python/, ruby/ and java/quickfix.i). A group's view ends when a call
 //   through the binding destroys its group, and raises if it is used after (#196, below).
 // - the argument itself, where the result is the argument: getField(field) and getGroup(..., group), likewise.
-// A Session and what a transport or session returns live until the transport is destroyed, as in C++ (README).
+// A Session, and what a transport or a session returns of itself, ends with its transport (#197, below).
 // These return an engine internal, or an opaque type nothing in a binding can use, so they are not wrapped:
 %ignore FIX::FieldMap::groups;
 %ignore FIX::FieldMap::cloneInto;
@@ -792,6 +792,83 @@ QUICKFIX_VIEWS_EXCEPTION(FIX::Trailer::getGroup, QuickfixViews::beforeClearing(*
 QUICKFIX_VIEWS_EXCEPTION(FIX::Group::getGroup, QuickfixViews::beforeGettingGroup(*arg1, arg2, arg3->field(), *arg3);)
 QUICKFIX_VIEWS_SESSION_EXCEPTION(FIX::Session::send, QuickfixViews::HeaderGroups views(*arg2);)
 QUICKFIX_VIEWS_SESSION_EXCEPTION(FIX::Session::sendToTarget, QuickfixViews::HeaderGroups views(*arg1);)
+
+// What a transport hands out of itself (#197): a Session (lookupSession, registerSession, getSession), the
+// transport's log, and in Java a session's store and log. The transport frees them in its destructor; and when its
+// constructor throws, it frees the sessions it had made, of which onCreate can have handed out a view. Each binding
+// keeps these views by the address of what they view, apart from the group views above, which a program makes far
+// more often and whose checks must stay cheap. It ends those of what a destructor frees, before the destructor and
+// again after it, since a script's store or log factory runs inside it; and after a constructor throws, those of
+// sessions that no longer exist. A call through an ended view raises (the null-proxy check above each binding's
+// %include). In Ruby and Java a view also keeps its transport, so that the collector never frees a transport a
+// script is still using through a view -- Ruby's would free it where no Ruby code can run to end the view. Python's
+// does not: its cycle collector would free a transport on whatever thread it ran (#111), so a transport there lives
+// until its last reference goes. The hooks are in python/ and java/quickfix.i, and Ruby's in quickfix_ruby.rb. A
+// transport destroyed while another thread is inside a call through one of its views is still a use after free, as
+// in C++.
+//
+// What a transport was made with -- getApplication, getMessageStoreFactory -- is returned as the script's own
+// object, which each binding keeps for the transport's life (#107, #110), and getSessionSettings returns a copy.
+%{
+namespace QuickfixTransportViews
+{
+typedef QuickfixViews::Addresses Addresses;
+
+// What a transport's destructor frees that a view can point at: each session, the store and log it hands out, and
+// the transport's own log.
+template <typename Transport> Addresses addressesOf(Transport &transport)
+{
+  Addresses addresses;
+  for (const FIX::SessionID &sessionID : transport.getSessions())
+  {
+    FIX::Session *session = transport.getSession(sessionID);
+    if (!session)
+      continue;
+    addresses.push_back(session);
+    addresses.push_back(session->getStore());
+    addresses.push_back(session->getLog());
+  }
+  addresses.push_back(transport.getLog());
+  return addresses;
+}
+
+// The sessions a transport made, whose views keep it in Ruby and Java.
+template <typename Transport> Addresses sessionsOf(const Transport &transport)
+{
+  Addresses sessions;
+  for (const FIX::SessionID &sessionID : transport.getSessions())
+    if (FIX::Session *session = transport.getSession(sessionID))
+      sessions.push_back(session);
+  return sessions;
+}
+
+// The sessions that exist now, sorted: after a constructor throws, a session view at any other address is a view of
+// one it freed.
+inline Addresses liveSessions()
+{
+  Addresses live;
+  for (const FIX::SessionID &sessionID : FIX::Session::getSessions())
+    if (FIX::Session *session = FIX::Session::lookupSession(sessionID))
+      live.push_back(session);
+  std::sort(live.begin(), live.end());
+  return live;
+}
+}
+%}
+
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
+// A session's store, log, dictionaries, logon times and allowed addresses come back as types these two never wrap,
+// opaque objects with no methods that also died with the transport (#197): they are not wrapped. Java's are in
+// java/quickfix.i.
+%ignore FIX::Session::getStore;
+%ignore FIX::Session::getLog;
+%ignore FIX::Session::getDataDictionaryProvider;
+%ignore FIX::Session::getLogonTime;
+%ignore FIX::Session::getAllowedRemoteAddresses;
+%typemap(out, noblock=1) const FIX::Dictionary *const getSessionSettings {
+  $result = SWIG_NewPointerObj(SWIG_as_voidptr($1 ? new FIX::Dictionary(*$1) : nullptr), $descriptor(FIX::Dictionary *), SWIG_POINTER_OWN);
+}
+#endif
 
 #if defined(SWIGPYTHON) || defined(SWIGRUBY)
 %typemap(out, noblock=1) const FIX::FieldBase &getFieldRef, const FIX::FieldBase *const getFieldPtr {

@@ -1856,6 +1856,52 @@ private:
 };
 }
 
+
+namespace QuickfixTransportViews
+{
+typedef QuickfixViews::Addresses Addresses;
+
+// What a transport's destructor frees that a view can point at: each session, the store and log it hands out, and
+// the transport's own log.
+template <typename Transport> Addresses addressesOf(Transport &transport)
+{
+  Addresses addresses;
+  for (const FIX::SessionID &sessionID : transport.getSessions())
+  {
+    FIX::Session *session = transport.getSession(sessionID);
+    if (!session)
+      continue;
+    addresses.push_back(session);
+    addresses.push_back(session->getStore());
+    addresses.push_back(session->getLog());
+  }
+  addresses.push_back(transport.getLog());
+  return addresses;
+}
+
+// The sessions a transport made, whose views keep it in Ruby and Java.
+template <typename Transport> Addresses sessionsOf(const Transport &transport)
+{
+  Addresses sessions;
+  for (const FIX::SessionID &sessionID : transport.getSessions())
+    if (FIX::Session *session = transport.getSession(sessionID))
+      sessions.push_back(session);
+  return sessions;
+}
+
+// The sessions that exist now, sorted: after a constructor throws, a session view at any other address is a view of
+// one it freed.
+inline Addresses liveSessions()
+{
+  Addresses live;
+  for (const FIX::SessionID &sessionID : FIX::Session::getSessions())
+    if (FIX::Session *session = FIX::Session::lookupSession(sessionID))
+      live.push_back(session);
+  std::sort(live.begin(), live.end());
+  return live;
+}
+}
+
 SWIGINTERN std::string FIX_FieldBase___str__(FIX::FieldBase *self){
     return self->getFixString();
   }
@@ -2138,6 +2184,57 @@ extern "C" JNIEXPORT jlong JNICALL Java_com_dudleylane_quickfix_Views_countAt(JN
   std::lock_guard<std::mutex> lock(s_mutex);
   prune(jenv);
   return static_cast<jlong>(s_entries.count(reinterpret_cast<const void *>(cPtr)));
+}
+
+// For Views' registry of what transports hand out (#197; ../quickfix.i): addresses, as Java longs.
+namespace QuickfixTransportViews
+{
+template <typename Get> static jlongArray toJava(JNIEnv *jenv, Get get)
+{
+  std::vector<jlong> values;
+  try
+  {
+    for (const void *address : get())
+      values.push_back(static_cast<jlong>(reinterpret_cast<std::uintptr_t>(address)));
+  }
+  catch (...)
+  {
+    SWIG_JavaThrowException(jenv, SWIG_JavaOutOfMemoryError, "a transport's views could not be listed");
+    return nullptr;
+  }
+  jlongArray result = jenv->NewLongArray(static_cast<jsize>(values.size()));
+  if (result)
+    jenv->SetLongArrayRegion(result, 0, static_cast<jsize>(values.size()), values.data());
+  return result;
+}
+
+template <typename Transport> static Transport &transport(jlong cPtr)
+{
+  return *reinterpret_cast<Transport *>(static_cast<std::uintptr_t>(cPtr));
+}
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_com_dudleylane_quickfix_Views_addressesOf(JNIEnv *jenv, jclass, jlong cPtr,
+                                                                                     jboolean initiator)
+{
+  using namespace QuickfixTransportViews;
+  return toJava(jenv, [&] {
+    return initiator ? addressesOf(transport<FIX::Initiator>(cPtr)) : addressesOf(transport<FIX::Acceptor>(cPtr));
+  });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_com_dudleylane_quickfix_Views_sessionsOf(JNIEnv *jenv, jclass, jlong cPtr,
+                                                                                    jboolean initiator)
+{
+  using namespace QuickfixTransportViews;
+  return toJava(jenv, [&] {
+    return initiator ? sessionsOf(transport<FIX::Initiator>(cPtr)) : sessionsOf(transport<FIX::Acceptor>(cPtr));
+  });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_com_dudleylane_quickfix_Views_liveSessions(JNIEnv *jenv, jclass)
+{
+  return QuickfixTransportViews::toJava(jenv, [] { return QuickfixTransportViews::liveSessions(); });
 }
 
 
@@ -93830,45 +93927,6 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1setDat
 }
 
 
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getDataDictionaryProvider(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  jlong jresult = 0 ;
-  FIX::Session *arg1 = (FIX::Session *) 0 ;
-  DataDictionaryProvider *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::Session **)&jarg1; 
-  if (!arg1) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getDataDictionaryProvider: its object was deleted, or the view ended");
-    return 0;
-  }
-  {
-    try
-    {
-      result = (DataDictionaryProvider *) &((FIX::Session const *)arg1)->getDataDictionaryProvider();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(DataDictionaryProvider **)&jresult = result; 
-  return jresult;
-}
-
-
 SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1sendToTarget_1_1SWIG_10(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2) {
   jboolean jresult = 0 ;
   FIX::Message *arg1 = 0 ;
@@ -94761,45 +94819,6 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1is
     }
   }
   jresult = (jboolean)result; 
-  return jresult;
-}
-
-
-SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getLogonTime(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
-  jlong jresult = 0 ;
-  FIX::Session *arg1 = (FIX::Session *) 0 ;
-  TimeRange *result = 0 ;
-  
-  (void)jenv;
-  (void)jcls;
-  (void)jarg1_;
-  arg1 = *(FIX::Session **)&jarg1; 
-  if (!arg1) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Session_getLogonTime: its object was deleted, or the view ended");
-    return 0;
-  }
-  {
-    try
-    {
-      result = (TimeRange *) &(arg1)->getLogonTime();
-    }
-    catch (const FIX::Exception &e)
-    {
-      QuickfixJava::throwToJava(jenv, e);
-      return 0;
-    }
-    catch (const std::exception &e)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
-      return 0;
-    }
-    catch (...)
-    {
-      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
-      return 0;
-    }
-  }
-  *(TimeRange **)&jresult = result; 
   return jresult;
 }
 
@@ -96344,7 +96363,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1getAl
       return 0;
     }
   }
-  *(std::set< std::string > **)&jresult = result; 
+  *(std::set<std::string> **)&jresult = new std::set<std::string>(*result); 
   return jresult;
 }
 
@@ -103788,7 +103807,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Initiator_1get
       return 0;
     }
   }
-  *(FIX::Dictionary **)&jresult = result; 
+  *(FIX::Dictionary **)&jresult = result ? new FIX::Dictionary(*result) : nullptr; 
   return jresult;
 }
 
@@ -104616,7 +104635,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Acceptor_1getS
       return 0;
     }
   }
-  *(FIX::Dictionary **)&jresult = result; 
+  *(FIX::Dictionary **)&jresult = result ? new FIX::Dictionary(*result) : nullptr; 
   return jresult;
 }
 

@@ -63,6 +63,9 @@ public class Log {
     quickfixJNI.Log_change_ownership(this, swigCPtr, true);
   }
 
+  // What this proxy is a view into, if anything: kept reachable while this is (#197).
+  protected Object swigOwner;
+
   public void clear() {
     quickfixJNI.Log_clear(swigCPtr, this);
   }

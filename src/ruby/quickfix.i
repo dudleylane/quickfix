@@ -797,7 +797,8 @@ bool quickfixEndView(VALUE view)
   return true;
 }
 
-// For the tests: Quickfix._endView(view) ends view, and says whether it could.
+// Quickfix._endView(view) ends view, and says whether it could: for the tests, and for quickfix_ruby.rb's
+// TransportViews (#197).
 VALUE quickfixTestEndView(VALUE, VALUE view) { return quickfixEndView(view) ? Qtrue : Qfalse; }
 %}
 // A method with overloads first asks each overload's typecheck whether it takes the arguments, and SWIG's took a
@@ -1142,6 +1143,82 @@ VALUE quickfixTestViewCount(VALUE)
 VALUE quickfixTestViewEntries(VALUE) { return rb_funcall(QuickfixViews::s_map, rb_intern("size"), 0); }
 
 VALUE quickfixTestViewsLanded(VALUE) { return SIZET2NUM(QuickfixViews::s_landed); }
+
+// For quickfix_ruby.rb, which keeps the views of transports (#197; ../quickfix.i): addresses, as Integers. Nothing
+// here calls into Ruby while a C++ object that needs destroying is alive, except on running out of memory.
+namespace QuickfixTransportViews
+{
+static VALUE toRuby(const Addresses &addresses)
+{
+  VALUE result = rb_ary_new_capa(static_cast<long>(addresses.size()));
+  for (const void *address : addresses)
+    rb_ary_push(result, ULL2NUM(reinterpret_cast<uintptr_t>(address)));
+  return result;
+}
+
+// What get finds in transport, an Initiator or an Acceptor: nothing in anything else, or in one never made or
+// already destroyed.
+template <typename Get> static VALUE ofTransport(VALUE transport, Get get)
+{
+  Addresses addresses;
+  bool failed = false;
+  try
+  {
+    void *pointer = 0;
+    if (SWIG_IsOK(SWIG_ConvertPtr(transport, &pointer, SWIGTYPE_p_FIX__Initiator, 0)) && pointer)
+      addresses = get(*static_cast<FIX::Initiator *>(pointer));
+    else if (SWIG_IsOK(SWIG_ConvertPtr(transport, &pointer, SWIGTYPE_p_FIX__Acceptor, 0)) && pointer)
+      addresses = get(*static_cast<FIX::Acceptor *>(pointer));
+  }
+  catch (...)
+  {
+    failed = true;
+  }
+  if (failed)
+    rb_memerror();
+  return toRuby(addresses);
+}
+}
+
+// Quickfix._transportAddresses(transport): what its destructor frees that a view can point at.
+VALUE quickfixTransportAddresses(VALUE, VALUE transport)
+{
+  return QuickfixTransportViews::ofTransport(transport, [](auto &t) { return QuickfixTransportViews::addressesOf(t); });
+}
+
+// Quickfix._sessionAddresses(transport): the sessions it made.
+VALUE quickfixSessionAddresses(VALUE, VALUE transport)
+{
+  return QuickfixTransportViews::ofTransport(transport, [](auto &t) { return QuickfixTransportViews::sessionsOf(t); });
+}
+
+// Quickfix._liveSessions: the sessions that exist.
+VALUE quickfixLiveSessions(VALUE)
+{
+  QuickfixTransportViews::Addresses live;
+  bool failed = false;
+  try
+  {
+    live = QuickfixTransportViews::liveSessions();
+  }
+  catch (...)
+  {
+    failed = true;
+  }
+  if (failed)
+    rb_memerror();
+  return QuickfixTransportViews::toRuby(live);
+}
+
+// Quickfix._viewAddress(view): what view points at, if it is a view -- a proxy that owns nothing and is not ended,
+// as quickfixEndView would take -- and nil if not.
+VALUE quickfixViewAddress(VALUE, VALUE view)
+{
+  if (TYPE(view) != T_DATA || RTYPEDDATA_P(view) || !RTEST(rb_ivar_defined(view, rb_intern("@__swigtype__"))) ||
+      RDATA(view)->dfree || !DATA_PTR(view))
+    return Qnil;
+  return ULL2NUM(reinterpret_cast<uintptr_t>(DATA_PTR(view)));
+}
 %}
 	  	 
 // Without director:except a Log or LogFactory method calls Ruby with a bare
@@ -1278,6 +1355,10 @@ QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::LogFactory::destroy)
   rb_define_module_function(mQuickfix, "_viewCount", RUBY_METHOD_FUNC(quickfixTestViewCount), 0);
   rb_define_module_function(mQuickfix, "_viewEntries", RUBY_METHOD_FUNC(quickfixTestViewEntries), 0);
   rb_define_module_function(mQuickfix, "_viewsLanded", RUBY_METHOD_FUNC(quickfixTestViewsLanded), 0);
+  rb_define_module_function(mQuickfix, "_transportAddresses", RUBY_METHOD_FUNC(quickfixTransportAddresses), 1);
+  rb_define_module_function(mQuickfix, "_sessionAddresses", RUBY_METHOD_FUNC(quickfixSessionAddresses), 1);
+  rb_define_module_function(mQuickfix, "_liveSessions", RUBY_METHOD_FUNC(quickfixLiveSessions), 0);
+  rb_define_module_function(mQuickfix, "_viewAddress", RUBY_METHOD_FUNC(quickfixViewAddress), 1);
   // The group views' map (QuickfixViews): a root before it exists, so no GC can take it in between.
   rb_gc_register_address(&QuickfixViews::s_map);
   QuickfixViews::s_map = rb_class_new_instance(0, nullptr, rb_path2class("ObjectSpace::WeakMap"));

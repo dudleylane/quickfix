@@ -246,6 +246,36 @@ QUICKFIX_VIEWS_EXCEPTION(decl, BEFORE)
   }
 }
 
+// So is what a transport hands out of itself, apart from the group views (#197; QuickfixTransportViews below), so
+// that its destructor, or its constructor when it throws, can end them. getLog's result is not a view when it is a
+// director: that is the script's own Log, which its LogFactory made.
+%typemap(ret, noblock=1) FIX::Session *lookupSession, FIX::Session *registerSession, FIX::Session *getSession {
+  if ($1 && $result && !QuickfixTransportViews::registerView($result, $1, true)) {
+    Py_DECREF($result);
+    $result = NULL;
+  }
+}
+%typemap(ret, noblock=1) FIX::Log *getLog {
+  if ($1 && $result && !dynamic_cast<Swig::Director *>($1) && !QuickfixTransportViews::registerView($result, $1, false)) {
+    Py_DECREF($result);
+    $result = NULL;
+  }
+}
+// The transports' constructors and destructors. BEFORE runs with the GIL, and what it declares is destroyed with
+// it: after $action, or as $action's exception leaves, once $action has taken the GIL back.
+%define QUICKFIX_TRANSPORT_VIEWS(Class, Name)
+QUICKFIX_VIEWS_EXCEPTION(Class::Name, QuickfixTransportViews::Construction construction;)
+QUICKFIX_VIEWS_EXCEPTION(Class::~Name, QuickfixTransportViews::Teardown<Class> teardown(*arg1);)
+%enddef
+QUICKFIX_TRANSPORT_VIEWS(FIX::SocketInitiator, SocketInitiator)
+QUICKFIX_TRANSPORT_VIEWS(FIX::SocketAcceptor, SocketAcceptor)
+QUICKFIX_TRANSPORT_VIEWS(FIX::ThreadedSocketInitiator, ThreadedSocketInitiator)
+QUICKFIX_TRANSPORT_VIEWS(FIX::ThreadedSocketAcceptor, ThreadedSocketAcceptor)
+QUICKFIX_TRANSPORT_VIEWS(FIX::SSLSocketInitiator, SSLSocketInitiator)
+QUICKFIX_TRANSPORT_VIEWS(FIX::SSLSocketAcceptor, SSLSocketAcceptor)
+QUICKFIX_TRANSPORT_VIEWS(FIX::ThreadedSSLSocketInitiator, ThreadedSSLSocketInitiator)
+QUICKFIX_TRANSPORT_VIEWS(FIX::ThreadedSSLSocketAcceptor, ThreadedSSLSocketAcceptor)
+
 %include ../quickfix.i
 
 // The group views handed out (#196; ../quickfix.i): each view's `this` object, by the address of its group. The
@@ -356,6 +386,158 @@ size_t quickfixTestViewCount()
 {
   QuickfixViews::prune();
   return QuickfixViews::s_entries;
+}
+%}
+
+// The views of a transport's sessions and log handed out (#197; ../quickfix.i): each view's `this` object, by the
+// address of what it views, held and pruned as the group views' are above, and whether that is a session. A map of
+// their own, walked only when a transport is destroyed or its constructor throws. With the GIL throughout.
+%{
+namespace QuickfixTransportViews
+{
+struct Views
+{
+  std::vector<PyObject *> objects;
+  bool session = false;
+};
+typedef std::unordered_map<const void *, Views> Map;
+static Map s_views;
+static size_t s_entries = 0;
+static size_t s_pruneAt = 64;
+
+static void drop(PyObject *object)
+{
+  reinterpret_cast<SwigPyObject *>(object)->own = 0;
+  Py_DECREF(object);
+  --s_entries;
+}
+
+static void prune()
+{
+  for (auto views = s_views.begin(); views != s_views.end();)
+  {
+    std::vector<PyObject *> &objects = views->second.objects;
+    for (size_t i = 0; i < objects.size();)
+    {
+      if (Py_REFCNT(objects[i]) == 1)
+      {
+        drop(objects[i]);
+        objects[i] = objects.back();
+        objects.pop_back();
+      }
+      else
+      {
+        ++i;
+      }
+    }
+    views = objects.empty() ? s_views.erase(views) : std::next(views);
+  }
+}
+
+// From a wrapper's ret typemap, outside the exception translation, so nothing may escape. False, with a Python
+// exception set, if view could not be registered. A proxy that owns its object is not a view.
+bool registerView(PyObject *view, const void *address, bool session)
+{
+  SwigPyObject *proxy = SWIG_Python_GetSwigThis(view);
+  if (!proxy)
+  {
+    PyErr_SetString(PyExc_RuntimeError, "a transport's view could not be registered");
+    return false;
+  }
+  if (proxy->own)
+    return true;
+  try
+  {
+    Views &views = s_views[address];
+    views.objects.push_back(reinterpret_cast<PyObject *>(proxy));
+    views.session = views.session || session;
+  }
+  catch (...)
+  {
+    PyErr_NoMemory();
+    return false;
+  }
+  Py_INCREF(reinterpret_cast<PyObject *>(proxy));
+  if (++s_entries >= s_pruneAt)
+  {
+    prune();
+    s_pruneAt = std::max<size_t>(64, 2 * s_entries);
+  }
+  return true;
+}
+
+// Ends the views in views, and erases them: the entry after.
+static Map::iterator endAt(Map::iterator views)
+{
+  for (PyObject *object : views->second.objects)
+  {
+    reinterpret_cast<SwigPyObject *>(object)->ptr = 0;
+    drop(object);
+  }
+  return s_views.erase(views);
+}
+
+static void endViews(const Addresses &addresses)
+{
+  for (const void *address : addresses)
+  {
+    auto views = s_views.find(address);
+    if (views != s_views.end())
+      endAt(views);
+  }
+}
+
+// A transport's destructor: ends the views of what it frees before it runs, and again after, since a script's store
+// or log factory runs inside it and can hand out a view of a session it has yet to free.
+template <typename Transport> class Teardown
+{
+public:
+  explicit Teardown(Transport &transport) : m_addresses(addressesOf(transport)) { endViews(m_addresses); }
+  ~Teardown() { endViews(m_addresses); }
+  Teardown(const Teardown &) = delete;
+  Teardown &operator=(const Teardown &) = delete;
+
+private:
+  Addresses m_addresses;
+};
+
+// A transport's constructor: one that throws has freed the sessions it made, so as its exception leaves, the views
+// of sessions that no longer exist are ended.
+class Construction
+{
+public:
+  Construction() : m_exceptions(std::uncaught_exceptions()) {}
+  ~Construction()
+  {
+    if (std::uncaught_exceptions() <= m_exceptions || s_views.empty())
+      return;
+    try
+    {
+      Addresses live = liveSessions();
+      for (auto views = s_views.begin(); views != s_views.end();)
+        views = views->second.session && !std::binary_search(live.begin(), live.end(), views->first) ? endAt(views)
+                                                                                                    : std::next(views);
+    }
+    catch (...)
+    {
+    }
+  }
+  Construction(const Construction &) = delete;
+  Construction &operator=(const Construction &) = delete;
+
+private:
+  int m_exceptions;
+};
+}
+%}
+// For the tests: fix._transportViewCount() is how many views of transports are registered and still held.
+%rename(_transportViewCount) quickfixTestTransportViewCount;
+%nothread quickfixTestTransportViewCount;
+%inline %{
+size_t quickfixTestTransportViewCount()
+{
+  QuickfixTransportViews::prune();
+  return QuickfixTransportViews::s_entries;
 }
 %}
 
@@ -669,6 +851,17 @@ def _transportClasses(base):
 
 for _cls in set(_transportClasses(Initiator)) | set(_transportClasses(Acceptor)):
   _keepArguments(_cls)
+del _cls
+
+# What a transport was made with is the script's own object, kept above. SWIG returned a second proxy of it that
+# owned nothing, and kept nothing alive once the transport had gone (#197).
+def _keptArgument(transport, index, name):
+  args, kwargs = transport._quickfixArguments
+  return args[index] if len(args) > index else kwargs[name]
+
+for _cls in (Initiator, Acceptor):
+  _cls.getApplication = lambda self: _keptArgument(self, 0, 'application')
+  _cls.getMessageStoreFactory = lambda self: _keptArgument(self, 1, 'storeFactory')
 del _cls
 %}
 

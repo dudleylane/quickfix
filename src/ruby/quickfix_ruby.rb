@@ -68,20 +68,131 @@ module Quickfix
 		end
 	end
 
+	# What a transport hands out of itself -- a Session from lookupSession,
+	# registerSession or getSession, and the transport's log -- dies with it
+	# (#197; quickfix.i). Each such view keeps its transport, as @quickfixOwner,
+	# so the GC, which frees a transport with no Ruby code running, never frees
+	# one a view can reach. And each is kept here, by the address of what it
+	# views, so that _destroyTransport ends the views of what a transport's
+	# destructor frees, and a constructor that raised those of the sessions it
+	# had made: from then on they raise ObjectPreviouslyDeleted. The maps are
+	# weak, so a view the GC collects leaves them, and an owner too. All of it
+	# runs here rather than in C++, where a raise or a kill landing in a call
+	# into Ruby would skip C++ destructors.
+	module TransportViews
+		SESSIONS = ObjectSpace::WeakMap.new # a session's view => its address
+		LOGS = ObjectSpace::WeakMap.new # a transport's log's view => its address
+		OWNERS = ObjectSpace::WeakMap.new # a session's address => its transport
+
+		# A view of a session (into SESSIONS) or a log (LOGS), owned by owner, or by
+		# the session's transport if none is given. A proxy that owns its object,
+		# such as a script's own Log, is not a view.
+		def self.keep(view, owner, views)
+			address = view && Quickfix._viewAddress(view)
+			return view unless address
+			owner ||= OWNERS[address]
+			view.instance_variable_set(:@quickfixOwner, owner) if owner
+			views[view] = address
+			view
+		end
+
+		def self.endAt(addresses)
+			doomed = addresses.to_h { |address| [address, true] }
+			[SESSIONS, LOGS].each do |views|
+				views.each { |view, address| Quickfix._endView(view) if doomed[address] }
+			end
+		end
+
+		# A constructor that raised freed the sessions it had made, and onCreate
+		# can have handed out a view of one.
+		def self.endDangling
+			live = Quickfix._liveSessions.to_h { |address| [address, true] }
+			SESSIONS.each { |view, address| Quickfix._endView(view) unless live[address] }
+		end
+
+		# A transport made: its sessions' views keep it from now on, and so do the
+		# ones onCreate handed out before it existed.
+		def self.constructed(transport, sessions)
+			mine = sessions.to_h { |address| [address, true] }
+			sessions.each { |address| OWNERS[address] = transport }
+			SESSIONS.each do |view, address|
+				if mine[address] && !view.instance_variable_get(:@quickfixOwner)
+					view.instance_variable_set(:@quickfixOwner, transport)
+				end
+			end
+		end
+	end
+
 	# An initiator or acceptor holds C++ references to the application, store
 	# factory, settings and log factory it was made with, so they must live as
 	# long as it does: keep them on the Ruby object, whichever class made it
-	# (#107).
+	# (#107). And its views (TransportViews): in ensure, so that a kill landing
+	# once the transport exists still gives them their owner. A transport that
+	# exists has a session; one whose constructor raised has none.
 	module KeepsArguments
 		def initialize(*args)
 			super
-			@quickfixArguments = args
+		ensure
+			sessions = Quickfix._sessionAddresses(self)
+			if sessions.empty?
+				TransportViews.endDangling
+			else
+				@quickfixArguments = args
+				TransportViews.constructed(self, sessions)
+			end
 		end
 	end
 
 	constants.map { |name| const_get(name) }.each do |klass|
 		next unless klass.is_a?(Class) && (klass < Initiator || klass < Acceptor)
 		klass.prepend(KeepsArguments)
+	end
+
+	module TransportGetters
+		def getSession(*args)
+			TransportViews.keep(super, self, TransportViews::SESSIONS)
+		end
+
+		def getLog(*args)
+			TransportViews.keep(super, self, TransportViews::LOGS)
+		end
+
+		# The store factory it was made with, which KeepsArguments keeps: SWIG
+		# returned a second proxy of it, which owned nothing and kept nothing alive
+		# (#197). getApplication returns the script's own object already (quickfix.i).
+		def getMessageStoreFactory
+			@quickfixArguments[1]
+		end
+	end
+	[Initiator, Acceptor].each { |klass| klass.prepend(TransportGetters) }
+
+	class << Session
+		prepend(Module.new do
+			def lookupSession(*args)
+				TransportViews.keep(super, nil, TransportViews::SESSIONS)
+			end
+
+			def registerSession(*args)
+				TransportViews.keep(super, nil, TransportViews::SESSIONS)
+			end
+		end)
+	end
+
+	# Deletes transport, as at exit, unless its block() is still running: false
+	# then. The views of what its destructor frees are ended before it runs, and
+	# again after, since a Ruby store or log factory runs inside it (#197).
+	def self._destroyTransport(transport)
+		initiator = transport.is_a?(Initiator)
+		return false if Quickfix.send(initiator ? :_initiatorBlocking : :_acceptorBlocking, transport)
+		addresses = Quickfix._transportAddresses(transport)
+		sessions = Quickfix._sessionAddresses(transport)
+		TransportViews.endAt(addresses)
+		destroyed = Quickfix.send(initiator ? :_destroyInitiator : :_destroyAcceptor, transport)
+		TransportViews.endAt(addresses)
+		sessions.each do |address|
+			TransportViews::OWNERS[address] = nil if TransportViews::OWNERS[address].equal?(transport)
+		end
+		destroyed
 	end
 
 	# The threaded transports' callbacks run on the "quickfix callbacks" thread
@@ -109,8 +220,7 @@ module Quickfix
 	# that, while they are all alive: stop each one, wait for the thread #start
 	# made and for any block() still running, and delete it.
 	at_exit do
-		[[Initiator, :_initiatorBlocking, :_destroyInitiator],
-		 [Acceptor, :_acceptorBlocking, :_destroyAcceptor]].each do |kind, blocking, destroy|
+		[[Initiator, :_initiatorBlocking], [Acceptor, :_acceptorBlocking]].each do |kind, blocking|
 			ObjectSpace.each_object(kind).to_a.each do |transport|
 				begin
 					transport.stop
@@ -123,7 +233,7 @@ module Quickfix
 					end
 					deadline = Time.now + 15
 					sleep 0.05 while Quickfix.send(blocking, transport) && Time.now < deadline
-					Quickfix.send(destroy, transport)
+					Quickfix._destroyTransport(transport)
 				rescue StandardError
 				end
 			end

@@ -48,6 +48,9 @@ public class MessageStore {
     }
   }
 
+  // What this proxy is a view into, if anything: kept reachable while this is (#197).
+  protected Object swigOwner;
+
   public boolean set(long arg0, String arg1) {
     return quickfixJNI.MessageStore_set(swigCPtr, this, arg0, arg1);
   }

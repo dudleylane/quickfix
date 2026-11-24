@@ -48,6 +48,9 @@ public class Session {
     }
   }
 
+  // What this proxy is a view into, if anything: kept reachable while this is (#197).
+  protected Object swigOwner;
+
   public void logon() {
     quickfixJNI.Session_logon(swigCPtr, this);
   }
@@ -104,10 +107,6 @@ public class Session {
     quickfixJNI.Session_setDataDictionaryProvider(swigCPtr, this, SWIGTYPE_p_DataDictionaryProvider.getCPtr(dataDictionaryProvider));
   }
 
-  public SWIGTYPE_p_DataDictionaryProvider getDataDictionaryProvider() {
-    return new SWIGTYPE_p_DataDictionaryProvider(quickfixJNI.Session_getDataDictionaryProvider(swigCPtr, this), false);
-  }
-
   public static boolean sendToTarget(Message message, String qualifier) {
     return quickfixJNI.Session_sendToTarget__SWIG_0(Message.getCPtr(message), message, qualifier);
   }
@@ -146,17 +145,17 @@ public class Session {
 
   public static Session lookupSession(SessionID arg0) {
     long cPtr = quickfixJNI.Session_lookupSession__SWIG_0(SessionID.getCPtr(arg0), arg0);
-    return (cPtr == 0) ? null : new Session(cPtr, false);
+    return cPtr == 0 ? null : Views.session(new Session(cPtr, false), cPtr, null);
   }
 
   public static Session lookupSession(String arg0, boolean reverse) {
     long cPtr = quickfixJNI.Session_lookupSession__SWIG_1(arg0, reverse);
-    return (cPtr == 0) ? null : new Session(cPtr, false);
+    return cPtr == 0 ? null : Views.session(new Session(cPtr, false), cPtr, null);
   }
 
   public static Session lookupSession(String arg0) {
     long cPtr = quickfixJNI.Session_lookupSession__SWIG_2(arg0);
-    return (cPtr == 0) ? null : new Session(cPtr, false);
+    return cPtr == 0 ? null : Views.session(new Session(cPtr, false), cPtr, null);
   }
 
   public static boolean isSessionRegistered(SessionID arg0) {
@@ -165,7 +164,7 @@ public class Session {
 
   public static Session registerSession(SessionID arg0) {
     long cPtr = quickfixJNI.Session_registerSession(SessionID.getCPtr(arg0), arg0);
-    return (cPtr == 0) ? null : new Session(cPtr, false);
+    return cPtr == 0 ? null : Views.session(new Session(cPtr, false), cPtr, null);
   }
 
   public static void unregisterSession(SessionID arg0) {
@@ -190,10 +189,6 @@ public class Session {
 
   public boolean isAcceptor() {
     return quickfixJNI.Session_isAcceptor(swigCPtr, this);
-  }
-
-  public SWIGTYPE_p_TimeRange getLogonTime() {
-    return new SWIGTYPE_p_TimeRange(quickfixJNI.Session_getLogonTime(swigCPtr, this), false);
   }
 
   public void setLogonTime(SWIGTYPE_p_TimeRange value) {
@@ -353,7 +348,7 @@ public class Session {
   }
 
   public StringSet getAllowedRemoteAddresses() {
-    return new StringSet(quickfixJNI.Session_getAllowedRemoteAddresses(swigCPtr, this), false);
+    return new StringSet(quickfixJNI.Session_getAllowedRemoteAddresses(swigCPtr, this), true);
   }
 
   public void setAllowedRemoteAddresses(StringSet value) {
@@ -406,12 +401,12 @@ public class Session {
 
   public Log getLog() {
     long cPtr = quickfixJNI.Session_getLog(swigCPtr, this);
-    return (cPtr == 0) ? null : new Log(cPtr, false);
+    return cPtr == 0 ? null : Views.log(new Log(cPtr, false), cPtr, this);
   }
 
   public MessageStore getStore() {
     long cPtr = quickfixJNI.Session_getStore(swigCPtr, this);
-    return (cPtr == 0) ? null : new MessageStore(cPtr, false);
+    return cPtr == 0 ? null : Views.store(new MessageStore(cPtr, false), cPtr, this);
   }
 
 }

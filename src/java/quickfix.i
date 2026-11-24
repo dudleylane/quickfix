@@ -693,6 +693,80 @@ QUICKFIX_VIEWS_EXCEPTION(FIX::Message::setBytes, QuickfixViews::beforeClearingMe
     return group;
   }
 
+// What a transport hands out of itself (#197; ../quickfix.i, Views): a Session, a session's store and log, and the
+// transport's log. Each holds its transport in swigOwner -- a session's store and log through the session's view --
+// so the GC never finalizes a transport a view can reach; and each is registered by the address of what it views,
+// so that the transport's delete(), which close() and its finalizer reach, ends it, as a constructor that throws
+// ends those of the sessions it had made. A static lookup's view is given the transport that made its session; one
+// taken in onCreate, before that transport exists, once its constructor returns (Views.constructed). The javaconstruct
+// and javadestruct_derived below are each transport class's, the *Base classes a script can also make directly.
+%typemap(javacode) FIX::Session, FIX::Log, FIX::MessageStore %{
+  // What this proxy is a view into, if anything: kept reachable while this is (#197).
+  protected Object swigOwner;
+%}
+%typemap(javaout) FIX::Session *lookupSession, FIX::Session *registerSession {
+    long cPtr = $jnicall;
+    return cPtr == 0 ? null : Views.session(new Session(cPtr, false), cPtr, null);
+  }
+%typemap(javaout) FIX::Session *getSession {
+    long cPtr = $jnicall;
+    return cPtr == 0 ? null : Views.session(new Session(cPtr, false), cPtr, this);
+  }
+%typemap(javaout) FIX::Log *getLog {
+    long cPtr = $jnicall;
+    return cPtr == 0 ? null : Views.log(new Log(cPtr, false), cPtr, this);
+  }
+%typemap(javaout) const FIX::MessageStore *getStore {
+    long cPtr = $jnicall;
+    return cPtr == 0 ? null : Views.store(new MessageStore(cPtr, false), cPtr, this);
+  }
+%define QUICKFIX_JAVA_TRANSPORT(Class)
+%typemap(javaconstruct) Class {
+    this(Views.constructing(() -> $imcall), true);
+    Views.constructed(this);
+  }
+%typemap(javadestruct_derived, methodname="delete", methodmodifiers="public synchronized", parameters="") Class {
+    if (swigCPtr != 0) {
+      if (swigCMemOwn) {
+        long[] freed = Views.teardown(this);
+        swigCMemOwn = false;
+        try {
+          $jnicall;
+        } finally {
+          Views.endTransportViews(freed);
+        }
+      }
+      swigCPtr = 0;
+    }
+    super.delete();
+  }
+%enddef
+QUICKFIX_JAVA_TRANSPORT(FIX::SocketInitiator)
+QUICKFIX_JAVA_TRANSPORT(FIX::SocketAcceptor)
+QUICKFIX_JAVA_TRANSPORT(FIX::ThreadedSocketInitiator)
+QUICKFIX_JAVA_TRANSPORT(FIX::ThreadedSocketAcceptor)
+QUICKFIX_JAVA_TRANSPORT(FIX::SSLSocketInitiator)
+QUICKFIX_JAVA_TRANSPORT(FIX::SSLSocketAcceptor)
+QUICKFIX_JAVA_TRANSPORT(FIX::ThreadedSSLSocketInitiator)
+QUICKFIX_JAVA_TRANSPORT(FIX::ThreadedSSLSocketAcceptor)
+// What a transport was made with, getApplication() and getMessageStoreFactory(), each class in main/ returns as the
+// object it keeps. A session's getAllowedRemoteAddresses() and a transport's getSessionSettings() return a copy, and
+// getDataDictionaryProvider() and getLogonTime(), which returned opaque handles that died with the transport, are
+// not wrapped (#197).
+%ignore FIX::Session::getDataDictionaryProvider;
+%ignore FIX::Session::getLogonTime;
+%typemap(out) const std::set<std::string> &getAllowedRemoteAddresses
+%{ *(std::set<std::string> **)&$result = new std::set<std::string>(*$1); %}
+%typemap(javaout) const std::set<std::string> &getAllowedRemoteAddresses {
+    return new $javaclassname($jnicall, true);
+  }
+%typemap(out) const FIX::Dictionary *const getSessionSettings
+%{ *(FIX::Dictionary **)&$result = $1 ? new FIX::Dictionary(*$1) : nullptr; %}
+%typemap(javaout) const FIX::Dictionary *const getSessionSettings {
+    long cPtr = $jnicall;
+    return cPtr == 0 ? null : new $javaclassname(cPtr, true);
+  }
+
 // A proxy whose object was deleted, or a view whose object the binding has destroyed, has swigCPtr 0, and a call
 // took it for a null pointer: a method ran on nullptr, which crashed the JVM, and a pointer argument read it as
 // none, as setString does a dictionary. As self it now throws NullPointerException, and as a pointer argument too
@@ -955,5 +1029,56 @@ extern "C" JNIEXPORT jlong JNICALL Java_com_dudleylane_quickfix_Views_countAt(JN
   std::lock_guard<std::mutex> lock(s_mutex);
   prune(jenv);
   return static_cast<jlong>(s_entries.count(reinterpret_cast<const void *>(cPtr)));
+}
+
+// For Views' registry of what transports hand out (#197; ../quickfix.i): addresses, as Java longs.
+namespace QuickfixTransportViews
+{
+template <typename Get> static jlongArray toJava(JNIEnv *jenv, Get get)
+{
+  std::vector<jlong> values;
+  try
+  {
+    for (const void *address : get())
+      values.push_back(static_cast<jlong>(reinterpret_cast<std::uintptr_t>(address)));
+  }
+  catch (...)
+  {
+    SWIG_JavaThrowException(jenv, SWIG_JavaOutOfMemoryError, "a transport's views could not be listed");
+    return nullptr;
+  }
+  jlongArray result = jenv->NewLongArray(static_cast<jsize>(values.size()));
+  if (result)
+    jenv->SetLongArrayRegion(result, 0, static_cast<jsize>(values.size()), values.data());
+  return result;
+}
+
+template <typename Transport> static Transport &transport(jlong cPtr)
+{
+  return *reinterpret_cast<Transport *>(static_cast<std::uintptr_t>(cPtr));
+}
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_com_dudleylane_quickfix_Views_addressesOf(JNIEnv *jenv, jclass, jlong cPtr,
+                                                                                     jboolean initiator)
+{
+  using namespace QuickfixTransportViews;
+  return toJava(jenv, [&] {
+    return initiator ? addressesOf(transport<FIX::Initiator>(cPtr)) : addressesOf(transport<FIX::Acceptor>(cPtr));
+  });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_com_dudleylane_quickfix_Views_sessionsOf(JNIEnv *jenv, jclass, jlong cPtr,
+                                                                                    jboolean initiator)
+{
+  using namespace QuickfixTransportViews;
+  return toJava(jenv, [&] {
+    return initiator ? sessionsOf(transport<FIX::Initiator>(cPtr)) : sessionsOf(transport<FIX::Acceptor>(cPtr));
+  });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL Java_com_dudleylane_quickfix_Views_liveSessions(JNIEnv *jenv, jclass)
+{
+  return QuickfixTransportViews::toJava(jenv, [] { return QuickfixTransportViews::liveSessions(); });
 }
 %}

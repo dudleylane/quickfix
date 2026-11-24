@@ -401,15 +401,29 @@ keep past its owner and so read freed memory (#194):
   that group again (#196); copying one of the largest groups takes about a millisecond, so keep the result.
 - **The argument itself** where that is the result: `getField(field)` and `getGroup(..., group)`, as its own
   class.
-- **A `Session`, and anything a transport or session returns** -- `lookupSession`, `getSession`, a session's
-  log and store, a transport's settings -- lives until the transport is destroyed, as in C++: in Python when
-  its last reference goes, in Ruby when it is collected or at exit, in Java at `close()` (#197).
+- **A view that ends with its transport**: a `Session` from `lookupSession`, `registerSession` or a transport's
+  `getSession`, a transport's `getLog()`, and in Java a session's `getStore()` and `getLog()`. As in C++, it is
+  valid until the transport is destroyed -- in Python when the transport's last reference goes, in Ruby at exit,
+  in Java at `close()` or `delete()` -- and the transport's destructor ends it first; a transport constructor
+  that raises after making sessions, at a duplicate session or a bad setting, ends the views its application's
+  `onCreate` took of them. A call through an ended view raises as one through a deleted object does, where it
+  read freed memory (#197). In Ruby and Java a view also keeps its transport, so the GC never collects a
+  transport a view can reach. A view used on another thread while its transport is destroyed is still a use
+  after free, as in C++. A log that a Python `LogFactory` made is returned as the script's own object, not a view.
+  Registering a view costs about 1 µs a `lookupSession` or `getSession` call in Ruby and 0.2 µs in Java, more
+  when several threads do so at once, and about 0.1 µs in Python, so keep the `Session` rather than looking it
+  up for each message.
+- **What a transport was made with**: `getApplication()` and `getMessageStoreFactory()` return the very objects
+  passed to its constructor, which it keeps (#107, #110), and `getSessionSettings()` returns a copy, as Java's
+  `getAllowedRemoteAddresses()` does (#197).
 
 `FieldMap.groups()` and `cloneInto()`, `GroupArena`, `DataDictionary.getOrderedFields` and its header,
 trailer and message forms, and `sessionToPort()` are not wrapped: they returned engine internals and opaque
 types nothing in a binding could use. Nor is `addGroupPtr`, which hands the message its argument to own and
 free, so the group's proxy, or the message the group was a view into, freed it a second time (#198). `addGroup`
-copies its argument instead.
+copies its argument instead. A session's `getDataDictionaryProvider()` and `getLogonTime()` are not wrapped, nor in
+Python and Ruby are its `getStore()`, `getLog()` and `getAllowedRemoteAddresses()`: each returned an opaque handle
+into the transport (#197).
 
 An object with no C++ object behind it raises wherever it is used, as the receiver or as an argument. In Java that
 is an object that was `delete()`d. Java passed its null pointer on: a method ran on it and crashed the JVM, and a

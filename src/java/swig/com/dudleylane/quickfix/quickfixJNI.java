@@ -6442,7 +6442,6 @@ public class quickfixJNI {
   public final static native void Session_setNextTargetMsgSeqNum(long jarg1, Session jarg1_, long jarg2);
   public final static native long Session_getSessionID(long jarg1, Session jarg1_);
   public final static native void Session_setDataDictionaryProvider(long jarg1, Session jarg1_, long jarg2);
-  public final static native long Session_getDataDictionaryProvider(long jarg1, Session jarg1_);
   public final static native boolean Session_sendToTarget__SWIG_0(long jarg1, Message jarg1_, String jarg2);
   public final static native boolean Session_sendToTarget__SWIG_1(long jarg1, Message jarg1_);
   public final static native boolean Session_sendToTarget__SWIG_2(long jarg1, Message jarg1_, long jarg2, SessionID jarg2_);
@@ -6463,7 +6462,6 @@ public class quickfixJNI {
   public final static native boolean Session_isLogonTime(long jarg1, Session jarg1_, long jarg2, UtcTimeStamp jarg2_);
   public final static native boolean Session_isInitiator(long jarg1, Session jarg1_);
   public final static native boolean Session_isAcceptor(long jarg1, Session jarg1_);
-  public final static native long Session_getLogonTime(long jarg1, Session jarg1_);
   public final static native void Session_setLogonTime(long jarg1, Session jarg1_, long jarg2);
   public final static native String Session_getSenderDefaultApplVerID(long jarg1, Session jarg1_);
   public final static native void Session_setSenderDefaultApplVerID(long jarg1, Session jarg1_, String jarg2);

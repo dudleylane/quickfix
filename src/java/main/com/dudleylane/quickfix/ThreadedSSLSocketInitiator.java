@@ -141,6 +141,18 @@ public class ThreadedSSLSocketInitiator extends ThreadedSSLSocketInitiatorBase i
         }
     }
 
+    /** The application it was made with -- not a second proxy of it, which kept nothing alive (#197). */
+    @Override
+    public Application getApplication() {
+        return application;
+    }
+
+    /** The store factory it was made with -- not a second proxy of it, which kept nothing alive (#197). */
+    @Override
+    public MessageStoreFactory getMessageStoreFactory() {
+        return storeFactory;
+    }
+
     /** Frees the transport, as close() does once it is stopped. */
     @Override
     public synchronized void delete() {

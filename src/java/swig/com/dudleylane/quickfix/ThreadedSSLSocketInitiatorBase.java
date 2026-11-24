@@ -40,8 +40,13 @@ public class ThreadedSSLSocketInitiatorBase extends Initiator {
   public synchronized void delete() {
     if (swigCPtr != 0) {
       if (swigCMemOwn) {
+        long[] freed = Views.teardown(this);
         swigCMemOwn = false;
-        quickfixJNI.delete_ThreadedSSLSocketInitiatorBase(swigCPtr);
+        try {
+          quickfixJNI.delete_ThreadedSSLSocketInitiatorBase(swigCPtr);
+        } finally {
+          Views.endTransportViews(freed);
+        }
       }
       swigCPtr = 0;
     }
@@ -49,11 +54,13 @@ public class ThreadedSSLSocketInitiatorBase extends Initiator {
   }
 
   protected ThreadedSSLSocketInitiatorBase(Application arg0, MessageStoreFactory arg1, SessionSettings arg2) {
-    this(quickfixJNI.new_ThreadedSSLSocketInitiatorBase__SWIG_0(Application.getCPtr(arg0), arg0, MessageStoreFactory.getCPtr(arg1), arg1, SessionSettings.getCPtr(arg2), arg2), true);
+    this(Views.constructing(() -> quickfixJNI.new_ThreadedSSLSocketInitiatorBase__SWIG_0(Application.getCPtr(arg0), arg0, MessageStoreFactory.getCPtr(arg1), arg1, SessionSettings.getCPtr(arg2), arg2)), true);
+    Views.constructed(this);
   }
 
   protected ThreadedSSLSocketInitiatorBase(Application arg0, MessageStoreFactory arg1, SessionSettings arg2, LogFactory arg3) {
-    this(quickfixJNI.new_ThreadedSSLSocketInitiatorBase__SWIG_1(Application.getCPtr(arg0), arg0, MessageStoreFactory.getCPtr(arg1), arg1, SessionSettings.getCPtr(arg2), arg2, LogFactory.getCPtr(arg3), arg3), true);
+    this(Views.constructing(() -> quickfixJNI.new_ThreadedSSLSocketInitiatorBase__SWIG_1(Application.getCPtr(arg0), arg0, MessageStoreFactory.getCPtr(arg1), arg1, SessionSettings.getCPtr(arg2), arg2, LogFactory.getCPtr(arg3), arg3)), true);
+    Views.constructed(this);
   }
 
   public void setPassword(String pwd) {

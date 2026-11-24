@@ -3887,68 +3887,66 @@ namespace Swig {
 #define SWIGTYPE_p_Groups swig_types[122]
 #define SWIGTYPE_p_IntArray swig_types[123]
 #define SWIGTYPE_p_IntField swig_types[124]
-#define SWIGTYPE_p_Log swig_types[125]
-#define SWIGTYPE_p_MYSQL swig_types[126]
-#define SWIGTYPE_p_MessageStore swig_types[127]
-#define SWIGTYPE_p_MsgType swig_types[128]
-#define SWIGTYPE_p_Mutex swig_types[129]
-#define SWIGTYPE_p_PGconn swig_types[130]
-#define SWIGTYPE_p_RSA swig_types[131]
-#define SWIGTYPE_p_Responder swig_types[132]
-#define SWIGTYPE_p_SessionID swig_types[133]
-#define SWIGTYPE_p_SessionToPort swig_types[134]
-#define SWIGTYPE_p_StringField swig_types[135]
-#define SWIGTYPE_p_TimeRange swig_types[136]
-#define SWIGTYPE_p_UtcDateField swig_types[137]
-#define SWIGTYPE_p_X509 swig_types[138]
-#define SWIGTYPE_p_allocator_type swig_types[139]
-#define SWIGTYPE_p_bool swig_types[140]
-#define SWIGTYPE_p_char swig_types[141]
-#define SWIGTYPE_p_const_iterator swig_types[142]
-#define SWIGTYPE_p_difference_type swig_types[143]
-#define SWIGTYPE_p_double swig_types[144]
-#define SWIGTYPE_p_g_const_iterator swig_types[145]
-#define SWIGTYPE_p_g_iterator swig_types[146]
-#define SWIGTYPE_p_g_value_type swig_types[147]
-#define SWIGTYPE_p_int swig_types[148]
-#define SWIGTYPE_p_iterator swig_types[149]
-#define SWIGTYPE_p_key_type swig_types[150]
-#define SWIGTYPE_p_long_long swig_types[151]
-#define SWIGTYPE_p_message_order swig_types[152]
-#define SWIGTYPE_p_p_FIX__DataDictionary swig_types[153]
-#define SWIGTYPE_p_p_PyObject swig_types[154]
-#define SWIGTYPE_p_short swig_types[155]
-#define SWIGTYPE_p_signed_char swig_types[156]
-#define SWIGTYPE_p_size_type swig_types[157]
-#define SWIGTYPE_p_ssize_t swig_types[158]
-#define SWIGTYPE_p_std__allocatorT_std__string_t swig_types[159]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__const_iterator swig_types[160]
-#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__iterator swig_types[161]
-#define SWIGTYPE_p_std__invalid_argument swig_types[162]
-#define SWIGTYPE_p_std__istream swig_types[163]
-#define SWIGTYPE_p_std__lessT_FIX__SessionID_t swig_types[164]
-#define SWIGTYPE_p_std__logic_error swig_types[165]
-#define SWIGTYPE_p_std__mapT_std__string_std__string_t__const_iterator swig_types[166]
-#define SWIGTYPE_p_std__ostream swig_types[167]
-#define SWIGTYPE_p_std__setT_FIX__SessionID_t swig_types[168]
-#define SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t swig_types[169]
-#define SWIGTYPE_p_std__string swig_types[170]
-#define SWIGTYPE_p_std__string__size_type swig_types[171]
-#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t_t swig_types[172]
-#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t_t swig_types[173]
-#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__const_iterator swig_types[174]
-#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__iterator swig_types[175]
-#define SWIGTYPE_p_std__vectorT_std__string_t swig_types[176]
-#define SWIGTYPE_p_swig__SwigPyIterator swig_types[177]
-#define SWIGTYPE_p_time_t swig_types[178]
-#define SWIGTYPE_p_tm swig_types[179]
-#define SWIGTYPE_p_unsigned_char swig_types[180]
-#define SWIGTYPE_p_unsigned_int swig_types[181]
-#define SWIGTYPE_p_unsigned_long_long swig_types[182]
-#define SWIGTYPE_p_unsigned_short swig_types[183]
-#define SWIGTYPE_p_value_type swig_types[184]
-static swig_type_info *swig_types[186];
-static swig_module_info swig_module = {swig_types, 185, 0, 0, 0, 0};
+#define SWIGTYPE_p_MYSQL swig_types[125]
+#define SWIGTYPE_p_MsgType swig_types[126]
+#define SWIGTYPE_p_Mutex swig_types[127]
+#define SWIGTYPE_p_PGconn swig_types[128]
+#define SWIGTYPE_p_RSA swig_types[129]
+#define SWIGTYPE_p_Responder swig_types[130]
+#define SWIGTYPE_p_SessionID swig_types[131]
+#define SWIGTYPE_p_SessionToPort swig_types[132]
+#define SWIGTYPE_p_StringField swig_types[133]
+#define SWIGTYPE_p_TimeRange swig_types[134]
+#define SWIGTYPE_p_UtcDateField swig_types[135]
+#define SWIGTYPE_p_X509 swig_types[136]
+#define SWIGTYPE_p_allocator_type swig_types[137]
+#define SWIGTYPE_p_bool swig_types[138]
+#define SWIGTYPE_p_char swig_types[139]
+#define SWIGTYPE_p_const_iterator swig_types[140]
+#define SWIGTYPE_p_difference_type swig_types[141]
+#define SWIGTYPE_p_double swig_types[142]
+#define SWIGTYPE_p_g_const_iterator swig_types[143]
+#define SWIGTYPE_p_g_iterator swig_types[144]
+#define SWIGTYPE_p_g_value_type swig_types[145]
+#define SWIGTYPE_p_int swig_types[146]
+#define SWIGTYPE_p_iterator swig_types[147]
+#define SWIGTYPE_p_key_type swig_types[148]
+#define SWIGTYPE_p_long_long swig_types[149]
+#define SWIGTYPE_p_message_order swig_types[150]
+#define SWIGTYPE_p_p_FIX__DataDictionary swig_types[151]
+#define SWIGTYPE_p_p_PyObject swig_types[152]
+#define SWIGTYPE_p_short swig_types[153]
+#define SWIGTYPE_p_signed_char swig_types[154]
+#define SWIGTYPE_p_size_type swig_types[155]
+#define SWIGTYPE_p_ssize_t swig_types[156]
+#define SWIGTYPE_p_std__allocatorT_std__string_t swig_types[157]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__const_iterator swig_types[158]
+#define SWIGTYPE_p_std__flat_mapT_int_std__vectorT_FIX__FieldMap_p_std__allocatorT_FIX__FieldMap_p_t_t_t__iterator swig_types[159]
+#define SWIGTYPE_p_std__invalid_argument swig_types[160]
+#define SWIGTYPE_p_std__istream swig_types[161]
+#define SWIGTYPE_p_std__lessT_FIX__SessionID_t swig_types[162]
+#define SWIGTYPE_p_std__logic_error swig_types[163]
+#define SWIGTYPE_p_std__mapT_std__string_std__string_t__const_iterator swig_types[164]
+#define SWIGTYPE_p_std__ostream swig_types[165]
+#define SWIGTYPE_p_std__setT_FIX__SessionID_t swig_types[166]
+#define SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t swig_types[167]
+#define SWIGTYPE_p_std__string swig_types[168]
+#define SWIGTYPE_p_std__string__size_type swig_types[169]
+#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__MySQLConnection_t_t swig_types[170]
+#define SWIGTYPE_p_std__unique_ptrT_FIX__DatabaseConnectionPoolT_FIX__PostgreSQLConnection_t_t swig_types[171]
+#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__const_iterator swig_types[172]
+#define SWIGTYPE_p_std__vectorT_FIX__FieldBase_ALLOCATORT_FIX__FieldBase_t_t__iterator swig_types[173]
+#define SWIGTYPE_p_std__vectorT_std__string_t swig_types[174]
+#define SWIGTYPE_p_swig__SwigPyIterator swig_types[175]
+#define SWIGTYPE_p_time_t swig_types[176]
+#define SWIGTYPE_p_tm swig_types[177]
+#define SWIGTYPE_p_unsigned_char swig_types[178]
+#define SWIGTYPE_p_unsigned_int swig_types[179]
+#define SWIGTYPE_p_unsigned_long_long swig_types[180]
+#define SWIGTYPE_p_unsigned_short swig_types[181]
+#define SWIGTYPE_p_value_type swig_types[182]
+static swig_type_info *swig_types[184];
+static swig_module_info swig_module = {swig_types, 183, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -6703,6 +6701,52 @@ private:
 };
 }
 
+
+namespace QuickfixTransportViews
+{
+typedef QuickfixViews::Addresses Addresses;
+
+// What a transport's destructor frees that a view can point at: each session, the store and log it hands out, and
+// the transport's own log.
+template <typename Transport> Addresses addressesOf(Transport &transport)
+{
+  Addresses addresses;
+  for (const FIX::SessionID &sessionID : transport.getSessions())
+  {
+    FIX::Session *session = transport.getSession(sessionID);
+    if (!session)
+      continue;
+    addresses.push_back(session);
+    addresses.push_back(session->getStore());
+    addresses.push_back(session->getLog());
+  }
+  addresses.push_back(transport.getLog());
+  return addresses;
+}
+
+// The sessions a transport made, whose views keep it in Ruby and Java.
+template <typename Transport> Addresses sessionsOf(const Transport &transport)
+{
+  Addresses sessions;
+  for (const FIX::SessionID &sessionID : transport.getSessions())
+    if (FIX::Session *session = transport.getSession(sessionID))
+      sessions.push_back(session);
+  return sessions;
+}
+
+// The sessions that exist now, sorted: after a constructor throws, a session view at any other address is a view of
+// one it freed.
+inline Addresses liveSessions()
+{
+  Addresses live;
+  for (const FIX::SessionID &sessionID : FIX::Session::getSessions())
+    if (FIX::Session *session = FIX::Session::lookupSession(sessionID))
+      live.push_back(session);
+  std::sort(live.begin(), live.end());
+  return live;
+}
+}
+
 SWIGINTERN std::string FIX_Exception___str__(FIX::Exception *self){
     return self->what();
   }
@@ -6951,6 +6995,151 @@ size_t quickfixTestViewCount()
 {
   QuickfixViews::prune();
   return QuickfixViews::s_entries;
+}
+
+
+namespace QuickfixTransportViews
+{
+struct Views
+{
+  std::vector<PyObject *> objects;
+  bool session = false;
+};
+typedef std::unordered_map<const void *, Views> Map;
+static Map s_views;
+static size_t s_entries = 0;
+static size_t s_pruneAt = 64;
+
+static void drop(PyObject *object)
+{
+  reinterpret_cast<SwigPyObject *>(object)->own = 0;
+  Py_DECREF(object);
+  --s_entries;
+}
+
+static void prune()
+{
+  for (auto views = s_views.begin(); views != s_views.end();)
+  {
+    std::vector<PyObject *> &objects = views->second.objects;
+    for (size_t i = 0; i < objects.size();)
+    {
+      if (Py_REFCNT(objects[i]) == 1)
+      {
+        drop(objects[i]);
+        objects[i] = objects.back();
+        objects.pop_back();
+      }
+      else
+      {
+        ++i;
+      }
+    }
+    views = objects.empty() ? s_views.erase(views) : std::next(views);
+  }
+}
+
+// From a wrapper's ret typemap, outside the exception translation, so nothing may escape. False, with a Python
+// exception set, if view could not be registered. A proxy that owns its object is not a view.
+bool registerView(PyObject *view, const void *address, bool session)
+{
+  SwigPyObject *proxy = SWIG_Python_GetSwigThis(view);
+  if (!proxy)
+  {
+    PyErr_SetString(PyExc_RuntimeError, "a transport's view could not be registered");
+    return false;
+  }
+  if (proxy->own)
+    return true;
+  try
+  {
+    Views &views = s_views[address];
+    views.objects.push_back(reinterpret_cast<PyObject *>(proxy));
+    views.session = views.session || session;
+  }
+  catch (...)
+  {
+    PyErr_NoMemory();
+    return false;
+  }
+  Py_INCREF(reinterpret_cast<PyObject *>(proxy));
+  if (++s_entries >= s_pruneAt)
+  {
+    prune();
+    s_pruneAt = std::max<size_t>(64, 2 * s_entries);
+  }
+  return true;
+}
+
+// Ends the views in views, and erases them: the entry after.
+static Map::iterator endAt(Map::iterator views)
+{
+  for (PyObject *object : views->second.objects)
+  {
+    reinterpret_cast<SwigPyObject *>(object)->ptr = 0;
+    drop(object);
+  }
+  return s_views.erase(views);
+}
+
+static void endViews(const Addresses &addresses)
+{
+  for (const void *address : addresses)
+  {
+    auto views = s_views.find(address);
+    if (views != s_views.end())
+      endAt(views);
+  }
+}
+
+// A transport's destructor: ends the views of what it frees before it runs, and again after, since a script's store
+// or log factory runs inside it and can hand out a view of a session it has yet to free.
+template <typename Transport> class Teardown
+{
+public:
+  explicit Teardown(Transport &transport) : m_addresses(addressesOf(transport)) { endViews(m_addresses); }
+  ~Teardown() { endViews(m_addresses); }
+  Teardown(const Teardown &) = delete;
+  Teardown &operator=(const Teardown &) = delete;
+
+private:
+  Addresses m_addresses;
+};
+
+// A transport's constructor: one that throws has freed the sessions it made, so as its exception leaves, the views
+// of sessions that no longer exist are ended.
+class Construction
+{
+public:
+  Construction() : m_exceptions(std::uncaught_exceptions()) {}
+  ~Construction()
+  {
+    if (std::uncaught_exceptions() <= m_exceptions || s_views.empty())
+      return;
+    try
+    {
+      Addresses live = liveSessions();
+      for (auto views = s_views.begin(); views != s_views.end();)
+        views = views->second.session && !std::binary_search(live.begin(), live.end(), views->first) ? endAt(views)
+                                                                                                    : std::next(views);
+    }
+    catch (...)
+    {
+    }
+  }
+  Construction(const Construction &) = delete;
+  Construction &operator=(const Construction &) = delete;
+
+private:
+  int m_exceptions;
+};
+}
+
+
+size_t quickfixTestTransportViewCount()
+{
+  QuickfixTransportViews::prune();
+  return QuickfixTransportViews::s_entries;
 }
 
 
@@ -135914,49 +136103,6 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Session_getDataDictionaryProvider(PyObject *self, PyObject *args) {
-  PyObject *resultobj = 0;
-  FIX::Session *arg1 = (FIX::Session *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject *swig_obj[1] ;
-  DataDictionaryProvider *result = 0 ;
-  
-  (void)self;
-  if (!args) SWIG_fail;
-  swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getDataDictionaryProvider" "', argument " "1"" of type '" "FIX::Session const *""'");
-  }
-  if (!argp1 && swig_obj[0] != Py_None) {
-    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getDataDictionaryProvider', argument 1: what it refers to was destroyed");
-    SWIG_fail;
-  }
-  arg1 = reinterpret_cast< FIX::Session * >(argp1);
-  {
-    if(!tryPythonException([&]() mutable 
-        {
-      {
-        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            result = (DataDictionaryProvider *) &((FIX::Session const *)arg1)->getDataDictionaryProvider();
-            SWIG_PYTHON_THREAD_END_ALLOW;
-          }
-          return true;
-        fail:
-          return false;
-        })) 
-    {
-      SWIG_fail;
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_DataDictionaryProvider, 0 |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_0(PyObject *self, Py_ssize_t nobjs, PyObject **swig_obj) {
   PyObject *resultobj = 0;
   FIX::Message *arg1 = 0 ;
@@ -136755,6 +136901,10 @@ SWIGINTERN PyObject *_wrap_Session_lookupSession__SWIG_0(PyObject *self, Py_ssiz
     }
   }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
+  if (result && resultobj && !QuickfixTransportViews::registerView(resultobj, result, true)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   return NULL;
@@ -136822,6 +136972,10 @@ SWIGINTERN PyObject *_wrap_Session_lookupSession__SWIG_1(PyObject *self, Py_ssiz
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
+  if (result && resultobj && !QuickfixTransportViews::registerView(resultobj, result, true)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -136882,6 +137036,10 @@ SWIGINTERN PyObject *_wrap_Session_lookupSession__SWIG_2(PyObject *self, Py_ssiz
     }
   }
   if (SWIG_IsNewObj(res1)) delete arg1;
+  if (result && resultobj && !QuickfixTransportViews::registerView(resultobj, result, true)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   if (SWIG_IsNewObj(res1)) delete arg1;
@@ -137016,6 +137174,10 @@ SWIGINTERN PyObject *_wrap_Session_registerSession(PyObject *self, PyObject *arg
     }
   }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
+  if (result && resultobj && !QuickfixTransportViews::registerView(resultobj, result, true)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   return NULL;
@@ -137278,49 +137440,6 @@ SWIGINTERN PyObject *_wrap_Session_isAcceptor(PyObject *self, PyObject *args) {
     }
   }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_Session_getLogonTime(PyObject *self, PyObject *args) {
-  PyObject *resultobj = 0;
-  FIX::Session *arg1 = (FIX::Session *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject *swig_obj[1] ;
-  TimeRange *result = 0 ;
-  
-  (void)self;
-  if (!args) SWIG_fail;
-  swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getLogonTime" "', argument " "1"" of type '" "FIX::Session *""'");
-  }
-  if (!argp1 && swig_obj[0] != Py_None) {
-    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getLogonTime', argument 1: what it refers to was destroyed");
-    SWIG_fail;
-  }
-  arg1 = reinterpret_cast< FIX::Session * >(argp1);
-  {
-    if(!tryPythonException([&]() mutable 
-        {
-      {
-        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            result = (TimeRange *) &(arg1)->getLogonTime();
-            SWIG_PYTHON_THREAD_END_ALLOW;
-          }
-          return true;
-        fail:
-          return false;
-        })) 
-    {
-      SWIG_fail;
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_TimeRange, 0 |  0 );
   return resultobj;
 fail:
   return NULL;
@@ -139186,49 +139305,6 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Session_getAllowedRemoteAddresses(PyObject *self, PyObject *args) {
-  PyObject *resultobj = 0;
-  FIX::Session *arg1 = (FIX::Session *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject *swig_obj[1] ;
-  std::set< std::string,std::less< std::string >,std::allocator< std::string > > *result = 0 ;
-  
-  (void)self;
-  if (!args) SWIG_fail;
-  swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getAllowedRemoteAddresses" "', argument " "1"" of type '" "FIX::Session const *""'");
-  }
-  if (!argp1 && swig_obj[0] != Py_None) {
-    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getAllowedRemoteAddresses', argument 1: what it refers to was destroyed");
-    SWIG_fail;
-  }
-  arg1 = reinterpret_cast< FIX::Session * >(argp1);
-  {
-    if(!tryPythonException([&]() mutable 
-        {
-      {
-        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            result = (std::set< std::string,std::less< std::string >,std::allocator< std::string > > *) &((FIX::Session const *)arg1)->getAllowedRemoteAddresses();
-            SWIG_PYTHON_THREAD_END_ALLOW;
-          }
-          return true;
-        fail:
-          return false;
-        })) 
-    {
-      SWIG_fail;
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__setT_std__string_std__lessT_std__string_t_std__allocatorT_std__string_t_t, 0 |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_Session_setAllowedRemoteAddresses(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   FIX::Session *arg1 = (FIX::Session *) 0 ;
@@ -140052,92 +140128,6 @@ SWIGINTERN PyObject *_wrap_Session_getExpectedTargetNum(PyObject *self, PyObject
     }
   }
   resultobj = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_Session_getLog(PyObject *self, PyObject *args) {
-  PyObject *resultobj = 0;
-  FIX::Session *arg1 = (FIX::Session *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject *swig_obj[1] ;
-  Log *result = 0 ;
-  
-  (void)self;
-  if (!args) SWIG_fail;
-  swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getLog" "', argument " "1"" of type '" "FIX::Session *""'");
-  }
-  if (!argp1 && swig_obj[0] != Py_None) {
-    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getLog', argument 1: what it refers to was destroyed");
-    SWIG_fail;
-  }
-  arg1 = reinterpret_cast< FIX::Session * >(argp1);
-  {
-    if(!tryPythonException([&]() mutable 
-        {
-      {
-        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            result = (Log *)(arg1)->getLog();
-            SWIG_PYTHON_THREAD_END_ALLOW;
-          }
-          return true;
-        fail:
-          return false;
-        })) 
-    {
-      SWIG_fail;
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_Log, 0 |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_Session_getStore(PyObject *self, PyObject *args) {
-  PyObject *resultobj = 0;
-  FIX::Session *arg1 = (FIX::Session *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject *swig_obj[1] ;
-  MessageStore *result = 0 ;
-  
-  (void)self;
-  if (!args) SWIG_fail;
-  swig_obj[0] = args;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Session, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Session_getStore" "', argument " "1"" of type '" "FIX::Session *""'");
-  }
-  if (!argp1 && swig_obj[0] != Py_None) {
-    PyErr_SetString(PyExc_ReferenceError, "in method 'Session_getStore', argument 1: what it refers to was destroyed");
-    SWIG_fail;
-  }
-  arg1 = reinterpret_cast< FIX::Session * >(argp1);
-  {
-    if(!tryPythonException([&]() mutable 
-        {
-      {
-        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            result = (MessageStore *)(arg1)->getStore();
-            SWIG_PYTHON_THREAD_END_ALLOW;
-          }
-          return true;
-        fail:
-          return false;
-        })) 
-    {
-      SWIG_fail;
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_MessageStore, 0 |  0 );
   return resultobj;
 fail:
   return NULL;
@@ -149779,6 +149769,10 @@ SWIGINTERN PyObject *_wrap_Initiator_getSession__SWIG_0(PyObject *self, Py_ssize
     }
   }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
+  if (result && resultobj && !QuickfixTransportViews::registerView(resultobj, result, true)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   return NULL;
@@ -149874,6 +149868,10 @@ SWIGINTERN PyObject *_wrap_Initiator_getSession__SWIG_1(PyObject *self, Py_ssize
     }
   }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
+  if (result && resultobj && !QuickfixTransportViews::registerView(resultobj, result, true)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   return NULL;
@@ -149975,7 +149973,7 @@ SWIGINTERN PyObject *_wrap_Initiator_getSessionSettings(PyObject *self, PyObject
       SWIG_fail;
     }
   }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result ? new FIX::Dictionary(*result) : nullptr), SWIGTYPE_p_FIX__Dictionary, SWIG_POINTER_OWN);
   return resultobj;
 fail:
   return NULL;
@@ -150215,6 +150213,10 @@ SWIGINTERN PyObject *_wrap_Initiator_getLog(PyObject *self, PyObject *args) {
   } else {
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Log, 0 |  0 );
   }
+  if (result && resultobj && !dynamic_cast<Swig::Director *>(result) && !QuickfixTransportViews::registerView(resultobj, result, false)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   return NULL;
@@ -150268,9 +150270,10 @@ SWIGINTERN PyObject *_wrap_new_SocketInitiatorBase__SWIG_0(PyObject *self, Py_ss
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::SocketInitiator *)new FIX::SocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -150278,7 +150281,7 @@ SWIGINTERN PyObject *_wrap_new_SocketInitiatorBase__SWIG_0(PyObject *self, Py_ss
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -150341,9 +150344,10 @@ SWIGINTERN PyObject *_wrap_new_SocketInitiatorBase__SWIG_1(PyObject *self, Py_ss
   }
   arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::SocketInitiator *)new FIX::SocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -150351,7 +150355,7 @@ SWIGINTERN PyObject *_wrap_new_SocketInitiatorBase__SWIG_1(PyObject *self, Py_ss
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -150442,9 +150446,10 @@ SWIGINTERN PyObject *_wrap_delete_SocketInitiatorBase(PyObject *self, PyObject *
   }
   arg1 = reinterpret_cast< FIX::SocketInitiator * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Teardown<FIX::SocketInitiator> teardown(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             delete arg1;
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -150452,7 +150457,7 @@ SWIGINTERN PyObject *_wrap_delete_SocketInitiatorBase(PyObject *self, PyObject *
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -150560,6 +150565,10 @@ SWIGINTERN PyObject *_wrap_Acceptor_getLog(PyObject *self, PyObject *args) {
     SWIG_Py_INCREF(resultobj);
   } else {
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Log, 0 |  0 );
+  }
+  if (result && resultobj && !dynamic_cast<Swig::Director *>(result) && !QuickfixTransportViews::registerView(resultobj, result, false)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
   }
   return resultobj;
 fail:
@@ -150943,6 +150952,10 @@ SWIGINTERN PyObject *_wrap_Acceptor_getSession__SWIG_0(PyObject *self, Py_ssize_
     }
   }
   if (SWIG_IsNewObj(res2)) delete arg2;
+  if (result && resultobj && !QuickfixTransportViews::registerView(resultobj, result, true)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   if (SWIG_IsNewObj(res2)) delete arg2;
@@ -151039,6 +151052,10 @@ SWIGINTERN PyObject *_wrap_Acceptor_getSession__SWIG_1(PyObject *self, Py_ssize_
     }
   }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Session, 0 |  0 );
+  if (result && resultobj && !QuickfixTransportViews::registerView(resultobj, result, true)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   return NULL;
@@ -151140,7 +151157,7 @@ SWIGINTERN PyObject *_wrap_Acceptor_getSessionSettings(PyObject *self, PyObject 
       SWIG_fail;
     }
   }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Dictionary, 0 |  0 );
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result ? new FIX::Dictionary(*result) : nullptr), SWIGTYPE_p_FIX__Dictionary, SWIG_POINTER_OWN);
   return resultobj;
 fail:
   return NULL;
@@ -151426,9 +151443,10 @@ SWIGINTERN PyObject *_wrap_new_SocketAcceptorBase__SWIG_0(PyObject *self, Py_ssi
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::SocketAcceptor *)new FIX::SocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -151436,7 +151454,7 @@ SWIGINTERN PyObject *_wrap_new_SocketAcceptorBase__SWIG_0(PyObject *self, Py_ssi
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -151499,9 +151517,10 @@ SWIGINTERN PyObject *_wrap_new_SocketAcceptorBase__SWIG_1(PyObject *self, Py_ssi
   }
   arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::SocketAcceptor *)new FIX::SocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -151509,7 +151528,7 @@ SWIGINTERN PyObject *_wrap_new_SocketAcceptorBase__SWIG_1(PyObject *self, Py_ssi
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -151600,9 +151619,10 @@ SWIGINTERN PyObject *_wrap_delete_SocketAcceptorBase(PyObject *self, PyObject *a
   }
   arg1 = reinterpret_cast< FIX::SocketAcceptor * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Teardown<FIX::SocketAcceptor> teardown(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             delete arg1;
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -151610,7 +151630,7 @@ SWIGINTERN PyObject *_wrap_delete_SocketAcceptorBase(PyObject *self, PyObject *a
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -155036,9 +155056,10 @@ SWIGINTERN PyObject *_wrap_new_SSLSocketAcceptorBase__SWIG_0(PyObject *self, Py_
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::SSLSocketAcceptor *)new FIX::SSLSocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -155046,7 +155067,7 @@ SWIGINTERN PyObject *_wrap_new_SSLSocketAcceptorBase__SWIG_0(PyObject *self, Py_
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -155109,9 +155130,10 @@ SWIGINTERN PyObject *_wrap_new_SSLSocketAcceptorBase__SWIG_1(PyObject *self, Py_
   }
   arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::SSLSocketAcceptor *)new FIX::SSLSocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -155119,7 +155141,7 @@ SWIGINTERN PyObject *_wrap_new_SSLSocketAcceptorBase__SWIG_1(PyObject *self, Py_
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -155210,9 +155232,10 @@ SWIGINTERN PyObject *_wrap_delete_SSLSocketAcceptorBase(PyObject *self, PyObject
   }
   arg1 = reinterpret_cast< FIX::SSLSocketAcceptor * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Teardown<FIX::SSLSocketAcceptor> teardown(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             delete arg1;
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -155220,7 +155243,7 @@ SWIGINTERN PyObject *_wrap_delete_SSLSocketAcceptorBase(PyObject *self, PyObject
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -155487,9 +155510,10 @@ SWIGINTERN PyObject *_wrap_new_SSLSocketInitiatorBase__SWIG_0(PyObject *self, Py
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::SSLSocketInitiator *)new FIX::SSLSocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -155497,7 +155521,7 @@ SWIGINTERN PyObject *_wrap_new_SSLSocketInitiatorBase__SWIG_0(PyObject *self, Py
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -155560,9 +155584,10 @@ SWIGINTERN PyObject *_wrap_new_SSLSocketInitiatorBase__SWIG_1(PyObject *self, Py
   }
   arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::SSLSocketInitiator *)new FIX::SSLSocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -155570,7 +155595,7 @@ SWIGINTERN PyObject *_wrap_new_SSLSocketInitiatorBase__SWIG_1(PyObject *self, Py
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -155661,9 +155686,10 @@ SWIGINTERN PyObject *_wrap_delete_SSLSocketInitiatorBase(PyObject *self, PyObjec
   }
   arg1 = reinterpret_cast< FIX::SSLSocketInitiator * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Teardown<FIX::SSLSocketInitiator> teardown(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             delete arg1;
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -155671,7 +155697,7 @@ SWIGINTERN PyObject *_wrap_delete_SSLSocketInitiatorBase(PyObject *self, PyObjec
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -165158,9 +165184,10 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSocketAcceptorBase__SWIG_0(PyObject *self
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::ThreadedSocketAcceptor *)new FIX::ThreadedSocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -165168,7 +165195,7 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSocketAcceptorBase__SWIG_0(PyObject *self
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -165231,9 +165258,10 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSocketAcceptorBase__SWIG_1(PyObject *self
   }
   arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::ThreadedSocketAcceptor *)new FIX::ThreadedSocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -165241,7 +165269,7 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSocketAcceptorBase__SWIG_1(PyObject *self
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -165332,9 +165360,10 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSocketAcceptorBase(PyObject *self, PyO
   }
   arg1 = reinterpret_cast< FIX::ThreadedSocketAcceptor * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Teardown<FIX::ThreadedSocketAcceptor> teardown(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             delete arg1;
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -165342,7 +165371,7 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSocketAcceptorBase(PyObject *self, PyO
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -165405,9 +165434,10 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSocketInitiatorBase__SWIG_0(PyObject *sel
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::ThreadedSocketInitiator *)new FIX::ThreadedSocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -165415,7 +165445,7 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSocketInitiatorBase__SWIG_0(PyObject *sel
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -165478,9 +165508,10 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSocketInitiatorBase__SWIG_1(PyObject *sel
   }
   arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::ThreadedSocketInitiator *)new FIX::ThreadedSocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -165488,7 +165519,7 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSocketInitiatorBase__SWIG_1(PyObject *sel
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -165579,9 +165610,10 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSocketInitiatorBase(PyObject *self, Py
   }
   arg1 = reinterpret_cast< FIX::ThreadedSocketInitiator * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Teardown<FIX::ThreadedSocketInitiator> teardown(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             delete arg1;
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -165589,7 +165621,7 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSocketInitiatorBase(PyObject *self, Py
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -165652,9 +165684,10 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSSLSocketAcceptorBase__SWIG_0(PyObject *s
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::ThreadedSSLSocketAcceptor *)new FIX::ThreadedSSLSocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -165662,7 +165695,7 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSSLSocketAcceptorBase__SWIG_0(PyObject *s
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -165725,9 +165758,10 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSSLSocketAcceptorBase__SWIG_1(PyObject *s
   }
   arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::ThreadedSSLSocketAcceptor *)new FIX::ThreadedSSLSocketAcceptor(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -165735,7 +165769,7 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSSLSocketAcceptorBase__SWIG_1(PyObject *s
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -165826,9 +165860,10 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSSLSocketAcceptorBase(PyObject *self, 
   }
   arg1 = reinterpret_cast< FIX::ThreadedSSLSocketAcceptor * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Teardown<FIX::ThreadedSSLSocketAcceptor> teardown(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             delete arg1;
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -165836,7 +165871,7 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSSLSocketAcceptorBase(PyObject *self, 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -166103,9 +166138,10 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSSLSocketInitiatorBase__SWIG_0(PyObject *
   }
   arg3 = reinterpret_cast< FIX::SessionSettings * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::ThreadedSSLSocketInitiator *)new FIX::ThreadedSSLSocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -166113,7 +166149,7 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSSLSocketInitiatorBase__SWIG_0(PyObject *
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -166176,9 +166212,10 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSSLSocketInitiatorBase__SWIG_1(PyObject *
   }
   arg4 = reinterpret_cast< FIX::LogFactory * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Construction construction;
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::ThreadedSSLSocketInitiator *)new FIX::ThreadedSSLSocketInitiator(*arg1,*arg2,(FIX::SessionSettings const &)*arg3,*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -166186,7 +166223,7 @@ SWIGINTERN PyObject *_wrap_new_ThreadedSSLSocketInitiatorBase__SWIG_1(PyObject *
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -166277,9 +166314,10 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSSLSocketInitiatorBase(PyObject *self,
   }
   arg1 = reinterpret_cast< FIX::ThreadedSSLSocketInitiator * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixTransportViews::Teardown<FIX::ThreadedSSLSocketInitiator> teardown(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             delete arg1;
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -166287,7 +166325,7 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSSLSocketInitiatorBase(PyObject *self,
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -167504,6 +167542,31 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap__transportViewCount(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  size_t result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "_transportViewCount", 0, 0, 0)) SWIG_fail;
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      result = quickfixTestTransportViewCount();
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_size_t(static_cast< size_t >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 static PyMethodDef SwigMethods[] = {
 	 { "_endView", _wrap__endView, METH_O, NULL},
 	 { "delete_SwigPyIterator", _wrap_delete_SwigPyIterator, METH_O, NULL},
@@ -168115,7 +168178,6 @@ static PyMethodDef SwigMethods[] = {
 	 { "Session_setNextTargetMsgSeqNum", _wrap_Session_setNextTargetMsgSeqNum, METH_VARARGS, NULL},
 	 { "Session_getSessionID", _wrap_Session_getSessionID, METH_O, NULL},
 	 { "Session_setDataDictionaryProvider", _wrap_Session_setDataDictionaryProvider, METH_VARARGS, NULL},
-	 { "Session_getDataDictionaryProvider", _wrap_Session_getDataDictionaryProvider, METH_O, NULL},
 	 { "Session_sendToTarget", _wrap_Session_sendToTarget, METH_VARARGS, NULL},
 	 { "Session_getSessions", _wrap_Session_getSessions, METH_NOARGS, NULL},
 	 { "Session_doesSessionExist", _wrap_Session_doesSessionExist, METH_O, NULL},
@@ -168128,7 +168190,6 @@ static PyMethodDef SwigMethods[] = {
 	 { "Session_isLogonTime", _wrap_Session_isLogonTime, METH_VARARGS, NULL},
 	 { "Session_isInitiator", _wrap_Session_isInitiator, METH_O, NULL},
 	 { "Session_isAcceptor", _wrap_Session_isAcceptor, METH_O, NULL},
-	 { "Session_getLogonTime", _wrap_Session_getLogonTime, METH_O, NULL},
 	 { "Session_setLogonTime", _wrap_Session_setLogonTime, METH_VARARGS, NULL},
 	 { "Session_getSenderDefaultApplVerID", _wrap_Session_getSenderDefaultApplVerID, METH_O, NULL},
 	 { "Session_setSenderDefaultApplVerID", _wrap_Session_setSenderDefaultApplVerID, METH_VARARGS, NULL},
@@ -168168,7 +168229,6 @@ static PyMethodDef SwigMethods[] = {
 	 { "Session_setSendNextExpectedMsgSeqNum", _wrap_Session_setSendNextExpectedMsgSeqNum, METH_VARARGS, NULL},
 	 { "Session_getIsNonStopSession", _wrap_Session_getIsNonStopSession, METH_O, NULL},
 	 { "Session_setIsNonStopSession", _wrap_Session_setIsNonStopSession, METH_VARARGS, NULL},
-	 { "Session_getAllowedRemoteAddresses", _wrap_Session_getAllowedRemoteAddresses, METH_O, NULL},
 	 { "Session_setAllowedRemoteAddresses", _wrap_Session_setAllowedRemoteAddresses, METH_VARARGS, NULL},
 	 { "Session_inAllowedRemoteAddresses", _wrap_Session_inAllowedRemoteAddresses, METH_VARARGS, NULL},
 	 { "Session_setResponder", _wrap_Session_setResponder, METH_VARARGS, NULL},
@@ -168177,8 +168237,6 @@ static PyMethodDef SwigMethods[] = {
 	 { "Session_disconnect", _wrap_Session_disconnect, METH_O, NULL},
 	 { "Session_getExpectedSenderNum", _wrap_Session_getExpectedSenderNum, METH_O, NULL},
 	 { "Session_getExpectedTargetNum", _wrap_Session_getExpectedTargetNum, METH_O, NULL},
-	 { "Session_getLog", _wrap_Session_getLog, METH_O, NULL},
-	 { "Session_getStore", _wrap_Session_getStore, METH_O, NULL},
 	 { "Session_swigregister", Session_swigregister, METH_O, NULL},
 	 { "delete_LogFactory", _wrap_delete_LogFactory, METH_O, NULL},
 	 { "LogFactory_create", _wrap_LogFactory_create, METH_VARARGS, NULL},
@@ -168635,6 +168693,7 @@ static PyMethodDef SwigMethods[] = {
 	 { "NullStore_swigregister", NullStore_swigregister, METH_O, NULL},
 	 { "NullStore_swiginit", NullStore_swiginit, METH_VARARGS, NULL},
 	 { "_viewCount", _wrap__viewCount, METH_NOARGS, NULL},
+	 { "_transportViewCount", _wrap__transportViewCount, METH_NOARGS, NULL},
 	 { NULL, NULL, 0, NULL }
 };
 
@@ -169147,9 +169206,7 @@ static swig_type_info _swigt__p_Group = {"_p_Group", "Group *", 0, 0, (void*)0, 
 static swig_type_info _swigt__p_Groups = {"_p_Groups", "Groups *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_IntArray = {"_p_IntArray", "IntArray *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_IntField = {"_p_IntField", "LengthField *|NumInGroupField *|SeqNumField *|TagNumField *|IntField *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_Log = {"_p_Log", "Log *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_MYSQL = {"_p_MYSQL", "MYSQL *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_MessageStore = {"_p_MessageStore", "MessageStore *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_MsgType = {"_p_MsgType", "MsgType *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_Mutex = {"_p_Mutex", "Mutex *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_PGconn = {"_p_PGconn", "PGconn *", 0, 0, (void*)0, 0};
@@ -169334,9 +169391,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_Groups,
   &_swigt__p_IntArray,
   &_swigt__p_IntField,
-  &_swigt__p_Log,
   &_swigt__p_MYSQL,
-  &_swigt__p_MessageStore,
   &_swigt__p_MsgType,
   &_swigt__p_Mutex,
   &_swigt__p_PGconn,
@@ -169521,9 +169576,7 @@ static swig_cast_info _swigc__p_Group[] = {  {&_swigt__p_Group, 0, 0, 0},{0, 0, 
 static swig_cast_info _swigc__p_Groups[] = {  {&_swigt__p_Groups, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_IntArray[] = {  {&_swigt__p_IntArray, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_IntField[] = {  {&_swigt__p_IntField, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_Log[] = {  {&_swigt__p_Log, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_MYSQL[] = {  {&_swigt__p_MYSQL, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_MessageStore[] = {  {&_swigt__p_MessageStore, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_MsgType[] = {  {&_swigt__p_MsgType, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_Mutex[] = {  {&_swigt__p_Mutex, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_PGconn[] = {  {&_swigt__p_PGconn, 0, 0, 0},{0, 0, 0, 0}};
@@ -169708,9 +169761,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_Groups,
   _swigc__p_IntArray,
   _swigc__p_IntField,
-  _swigc__p_Log,
   _swigc__p_MYSQL,
-  _swigc__p_MessageStore,
   _swigc__p_MsgType,
   _swigc__p_Mutex,
   _swigc__p_PGconn,

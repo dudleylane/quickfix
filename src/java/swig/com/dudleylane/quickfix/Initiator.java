@@ -74,7 +74,7 @@ public class Initiator {
 
   public Session getSession(SessionID sessionID, SWIGTYPE_p_Responder arg1) {
     long cPtr = quickfixJNI.Initiator_getSession__SWIG_0(swigCPtr, this, SessionID.getCPtr(sessionID), sessionID, SWIGTYPE_p_Responder.getCPtr(arg1));
-    return (cPtr == 0) ? null : new Session(cPtr, false);
+    return cPtr == 0 ? null : Views.session(new Session(cPtr, false), cPtr, this);
   }
 
   public SessionIDSet getSessions() {
@@ -83,12 +83,12 @@ public class Initiator {
 
   public Session getSession(SessionID sessionID) {
     long cPtr = quickfixJNI.Initiator_getSession__SWIG_1(swigCPtr, this, SessionID.getCPtr(sessionID), sessionID);
-    return (cPtr == 0) ? null : new Session(cPtr, false);
+    return cPtr == 0 ? null : Views.session(new Session(cPtr, false), cPtr, this);
   }
 
   public Dictionary getSessionSettings(SessionID sessionID) {
     long cPtr = quickfixJNI.Initiator_getSessionSettings(swigCPtr, this, SessionID.getCPtr(sessionID), sessionID);
-    return (cPtr == 0) ? null : new Dictionary(cPtr, false);
+    return cPtr == 0 ? null : new Dictionary(cPtr, true);
   }
 
   public boolean has(SessionID id) {
@@ -109,7 +109,7 @@ public class Initiator {
 
   public Log getLog() {
     long cPtr = quickfixJNI.Initiator_getLog(swigCPtr, this);
-    return (cPtr == 0) ? null : new Log(cPtr, false);
+    return cPtr == 0 ? null : Views.log(new Log(cPtr, false), cPtr, this);
   }
 
 }
