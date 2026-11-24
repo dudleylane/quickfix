@@ -6290,17 +6290,46 @@ namespace QuickfixViews
 void redeliverError();
 }
 
-template<typename Exception>
-void raiseRubyException(Exception const& e, swig_type_info* swigType)
+// Ruby raises by longjmp, which runs no destructor and completes no handler, so a caught C++ exception is raised into
+// Ruby from the method's wrapper, outside every handler: tryRubyException's handlers park what they caught in a
+// QuickfixCaught of the wrapper, and once tryRubyException has returned, and the call's temporaries with it, the
+// wrapper frees what SWIG made for its arguments and raises with raiseCaught (ruby/quickfix.i). QuickfixCaught holds a
+// copy of a FIX exception, as its own class, or the text of anything else, cut to fit; it is plain storage, which a
+// longjmp leaves nothing to destroy in.
+struct QuickfixCaught
 {
-  // A kill that landed in a callback outranks what the engine threw (#147), and so does an exception that landed
-  // while a call ended views (#196; ruby/quickfix.i).
-  redeliverKill();
-  QuickfixViews::redeliverError();
-  rb_exc_raise(SWIG_Ruby_ExceptionType(swigType, SWIG_NewPointerObj((new Exception(static_cast<const Exception&>(e))),swigType,SWIG_POINTER_OWN)));
+  bool caught = false;
+  void *copy = nullptr;
+  swig_type_info *type = nullptr;
+  char text[512];
+};
+
+void parkText(QuickfixCaught& caught, const char* text)
+{
+  size_t length = strnlen(text, sizeof(caught.text) - 1);
+  memcpy(caught.text, text, length);
+  caught.text[length] = '\0';
+  caught.copy = nullptr;
+  caught.caught = true;
 }
 
-VALUE tryRubyException(std::function<VALUE()> const& function)
+template<typename Exception>
+void park(QuickfixCaught& caught, Exception const& e, swig_type_info* swigType)
+{
+  try
+  {
+    caught.copy = new Exception(e);
+    caught.type = swigType;
+    caught.caught = true;
+  }
+  catch(...)
+  {
+    parkText(caught, e.what());
+  }
+}
+
+// Calls function, and returns what it returns, or Qnil with what it threw parked in caught.
+VALUE tryRubyException(std::function<VALUE()> const& function, QuickfixCaught& caught)
 {
   try
   {
@@ -6308,132 +6337,152 @@ VALUE tryRubyException(std::function<VALUE()> const& function)
   }
   catch(FIX::DataDictionaryNotFound const& e)
   {
-    raiseRubyException<FIX::DataDictionaryNotFound>(e, SWIGTYPE_p_FIX__DataDictionaryNotFound); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__DataDictionaryNotFound);
   }
   catch(FIX::FieldNotFound const& e)
   {
-    raiseRubyException<FIX::FieldNotFound>(e, SWIGTYPE_p_FIX__FieldNotFound); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__FieldNotFound);
   }
   catch(FIX::FieldConvertError const& e)
   {
-    raiseRubyException<FIX::FieldConvertError>(e, SWIGTYPE_p_FIX__FieldConvertError); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__FieldConvertError);
   }
   catch(FIX::MessageParseError const& e)
   {
-    raiseRubyException<FIX::MessageParseError>(e, SWIGTYPE_p_FIX__MessageParseError); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__MessageParseError);
   }
   catch(FIX::InvalidMessage const& e)
   {
-    raiseRubyException<FIX::InvalidMessage>(e, SWIGTYPE_p_FIX__InvalidMessage); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__InvalidMessage);
   }
   catch(FIX::ConfigError const& e)
   {
-    raiseRubyException<FIX::ConfigError>(e, SWIGTYPE_p_FIX__ConfigError); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__ConfigError);
   }
   catch(FIX::RuntimeError const& e)
   {
-    raiseRubyException<FIX::RuntimeError>(e, SWIGTYPE_p_FIX__RuntimeError); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__RuntimeError);
   }
   catch(FIX::InvalidTagNumber const& e)
   {
-    raiseRubyException<FIX::InvalidTagNumber>(e, SWIGTYPE_p_FIX__InvalidTagNumber); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__InvalidTagNumber);
   }
   catch(FIX::RequiredTagMissing const& e)
   {
-    raiseRubyException<FIX::RequiredTagMissing>(e, SWIGTYPE_p_FIX__RequiredTagMissing); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__RequiredTagMissing);
   }
   catch(FIX::TagNotDefinedForMessage const& e)
   {
-    raiseRubyException<FIX::TagNotDefinedForMessage>(e, SWIGTYPE_p_FIX__TagNotDefinedForMessage); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__TagNotDefinedForMessage);
   }
   catch(FIX::NoTagValue const& e)
   {
-    raiseRubyException<FIX::NoTagValue>(e, SWIGTYPE_p_FIX__NoTagValue); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__NoTagValue);
   }
   catch(FIX::IncorrectTagValue const& e)
   {
-    raiseRubyException<FIX::IncorrectTagValue>(e, SWIGTYPE_p_FIX__IncorrectTagValue); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__IncorrectTagValue);
   }
   catch(FIX::IncorrectDataFormat const& e)
   {
-    raiseRubyException<FIX::IncorrectDataFormat>(e, SWIGTYPE_p_FIX__IncorrectDataFormat); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__IncorrectDataFormat);
   }
   catch(FIX::IncorrectMessageStructure const& e)
   {
-    raiseRubyException<FIX::IncorrectMessageStructure>(e, SWIGTYPE_p_FIX__IncorrectMessageStructure); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__IncorrectMessageStructure);
   }
   catch(FIX::DuplicateFieldNumber const& e)
   {
-    raiseRubyException<FIX::DuplicateFieldNumber>(e, SWIGTYPE_p_FIX__DuplicateFieldNumber); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__DuplicateFieldNumber);
   }
   catch(FIX::InvalidMessageType const& e)
   {
-    raiseRubyException<FIX::InvalidMessageType>(e, SWIGTYPE_p_FIX__InvalidMessageType); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__InvalidMessageType);
   }
   catch(FIX::UnsupportedMessageType const& e)
   {
-    raiseRubyException<FIX::UnsupportedMessageType>(e, SWIGTYPE_p_FIX__UnsupportedMessageType); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__UnsupportedMessageType);
   }
   catch(FIX::UnsupportedVersion const& e)
   {
-    raiseRubyException<FIX::UnsupportedVersion>(e, SWIGTYPE_p_FIX__UnsupportedVersion); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__UnsupportedVersion);
   }
   catch(FIX::TagOutOfOrder const& e)
   {
-    raiseRubyException<FIX::TagOutOfOrder>(e, SWIGTYPE_p_FIX__TagOutOfOrder); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__TagOutOfOrder);
   }
   catch(FIX::RepeatedTag const& e)
   {
-    raiseRubyException<FIX::RepeatedTag>(e, SWIGTYPE_p_FIX__RepeatedTag); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__RepeatedTag);
   }
   catch(FIX::RepeatingGroupCountMismatch const& e)
   {
-    raiseRubyException<FIX::RepeatingGroupCountMismatch>(e, SWIGTYPE_p_FIX__RepeatingGroupCountMismatch); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__RepeatingGroupCountMismatch);
   }
   catch(FIX::DoNotSend const& e)
   {
-    raiseRubyException<FIX::DoNotSend>(e, SWIGTYPE_p_FIX__DoNotSend); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__DoNotSend);
   }
   catch(FIX::RejectLogon const& e)
   {
-    raiseRubyException<FIX::RejectLogon>(e, SWIGTYPE_p_FIX__RejectLogon); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__RejectLogon);
   }
   catch(FIX::SessionNotFound const& e)
   {
-    raiseRubyException<FIX::SessionNotFound>(e, SWIGTYPE_p_FIX__SessionNotFound); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__SessionNotFound);
   }
   catch(FIX::IOException const& e)
   {
-    raiseRubyException<FIX::IOException>(e, SWIGTYPE_p_FIX__IOException); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__IOException);
   }
   catch(FIX::SocketSendFailed const& e)
   {
-    raiseRubyException<FIX::SocketSendFailed>(e, SWIGTYPE_p_FIX__SocketSendFailed); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__SocketSendFailed);
   }
   catch(FIX::SocketRecvFailed const& e)
   {
-    raiseRubyException<FIX::SocketRecvFailed>(e, SWIGTYPE_p_FIX__SocketRecvFailed); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__SocketRecvFailed);
   }
   catch(FIX::SocketCloseFailed const& e)
   {
-    raiseRubyException<FIX::SocketCloseFailed>(e, SWIGTYPE_p_FIX__SocketCloseFailed); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__SocketCloseFailed);
   }
   catch(FIX::SocketException const& e)
   {
-    raiseRubyException<FIX::SocketException>(e, SWIGTYPE_p_FIX__SocketException); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__SocketException);
   }
   catch(FIX::Exception const& e)
   {
-    raiseRubyException<FIX::Exception>(e, SWIGTYPE_p_FIX__Exception); return Qnil;
+    park(caught, e, SWIGTYPE_p_FIX__Exception);
   }
   catch(std::exception const& e) 
   {
-    redeliverKill(); SWIG_Error(SWIG_RuntimeError, e.what()); return Qnil;
+    parkText(caught, e.what());
   }
   catch(...)
   {
-    redeliverKill(); SWIG_Error(SWIG_RuntimeError, "unknown exception"); return Qnil;
+    parkText(caught, "unknown exception");
   }
+  return Qnil;
+}
+
+// Raises what tryRubyException parked in caught, if anything, from the method's wrapper. A kill that landed in a
+// callback outranks it (#147), and so does an exception that landed while a call ended views (#196;
+// ruby/quickfix.i): the copy is Ruby's before either goes on, so the GC frees it then.
+void raiseCaught(QuickfixCaught& caught)
+{
+  if(!caught.caught)
+    return;
+  caught.caught = false;
+  void* copy = caught.copy;
+  caught.copy = nullptr;
+  VALUE error =
+    copy ? SWIG_Ruby_ExceptionType(caught.type, SWIG_NewPointerObj(copy, caught.type, SWIG_POINTER_OWN)) : Qnil;
+  redeliverKill();
+  QuickfixViews::redeliverError();
+  if(copy)
+    rb_exc_raise(error);
+  SWIG_Error(SWIG_RuntimeError, caught.text);
 }
 #endif
          

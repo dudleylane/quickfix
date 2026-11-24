@@ -1,14 +1,23 @@
+// A caught exception is raised from the wrapper, once tryRubyException has returned (raiseCaught, ../quickfix.i).
+// The raise never returns, so the wrapper first frees what SWIG made for the arguments ($cleanup), which SWIG_fail
+// would otherwise reach at fail:. With nothing caught, SWIG_fail takes that path itself.
 %define QUICKFIX_RUBY_EXCEPTION
 %exception
 {
+  QuickfixCaught caught;
   if(tryRubyException([&]() mutable
   {
     $action
     return self;
   fail:
     return Qnil;
-  }) == Qnil)
+  }, caught) == Qnil)
   {
+    if(caught.caught)
+    {
+      $cleanup
+      raiseCaught(caught);
+    }
     SWIG_fail;
   }
   redeliverKill();
@@ -25,6 +34,7 @@
 %define QUICKFIX_RUBY_EXCEPTION_WITHOUT_GVL
 %exception
 {
+  QuickfixCaught caught;
   if(tryRubyException([&]() mutable
   {
     return withoutGvl([&]() mutable -> VALUE
@@ -32,8 +42,13 @@
       $action
       return self;
     });
-  }) == Qnil)
+  }, caught) == Qnil)
   {
+    if(caught.caught)
+    {
+      $cleanup
+      raiseCaught(caught);
+    }
     SWIG_fail;
   }
   redeliverKill();
@@ -46,6 +61,7 @@ QUICKFIX_RUBY_EXCEPTION
 // Thread#kill, or the threads being terminated at exit, stops the transport.
 %exception FIX::Initiator::block
 {
+  QuickfixCaught caught;
   if(tryRubyException([&]() mutable
   {
     return blockWithoutGvl([&]() mutable -> VALUE
@@ -53,8 +69,13 @@ QUICKFIX_RUBY_EXCEPTION
       $action
       return self;
     }, *arg1);
-  }) == Qnil)
+  }, caught) == Qnil)
   {
+    if(caught.caught)
+    {
+      $cleanup
+      raiseCaught(caught);
+    }
     SWIG_fail;
   }
   redeliverKill();
@@ -62,6 +83,7 @@ QUICKFIX_RUBY_EXCEPTION
 
 %exception FIX::Acceptor::block
 {
+  QuickfixCaught caught;
   if(tryRubyException([&]() mutable
   {
     return blockWithoutGvl([&]() mutable -> VALUE
@@ -69,8 +91,13 @@ QUICKFIX_RUBY_EXCEPTION
       $action
       return self;
     }, *arg1);
-  }) == Qnil)
+  }, caught) == Qnil)
   {
+    if(caught.caught)
+    {
+      $cleanup
+      raiseCaught(caught);
+    }
     SWIG_fail;
   }
   redeliverKill();
@@ -838,6 +865,7 @@ VALUE quickfixTestEndView(VALUE, VALUE view) { return quickfixEndView(view) ? Qt
 %define QUICKFIX_VIEWS_EXCEPTION(decl, BEFORE)
 %exception decl
 {
+  QuickfixCaught caught;
   if(tryRubyException([&]() mutable
   {
     BEFORE
@@ -845,8 +873,13 @@ VALUE quickfixTestEndView(VALUE, VALUE view) { return quickfixEndView(view) ? Qt
     return self;
   fail:
     return Qnil;
-  }) == Qnil)
+  }, caught) == Qnil)
   {
+    if(caught.caught)
+    {
+      $cleanup
+      raiseCaught(caught);
+    }
     SWIG_fail;
   }
   redeliverKill();
@@ -856,6 +889,7 @@ VALUE quickfixTestEndView(VALUE, VALUE view) { return quickfixEndView(view) ? Qt
 %define QUICKFIX_VIEWS_SESSION_EXCEPTION(decl, BEFORE)
 %exception decl
 {
+  QuickfixCaught caught;
   if(tryRubyException([&]() mutable
   {
     BEFORE
@@ -864,8 +898,13 @@ VALUE quickfixTestEndView(VALUE, VALUE view) { return quickfixEndView(view) ? Qt
       $action
       return self;
     });
-  }) == Qnil)
+  }, caught) == Qnil)
   {
+    if(caught.caught)
+    {
+      $cleanup
+      raiseCaught(caught);
+    }
     SWIG_fail;
   }
   redeliverKill();
@@ -1221,6 +1260,86 @@ VALUE quickfixViewAddress(VALUE, VALUE view)
 }
 %}
 	  	 
+// For the tests (ExceptionTestCase.rb): Quickfix._throw(kind) throws the kind-th of the exceptions tryRubyException
+// has a handler for (../quickfix.i), in the order of its handlers, then a std::exception and then an int; and
+// Quickfix._currentException is std::current_exception() != nullptr, from outside any handler.
+%rename(_throw) quickfixTestThrow;
+%rename(_currentException) quickfixTestCurrentException;
+%inline %{
+void quickfixTestThrow(int kind)
+{
+  switch (kind)
+  {
+  case 0:
+    throw FIX::DataDictionaryNotFound("FIX.9.9");
+  case 1:
+    throw FIX::FieldNotFound(44);
+  case 2:
+    throw FIX::FieldConvertError();
+  case 3:
+    throw FIX::MessageParseError();
+  case 4:
+    throw FIX::InvalidMessage();
+  case 5:
+    throw FIX::ConfigError();
+  case 6:
+    throw FIX::RuntimeError();
+  case 7:
+    throw FIX::InvalidTagNumber();
+  case 8:
+    throw FIX::RequiredTagMissing();
+  case 9:
+    throw FIX::TagNotDefinedForMessage();
+  case 10:
+    throw FIX::NoTagValue();
+  case 11:
+    throw FIX::IncorrectTagValue();
+  case 12:
+    throw FIX::IncorrectDataFormat();
+  case 13:
+    throw FIX::IncorrectMessageStructure();
+  case 14:
+    throw FIX::DuplicateFieldNumber();
+  case 15:
+    throw FIX::InvalidMessageType();
+  case 16:
+    throw FIX::UnsupportedMessageType();
+  case 17:
+    throw FIX::UnsupportedVersion();
+  case 18:
+    throw FIX::TagOutOfOrder();
+  case 19:
+    throw FIX::RepeatedTag();
+  case 20:
+    throw FIX::RepeatingGroupCountMismatch();
+  case 21:
+    throw FIX::DoNotSend();
+  case 22:
+    throw FIX::RejectLogon();
+  case 23:
+    throw FIX::SessionNotFound();
+  case 24:
+    throw FIX::IOException();
+  case 25:
+    throw FIX::SocketSendFailed("send");
+  case 26:
+    throw FIX::SocketRecvFailed("receive");
+  case 27:
+    throw FIX::SocketCloseFailed("close");
+  case 28:
+    throw FIX::SocketException("socket");
+  case 29:
+    throw FIX::Exception("Exception", "the base class");
+  case 30:
+    throw std::runtime_error("a std::exception");
+  case 31:
+    throw 31;
+  }
+}
+
+bool quickfixTestCurrentException() { return static_cast<bool>(std::current_exception()); }
+%}
+
 // Without director:except a Log or LogFactory method calls Ruby with a bare
 // rb_funcall, and an exception longjmps out through the engine's C++ frames (#112).
 %define QUICKFIX_RUBY_EXIT_ON_ERROR(method)
