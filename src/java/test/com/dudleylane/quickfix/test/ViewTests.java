@@ -176,7 +176,7 @@ public class ViewTests {
 
     public void testInternalsAreNotWrapped() {
         Map<Class<?>, List<String>> removed = Map.of(
-            FieldMap.class, List.of("groups", "cloneInto"), Group.class, List.of("cloneInto"),
+            FieldMap.class, List.of("groups", "cloneInto", "addGroupPtr"), Group.class, List.of("cloneInto"),
             DataDictionary.class, List.of("getOrderedFields", "getHeaderOrderedFields", "getTrailerOrderedFields",
                                           "getMessageOrderedFields"),
             SocketAcceptorBase.class, List.of("sessionToPort"));

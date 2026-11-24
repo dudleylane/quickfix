@@ -398,7 +398,9 @@ keep past its owner and so read freed memory (#194):
 
 `FieldMap.groups()` and `cloneInto()`, `GroupArena`, `DataDictionary.getOrderedFields` and its header,
 trailer and message forms, and `sessionToPort()` are not wrapped: they returned engine internals and opaque
-types nothing in a binding could use.
+types nothing in a binding could use. Nor is `addGroupPtr`, which hands the message its argument to own and
+free, so the group's proxy, or the message the group was a view into, freed it a second time (#198). `addGroup`
+copies its argument instead.
 
 An object with no C++ object behind it raises wherever it is used, as the receiver or as an argument. In Java that
 is an object that was `delete()`d. Java passed its null pointer on: a method ran on it and crashed the JVM, and a

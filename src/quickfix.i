@@ -569,6 +569,10 @@ typedef FIX::SessionSettings SessionSettings;
 %ignore FIX::DataDictionary::getTrailerOrderedFields;
 %ignore FIX::DataDictionary::getMessageOrderedFields;
 %ignore FIX::SocketAcceptor::sessionToPort;
+// addGroupPtr hands its receiver the group to own and free (#198). No binding can honour that: a group the script
+// made is freed by its proxy too, and a group view by the message it is in. addGroup copies, and is what a binding
+// needs.
+%ignore FIX::FieldMap::addGroupPtr;
 
 #if defined(SWIGPYTHON) || defined(SWIGRUBY)
 %typemap(out, noblock=1) const FIX::FieldBase &getFieldRef, const FIX::FieldBase *const getFieldPtr {

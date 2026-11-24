@@ -120,14 +120,6 @@ public class FieldMap {
     quickfixJNI.FieldMap_addGroup__SWIG_1(swigCPtr, this, tag, FieldMap.getCPtr(group), group);
   }
 
-  public void addGroupPtr(int tag, FieldMap group, boolean setCount) {
-    quickfixJNI.FieldMap_addGroupPtr__SWIG_0(swigCPtr, this, tag, Proxies.cPtr(FieldMap.getCPtr(group), group), group, setCount);
-  }
-
-  public void addGroupPtr(int tag, FieldMap group) {
-    quickfixJNI.FieldMap_addGroupPtr__SWIG_1(swigCPtr, this, tag, Proxies.cPtr(FieldMap.getCPtr(group), group), group);
-  }
-
   public void replaceGroup(int num, int tag, FieldMap group) {
     quickfixJNI.FieldMap_replaceGroup(swigCPtr, this, num, tag, FieldMap.getCPtr(group), group);
   }

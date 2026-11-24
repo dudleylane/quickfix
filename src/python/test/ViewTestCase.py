@@ -151,7 +151,7 @@ class ViewTestCase(unittest.TestCase):
         self.assertEqual("D", message.getHeader().getField(35))
 
     def test_internals_are_not_wrapped(self):
-        for owner, names in ((fix.FieldMap, ("groups", "cloneInto")), (fix.Group, ("cloneInto",)),
+        for owner, names in ((fix.FieldMap, ("groups", "cloneInto", "addGroupPtr")), (fix.Group, ("cloneInto",)),
                              (fix.DataDictionary, ("getOrderedFields", "getHeaderOrderedFields",
                                                    "getTrailerOrderedFields", "getMessageOrderedFields")),
                              (fix.SocketAcceptorBase, ("sessionToPort",))):

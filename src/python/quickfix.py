@@ -1301,9 +1301,6 @@ class FieldMap(object):
     def addGroup(self, tag, group, setCount=True):
         return _quickfix.FieldMap_addGroup(self, tag, group, setCount)
 
-    def addGroupPtr(self, tag, group, setCount=True):
-        return _quickfix.FieldMap_addGroupPtr(self, tag, group, setCount)
-
     def replaceGroup(self, num, tag, group):
         return _quickfix.FieldMap_replaceGroup(self, num, tag, group)
 

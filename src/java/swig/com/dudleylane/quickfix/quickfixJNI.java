@@ -304,8 +304,6 @@ public class quickfixJNI {
   public final static native void FieldMap_removeField(long jarg1, FieldMap jarg1_, int jarg2);
   public final static native void FieldMap_addGroup__SWIG_0(long jarg1, FieldMap jarg1_, int jarg2, long jarg3, FieldMap jarg3_, boolean jarg4);
   public final static native void FieldMap_addGroup__SWIG_1(long jarg1, FieldMap jarg1_, int jarg2, long jarg3, FieldMap jarg3_);
-  public final static native void FieldMap_addGroupPtr__SWIG_0(long jarg1, FieldMap jarg1_, int jarg2, long jarg3, FieldMap jarg3_, boolean jarg4);
-  public final static native void FieldMap_addGroupPtr__SWIG_1(long jarg1, FieldMap jarg1_, int jarg2, long jarg3, FieldMap jarg3_);
   public final static native void FieldMap_replaceGroup(long jarg1, FieldMap jarg1_, int jarg2, int jarg3, long jarg4, FieldMap jarg4_);
   public final static native long FieldMap_getGroup(long jarg1, FieldMap jarg1_, int jarg2, int jarg3, long jarg4, FieldMap jarg4_);
   public final static native long FieldMap_getGroupRef(long jarg1, FieldMap jarg1_, int jarg2, int jarg3);
