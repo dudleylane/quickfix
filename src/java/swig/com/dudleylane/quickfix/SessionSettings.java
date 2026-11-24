@@ -79,7 +79,7 @@ public class SessionSettings {
     }
     Dictionary view = new Dictionary(cPtr, false);
     view.swigOwner = this;
-    return view;
+    return Views.into(this, view, cPtr);
   }
 
   public void set(SessionID arg0, Dictionary arg1) {
@@ -93,7 +93,7 @@ public class SessionSettings {
     }
     Dictionary view = new Dictionary(cPtr, false);
     view.swigOwner = this;
-    return view;
+    return Views.into(this, view, cPtr);
   }
 
   public void set(Dictionary defaults) {

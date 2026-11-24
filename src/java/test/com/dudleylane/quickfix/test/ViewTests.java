@@ -14,10 +14,10 @@ import java.util.Map;
 
 /**
  * What a call returns from inside another object outlives nothing it points into (#194). A view -- a message's
- * header, trailer or group, a SessionSettings' dictionary, a group's DataDictionary -- holds its owner; a const view
- * -- a field, a transport's set of SessionIDs -- is the caller's own copy; a call whose result is its argument
- * returns the argument. Each was a proxy that owned nothing and kept nothing alive, so one kept past its owner read
- * and wrote freed memory once the GC had finalized the owner.
+ * header, trailer or group, a SessionSettings' dictionary -- holds its owner; a const view -- a field, a transport's
+ * set of SessionIDs -- is the caller's own copy, as a group's DataDictionary is (EndedViewTests); a call whose result
+ * is its argument returns the argument. Each was a proxy that owned nothing and kept nothing alive, so one kept past
+ * its owner read and wrote freed memory once the GC had finalized the owner.
  */
 public class ViewTests {
     /** owner is reachable only through view now: it must survive the GC while view does. */
@@ -83,15 +83,6 @@ public class ViewTests {
         // Writing through get() reaches the settings, as it did.
         section.setString("HeartBtInt", "45");
         Check.equal("45", owner.get().get(id).getString("HeartBtInt"), "written through");
-    }
-
-    public void testAGroupDictionaryKeepsItsDictionary() {
-        DataDictionary dictionary = new DataDictionary(Fixture.spec("FIX42"));
-        WeakReference<DataDictionary> owner = new WeakReference<>(dictionary);
-        DataDictionary group = dictionary.getGroupDictionary("V", 146);
-        dictionary = null;
-        checkKeeps(group, owner, "getGroupDictionary");
-        Check.isTrue(group.isField(55) && !group.isField(11), "the group's own dictionary");
     }
 
     public void testConstViewsAreCopies() {

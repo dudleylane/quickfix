@@ -6287,11 +6287,18 @@ bool tryPythonException(std::function<bool()> const& function)
 #endif
 
 #ifdef SWIGRUBY
+namespace QuickfixViews
+{
+void redeliverError();
+}
+
 template<typename Exception>
 void raiseRubyException(Exception const& e, swig_type_info* swigType)
 {
-  // A kill that landed in a callback outranks what the engine threw (#147).
+  // A kill that landed in a callback outranks what the engine threw (#147), and so does an exception that landed
+  // while a call ended views (#196; ruby/quickfix.i).
   redeliverKill();
+  QuickfixViews::redeliverError();
   rb_exc_raise(SWIG_Ruby_ExceptionType(swigType, SWIG_NewPointerObj((new Exception(static_cast<const Exception&>(e))),swigType,SWIG_POINTER_OWN)));
 }
 
@@ -6530,6 +6537,172 @@ SWIGINTERN void std_set_Sl_FIX_SessionID_Sg__discard(std::set< FIX::SessionID > 
 SWIGINTERN void std_set_Sl_FIX_SessionID_Sg__erase__SWIG_1(std::set< FIX::SessionID > *self,std::set< FIX::SessionID >::iterator pos){ self->erase(pos); }
 SWIGINTERN void std_set_Sl_FIX_SessionID_Sg__erase__SWIG_2(std::set< FIX::SessionID > *self,std::set< FIX::SessionID >::iterator first,std::set< FIX::SessionID >::iterator last){ self->erase(first, last); }
 
+
+#include <algorithm>
+#include <vector>
+namespace QuickfixViews
+{
+typedef std::vector<const void *> Addresses;
+
+// Each binding's own: whether any group view is registered, and ending the views registered at these addresses.
+// endViews() leaves the language's pending error, if there is one, as it found it. (Not end(): an unqualified call
+// with a std::vector finds std::end too, and std::end(Container &) binds a non-const vector more tightly.)
+bool anyGroupViews();
+void endViews(const Addresses &addresses);
+
+// Every group under map, at any depth; not map itself.
+inline void addGroupsUnder(const FIX::FieldMap &map, Addresses &addresses)
+{
+  for (FIX::FieldMap::g_const_iterator tag = map.g_begin(); tag != map.g_end(); ++tag)
+  {
+    for (const FIX::FieldMap *group : tag->second)
+    {
+      addresses.push_back(group);
+      addGroupsUnder(*group, addresses);
+    }
+  }
+}
+
+// Group num at tag, or null.
+inline const FIX::FieldMap *groupAt(const FIX::FieldMap &map, int num, int tag)
+{
+  if (num <= 0 || map.groupCount(tag) < static_cast<size_t>(num))
+    return nullptr;
+  return &map.getGroupRef(num, tag);
+}
+
+// clear(), and Message's, Header's and Trailer's getGroup(num, group), which clear their argument before they look
+// (Message.h): every group under map.
+inline void beforeClearing(const FIX::FieldMap &map)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(map, addresses);
+  endViews(addresses);
+}
+
+// Message's clear(), setString() and setStringHeader(), which clear first: the header's, body's and trailer's groups.
+inline void beforeClearingMessage(const FIX::Message &message)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(message.getHeader(), addresses);
+  addGroupsUnder(message, addresses);
+  addGroupsUnder(message.getTrailer(), addresses);
+  endViews(addresses);
+}
+
+// removeGroup(num, tag): group num, and every group under it.
+inline void beforeRemovingGroup(const FIX::FieldMap &map, int num, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  if (const FIX::FieldMap *group = groupAt(map, num, tag))
+  {
+    Addresses addresses(1, group);
+    addGroupsUnder(*group, addresses);
+    endViews(addresses);
+  }
+}
+
+// removeGroup(tag): every group at tag, and every group under them.
+inline void beforeRemovingGroups(const FIX::FieldMap &map, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  for (size_t num = 1, count = map.groupCount(tag); num <= count; ++num)
+  {
+    const FIX::FieldMap &group = map.getGroupRef(static_cast<int>(num), tag);
+    addresses.push_back(&group);
+    addGroupsUnder(group, addresses);
+  }
+  endViews(addresses);
+}
+
+// removeField(tag) removes tag's groups with the field, and only when the field is set.
+inline void beforeRemovingField(const FIX::FieldMap &map, int tag)
+{
+  if (map.isSetField(tag))
+    beforeRemovingGroups(map, tag);
+}
+
+// replaceGroup(num, ...) assigns over group num: the group stays, and the groups under it go.
+inline void beforeReplacingGroup(const FIX::FieldMap &map, int num, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  if (const FIX::FieldMap *group = groupAt(map, num, tag))
+  {
+    Addresses addresses;
+    addGroupsUnder(*group, addresses);
+    endViews(addresses);
+  }
+}
+
+// FieldMap's and Group's getGroup(num, ..., group) assign group num over group, and throw FieldNotFound first,
+// leaving group as it was, when there is none.
+inline void beforeGettingGroup(const FIX::FieldMap &map, int num, int tag, const FIX::FieldMap &group)
+{
+  if (groupAt(map, num, tag))
+    beforeClearing(group);
+}
+
+// swap(rhs): each map's groups pass to the other, with its arena, so a view would keep the wrong message alive.
+inline void beforeSwapping(const FIX::FieldMap &map, const FIX::FieldMap &rhs)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(map, addresses);
+  addGroupsUnder(rhs, addresses);
+  endViews(addresses);
+}
+
+// Message's reverseRoute(), and Session's send() and sendToTarget() on their message, remove routing and resend
+// fields from its header, and the groups at those tags with them (Message.cpp, Session.cpp). Rather than mirror
+// their lists, which would go stale without a word, this compares the header's groups before and after the call,
+// also when the call throws. Nothing in the send path removes from the message after toApp or toAdmin returns, so
+// deciding before the call that no view needs the comparison holds for a view a callback takes.
+class HeaderGroups
+{
+public:
+  explicit HeaderGroups(const FIX::Message &message) : m_message(anyGroupViews() ? &message : nullptr)
+  {
+    if (m_message)
+      addGroupsUnder(message.getHeader(), m_before);
+  }
+  ~HeaderGroups()
+  {
+    if (!m_message || m_before.empty())
+      return;
+    try
+    {
+      Addresses after;
+      addGroupsUnder(m_message->getHeader(), after);
+      std::sort(after.begin(), after.end());
+      Addresses gone;
+      for (const void *address : m_before)
+        if (!std::binary_search(after.begin(), after.end(), address))
+          gone.push_back(address);
+      if (!gone.empty())
+        endViews(gone);
+    }
+    catch (...)
+    {
+    }
+  }
+  HeaderGroups(const HeaderGroups &) = delete;
+  HeaderGroups &operator=(const HeaderGroups &) = delete;
+
+private:
+  const FIX::Message *m_message;
+  Addresses m_before;
+};
+}
+
 SWIGINTERN std::string FIX_Exception___str__(FIX::Exception *self){
     return self->what();
   }
@@ -6621,9 +6794,6 @@ SWIG_AsVal_bool (PyObject *obj, bool *val)
 }
 
 
-#include <memory>
-
-
 SWIGINTERN int
 SWIG_AsVal_unsigned_SS_int (PyObject * obj, unsigned int *val)
 {
@@ -6682,6 +6852,105 @@ SWIGINTERNINLINE PyObject *
 SWIG_From_unsigned_SS_short  (unsigned short value)
 {    
   return SWIG_From_unsigned_SS_long  (value);
+}
+
+
+#include <unordered_map>
+namespace QuickfixViews
+{
+static std::unordered_map<const void *, std::vector<PyObject *>> s_views;
+static size_t s_entries = 0;
+static size_t s_idle = 0;
+static size_t s_pruneAt = 64;
+
+static void drop(PyObject *object)
+{
+  reinterpret_cast<SwigPyObject *>(object)->own = 0;
+  Py_DECREF(object);
+  --s_entries;
+}
+
+static void prune()
+{
+  for (auto views = s_views.begin(); views != s_views.end();)
+  {
+    std::vector<PyObject *> &objects = views->second;
+    for (size_t i = 0; i < objects.size();)
+    {
+      if (Py_REFCNT(objects[i]) == 1)
+      {
+        drop(objects[i]);
+        objects[i] = objects.back();
+        objects.pop_back();
+      }
+      else
+      {
+        ++i;
+      }
+    }
+    views = objects.empty() ? s_views.erase(views) : std::next(views);
+  }
+  s_idle = 0;
+}
+
+// From a wrapper's ret typemap, outside the exception translation, so nothing may escape. False, with a Python
+// exception set, if view could not be registered.
+bool registerView(PyObject *view, const void *address)
+{
+  PyObject *object = reinterpret_cast<PyObject *>(SWIG_Python_GetSwigThis(view));
+  if (!object)
+  {
+    PyErr_SetString(PyExc_RuntimeError, "a group view could not be registered");
+    return false;
+  }
+  try
+  {
+    s_views[address].push_back(object);
+  }
+  catch (...)
+  {
+    PyErr_NoMemory();
+    return false;
+  }
+  Py_INCREF(object);
+  if (++s_entries >= s_pruneAt)
+  {
+    prune();
+    s_pruneAt = std::max<size_t>(64, 2 * s_entries);
+  }
+  return true;
+}
+
+bool anyGroupViews() { return !s_views.empty(); }
+
+void endViews(const Addresses &addresses)
+{
+  bool ended = false;
+  for (const void *address : addresses)
+  {
+    auto views = s_views.find(address);
+    if (views == s_views.end())
+      continue;
+    for (PyObject *object : views->second)
+    {
+      reinterpret_cast<SwigPyObject *>(object)->ptr = 0;
+      drop(object);
+    }
+    s_views.erase(views);
+    ended = true;
+  }
+  if (ended)
+    s_idle = 0;
+  else if (++s_idle >= s_entries)
+    prune();
+}
+}
+
+
+size_t quickfixTestViewCount()
+{
+  QuickfixViews::prune();
+  return QuickfixViews::s_entries;
 }
 
 
@@ -36961,52 +37230,6 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_new_FieldMap__SWIG_5(PyObject *self, Py_ssize_t nobjs, PyObject **swig_obj) {
-  PyObject *resultobj = 0;
-  FIX::FieldMap *arg1 = 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  std::unique_ptr< FIX::FieldMap > rvrdeleter1 ;
-  FIX::FieldMap *result = 0 ;
-  
-  (void)self;
-  if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__FieldMap, SWIG_POINTER_RELEASE |  0 );
-  if (!SWIG_IsOK(res1)) {
-    if (res1 == SWIG_ERROR_RELEASE_NOT_OWNED) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_FieldMap" "', cannot release ownership as memory is not owned for argument " "1"" of type '" "FIX::FieldMap &&""'");
-    } else {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_FieldMap" "', argument " "1"" of type '" "FIX::FieldMap &&""'"); 
-    }
-  }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_FieldMap" "', argument " "1"" of type '" "FIX::FieldMap &&""'"); 
-  }
-  arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
-  rvrdeleter1.reset(arg1);
-  {
-    if(!tryPythonException([&]() mutable 
-        {
-      {
-        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            result = (FIX::FieldMap *)new FIX::FieldMap((FIX::FieldMap &&)*arg1);
-            SWIG_PYTHON_THREAD_END_ALLOW;
-          }
-          return true;
-        fail:
-          return false;
-        })) 
-    {
-      SWIG_fail;
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldMap, SWIG_POINTER_NEW |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_new_FieldMap(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[2] = {
@@ -37043,15 +37266,6 @@ SWIGINTERN PyObject *_wrap_new_FieldMap(PyObject *self, PyObject *args) {
       return _wrap_new_FieldMap__SWIG_4(self, argc, argv);
     }
   }
-  if (argc == 1) {
-    int _v = 0;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      return _wrap_new_FieldMap__SWIG_5(self, argc, argv);
-    }
-  }
   
 fail:
   SWIG_Python_RaiseOrModifyTypeError("Wrong number or type of arguments for overloaded function 'new_FieldMap'.\n"
@@ -37059,8 +37273,7 @@ fail:
     "    FIX::FieldMap::FieldMap(message_order const &)\n"
     "    FIX::FieldMap::FieldMap()\n"
     "    FIX::FieldMap::FieldMap(int const [])\n"
-    "    FIX::FieldMap::FieldMap(FIX::FieldMap const &)\n"
-    "    FIX::FieldMap::FieldMap(FIX::FieldMap &&)\n");
+    "    FIX::FieldMap::FieldMap(FIX::FieldMap const &)\n");
   return 0;
 }
 
@@ -37841,9 +38054,10 @@ SWIGINTERN PyObject *_wrap_FieldMap_removeField(PyObject *self, PyObject *args) 
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingField(*arg1, arg2);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeField(arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -37851,7 +38065,7 @@ SWIGINTERN PyObject *_wrap_FieldMap_removeField(PyObject *self, PyObject *args) 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -38097,9 +38311,10 @@ SWIGINTERN PyObject *_wrap_FieldMap_replaceGroup(PyObject *self, PyObject *args)
   }
   arg4 = reinterpret_cast< FIX::FieldMap * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->replaceGroup(arg2,arg3,(FIX::FieldMap const &)*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -38107,7 +38322,7 @@ SWIGINTERN PyObject *_wrap_FieldMap_replaceGroup(PyObject *self, PyObject *args)
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -38166,9 +38381,10 @@ SWIGINTERN PyObject *_wrap_FieldMap_getGroup(PyObject *self, PyObject *args) {
   }
   arg4 = reinterpret_cast< FIX::FieldMap * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeGettingGroup(*arg1, arg2, arg3, *arg4);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::FieldMap *) &((FIX::FieldMap const *)arg1)->getGroup(arg2,arg3,*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -38176,7 +38392,7 @@ SWIGINTERN PyObject *_wrap_FieldMap_getGroup(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -38240,6 +38456,10 @@ SWIGINTERN PyObject *_wrap_FieldMap_getGroupRef(PyObject *self, PyObject *args) 
     }
   }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  if (result && resultobj && !QuickfixViews::registerView(resultobj, result)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   return NULL;
@@ -38298,6 +38518,10 @@ SWIGINTERN PyObject *_wrap_FieldMap_getGroupPtr(PyObject *self, PyObject *args) 
     }
   }
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldMap, 0 |  0 );
+  if (result && resultobj && !QuickfixViews::registerView(resultobj, result)) {
+    Py_DECREF(resultobj);
+    resultobj = NULL;
+  }
   return resultobj;
 fail:
   return NULL;
@@ -38338,9 +38562,10 @@ SWIGINTERN PyObject *_wrap_FieldMap_removeGroup__SWIG_0(PyObject *self, Py_ssize
   } 
   arg3 = static_cast< int >(val3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeGroup(arg2,arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -38348,7 +38573,7 @@ SWIGINTERN PyObject *_wrap_FieldMap_removeGroup__SWIG_0(PyObject *self, Py_ssize
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -38386,9 +38611,10 @@ SWIGINTERN PyObject *_wrap_FieldMap_removeGroup__SWIG_1(PyObject *self, Py_ssize
   } 
   arg2 = static_cast< int >(val2);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeGroup(arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -38396,7 +38622,7 @@ SWIGINTERN PyObject *_wrap_FieldMap_removeGroup__SWIG_1(PyObject *self, Py_ssize
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -38692,9 +38918,10 @@ SWIGINTERN PyObject *_wrap_FieldMap_clear(PyObject *self, PyObject *args) {
   }
   arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeClearing(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->clear();
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -38702,7 +38929,7 @@ SWIGINTERN PyObject *_wrap_FieldMap_clear(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -38744,9 +38971,10 @@ SWIGINTERN PyObject *_wrap_FieldMap_swap(PyObject *self, PyObject *args) {
   }
   arg2 = reinterpret_cast< FIX::FieldMap * >(argp2);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeSwapping(*arg1, *arg2);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->swap(*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -38754,7 +38982,7 @@ SWIGINTERN PyObject *_wrap_FieldMap_swap(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -40028,9 +40256,10 @@ SWIGINTERN PyObject *_wrap_Header_replaceGroup(PyObject *self, PyObject *args) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -40038,7 +40267,7 @@ SWIGINTERN PyObject *_wrap_Header_replaceGroup(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -40089,9 +40318,10 @@ SWIGINTERN PyObject *_wrap_Header_getGroup(PyObject *self, PyObject *args) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeClearing(*arg3);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (Group *) &((FIX::Header const *)arg1)->getGroup(arg2,*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -40099,7 +40329,7 @@ SWIGINTERN PyObject *_wrap_Header_getGroup(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -40148,9 +40378,10 @@ SWIGINTERN PyObject *_wrap_Header_removeGroup__SWIG_0(PyObject *self, Py_ssize_t
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -40158,7 +40389,7 @@ SWIGINTERN PyObject *_wrap_Header_removeGroup__SWIG_0(PyObject *self, Py_ssize_t
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -40199,9 +40430,10 @@ SWIGINTERN PyObject *_wrap_Header_removeGroup__SWIG_1(PyObject *self, Py_ssize_t
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeGroup((FIX::Group const &)*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -40209,7 +40441,7 @@ SWIGINTERN PyObject *_wrap_Header_removeGroup__SWIG_1(PyObject *self, Py_ssize_t
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -40674,9 +40906,10 @@ SWIGINTERN PyObject *_wrap_Trailer_replaceGroup(PyObject *self, PyObject *args) 
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -40684,7 +40917,7 @@ SWIGINTERN PyObject *_wrap_Trailer_replaceGroup(PyObject *self, PyObject *args) 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -40735,9 +40968,10 @@ SWIGINTERN PyObject *_wrap_Trailer_getGroup(PyObject *self, PyObject *args) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeClearing(*arg3);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (Group *) &((FIX::Trailer const *)arg1)->getGroup(arg2,*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -40745,7 +40979,7 @@ SWIGINTERN PyObject *_wrap_Trailer_getGroup(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -40794,9 +41028,10 @@ SWIGINTERN PyObject *_wrap_Trailer_removeGroup__SWIG_0(PyObject *self, Py_ssize_
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -40804,7 +41039,7 @@ SWIGINTERN PyObject *_wrap_Trailer_removeGroup__SWIG_0(PyObject *self, Py_ssize_
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -40845,9 +41080,10 @@ SWIGINTERN PyObject *_wrap_Trailer_removeGroup__SWIG_1(PyObject *self, Py_ssize_
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeGroup((FIX::Group const &)*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -40855,7 +41091,7 @@ SWIGINTERN PyObject *_wrap_Trailer_removeGroup__SWIG_1(PyObject *self, Py_ssize_
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -42167,52 +42403,6 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_new_Message__SWIG_13(PyObject *self, Py_ssize_t nobjs, PyObject **swig_obj) {
-  PyObject *resultobj = 0;
-  FIX::Message *arg1 = 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  std::unique_ptr< FIX::Message > rvrdeleter1 ;
-  FIX::Message *result = 0 ;
-  
-  (void)self;
-  if ((nobjs < 1) || (nobjs > 1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Message, SWIG_POINTER_RELEASE |  0 );
-  if (!SWIG_IsOK(res1)) {
-    if (res1 == SWIG_ERROR_RELEASE_NOT_OWNED) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_Message" "', cannot release ownership as memory is not owned for argument " "1"" of type '" "FIX::Message &&""'");
-    } else {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_Message" "', argument " "1"" of type '" "FIX::Message &&""'"); 
-    }
-  }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "new_Message" "', argument " "1"" of type '" "FIX::Message &&""'"); 
-  }
-  arg1 = reinterpret_cast< FIX::Message * >(argp1);
-  rvrdeleter1.reset(arg1);
-  {
-    if(!tryPythonException([&]() mutable 
-        {
-      {
-        SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            result = (FIX::Message *)new FIX::Message((FIX::Message &&)*arg1);
-            SWIG_PYTHON_THREAD_END_ALLOW;
-          }
-          return true;
-        fail:
-          return false;
-        })) 
-    {
-      SWIG_fail;
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__Message, SWIG_POINTER_NEW |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_new_Message(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[8] = {
@@ -42230,15 +42420,6 @@ SWIGINTERN PyObject *_wrap_new_Message(PyObject *self, PyObject *args) {
     _v = SWIG_CheckState(res);
     if (_v) {
       return _wrap_new_Message__SWIG_12(self, argc, argv);
-    }
-  }
-  if (argc == 1) {
-    int _v = 0;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      return _wrap_new_Message__SWIG_13(self, argc, argv);
     }
   }
   if (argc == 1) {
@@ -42479,8 +42660,7 @@ fail:
     "    FIX::Message::Message(message_order const &,message_order const &,message_order const &,std::string const &,FIX::DataDictionary const &)\n"
     "    FIX::Message::Message(message_order const &,message_order const &,message_order const &,std::string const &,FIX::DataDictionary const &,FIX::DataDictionary const &,bool)\n"
     "    FIX::Message::Message(message_order const &,message_order const &,message_order const &,std::string const &,FIX::DataDictionary const &,FIX::DataDictionary const &)\n"
-    "    FIX::Message::Message(FIX::Message const &)\n"
-    "    FIX::Message::Message(FIX::Message &&)\n");
+    "    FIX::Message::Message(FIX::Message const &)\n");
   return 0;
 }
 
@@ -42679,9 +42859,10 @@ SWIGINTERN PyObject *_wrap_Message_replaceGroup(PyObject *self, PyObject *args) 
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -42689,7 +42870,7 @@ SWIGINTERN PyObject *_wrap_Message_replaceGroup(PyObject *self, PyObject *args) 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -42740,9 +42921,10 @@ SWIGINTERN PyObject *_wrap_Message_getGroup(PyObject *self, PyObject *args) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeClearing(*arg3);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (Group *) &((FIX::Message const *)arg1)->getGroup(arg2,*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -42750,7 +42932,7 @@ SWIGINTERN PyObject *_wrap_Message_getGroup(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -42799,9 +42981,10 @@ SWIGINTERN PyObject *_wrap_Message_removeGroup__SWIG_0(PyObject *self, Py_ssize_
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -42809,7 +42992,7 @@ SWIGINTERN PyObject *_wrap_Message_removeGroup__SWIG_0(PyObject *self, Py_ssize_
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -42850,9 +43033,10 @@ SWIGINTERN PyObject *_wrap_Message_removeGroup__SWIG_1(PyObject *self, Py_ssize_
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeGroup((FIX::Group const &)*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -42860,7 +43044,7 @@ SWIGINTERN PyObject *_wrap_Message_removeGroup__SWIG_1(PyObject *self, Py_ssize_
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -43984,9 +44168,10 @@ SWIGINTERN PyObject *_wrap_Message_reverseRoute(PyObject *self, PyObject *args) 
   }
   arg2 = reinterpret_cast< FIX::Header * >(argp2);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::HeaderGroups views(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->reverseRoute((FIX::Header const &)*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -43994,7 +44179,7 @@ SWIGINTERN PyObject *_wrap_Message_reverseRoute(PyObject *self, PyObject *args) 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -44037,9 +44222,10 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_0(PyObject *self, Py_ssize_t 
     arg2 = ptr;
   }
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeClearingMessage(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->setString((std::string const &)*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -44047,7 +44233,7 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_0(PyObject *self, Py_ssize_t 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -44116,9 +44302,10 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_1(PyObject *self, Py_ssize_t 
   } 
   arg3 = static_cast< bool >(val3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeClearingMessage(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->setString((std::string const &)*arg2,arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -44126,7 +44313,7 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_1(PyObject *self, Py_ssize_t 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -44207,9 +44394,10 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_2(PyObject *self, Py_ssize_t 
   }
   arg4 = reinterpret_cast< FIX::DataDictionary * >(argp4);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeClearingMessage(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->setString((std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -44217,7 +44405,7 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_2(PyObject *self, Py_ssize_t 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -44310,9 +44498,10 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_3(PyObject *self, Py_ssize_t 
   }
   arg5 = reinterpret_cast< FIX::DataDictionary * >(argp5);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeClearingMessage(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->setString((std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4,(FIX::DataDictionary const *)arg5);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -44320,7 +44509,7 @@ SWIGINTERN PyObject *_wrap_Message_setString__SWIG_3(PyObject *self, Py_ssize_t 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -44635,9 +44824,10 @@ SWIGINTERN PyObject *_wrap_Message_setStringHeader(PyObject *self, PyObject *arg
     arg2 = ptr;
   }
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeClearingMessage(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (bool)(arg1)->setStringHeader((std::string const &)*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -44645,7 +44835,7 @@ SWIGINTERN PyObject *_wrap_Message_setStringHeader(PyObject *self, PyObject *arg
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -45688,9 +45878,10 @@ SWIGINTERN PyObject *_wrap_Message_clear(PyObject *self, PyObject *args) {
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeClearingMessage(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->clear();
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -45698,7 +45889,7 @@ SWIGINTERN PyObject *_wrap_Message_clear(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -47196,9 +47387,10 @@ SWIGINTERN PyObject *_wrap_Group_replaceGroup(PyObject *self, PyObject *args) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -47206,7 +47398,7 @@ SWIGINTERN PyObject *_wrap_Group_replaceGroup(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -47257,9 +47449,10 @@ SWIGINTERN PyObject *_wrap_Group_getGroup(PyObject *self, PyObject *args) {
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeGettingGroup(*arg1, arg2, arg3->field(), *arg3);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (FIX::Group *) &((FIX::Group const *)arg1)->getGroup(arg2,*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -47267,7 +47460,7 @@ SWIGINTERN PyObject *_wrap_Group_getGroup(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -47316,9 +47509,10 @@ SWIGINTERN PyObject *_wrap_Group_removeGroup__SWIG_0(PyObject *self, Py_ssize_t 
   }
   arg3 = reinterpret_cast< FIX::Group * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -47326,7 +47520,7 @@ SWIGINTERN PyObject *_wrap_Group_removeGroup__SWIG_0(PyObject *self, Py_ssize_t 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -47367,9 +47561,10 @@ SWIGINTERN PyObject *_wrap_Group_removeGroup__SWIG_1(PyObject *self, Py_ssize_t 
   }
   arg2 = reinterpret_cast< FIX::Group * >(argp2);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->removeGroup((FIX::Group const &)*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -47377,7 +47572,7 @@ SWIGINTERN PyObject *_wrap_Group_removeGroup__SWIG_1(PyObject *self, Py_ssize_t 
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -135793,9 +135988,10 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_0(PyObject *self, Py_ssize
     arg2 = ptr;
   }
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::HeaderGroups views(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -135803,7 +135999,7 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_0(PyObject *self, Py_ssize
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -135851,9 +136047,10 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_1(PyObject *self, Py_ssize
   }
   arg1 = reinterpret_cast< FIX::Message * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::HeaderGroups views(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (bool)FIX::Session::sendToTarget(*arg1);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -135861,7 +136058,7 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_1(PyObject *self, Py_ssize
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -135902,9 +136099,10 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_2(PyObject *self, Py_ssize
   }
   arg2 = reinterpret_cast< FIX::SessionID * >(argp2);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::HeaderGroups views(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SessionID const &)*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -135912,7 +136110,7 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_2(PyObject *self, Py_ssize
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -135977,9 +136175,10 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_3(PyObject *self, Py_ssize
     arg4 = ptr;
   }
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::HeaderGroups views(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SenderCompID const &)*arg2,(FIX::TargetCompID const &)*arg3,(std::string const &)*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -135987,7 +136186,7 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_3(PyObject *self, Py_ssize
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -136057,9 +136256,10 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_4(PyObject *self, Py_ssize
   }
   arg3 = reinterpret_cast< FIX::TargetCompID * >(argp3);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::HeaderGroups views(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SenderCompID const &)*arg2,(FIX::TargetCompID const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -136067,7 +136267,7 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_4(PyObject *self, Py_ssize
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -136136,9 +136336,10 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_5(PyObject *self, Py_ssize
     arg4 = ptr;
   }
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::HeaderGroups views(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -136146,7 +136347,7 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_5(PyObject *self, Py_ssize
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -136256,9 +136457,10 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_6(PyObject *self, Py_ssize
     arg3 = ptr;
   }
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::HeaderGroups views(*arg1);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2,(std::string const &)*arg3);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -136266,7 +136468,7 @@ SWIGINTERN PyObject *_wrap_Session_sendToTarget__SWIG_6(PyObject *self, Py_ssize
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -139236,9 +139438,10 @@ SWIGINTERN PyObject *_wrap_Session_send(PyObject *self, PyObject *args) {
   }
   arg2 = reinterpret_cast< FIX::Message * >(argp2);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixViews::HeaderGroups views(*arg2);
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             result = (bool)(arg1)->send(*arg2);
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -139246,7 +139449,7 @@ SWIGINTERN PyObject *_wrap_Session_send(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -167276,6 +167479,31 @@ SWIGINTERN PyObject *NullStore_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObject
   return SWIG_Python_InitShadowInstance(args);
 }
 
+SWIGINTERN PyObject *_wrap__viewCount(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  size_t result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "_viewCount", 0, 0, 0)) SWIG_fail;
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      result = quickfixTestViewCount();
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_size_t(static_cast< size_t >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 static PyMethodDef SwigMethods[] = {
 	 { "_endView", _wrap__endView, METH_O, NULL},
 	 { "delete_SwigPyIterator", _wrap_delete_SwigPyIterator, METH_O, NULL},
@@ -168406,6 +168634,7 @@ static PyMethodDef SwigMethods[] = {
 	 { "delete_NullStore", _wrap_delete_NullStore, METH_O, NULL},
 	 { "NullStore_swigregister", NullStore_swigregister, METH_O, NULL},
 	 { "NullStore_swiginit", NullStore_swiginit, METH_VARARGS, NULL},
+	 { "_viewCount", _wrap__viewCount, METH_NOARGS, NULL},
 	 { NULL, NULL, 0, NULL }
 };
 

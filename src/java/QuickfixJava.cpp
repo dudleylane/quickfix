@@ -1003,6 +1003,12 @@ std::string detailOf(JNIEnv *jenv, jthrowable error)
 int fieldOf(JNIEnv *jenv, jthrowable error) { return jenv->GetIntField(error, g_field); }
 } // namespace QuickfixJava
 
+namespace QuickfixViews
+{
+// The view registry's (after %include ../quickfix.i, below): keeps the JVM, and finds Views.end.
+bool load(JavaVM *vm, JNIEnv *jenv);
+}
+
 extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *)
 {
   JNIEnv *jenv = nullptr;
@@ -1031,7 +1037,7 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *)
   jclass base = QuickfixJava::exceptionClass("FIXException").cls;
   QuickfixJava::g_detail = jenv->GetFieldID(base, "detail", "Ljava/lang/String;");
   QuickfixJava::g_field = jenv->GetFieldID(base, "field", "I");
-  if (!QuickfixJava::g_detail || !QuickfixJava::g_field)
+  if (!QuickfixJava::g_detail || !QuickfixJava::g_field || !QuickfixViews::load(vm, jenv))
   {
     return JNI_ERR;
   }
@@ -1475,11 +1481,18 @@ bool tryPythonException(std::function<bool()> const& function)
 #endif
 
 #ifdef SWIGRUBY
+namespace QuickfixViews
+{
+void redeliverError();
+}
+
 template<typename Exception>
 void raiseRubyException(Exception const& e, swig_type_info* swigType)
 {
-  // A kill that landed in a callback outranks what the engine threw (#147).
+  // A kill that landed in a callback outranks what the engine threw (#147), and so does an exception that landed
+  // while a call ended views (#196; ruby/quickfix.i).
   redeliverKill();
+  QuickfixViews::redeliverError();
   rb_exc_raise(SWIG_Ruby_ExceptionType(swigType, SWIG_NewPointerObj((new Exception(static_cast<const Exception&>(e))),swigType,SWIG_POINTER_OWN)));
 }
 
@@ -1677,12 +1690,175 @@ SWIGINTERN jint std_set_Sl_FIX_SessionID_Sg__sizeImpl(std::set< FIX::SessionID >
 SWIGINTERN bool std_set_Sl_FIX_SessionID_Sg__hasNextImpl(std::set< FIX::SessionID > const *self,std::set< FIX::SessionID >::iterator const &itr){
         return (itr != self->end());
       }
+
+#include <algorithm>
+#include <vector>
+namespace QuickfixViews
+{
+typedef std::vector<const void *> Addresses;
+
+// Each binding's own: whether any group view is registered, and ending the views registered at these addresses.
+// endViews() leaves the language's pending error, if there is one, as it found it. (Not end(): an unqualified call
+// with a std::vector finds std::end too, and std::end(Container &) binds a non-const vector more tightly.)
+bool anyGroupViews();
+void endViews(const Addresses &addresses);
+
+// Every group under map, at any depth; not map itself.
+inline void addGroupsUnder(const FIX::FieldMap &map, Addresses &addresses)
+{
+  for (FIX::FieldMap::g_const_iterator tag = map.g_begin(); tag != map.g_end(); ++tag)
+  {
+    for (const FIX::FieldMap *group : tag->second)
+    {
+      addresses.push_back(group);
+      addGroupsUnder(*group, addresses);
+    }
+  }
+}
+
+// Group num at tag, or null.
+inline const FIX::FieldMap *groupAt(const FIX::FieldMap &map, int num, int tag)
+{
+  if (num <= 0 || map.groupCount(tag) < static_cast<size_t>(num))
+    return nullptr;
+  return &map.getGroupRef(num, tag);
+}
+
+// clear(), and Message's, Header's and Trailer's getGroup(num, group), which clear their argument before they look
+// (Message.h): every group under map.
+inline void beforeClearing(const FIX::FieldMap &map)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(map, addresses);
+  endViews(addresses);
+}
+
+// Message's clear(), setString() and setStringHeader(), which clear first: the header's, body's and trailer's groups.
+inline void beforeClearingMessage(const FIX::Message &message)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(message.getHeader(), addresses);
+  addGroupsUnder(message, addresses);
+  addGroupsUnder(message.getTrailer(), addresses);
+  endViews(addresses);
+}
+
+// removeGroup(num, tag): group num, and every group under it.
+inline void beforeRemovingGroup(const FIX::FieldMap &map, int num, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  if (const FIX::FieldMap *group = groupAt(map, num, tag))
+  {
+    Addresses addresses(1, group);
+    addGroupsUnder(*group, addresses);
+    endViews(addresses);
+  }
+}
+
+// removeGroup(tag): every group at tag, and every group under them.
+inline void beforeRemovingGroups(const FIX::FieldMap &map, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  for (size_t num = 1, count = map.groupCount(tag); num <= count; ++num)
+  {
+    const FIX::FieldMap &group = map.getGroupRef(static_cast<int>(num), tag);
+    addresses.push_back(&group);
+    addGroupsUnder(group, addresses);
+  }
+  endViews(addresses);
+}
+
+// removeField(tag) removes tag's groups with the field, and only when the field is set.
+inline void beforeRemovingField(const FIX::FieldMap &map, int tag)
+{
+  if (map.isSetField(tag))
+    beforeRemovingGroups(map, tag);
+}
+
+// replaceGroup(num, ...) assigns over group num: the group stays, and the groups under it go.
+inline void beforeReplacingGroup(const FIX::FieldMap &map, int num, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  if (const FIX::FieldMap *group = groupAt(map, num, tag))
+  {
+    Addresses addresses;
+    addGroupsUnder(*group, addresses);
+    endViews(addresses);
+  }
+}
+
+// FieldMap's and Group's getGroup(num, ..., group) assign group num over group, and throw FieldNotFound first,
+// leaving group as it was, when there is none.
+inline void beforeGettingGroup(const FIX::FieldMap &map, int num, int tag, const FIX::FieldMap &group)
+{
+  if (groupAt(map, num, tag))
+    beforeClearing(group);
+}
+
+// swap(rhs): each map's groups pass to the other, with its arena, so a view would keep the wrong message alive.
+inline void beforeSwapping(const FIX::FieldMap &map, const FIX::FieldMap &rhs)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(map, addresses);
+  addGroupsUnder(rhs, addresses);
+  endViews(addresses);
+}
+
+// Message's reverseRoute(), and Session's send() and sendToTarget() on their message, remove routing and resend
+// fields from its header, and the groups at those tags with them (Message.cpp, Session.cpp). Rather than mirror
+// their lists, which would go stale without a word, this compares the header's groups before and after the call,
+// also when the call throws. Nothing in the send path removes from the message after toApp or toAdmin returns, so
+// deciding before the call that no view needs the comparison holds for a view a callback takes.
+class HeaderGroups
+{
+public:
+  explicit HeaderGroups(const FIX::Message &message) : m_message(anyGroupViews() ? &message : nullptr)
+  {
+    if (m_message)
+      addGroupsUnder(message.getHeader(), m_before);
+  }
+  ~HeaderGroups()
+  {
+    if (!m_message || m_before.empty())
+      return;
+    try
+    {
+      Addresses after;
+      addGroupsUnder(m_message->getHeader(), after);
+      std::sort(after.begin(), after.end());
+      Addresses gone;
+      for (const void *address : m_before)
+        if (!std::binary_search(after.begin(), after.end(), address))
+          gone.push_back(address);
+      if (!gone.empty())
+        endViews(gone);
+    }
+    catch (...)
+    {
+    }
+  }
+  HeaderGroups(const HeaderGroups &) = delete;
+  HeaderGroups &operator=(const HeaderGroups &) = delete;
+
+private:
+  const FIX::Message *m_message;
+  Addresses m_before;
+};
+}
+
 SWIGINTERN std::string FIX_FieldBase___str__(FIX::FieldBase *self){
     return self->getFixString();
   }
-
-#include <memory>
-
 SWIGINTERN QuickfixBytes FIX_FieldMap_getFieldBytes(FIX::FieldMap const *self,int tag){ return self->getField(tag); }
 SWIGINTERN void FIX_FieldMap_setFieldBytes(FIX::FieldMap *self,int tag,QuickfixBytes const &value){ self->setField(tag, value); }
 SWIGINTERN QuickfixBytes FIX_Message_toBytes(FIX::Message const *self){ return self->toString(); }
@@ -1690,6 +1866,8 @@ SWIGINTERN void FIX_Message_setBytes__SWIG_0(FIX::Message *self,QuickfixBytes co
 SWIGINTERN void FIX_Message_setBytes__SWIG_2(FIX::Message *self,QuickfixBytes const &message,bool validate,FIX::DataDictionary const *dictionary){
     self->setString(message, validate, dictionary);
   }
+SWIGINTERN std::string FIX_Message_getHeaderField(FIX::Message const *self,int tag){ return self->getHeader().getField(tag); }
+SWIGINTERN void FIX_Message_setHeaderField(FIX::Message *self,int tag,std::string const &value){ self->getHeader().setField(tag, value); }
 SWIGINTERN std::string FIX_Message___str__(FIX::Message *self){
     return self->toString();
   }
@@ -1720,11 +1898,248 @@ SWIGINTERN int FIX_DataDictionary_getGroupDelimiter(FIX::DataDictionary const *s
     const FIX::DataDictionary *group = nullptr;
     return self->getGroup(msg, field, delim, group) ? delim : 0;
   }
-SWIGINTERN FIX::DataDictionary const *FIX_DataDictionary_getGroupDictionary(FIX::DataDictionary const *self,std::string const &msg,int field){
+SWIGINTERN FIX::DataDictionary *FIX_DataDictionary_getGroupDictionary(FIX::DataDictionary const *self,std::string const &msg,int field){
     int delim = 0;
     const FIX::DataDictionary *group = nullptr;
-    return self->getGroup(msg, field, delim, group) ? group : nullptr;
+    return self->getGroup(msg, field, delim, group) && group ? new FIX::DataDictionary(*group) : nullptr;
   }
+
+#include <atomic>
+#include <mutex>
+#include <unordered_map>
+
+namespace QuickfixViews
+{
+struct Entry
+{
+  jweak view;
+  bool group;
+};
+static JavaVM *s_vm = nullptr;
+static jclass s_class = nullptr;  // Views
+static jmethodID s_end = nullptr; // Views.end(Object)
+static std::mutex s_mutex;
+static std::unordered_multimap<const void *, Entry> s_entries;
+static size_t s_groupEntries = 0;
+static size_t s_pruneAt = 64;
+static size_t s_idle = 0;
+static std::atomic<size_t> s_groups{0};
+static std::atomic<size_t> s_all{0};
+
+bool load(JavaVM *vm, JNIEnv *jenv)
+{
+  s_vm = vm;
+  jclass local = jenv->FindClass("com/dudleylane/quickfix/Views");
+  if (!local)
+    return false;
+  s_class = static_cast<jclass>(jenv->NewGlobalRef(local));
+  jenv->DeleteLocalRef(local);
+  s_end = s_class ? jenv->GetStaticMethodID(s_class, "end", "(Ljava/lang/Object;)Z") : nullptr;
+  return s_end != nullptr;
+}
+
+// Under s_mutex, after a change to the map.
+static void publish()
+{
+  s_groups.store(s_groupEntries, std::memory_order_release);
+  s_all.store(s_entries.size(), std::memory_order_release);
+}
+
+// Under s_mutex: drops the entries whose views the GC has collected.
+static void prune(JNIEnv *jenv)
+{
+  for (auto entry = s_entries.begin(); entry != s_entries.end();)
+  {
+    if (jenv->IsSameObject(entry->second.view, nullptr))
+    {
+      jenv->DeleteWeakGlobalRef(entry->second.view);
+      s_groupEntries -= entry->second.group;
+      entry = s_entries.erase(entry);
+    }
+    else
+    {
+      ++entry;
+    }
+  }
+  s_idle = 0;
+  publish();
+}
+
+bool anyGroupViews() { return s_groups.load(std::memory_order_acquire) != 0; }
+static bool anyViews() { return s_all.load(std::memory_order_acquire) != 0; }
+
+// A Java exception pending on entry is set aside, since most JNI calls may not be made under one, and is pending
+// again on every exit.
+class Pending
+{
+public:
+  explicit Pending(JNIEnv *jenv) : m_jenv(jenv), m_error(jenv->ExceptionOccurred())
+  {
+    if (m_error)
+      m_jenv->ExceptionClear();
+  }
+  ~Pending()
+  {
+    if (m_error)
+    {
+      m_jenv->Throw(m_error);
+      m_jenv->DeleteLocalRef(m_error);
+    }
+  }
+  bool any() const { return m_error != nullptr; }
+  Pending(const Pending &) = delete;
+  Pending &operator=(const Pending &) = delete;
+
+private:
+  JNIEnv *m_jenv;
+  jthrowable m_error;
+};
+
+// Throws, once it has ended the rest, if a view could not be ended (Views.end said so, or threw), so that the call
+// which would destroy its object does not run; but not over an exception that was pending on entry, which only the
+// comparison after send() and reverseRoute() can meet, and that comparison runs after the call.
+void endViews(const Addresses &addresses)
+{
+  if (addresses.empty())
+    return;
+  JNIEnv *jenv = nullptr;
+  if (s_vm->GetEnv(reinterpret_cast<void **>(&jenv), JNI_VERSION_1_8) != JNI_OK)
+    throw FIX::RuntimeError("the views of the objects this call destroys could not be ended");
+  Pending pending(jenv);
+  std::vector<jweak> doomed;
+  {
+    std::lock_guard<std::mutex> lock(s_mutex);
+    size_t count = 0;
+    for (const void *address : addresses)
+      count += s_entries.count(address);
+    if (!count)
+    {
+      if (++s_idle >= s_entries.size())
+        prune(jenv);
+      return;
+    }
+    // Reserved first, so that nothing leaves the map unless all of it can. An address can be given twice.
+    doomed.reserve(count);
+    for (const void *address : addresses)
+    {
+      auto range = s_entries.equal_range(address);
+      for (auto entry = range.first; entry != range.second; ++entry)
+      {
+        doomed.push_back(entry->second.view);
+        s_groupEntries -= entry->second.group;
+      }
+      s_entries.erase(range.first, range.second);
+    }
+    s_idle = 0;
+    publish();
+  }
+  bool failed = false;
+  for (jweak weak : doomed)
+  {
+    jobject view = jenv->NewLocalRef(weak);
+    jenv->DeleteWeakGlobalRef(weak);
+    if (!view)
+      continue;
+    jboolean ended = jenv->CallStaticBooleanMethod(s_class, s_end, view);
+    if (jenv->ExceptionCheck())
+    {
+      jenv->ExceptionClear();
+      ended = JNI_FALSE;
+    }
+    jenv->DeleteLocalRef(view);
+    failed = failed || !ended;
+  }
+  if (failed && !pending.any())
+    throw FIX::RuntimeError("the views of the objects this call destroys could not be ended");
+}
+
+// Java's delete() on a proxy that owns its object (QUICKFIX_VIEWS_EXCEPTION above): the object, and every group in
+// it. A message's header and trailer are its members.
+inline void beforeDeleting(const FIX::FieldMap &map)
+{
+  if (!anyViews())
+    return;
+  Addresses addresses(1, &map);
+  addGroupsUnder(map, addresses);
+  endViews(addresses);
+}
+
+inline void beforeDeletingMessage(const FIX::Message &message)
+{
+  if (!anyViews())
+    return;
+  Addresses addresses{&message, &message.getHeader(), &message.getTrailer()};
+  addGroupsUnder(message.getHeader(), addresses);
+  addGroupsUnder(message, addresses);
+  addGroupsUnder(message.getTrailer(), addresses);
+  endViews(addresses);
+}
+
+// Every dictionary get() can return: SessionSettings never erases one before its destructor.
+inline void beforeDeletingSettings(const FIX::SessionSettings &settings)
+{
+  if (!anyViews())
+    return;
+  Addresses addresses(1, &settings.get());
+  for (const FIX::SessionID &sessionID : settings.getSessions())
+    addresses.push_back(&settings.get(sessionID));
+  endViews(addresses);
+}
+} // namespace QuickfixViews
+
+// Views.register: view, a proxy of the object at cPtr, is registered there. OutOfMemoryError if it cannot be, and
+// the view is then not handed out.
+extern "C" JNIEXPORT void JNICALL Java_com_dudleylane_quickfix_Views_register(JNIEnv *jenv, jclass, jobject view,
+                                                                              jlong cPtr, jboolean group)
+{
+  using namespace QuickfixViews;
+  jweak weak = jenv->NewWeakGlobalRef(view);
+  if (!weak)
+  {
+    if (!jenv->ExceptionCheck())
+      SWIG_JavaThrowException(jenv, SWIG_JavaOutOfMemoryError, "a view could not be registered");
+    return;
+  }
+  try
+  {
+    std::lock_guard<std::mutex> lock(s_mutex);
+    s_entries.emplace(reinterpret_cast<const void *>(cPtr), Entry{weak, group == JNI_TRUE});
+    s_groupEntries += group == JNI_TRUE;
+    if (s_entries.size() >= s_pruneAt)
+    {
+      prune(jenv);
+      s_pruneAt = std::max<size_t>(64, 2 * s_entries.size());
+    }
+    publish();
+  }
+  catch (...)
+  {
+    jenv->DeleteWeakGlobalRef(weak);
+    SWIG_JavaThrowException(jenv, SWIG_JavaOutOfMemoryError, "a view could not be registered");
+  }
+}
+
+// For the tests, by reflection, once the views the GC has collected are dropped: whether view is registered
+// (Views.registered), and how many views are registered at cPtr (Views.countAt).
+extern "C" JNIEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_Views_registered(JNIEnv *jenv, jclass, jobject view)
+{
+  using namespace QuickfixViews;
+  std::lock_guard<std::mutex> lock(s_mutex);
+  prune(jenv);
+  for (const auto &entry : s_entries)
+    if (jenv->IsSameObject(entry.second.view, view))
+      return JNI_TRUE;
+  return JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jlong JNICALL Java_com_dudleylane_quickfix_Views_countAt(JNIEnv *jenv, jclass, jlong cPtr)
+{
+  using namespace QuickfixViews;
+  std::lock_guard<std::mutex> lock(s_mutex);
+  prune(jenv);
+  return static_cast<jlong>(s_entries.count(reinterpret_cast<const void *>(cPtr)));
+}
+
 
 
 /* ---------------------------------------------------
@@ -2181,7 +2596,7 @@ void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &ar
       if (swigerror)
       {
         jenv->ExceptionClear();
-        /*@SWIG:quickfix.i,265,QUICKFIX_JAVA_RETHROW@*/
+        /*@SWIG:quickfix.i,290,QUICKFIX_JAVA_RETHROW@*/
         if (QuickfixJava::isA(jenv, swigerror,"DoNotSend")) {
           throw FIX::DoNotSend(QuickfixJava::detailOf(jenv, swigerror)); 
         }
@@ -2216,23 +2631,23 @@ void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID
       if (swigerror)
       {
         jenv->ExceptionClear();
-        /*@SWIG:quickfix.i,268,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"FieldNotFound"))
         {
           throw FIX::FieldNotFound(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
-        /*@SWIG@*/ /*@SWIG:quickfix.i,268,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        /*@SWIG@*/ /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"IncorrectDataFormat"))
         {
           throw FIX::IncorrectDataFormat(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
         /*@SWIG@*/
-        /*@SWIG:quickfix.i,268,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"IncorrectTagValue"))
         {
           throw FIX::IncorrectTagValue(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
-        /*@SWIG@*/ /*@SWIG:quickfix.i,265,QUICKFIX_JAVA_RETHROW@*/
+        /*@SWIG@*/ /*@SWIG:quickfix.i,290,QUICKFIX_JAVA_RETHROW@*/
         if (QuickfixJava::isA(jenv, swigerror,"RejectLogon")) {
           throw FIX::RejectLogon(QuickfixJava::detailOf(jenv, swigerror)); 
         }
@@ -2267,23 +2682,23 @@ void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID c
       if (swigerror)
       {
         jenv->ExceptionClear();
-        /*@SWIG:quickfix.i,268,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"FieldNotFound"))
         {
           throw FIX::FieldNotFound(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
-        /*@SWIG@*/ /*@SWIG:quickfix.i,268,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        /*@SWIG@*/ /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"IncorrectDataFormat"))
         {
           throw FIX::IncorrectDataFormat(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
         /*@SWIG@*/
-        /*@SWIG:quickfix.i,268,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"IncorrectTagValue"))
         {
           throw FIX::IncorrectTagValue(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
-        /*@SWIG@*/ /*@SWIG:quickfix.i,265,QUICKFIX_JAVA_RETHROW@*/
+        /*@SWIG@*/ /*@SWIG:quickfix.i,290,QUICKFIX_JAVA_RETHROW@*/
         if (QuickfixJava::isA(jenv, swigerror,"UnsupportedMessageType")) {
           throw FIX::UnsupportedMessageType(QuickfixJava::detailOf(jenv, swigerror)); 
         }
@@ -12729,6 +13144,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1FieldMa
   {
     try
     {
+      QuickfixViews::beforeDeleting(*arg1);
       delete arg1;
     }
     catch (const FIX::Exception &e)
@@ -13201,6 +13617,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1remov
   {
     try
     {
+      QuickfixViews::beforeRemovingField(*arg1, arg2);
       (arg1)->removeField(arg2);
     }
     catch (const FIX::Exception &e)
@@ -13337,6 +13754,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1repla
   {
     try
     {
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3);
       (arg1)->replaceGroup(arg2,arg3,(FIX::FieldMap const &)*arg4);
     }
     catch (const FIX::Exception &e)
@@ -13385,6 +13803,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1getG
   {
     try
     {
+      QuickfixViews::beforeGettingGroup(*arg1, arg2, arg3, *arg4);
       result = (FIX::FieldMap *) &((FIX::FieldMap const *)arg1)->getGroup(arg2,arg3,*arg4);
     }
     catch (const FIX::Exception &e)
@@ -13512,6 +13931,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1remov
   {
     try
     {
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3);
       (arg1)->removeGroup(arg2,arg3);
     }
     catch (const FIX::Exception &e)
@@ -13549,6 +13969,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1remov
   {
     try
     {
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2);
       (arg1)->removeGroup(arg2);
     }
     catch (const FIX::Exception &e)
@@ -13709,6 +14130,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1clear
   {
     try
     {
+      QuickfixViews::beforeClearing(*arg1);
       (arg1)->clear();
     }
     catch (const FIX::Exception &e)
@@ -13751,6 +14173,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_FieldMap_1swap(
   {
     try
     {
+      QuickfixViews::beforeSwapping(*arg1, *arg2);
       (arg1)->swap(*arg2);
     }
     catch (const FIX::Exception &e)
@@ -14529,6 +14952,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1replace
   {
     try
     {
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
       (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
     }
     catch (const FIX::Exception &e)
@@ -14575,6 +14999,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1getGro
   {
     try
     {
+      QuickfixViews::beforeClearing(*arg3);
       result = (FIX::Group *) &((FIX::Header const *)arg1)->getGroup(arg2,*arg3);
     }
     catch (const FIX::Exception &e)
@@ -14621,6 +15046,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1removeG
   {
     try
     {
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
       (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
     }
     catch (const FIX::Exception &e)
@@ -14663,6 +15089,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Header_1removeG
   {
     try
     {
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
       (arg1)->removeGroup((FIX::Group const &)*arg2);
     }
     catch (const FIX::Exception &e)
@@ -14791,6 +15218,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Header(
   {
     try
     {
+      QuickfixViews::beforeDeleting(*arg1);
       delete arg1;
     }
     catch (const FIX::Exception &e)
@@ -14947,6 +15375,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1replac
   {
     try
     {
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
       (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
     }
     catch (const FIX::Exception &e)
@@ -14993,6 +15422,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1getGr
   {
     try
     {
+      QuickfixViews::beforeClearing(*arg3);
       result = (FIX::Group *) &((FIX::Trailer const *)arg1)->getGroup(arg2,*arg3);
     }
     catch (const FIX::Exception &e)
@@ -15039,6 +15469,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1remove
   {
     try
     {
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
       (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
     }
     catch (const FIX::Exception &e)
@@ -15081,6 +15512,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Trailer_1remove
   {
     try
     {
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
       (arg1)->removeGroup((FIX::Group const &)*arg2);
     }
     catch (const FIX::Exception &e)
@@ -15209,6 +15641,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Trailer
   {
     try
     {
+      QuickfixViews::beforeDeleting(*arg1);
       delete arg1;
     }
     catch (const FIX::Exception &e)
@@ -15950,6 +16383,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Message
   {
     try
     {
+      QuickfixViews::beforeDeletingMessage(*arg1);
       delete arg1;
     }
     catch (const FIX::Exception &e)
@@ -16078,6 +16512,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1replac
   {
     try
     {
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
       (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
     }
     catch (const FIX::Exception &e)
@@ -16124,6 +16559,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getGr
   {
     try
     {
+      QuickfixViews::beforeClearing(*arg3);
       result = (FIX::Group *) &((FIX::Message const *)arg1)->getGroup(arg2,*arg3);
     }
     catch (const FIX::Exception &e)
@@ -16170,6 +16606,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1remove
   {
     try
     {
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
       (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
     }
     catch (const FIX::Exception &e)
@@ -16212,6 +16649,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1remove
   {
     try
     {
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
       (arg1)->removeGroup((FIX::Group const &)*arg2);
     }
     catch (const FIX::Exception &e)
@@ -16792,6 +17230,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1revers
   {
     try
     {
+      QuickfixViews::HeaderGroups views(*arg1);
       (arg1)->reverseRoute((FIX::Header const &)*arg2);
     }
     catch (const FIX::Exception &e)
@@ -16837,6 +17276,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setStr
   {
     try
     {
+      QuickfixViews::beforeClearingMessage(*arg1);
       (arg1)->setString((std::string const &)*arg2);
     }
     catch (const FIX::Exception &e)
@@ -16884,6 +17324,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setStr
   {
     try
     {
+      QuickfixViews::beforeClearingMessage(*arg1);
       (arg1)->setString((std::string const &)*arg2,arg3);
     }
     catch (const FIX::Exception &e)
@@ -16934,6 +17375,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setStr
   {
     try
     {
+      QuickfixViews::beforeClearingMessage(*arg1);
       (arg1)->setString((std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4);
     }
     catch (const FIX::Exception &e)
@@ -16987,6 +17429,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setStr
   {
     try
     {
+      QuickfixViews::beforeClearingMessage(*arg1);
       (arg1)->setString((std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4,(FIX::DataDictionary const *)arg5);
     }
     catch (const FIX::Exception &e)
@@ -17116,6 +17559,7 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1se
   {
     try
     {
+      QuickfixViews::beforeClearingMessage(*arg1);
       result = (bool)(arg1)->setStringHeader((std::string const &)*arg2);
     }
     catch (const FIX::Exception &e)
@@ -17731,6 +18175,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1clear(
   {
     try
     {
+      QuickfixViews::beforeClearingMessage(*arg1);
       (arg1)->clear();
     }
     catch (const FIX::Exception &e)
@@ -18380,6 +18825,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setByt
   {
     try
     {
+      QuickfixViews::beforeClearingMessage(*arg1);
       FIX_Message_setBytes__SWIG_0(arg1,(std::string const &)*arg2,arg3);
     }
     catch (const FIX::Exception &e)
@@ -18427,6 +18873,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setByt
   {
     try
     {
+      QuickfixViews::beforeClearingMessage(*arg1);
       FIX_Message_setBytes__SWIG_0(arg1,(std::string const &)*arg2);
     }
     catch (const FIX::Exception &e)
@@ -18479,7 +18926,96 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setByt
   {
     try
     {
+      QuickfixViews::beforeClearingMessage(*arg1);
       FIX_Message_setBytes__SWIG_2(arg1,(std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return ;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return ;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return ;
+    }
+  }
+}
+
+
+SWIGEXPORT jstring JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1getHeaderField(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2) {
+  jstring jresult = 0 ;
+  FIX::Message *arg1 = (FIX::Message *) 0 ;
+  int arg2 ;
+  std::string result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::Message **)&jarg1; 
+  arg2 = (int)jarg2; 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_getHeaderField: its object was deleted, or the view ended");
+    return 0;
+  }
+  {
+    try
+    {
+      result = FIX_Message_getHeaderField((FIX::Message const *)arg1,arg2);
+    }
+    catch (const FIX::Exception &e)
+    {
+      QuickfixJava::throwToJava(jenv, e);
+      return 0;
+    }
+    catch (const std::exception &e)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, e.what());
+      return 0;
+    }
+    catch (...)
+    {
+      SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "unknown C++ exception");
+      return 0;
+    }
+  }
+  jresult = jenv->NewStringUTF((&result)->c_str()); 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Message_1setHeaderField(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jint jarg2, jstring jarg3) {
+  FIX::Message *arg1 = (FIX::Message *) 0 ;
+  int arg2 ;
+  std::string *arg3 = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(FIX::Message **)&jarg1; 
+  arg2 = (int)jarg2; 
+  if(!jarg3) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "null string");
+    return ;
+  }
+  const char *arg3_pstr = (const char *)jenv->GetStringUTFChars(jarg3, 0); 
+  if (!arg3_pstr) return ;
+  std::string arg3_str(arg3_pstr);
+  arg3 = &arg3_str;
+  jenv->ReleaseStringUTFChars(jarg3, arg3_pstr); 
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "Message_setHeaderField: its object was deleted, or the view ended");
+    return ;
+  }
+  {
+    try
+    {
+      FIX_Message_setHeaderField(arg1,arg2,(std::string const &)*arg3);
     }
     catch (const FIX::Exception &e)
     {
@@ -18880,6 +19416,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1replaceG
   {
     try
     {
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
       (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
     }
     catch (const FIX::Exception &e)
@@ -18926,6 +19463,7 @@ SWIGEXPORT jlong JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1getGrou
   {
     try
     {
+      QuickfixViews::beforeGettingGroup(*arg1, arg2, arg3->field(), *arg3);
       result = (FIX::Group *) &((FIX::Group const *)arg1)->getGroup(arg2,*arg3);
     }
     catch (const FIX::Exception &e)
@@ -18972,6 +19510,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1removeGr
   {
     try
     {
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
       (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
     }
     catch (const FIX::Exception &e)
@@ -19014,6 +19553,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Group_1removeGr
   {
     try
     {
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
       (arg1)->removeGroup((FIX::Group const &)*arg2);
     }
     catch (const FIX::Exception &e)
@@ -19142,6 +19682,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Group(J
   {
     try
     {
+      QuickfixViews::beforeDeleting(*arg1);
       delete arg1;
     }
     catch (const FIX::Exception &e)
@@ -92699,6 +93240,7 @@ SWIGEXPORT void JNICALL Java_com_dudleylane_quickfix_quickfixJNI_delete_1Session
   {
     try
     {
+      QuickfixViews::beforeDeletingSettings(*arg1);
       delete arg1;
     }
     catch (const FIX::Exception &e)
@@ -93353,6 +93895,7 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
   {
     try
     {
+      QuickfixViews::HeaderGroups views(*arg1);
       result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2);
     }
     catch (const FIX::Exception &e)
@@ -93392,6 +93935,7 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
   {
     try
     {
+      QuickfixViews::HeaderGroups views(*arg1);
       result = (bool)FIX::Session::sendToTarget(*arg1);
     }
     catch (const FIX::Exception &e)
@@ -93438,6 +93982,7 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
   {
     try
     {
+      QuickfixViews::HeaderGroups views(*arg1);
       result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SessionID const &)*arg2);
     }
     catch (const FIX::Exception &e)
@@ -93501,6 +94046,7 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
   {
     try
     {
+      QuickfixViews::HeaderGroups views(*arg1);
       result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SenderCompID const &)*arg2,(FIX::TargetCompID const &)*arg3,(std::string const &)*arg4);
     }
     catch (const FIX::Exception &e)
@@ -93554,6 +94100,7 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
   {
     try
     {
+      QuickfixViews::HeaderGroups views(*arg1);
       result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SenderCompID const &)*arg2,(FIX::TargetCompID const &)*arg3);
     }
     catch (const FIX::Exception &e)
@@ -93623,6 +94170,7 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
   {
     try
     {
+      QuickfixViews::HeaderGroups views(*arg1);
       result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4);
     }
     catch (const FIX::Exception &e)
@@ -93682,6 +94230,7 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
   {
     try
     {
+      QuickfixViews::HeaderGroups views(*arg1);
       result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2,(std::string const &)*arg3);
     }
     catch (const FIX::Exception &e)
@@ -95951,6 +96500,7 @@ SWIGEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_quickfixJNI_Session_1se
   {
     try
     {
+      QuickfixViews::HeaderGroups views(*arg2);
       result = (bool)(arg1)->send(*arg2);
     }
     catch (const FIX::Exception &e)

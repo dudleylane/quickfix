@@ -17,7 +17,7 @@ public final class TestRunner {
     static final Class<?>[] SUITES = {FieldTests.class, MessageTests.class, SettingsTests.class,
                                       DataDictionaryTests.class, StoreTests.class, TransportTests.class,
                                       CallbackErrorTests.class, LifetimeTests.class, SessionIDTests.class,
-                                      ViewTests.class, ExceptionListTests.class, GeneratedTests.class,
+                                      ViewTests.class, EndedViewTests.class, ExceptionListTests.class, GeneratedTests.class,
                                       ExampleTests.class};
 
     public static void main(String[] args) throws Exception {

@@ -422,6 +422,8 @@ public class quickfixJNI {
   public final static native void Message_setBytes__SWIG_0(long jarg1, Message jarg1_, byte[] jarg2, boolean jarg3);
   public final static native void Message_setBytes__SWIG_1(long jarg1, Message jarg1_, byte[] jarg2);
   public final static native void Message_setBytes__SWIG_2(long jarg1, Message jarg1_, byte[] jarg2, boolean jarg3, long jarg4, DataDictionary jarg4_);
+  public final static native String Message_getHeaderField(long jarg1, Message jarg1_, int jarg2);
+  public final static native void Message_setHeaderField(long jarg1, Message jarg1_, int jarg2, String jarg3);
   public final static native String Message___str__(long jarg1, Message jarg1_);
   public final static native long identifyType(String jarg1);
   public final static native long new_Group__SWIG_0(int jarg1, int jarg2);

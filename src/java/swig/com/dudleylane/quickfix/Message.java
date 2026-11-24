@@ -48,6 +48,24 @@ public class Message extends FieldMap {
     super.delete();
   }
 
+  /**
+   * For a generated class's view(): message as that class, which make constructs from message's pointer. The view
+   * holds message, and is registered as a header view would be (Views.into). IllegalArgumentException if message's
+   * MsgType is not msgType, FieldNotFound if it has none, and NullPointerException if message is null, deleted or
+   * an ended view.
+   */
+  protected static <T extends Message> T typedView(Message message, String msgType, String name,
+                                                   java.util.function.LongFunction<T> make) {
+    String actual = message.getHeaderField(35);
+    if (!msgType.equals(actual)) {
+      throw new IllegalArgumentException("not a " + name + " (35=" + msgType + "): 35=" + actual);
+    }
+    long cPtr = getCPtr(message);
+    T view = make.apply(cPtr);
+    view.swigOwner = message;
+    return Views.into(message, view, cPtr);
+  }
+
   public Message() {
     this(quickfixJNI.new_Message__SWIG_0(), true);
   }
@@ -208,7 +226,7 @@ public class Message extends FieldMap {
     }
     Header view = new Header(cPtr, false);
     view.swigOwner = this;
-    return view;
+    return Views.into(this, view, cPtr);
   }
 
   public Trailer getTrailer() {
@@ -218,7 +236,7 @@ public class Message extends FieldMap {
     }
     Trailer view = new Trailer(cPtr, false);
     view.swigOwner = this;
-    return view;
+    return Views.into(this, view, cPtr);
   }
 
   public boolean hasValidStructure(SWIGTYPE_p_int tag) {
@@ -343,6 +361,14 @@ public class Message extends FieldMap {
 
   public void setBytes(byte[] message, boolean validate, DataDictionary dictionary) {
     quickfixJNI.Message_setBytes__SWIG_2(swigCPtr, this, message, validate, Proxies.cPtr(DataDictionary.getCPtr(dictionary), dictionary), dictionary);
+  }
+
+  protected String getHeaderField(int tag) {
+    return quickfixJNI.Message_getHeaderField(swigCPtr, this, tag);
+  }
+
+  protected void setHeaderField(int tag, String value) {
+    quickfixJNI.Message_setHeaderField(swigCPtr, this, tag, value);
   }
 
   public String __str__() {

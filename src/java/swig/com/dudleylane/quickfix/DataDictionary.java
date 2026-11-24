@@ -48,9 +48,6 @@ public class DataDictionary {
     }
   }
 
-  // What this proxy is a view into, if anything: kept reachable while this is (#194).
-  protected Object swigOwner;
-
   public DataDictionary() {
     this(quickfixJNI.new_DataDictionary__SWIG_0(), true);
   }
@@ -245,12 +242,7 @@ public class DataDictionary {
 
   public DataDictionary getGroupDictionary(String msg, int field) {
     long cPtr = quickfixJNI.DataDictionary_getGroupDictionary(swigCPtr, this, msg, field);
-    if (cPtr == 0) {
-      return null;
-    }
-    DataDictionary view = new DataDictionary(cPtr, false);
-    view.swigOwner = this;
-    return view;
+    return (cPtr == 0) ? null : new DataDictionary(cPtr, true);
   }
 
 }

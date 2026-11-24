@@ -153,6 +153,12 @@ std::string detailOf(JNIEnv *jenv, jthrowable error)
 int fieldOf(JNIEnv *jenv, jthrowable error) { return jenv->GetIntField(error, g_field); }
 } // namespace QuickfixJava
 
+namespace QuickfixViews
+{
+// The view registry's (after %include ../quickfix.i, below): keeps the JVM, and finds Views.end.
+bool load(JavaVM *vm, JNIEnv *jenv);
+}
+
 extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *)
 {
   JNIEnv *jenv = nullptr;
@@ -181,7 +187,7 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *)
   jclass base = QuickfixJava::exceptionClass("FIXException").cls;
   QuickfixJava::g_detail = jenv->GetFieldID(base, "detail", "Ljava/lang/String;");
   QuickfixJava::g_field = jenv->GetFieldID(base, "field", "I");
-  if (!QuickfixJava::g_detail || !QuickfixJava::g_field)
+  if (!QuickfixJava::g_detail || !QuickfixJava::g_field || !QuickfixViews::load(vm, jenv))
   {
     return JNI_ERR;
   }
@@ -225,10 +231,12 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *)
 %ignore FIX::SocketCloseFailed;
 
 // Every call into the engine: a C++ exception becomes the Java one, where it would otherwise reach the
-// JNI boundary and terminate the JVM.
-%exception {
+// JNI boundary and terminate the JVM. With decl, that call's, with BEFORE ahead of $action.
+%define QUICKFIX_JAVA_EXCEPTION(decl, BEFORE)
+%exception decl {
   try
   {
+    BEFORE
     $action
   }
   catch (const FIX::Exception &e)
@@ -247,6 +255,23 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *)
     return $null;
   }
 }
+%enddef
+QUICKFIX_JAVA_EXCEPTION(, )
+
+// A call that destroys what a view may point at (#196; ../quickfix.i): BEFORE ends those views first.
+%define QUICKFIX_VIEWS_EXCEPTION(decl, BEFORE)
+QUICKFIX_JAVA_EXCEPTION(decl, BEFORE)
+%enddef
+%define QUICKFIX_VIEWS_SESSION_EXCEPTION(decl, BEFORE)
+QUICKFIX_JAVA_EXCEPTION(decl, BEFORE)
+%enddef
+// And in Java, delete() on a proxy that owns its object, which frees it and everything in it.
+QUICKFIX_VIEWS_EXCEPTION(FIX::FieldMap::~FieldMap, QuickfixViews::beforeDeleting(*arg1);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Message::~Message, QuickfixViews::beforeDeletingMessage(*arg1);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Header::~Header, QuickfixViews::beforeDeleting(*arg1);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Trailer::~Trailer, QuickfixViews::beforeDeleting(*arg1);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Group::~Group, QuickfixViews::beforeDeleting(*arg1);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::SessionSettings::~SessionSettings, QuickfixViews::beforeDeletingSettings(*arg1);)
 
 // A callback's Java exception: the FIX exceptions the engine expects of that callback reach it as the C++
 // type, which the engine answers as it would a C++ application's (a reject, a refused logon, a message not
@@ -491,6 +516,7 @@ namespace std
 %ignore FIX::DataDictionary::getValueName(int, const std::string &, std::string &) const;
 %ignore FIX::DataDictionary::getNameValue(int, const std::string &, std::string &) const;
 %ignore FIX::DataDictionary::getGroup(const std::string &, int, int &, const DataDictionary *&) const;
+%newobject FIX::DataDictionary::getGroupDictionary;
 %extend FIX::DataDictionary {
   /** The field's name, or null if the dictionary does not name it. */
   const char *getFieldName(int field) const
@@ -523,12 +549,16 @@ namespace std
     const FIX::DataDictionary *group = nullptr;
     return $self->getGroup(msg, field, delim, group) ? delim : 0;
   }
-  /** The dictionary of that group, or null; it belongs to this one, and lives as long as it does. */
-  const FIX::DataDictionary *getGroupDictionary(const std::string &msg, int field) const
+  /**
+   * A copy of that group's dictionary, or null. A copy, not a view (#196): this dictionary deletes its own when one
+   * is read into it, or addGroup replaces that group, so a view could not outlive them. Copying FIX 5.0 SP2's
+   * largest groups takes a millisecond or so: keep the result, and ask isGroup or getGroupDelimiter what they say.
+   */
+  FIX::DataDictionary *getGroupDictionary(const std::string &msg, int field) const
   {
     int delim = 0;
     const FIX::DataDictionary *group = nullptr;
-    return $self->getGroup(msg, field, delim, group) ? group : nullptr;
+    return $self->getGroup(msg, field, delim, group) && group ? new FIX::DataDictionary(*group) : nullptr;
   }
 }
 
@@ -567,6 +597,9 @@ typedef std::string QuickfixBytes;
   /** Sets the field to these bytes as they are; a data field's length field is the caller's to set. */
   void setFieldBytes(int tag, const QuickfixBytes &value) { $self->setField(tag, value); }
 }
+// setBytes is setString, and ends the views of the message's groups as it does (#196; ../quickfix.i). Ahead of
+// the %extend, which takes the features declared before it.
+QUICKFIX_VIEWS_EXCEPTION(FIX::Message::setBytes, QuickfixViews::beforeClearingMessage(*arg1);)
 %extend FIX::Message {
   /** The message as the bytes the engine would send. */
   QuickfixBytes toBytes() const { return $self->toString(); }
@@ -579,23 +612,69 @@ typedef std::string QuickfixBytes;
   }
 }
 
+// For the generated classes (spec/GeneratorJava.rb), whose constructors set BeginString, ApplVerID and MsgType and
+// whose view() reads MsgType: a header field, without the header proxy an owned message would register (Views).
+%javamethodmodifiers FIX::Message::getHeaderField "protected";
+%javamethodmodifiers FIX::Message::setHeaderField "protected";
+%extend FIX::Message {
+  std::string getHeaderField(int tag) const { return $self->getHeader().getField(tag); }
+  void setHeaderField(int tag, const std::string &value) { $self->getHeader().setField(tag, value); }
+}
+
 // What a call returns from inside another object (#194; ../quickfix.i). A view holds its owner in swigOwner, so the
 // owner is not finalized while the view is reachable; a const view is a copy its proxy owns; a call whose result
 // is its argument returns the argument. The proxies' parameters keep their C++ names, field and group.
-%typemap(javacode) FIX::FieldMap, FIX::Dictionary, FIX::DataDictionary %{
+//
+// A view of an object that a call from Java can destroy is also registered, and that call ends it first (#196;
+// Views, and QuickfixViews below): a group's view always, and a header's, a trailer's, a SessionSettings
+// dictionary's or a generated class's view() of a message when Java can destroy what it views.
+%typemap(javacode) FIX::FieldMap %{
+  // What this proxy is a view into, if anything: kept reachable while this is (#194).
+  protected Object swigOwner;
+  // Whether this is a view the binding registered (#196; Views).
+  transient boolean swigRegistered;
+%}
+%typemap(javacode) FIX::Dictionary %{
   // What this proxy is a view into, if anything: kept reachable while this is (#194).
   protected Object swigOwner;
 %}
-%typemap(javaout) FIX::Header &getHeader, const FIX::Header &getHeader, FIX::Trailer &getTrailer,
-                  const FIX::Trailer &getTrailer, FIX::FieldMap &getGroupRef, FIX::FieldMap *getGroupPtr,
-                  const FIX::Dictionary &get, const FIX::DataDictionary *getGroupDictionary {
+%typemap(javacode) FIX::Message %{
+  /**
+   * For a generated class's view(): message as that class, which make constructs from message's pointer. The view
+   * holds message, and is registered as a header view would be (Views.into). IllegalArgumentException if message's
+   * MsgType is not msgType, FieldNotFound if it has none, and NullPointerException if message is null, deleted or
+   * an ended view.
+   */
+  protected static <T extends Message> T typedView(Message message, String msgType, String name,
+                                                   java.util.function.LongFunction<T> make) {
+    String actual = message.getHeaderField(35);
+    if (!msgType.equals(actual)) {
+      throw new IllegalArgumentException("not a " + name + " (35=" + msgType + "): 35=" + actual);
+    }
+    long cPtr = getCPtr(message);
+    T view = make.apply(cPtr);
+    view.swigOwner = message;
+    return Views.into(message, view, cPtr);
+  }
+%}
+%typemap(javaout) FIX::FieldMap &getGroupRef, FIX::FieldMap *getGroupPtr {
     long cPtr = $jnicall;
     if (cPtr == 0) {
       return null;
     }
     $javaclassname view = new $javaclassname(cPtr, false);
     view.swigOwner = this;
-    return view;
+    return Views.group(view, cPtr);
+  }
+%typemap(javaout) FIX::Header &getHeader, const FIX::Header &getHeader, FIX::Trailer &getTrailer,
+                  const FIX::Trailer &getTrailer, const FIX::Dictionary &get {
+    long cPtr = $jnicall;
+    if (cPtr == 0) {
+      return null;
+    }
+    $javaclassname view = new $javaclassname(cPtr, false);
+    view.swigOwner = this;
+    return Views.into(this, view, cPtr);
   }
 %typemap(out) const FIX::FieldBase &getFieldRef, const FIX::FieldBase *const getFieldPtr
 %{ *(FIX::FieldBase **)&$result = new FIX::FieldBase(*$1); %}
@@ -627,3 +706,254 @@ typedef std::string QuickfixBytes;
 %typemap(javain) SWIGTYPE * "Proxies.cPtr($javaclassname.getCPtr($javainput), $javainput)"
 
 %include ../quickfix.i
+
+// The views of objects that a call from Java can destroy (#196; ../quickfix.i, Views): each by the address of its
+// object, as a weak global reference to its proxy, so a view still goes when the GC collects it. Views.group
+// registers a group's view, and Views.into a header's, a trailer's, a SessionSettings dictionary's or a generated
+// class's view() of a message when Java can destroy what it views. A call that destroys objects first ends the
+// views registered at them through Views.end, which calls a view's delete(): a view owns nothing, so that only sets
+// its pointer to 0, and the null-proxy check above throws for it from then on.
+//
+// One mutex guards the map. The counts are written under it and read without it, for the calls' fast check: one
+// load while no group view is registered, and for delete() while no view at all is. It is never held across a call
+// into Java: endViews takes the entries at its addresses out of the map under it, and ends their views after. An
+// entry leaves the map once: taken by endViews, or pruned once the GC has cleared its reference -- at a
+// registration once the map has doubled since the last prune, and once calls that end nothing outnumber its
+// entries. A view its caller deleted stays until one of those, and ending it again does nothing.
+%{
+#include <atomic>
+#include <mutex>
+#include <unordered_map>
+
+namespace QuickfixViews
+{
+struct Entry
+{
+  jweak view;
+  bool group;
+};
+static JavaVM *s_vm = nullptr;
+static jclass s_class = nullptr;  // Views
+static jmethodID s_end = nullptr; // Views.end(Object)
+static std::mutex s_mutex;
+static std::unordered_multimap<const void *, Entry> s_entries;
+static size_t s_groupEntries = 0;
+static size_t s_pruneAt = 64;
+static size_t s_idle = 0;
+static std::atomic<size_t> s_groups{0};
+static std::atomic<size_t> s_all{0};
+
+bool load(JavaVM *vm, JNIEnv *jenv)
+{
+  s_vm = vm;
+  jclass local = jenv->FindClass("com/dudleylane/quickfix/Views");
+  if (!local)
+    return false;
+  s_class = static_cast<jclass>(jenv->NewGlobalRef(local));
+  jenv->DeleteLocalRef(local);
+  s_end = s_class ? jenv->GetStaticMethodID(s_class, "end", "(Ljava/lang/Object;)Z") : nullptr;
+  return s_end != nullptr;
+}
+
+// Under s_mutex, after a change to the map.
+static void publish()
+{
+  s_groups.store(s_groupEntries, std::memory_order_release);
+  s_all.store(s_entries.size(), std::memory_order_release);
+}
+
+// Under s_mutex: drops the entries whose views the GC has collected.
+static void prune(JNIEnv *jenv)
+{
+  for (auto entry = s_entries.begin(); entry != s_entries.end();)
+  {
+    if (jenv->IsSameObject(entry->second.view, nullptr))
+    {
+      jenv->DeleteWeakGlobalRef(entry->second.view);
+      s_groupEntries -= entry->second.group;
+      entry = s_entries.erase(entry);
+    }
+    else
+    {
+      ++entry;
+    }
+  }
+  s_idle = 0;
+  publish();
+}
+
+bool anyGroupViews() { return s_groups.load(std::memory_order_acquire) != 0; }
+static bool anyViews() { return s_all.load(std::memory_order_acquire) != 0; }
+
+// A Java exception pending on entry is set aside, since most JNI calls may not be made under one, and is pending
+// again on every exit.
+class Pending
+{
+public:
+  explicit Pending(JNIEnv *jenv) : m_jenv(jenv), m_error(jenv->ExceptionOccurred())
+  {
+    if (m_error)
+      m_jenv->ExceptionClear();
+  }
+  ~Pending()
+  {
+    if (m_error)
+    {
+      m_jenv->Throw(m_error);
+      m_jenv->DeleteLocalRef(m_error);
+    }
+  }
+  bool any() const { return m_error != nullptr; }
+  Pending(const Pending &) = delete;
+  Pending &operator=(const Pending &) = delete;
+
+private:
+  JNIEnv *m_jenv;
+  jthrowable m_error;
+};
+
+// Throws, once it has ended the rest, if a view could not be ended (Views.end said so, or threw), so that the call
+// which would destroy its object does not run; but not over an exception that was pending on entry, which only the
+// comparison after send() and reverseRoute() can meet, and that comparison runs after the call.
+void endViews(const Addresses &addresses)
+{
+  if (addresses.empty())
+    return;
+  JNIEnv *jenv = nullptr;
+  if (s_vm->GetEnv(reinterpret_cast<void **>(&jenv), JNI_VERSION_1_8) != JNI_OK)
+    throw FIX::RuntimeError("the views of the objects this call destroys could not be ended");
+  Pending pending(jenv);
+  std::vector<jweak> doomed;
+  {
+    std::lock_guard<std::mutex> lock(s_mutex);
+    size_t count = 0;
+    for (const void *address : addresses)
+      count += s_entries.count(address);
+    if (!count)
+    {
+      if (++s_idle >= s_entries.size())
+        prune(jenv);
+      return;
+    }
+    // Reserved first, so that nothing leaves the map unless all of it can. An address can be given twice.
+    doomed.reserve(count);
+    for (const void *address : addresses)
+    {
+      auto range = s_entries.equal_range(address);
+      for (auto entry = range.first; entry != range.second; ++entry)
+      {
+        doomed.push_back(entry->second.view);
+        s_groupEntries -= entry->second.group;
+      }
+      s_entries.erase(range.first, range.second);
+    }
+    s_idle = 0;
+    publish();
+  }
+  bool failed = false;
+  for (jweak weak : doomed)
+  {
+    jobject view = jenv->NewLocalRef(weak);
+    jenv->DeleteWeakGlobalRef(weak);
+    if (!view)
+      continue;
+    jboolean ended = jenv->CallStaticBooleanMethod(s_class, s_end, view);
+    if (jenv->ExceptionCheck())
+    {
+      jenv->ExceptionClear();
+      ended = JNI_FALSE;
+    }
+    jenv->DeleteLocalRef(view);
+    failed = failed || !ended;
+  }
+  if (failed && !pending.any())
+    throw FIX::RuntimeError("the views of the objects this call destroys could not be ended");
+}
+
+// Java's delete() on a proxy that owns its object (QUICKFIX_VIEWS_EXCEPTION above): the object, and every group in
+// it. A message's header and trailer are its members.
+inline void beforeDeleting(const FIX::FieldMap &map)
+{
+  if (!anyViews())
+    return;
+  Addresses addresses(1, &map);
+  addGroupsUnder(map, addresses);
+  endViews(addresses);
+}
+
+inline void beforeDeletingMessage(const FIX::Message &message)
+{
+  if (!anyViews())
+    return;
+  Addresses addresses{&message, &message.getHeader(), &message.getTrailer()};
+  addGroupsUnder(message.getHeader(), addresses);
+  addGroupsUnder(message, addresses);
+  addGroupsUnder(message.getTrailer(), addresses);
+  endViews(addresses);
+}
+
+// Every dictionary get() can return: SessionSettings never erases one before its destructor.
+inline void beforeDeletingSettings(const FIX::SessionSettings &settings)
+{
+  if (!anyViews())
+    return;
+  Addresses addresses(1, &settings.get());
+  for (const FIX::SessionID &sessionID : settings.getSessions())
+    addresses.push_back(&settings.get(sessionID));
+  endViews(addresses);
+}
+} // namespace QuickfixViews
+
+// Views.register: view, a proxy of the object at cPtr, is registered there. OutOfMemoryError if it cannot be, and
+// the view is then not handed out.
+extern "C" JNIEXPORT void JNICALL Java_com_dudleylane_quickfix_Views_register(JNIEnv *jenv, jclass, jobject view,
+                                                                              jlong cPtr, jboolean group)
+{
+  using namespace QuickfixViews;
+  jweak weak = jenv->NewWeakGlobalRef(view);
+  if (!weak)
+  {
+    if (!jenv->ExceptionCheck())
+      SWIG_JavaThrowException(jenv, SWIG_JavaOutOfMemoryError, "a view could not be registered");
+    return;
+  }
+  try
+  {
+    std::lock_guard<std::mutex> lock(s_mutex);
+    s_entries.emplace(reinterpret_cast<const void *>(cPtr), Entry{weak, group == JNI_TRUE});
+    s_groupEntries += group == JNI_TRUE;
+    if (s_entries.size() >= s_pruneAt)
+    {
+      prune(jenv);
+      s_pruneAt = std::max<size_t>(64, 2 * s_entries.size());
+    }
+    publish();
+  }
+  catch (...)
+  {
+    jenv->DeleteWeakGlobalRef(weak);
+    SWIG_JavaThrowException(jenv, SWIG_JavaOutOfMemoryError, "a view could not be registered");
+  }
+}
+
+// For the tests, by reflection, once the views the GC has collected are dropped: whether view is registered
+// (Views.registered), and how many views are registered at cPtr (Views.countAt).
+extern "C" JNIEXPORT jboolean JNICALL Java_com_dudleylane_quickfix_Views_registered(JNIEnv *jenv, jclass, jobject view)
+{
+  using namespace QuickfixViews;
+  std::lock_guard<std::mutex> lock(s_mutex);
+  prune(jenv);
+  for (const auto &entry : s_entries)
+    if (jenv->IsSameObject(entry.second.view, view))
+      return JNI_TRUE;
+  return JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jlong JNICALL Java_com_dudleylane_quickfix_Views_countAt(JNIEnv *jenv, jclass, jlong cPtr)
+{
+  using namespace QuickfixViews;
+  std::lock_guard<std::mutex> lock(s_mutex);
+  prune(jenv);
+  return static_cast<jlong>(s_entries.count(reinterpret_cast<const void *>(cPtr)));
+}
+%}

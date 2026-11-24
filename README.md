@@ -383,13 +383,22 @@ In Python, Ruby and Java, such a call returns one of these, and each was once a 
 keep past its owner and so read freed memory (#194):
 
 - **A view that keeps its owner**: `Message.getHeader()` and `getTrailer()`, `getGroupRef` and `getGroupPtr`,
-  `SessionSettings.get`, and in Java `DataDictionary.getGroupDictionary` and a generated message class's
-  `view(message)`. It is the owner's object in place, so a write through it reaches the owner, and the owner
-  lives as long as the view. As with a C++ reference, a group's view ends when its group is removed or its
-  message cleared or set from a string (#196), a view of a callback's message ends when the callback returns,
-  and in Java one ends when its owner is `delete()`d.
+  `SessionSettings.get`, and in Java a generated message class's `view(message)`. It is the owner's object in
+  place, so a write through it reaches the owner, and the owner lives as long as the view. As with a C++
+  reference, a view ends when what it views is destroyed. A call through the binding that destroys it --
+  `removeGroup`, `replaceGroup`, `clear` or `setString` above it, a `getGroup` into the map above it, `swap`,
+  and in Java an owner's `delete()`, among others -- ends the view first, and a call through the view then raises
+  as one through a deleted object does, where it read freed memory (#196). A call with no view registered pays
+  one comparison for this; with views registered it walks the groups it destroys, about 15 ns a group, and in
+  Ruby a call that ends a view also walks every view not yet collected. Registering a group view and ending it
+  costs about 2 µs in Ruby and 0.6 µs in Java, more when several threads do so at once, and nothing measurable
+  in Python; in Java, a header or trailer view of a message Java owns costs about 0.2 µs. A view of a callback's
+  message is valid only until the callback returns, which no call through the binding marks, so nothing ends
+  it: keep a copy instead (#199).
 - **A copy** where C++ returns `const`: `getFieldRef`, `getFieldPtr`, a `SessionID`'s getters, and Java's
-  `getSessions()`. Writing it changes nothing else.
+  `getSessions()`. Writing it changes nothing else. Java's `DataDictionary.getGroupDictionary` returns a copy
+  too, though C++ returns a pointer, because a dictionary replaces a group's dictionary when it reads or adds
+  that group again (#196); copying one of the largest groups takes about a millisecond, so keep the result.
 - **The argument itself** where that is the result: `getField(field)` and `getGroup(..., group)`, as its own
   class.
 - **A `Session`, and anything a transport or session returns** -- `lookupSession`, `getSession`, a session's

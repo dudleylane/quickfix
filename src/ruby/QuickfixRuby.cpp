@@ -6158,11 +6158,18 @@ bool tryPythonException(std::function<bool()> const& function)
 #endif
 
 #ifdef SWIGRUBY
+namespace QuickfixViews
+{
+void redeliverError();
+}
+
 template<typename Exception>
 void raiseRubyException(Exception const& e, swig_type_info* swigType)
 {
-  // A kill that landed in a callback outranks what the engine threw (#147).
+  // A kill that landed in a callback outranks what the engine threw (#147), and so does an exception that landed
+  // while a call ended views (#196; ruby/quickfix.i).
   redeliverKill();
+  QuickfixViews::redeliverError();
   rb_exc_raise(SWIG_Ruby_ExceptionType(swigType, SWIG_NewPointerObj((new Exception(static_cast<const Exception&>(e))),swigType,SWIG_POINTER_OWN)));
 }
 
@@ -6642,6 +6649,172 @@ SWIGINTERN std::set< FIX::SessionID >::value_type std_set_Sl_FIX_SessionID_Sg___
 SWIGINTERN void std_set_Sl_FIX_SessionID_Sg__erase__SWIG_1(std::set< FIX::SessionID > *self,std::set< FIX::SessionID >::iterator pos){ self->erase(pos); }
 SWIGINTERN void std_set_Sl_FIX_SessionID_Sg__erase__SWIG_2(std::set< FIX::SessionID > *self,std::set< FIX::SessionID >::iterator first,std::set< FIX::SessionID >::iterator last){ self->erase(first, last); }
 
+
+#include <algorithm>
+#include <vector>
+namespace QuickfixViews
+{
+typedef std::vector<const void *> Addresses;
+
+// Each binding's own: whether any group view is registered, and ending the views registered at these addresses.
+// endViews() leaves the language's pending error, if there is one, as it found it. (Not end(): an unqualified call
+// with a std::vector finds std::end too, and std::end(Container &) binds a non-const vector more tightly.)
+bool anyGroupViews();
+void endViews(const Addresses &addresses);
+
+// Every group under map, at any depth; not map itself.
+inline void addGroupsUnder(const FIX::FieldMap &map, Addresses &addresses)
+{
+  for (FIX::FieldMap::g_const_iterator tag = map.g_begin(); tag != map.g_end(); ++tag)
+  {
+    for (const FIX::FieldMap *group : tag->second)
+    {
+      addresses.push_back(group);
+      addGroupsUnder(*group, addresses);
+    }
+  }
+}
+
+// Group num at tag, or null.
+inline const FIX::FieldMap *groupAt(const FIX::FieldMap &map, int num, int tag)
+{
+  if (num <= 0 || map.groupCount(tag) < static_cast<size_t>(num))
+    return nullptr;
+  return &map.getGroupRef(num, tag);
+}
+
+// clear(), and Message's, Header's and Trailer's getGroup(num, group), which clear their argument before they look
+// (Message.h): every group under map.
+inline void beforeClearing(const FIX::FieldMap &map)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(map, addresses);
+  endViews(addresses);
+}
+
+// Message's clear(), setString() and setStringHeader(), which clear first: the header's, body's and trailer's groups.
+inline void beforeClearingMessage(const FIX::Message &message)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(message.getHeader(), addresses);
+  addGroupsUnder(message, addresses);
+  addGroupsUnder(message.getTrailer(), addresses);
+  endViews(addresses);
+}
+
+// removeGroup(num, tag): group num, and every group under it.
+inline void beforeRemovingGroup(const FIX::FieldMap &map, int num, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  if (const FIX::FieldMap *group = groupAt(map, num, tag))
+  {
+    Addresses addresses(1, group);
+    addGroupsUnder(*group, addresses);
+    endViews(addresses);
+  }
+}
+
+// removeGroup(tag): every group at tag, and every group under them.
+inline void beforeRemovingGroups(const FIX::FieldMap &map, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  for (size_t num = 1, count = map.groupCount(tag); num <= count; ++num)
+  {
+    const FIX::FieldMap &group = map.getGroupRef(static_cast<int>(num), tag);
+    addresses.push_back(&group);
+    addGroupsUnder(group, addresses);
+  }
+  endViews(addresses);
+}
+
+// removeField(tag) removes tag's groups with the field, and only when the field is set.
+inline void beforeRemovingField(const FIX::FieldMap &map, int tag)
+{
+  if (map.isSetField(tag))
+    beforeRemovingGroups(map, tag);
+}
+
+// replaceGroup(num, ...) assigns over group num: the group stays, and the groups under it go.
+inline void beforeReplacingGroup(const FIX::FieldMap &map, int num, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  if (const FIX::FieldMap *group = groupAt(map, num, tag))
+  {
+    Addresses addresses;
+    addGroupsUnder(*group, addresses);
+    endViews(addresses);
+  }
+}
+
+// FieldMap's and Group's getGroup(num, ..., group) assign group num over group, and throw FieldNotFound first,
+// leaving group as it was, when there is none.
+inline void beforeGettingGroup(const FIX::FieldMap &map, int num, int tag, const FIX::FieldMap &group)
+{
+  if (groupAt(map, num, tag))
+    beforeClearing(group);
+}
+
+// swap(rhs): each map's groups pass to the other, with its arena, so a view would keep the wrong message alive.
+inline void beforeSwapping(const FIX::FieldMap &map, const FIX::FieldMap &rhs)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(map, addresses);
+  addGroupsUnder(rhs, addresses);
+  endViews(addresses);
+}
+
+// Message's reverseRoute(), and Session's send() and sendToTarget() on their message, remove routing and resend
+// fields from its header, and the groups at those tags with them (Message.cpp, Session.cpp). Rather than mirror
+// their lists, which would go stale without a word, this compares the header's groups before and after the call,
+// also when the call throws. Nothing in the send path removes from the message after toApp or toAdmin returns, so
+// deciding before the call that no view needs the comparison holds for a view a callback takes.
+class HeaderGroups
+{
+public:
+  explicit HeaderGroups(const FIX::Message &message) : m_message(anyGroupViews() ? &message : nullptr)
+  {
+    if (m_message)
+      addGroupsUnder(message.getHeader(), m_before);
+  }
+  ~HeaderGroups()
+  {
+    if (!m_message || m_before.empty())
+      return;
+    try
+    {
+      Addresses after;
+      addGroupsUnder(m_message->getHeader(), after);
+      std::sort(after.begin(), after.end());
+      Addresses gone;
+      for (const void *address : m_before)
+        if (!std::binary_search(after.begin(), after.end(), address))
+          gone.push_back(address);
+      if (!gone.empty())
+        endViews(gone);
+    }
+    catch (...)
+    {
+    }
+  }
+  HeaderGroups(const HeaderGroups &) = delete;
+  HeaderGroups &operator=(const HeaderGroups &) = delete;
+
+private:
+  const FIX::Message *m_message;
+  Addresses m_before;
+};
+}
+
 SWIGINTERN std::string FIX_Exception___str__(FIX::Exception *self){
     return self->what();
   }
@@ -6761,9 +6934,6 @@ SWIG_AsVal_bool (VALUE obj, bool *val)
 }
 
 
-#include <memory>
-
-
 SWIGINTERN int
 SWIG_AsVal_unsigned_SS_int (VALUE obj, unsigned int *val)
 {
@@ -6817,6 +6987,275 @@ SWIG_From_unsigned_SS_short  (unsigned short value)
 {    
   return SWIG_From_unsigned_SS_long  (value);
 }
+
+
+#include <unordered_map>
+#include <unordered_set>
+namespace QuickfixViews
+{
+// The group views handed out (#196; ../quickfix.i). An ObjectSpace::WeakMap holds each view, mapped to the address
+// of its group, so a view still goes when Ruby collects it: Ruby's C API has no weak reference of its own. The
+// counts, by address, serve the fast check and say when the map needs walking: they never miss a view that has not
+// been ended, and may count views collected since the last walk recounted them. A walk ends the views of the
+// groups a call destroys by nulling their pointers (quickfixEndView), and SWIG raises ObjectPreviouslyDeleted for
+// them from then on.
+//
+// An ended view stays in the map until Ruby collects it, so a loop that ends a view on every pass would walk every
+// view it had made since the last GC. Instead, once the map holds more than twice the views not ended, and 16 more,
+// a walk keeps the views it finds not ended, and a new map of those replaces it (WeakMap#delete is Ruby 3.3's). So a
+// walk costs O(views not ended), amortized.
+//
+// Each call into Ruby here may switch threads, or run a trap handler or a finalizer that registers views itself,
+// and may deliver a Thread#raise, a Thread#kill or a throw. Each lands after the call has done its work: each_pair's
+// block calls nothing that checks for one. So nothing here holds an iterator or a count across such a call, a walk
+// is repeated when a view was registered while it ran, a map is replaced only if none was, and what lands is held
+// for the method's wrapper to deliver once it is out of C++ frames: a kill by deferKill, anything else by protect
+// (redeliverError). While one is held, nothing here calls into Ruby again, where a second could land over it.
+static VALUE s_map = Qnil;
+static std::unordered_map<const void *, size_t> s_counts;
+static size_t s_total = 0;
+// The map's entries as the last walk found them, and the views registered since: more than it holds once Ruby has
+// collected some.
+static size_t s_entries = 0;
+static size_t s_registrations = 0;
+static size_t s_idle = 0;
+static size_t s_lastGc = 0;
+static size_t s_walkAt = 64;
+// How many times something landed in protect: for the tests, which show they reach it.
+static size_t s_landed = 0;
+// What protect caught, for redeliverError: its tag, and $! as protect found it, compared, not kept, since Ruby
+// keeps it there.
+thread_local int t_heldTag = 0;
+thread_local VALUE t_heldError = Qnil;
+
+static bool holding() { return t_heldTag || t_deferredKill; }
+
+// Calls into Ruby, unless something is held already, so that nothing it raises or throws unwinds through C++
+// frames. A kill is held by deferKill; anything else by its tag, to go on with rb_jump_tag as it would have gone on.
+// False if it did not call, or something landed. call creates no C++ object that needs destroying.
+template <typename Call> static bool protect(Call &call)
+{
+  if (holding())
+    return false;
+  int state = 0;
+  rb_protect(
+      [](VALUE call) -> VALUE
+      {
+        (*reinterpret_cast<Call *>(call))();
+        return Qnil;
+      },
+      reinterpret_cast<VALUE>(&call), &state);
+  if (!state)
+    return true;
+  ++s_landed;
+  if (!deferKill(rb_errinfo()))
+  {
+    t_heldTag = state;
+    t_heldError = rb_errinfo();
+  }
+  return false;
+}
+
+// With the GVL, where a longjmp leaves no C++ frame that needs unwinding: after redeliverKill, which outranks it.
+// What protect held goes on as it would have; if $! no longer holds it, it was lost, and that is raised instead.
+void redeliverError()
+{
+  if (!t_heldTag)
+    return;
+  int tag = t_heldTag;
+  VALUE error = t_heldError;
+  t_heldTag = 0;
+  t_heldError = Qnil;
+  if (rb_errinfo() != error)
+    rb_raise(rb_eThreadError, "quickfix: what landed while views were registered or ended was lost before it could "
+                              "be delivered");
+  rb_jump_tag(tag);
+}
+
+static const void *addressOf(VALUE value) { return reinterpret_cast<const void *>(NUM2ULL(value)); }
+
+struct Walk
+{
+  const std::unordered_set<const void *> *doomed;
+  // The views not ended, each followed by its address, when the map is to be replaced: an array made with room for
+  // as many as the counts allow, so that pushing never allocates; Qnil if not, or if they did not fit.
+  VALUE kept;
+  long room;
+  std::unordered_map<const void *, size_t> counts;
+  size_t total = 0;
+  size_t entries = 0;
+  bool failed = false;
+  bool refused = false;
+};
+
+// Calls nothing that can raise, allocate or let other Ruby code run, so a walk is never cut short once it has begun.
+static VALUE walkView(RB_BLOCK_CALL_FUNC_ARGLIST(view, data))
+{
+  Walk *walk = reinterpret_cast<Walk *>(data);
+  ++walk->entries;
+  if (!DATA_PTR(argv[0]))
+    return Qnil;
+  const void *address = addressOf(argv[1]);
+  if (walk->doomed && walk->doomed->count(address))
+  {
+    if (quickfixEndView(argv[0]))
+      return Qnil;
+    walk->refused = true;
+  }
+  try
+  {
+    ++walk->counts[address];
+    ++walk->total;
+  }
+  catch (...)
+  {
+    walk->failed = true;
+  }
+  if (!NIL_P(walk->kept))
+  {
+    if (walk->room >= 2)
+    {
+      rb_ary_push(walk->kept, argv[0]);
+      rb_ary_push(walk->kept, argv[1]);
+      walk->room -= 2;
+    }
+    else
+    {
+      walk->kept = Qnil;
+    }
+  }
+  return Qnil;
+}
+
+// A new map of the views kept replaces the old one, if every one went in and no view was registered meanwhile: one
+// registered meanwhile is in the old map alone.
+static void replace(VALUE kept)
+{
+  size_t registrations = s_registrations;
+  VALUE map = Qnil;
+  auto make = [&]() { map = rb_class_new_instance(0, nullptr, rb_path2class("ObjectSpace::WeakMap")); };
+  if (!protect(make))
+    return;
+  for (long i = 0; i + 1 < RARRAY_LEN(kept); i += 2)
+  {
+    VALUE view = RARRAY_AREF(kept, i);
+    VALUE address = RARRAY_AREF(kept, i + 1);
+    auto store = [&]() { rb_funcall(map, rb_intern("[]="), 2, view, address); };
+    if (!protect(store))
+      return;
+  }
+  if (registrations != s_registrations)
+    return;
+  s_map = map;
+  s_entries = static_cast<size_t>(RARRAY_LEN(kept) / 2);
+  RB_GC_GUARD(map);
+}
+
+// Walks the map: ends the views at doomed, if given, recounts the rest, and replaces the map if ended views fill
+// it. Repeated when a view was registered while it ran, which the recount may miss; ending a view twice is
+// harmless. False if it never ran undisturbed, if something landed, or if a view at doomed could not be ended:
+// quickfixEndView refuses one that owns its object, which no view does.
+static bool walk(const std::unordered_set<const void *> *doomed)
+{
+  VALUE kept = Qnil;
+  long room = 0;
+  if (s_entries > 2 * s_total + 16)
+  {
+    room = static_cast<long>(2 * s_total);
+    auto make = [&]() { kept = rb_ary_new_capa(room); };
+    if (!protect(make))
+      return false;
+  }
+  for (int attempt = 0; attempt < 3; ++attempt)
+  {
+    size_t registrations = s_registrations;
+    Walk pass{doomed, attempt ? Qnil : kept, room};
+    auto each = [&]()
+    { rb_block_call(s_map, rb_intern("each_pair"), 0, nullptr, walkView, reinterpret_cast<VALUE>(&pass)); };
+    if (!protect(each))
+      return false;
+    if (registrations != s_registrations)
+      continue;
+    if (!pass.failed)
+    {
+      s_counts.swap(pass.counts);
+      s_total = pass.total;
+    }
+    s_entries = pass.entries;
+    s_lastGc = rb_gc_count();
+    s_idle = 0;
+    if (!NIL_P(pass.kept))
+      replace(pass.kept);
+    RB_GC_GUARD(kept);
+    return !pass.refused;
+  }
+  return false;
+}
+
+// From a wrapper's out typemap, which delivers what landed here, so a view that may be missing from the map is
+// never handed out. It is counted first, so a count never misses it. False if it is not in the map.
+bool registerView(VALUE view, const void *address)
+{
+  try
+  {
+    ++s_counts[address];
+  }
+  catch (...)
+  {
+    return false;
+  }
+  ++s_total;
+  ++s_entries;
+  ++s_registrations;
+  auto store = [&]() { rb_funcall(s_map, rb_intern("[]="), 2, view, ULL2NUM(reinterpret_cast<uintptr_t>(address))); };
+  if (!protect(store))
+    return false;
+  if (s_total >= s_walkAt)
+  {
+    if (rb_gc_count() != s_lastGc)
+      walk(nullptr);
+    s_walkAt = std::max<size_t>(64, 2 * s_total);
+  }
+  return true;
+}
+
+bool anyGroupViews() { return s_total != 0; }
+
+// A call that destroys groups with views runs only once those views are ended. Calls that end nothing recount the
+// map once they outnumber its views, if a GC may have collected some.
+void endViews(const Addresses &addresses)
+{
+  if (!s_total)
+    return;
+  std::unordered_set<const void *> doomed;
+  for (const void *address : addresses)
+    if (s_counts.count(address))
+      doomed.insert(address);
+  if (doomed.empty())
+  {
+    if (++s_idle >= s_total && rb_gc_count() != s_lastGc)
+      walk(nullptr);
+    return;
+  }
+  if (!walk(&doomed))
+    throw FIX::RuntimeError("the views of the groups this call destroys could not be ended");
+}
+}
+
+// For the tests: Quickfix._viewCount is how many group views are registered and not ended, after a recount;
+// Quickfix._viewEntries how many entries the registry's map holds, ended views among them; and Quickfix._viewsLanded
+// how many times something landed in the registry's own calls into Ruby.
+VALUE quickfixTestViewCount(VALUE)
+{
+  QuickfixViews::walk(nullptr);
+  redeliverKill();
+  QuickfixViews::redeliverError();
+  return SIZET2NUM(QuickfixViews::s_total);
+}
+
+VALUE quickfixTestViewEntries(VALUE) { return rb_funcall(QuickfixViews::s_map, rb_intern("size"), 0); }
+
+VALUE quickfixTestViewsLanded(VALUE) { return SIZET2NUM(QuickfixViews::s_landed); }
 
 /* ---------------------------------------------------
  * C++ director class helpers
@@ -33814,6 +34253,21 @@ fail:
 
 
 SWIGINTERN VALUE
+#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
+_wrap_FieldMap_allocate(VALUE self)
+#else
+_wrap_FieldMap_allocate(int argc, VALUE *argv, VALUE self)
+#endif
+{
+  VALUE vresult = SWIG_NewClassInstance(self, SWIGTYPE_p_FIX__FieldMap);
+#ifndef HAVE_RB_DEFINE_ALLOC_FUNC
+  rb_obj_call_init(vresult, argc, argv);
+#endif
+  return vresult;
+}
+
+
+SWIGINTERN VALUE
 _wrap_new_FieldMap__SWIG_4(int argc, VALUE *argv, VALUE self) {
   FIX::FieldMap *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -33836,66 +34290,6 @@ _wrap_new_FieldMap__SWIG_4(int argc, VALUE *argv, VALUE self) {
     if(tryRubyException([&]() mutable
         {
       result = (FIX::FieldMap *)new FIX::FieldMap((FIX::FieldMap const &)*arg1);
-          DATA_PTR(self) = result;
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil)
-    {
-      SWIG_fail;
-    }
-    redeliverKill();
-  }
-  return self;
-fail:
-  return Qnil;
-}
-
-
-SWIGINTERN VALUE
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
-_wrap_FieldMap_allocate(VALUE self)
-#else
-_wrap_FieldMap_allocate(int argc, VALUE *argv, VALUE self)
-#endif
-{
-  VALUE vresult = SWIG_NewClassInstance(self, SWIGTYPE_p_FIX__FieldMap);
-#ifndef HAVE_RB_DEFINE_ALLOC_FUNC
-  rb_obj_call_init(vresult, argc, argv);
-#endif
-  return vresult;
-}
-
-
-SWIGINTERN VALUE
-_wrap_new_FieldMap__SWIG_5(int argc, VALUE *argv, VALUE self) {
-  FIX::FieldMap *arg1 = 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  std::unique_ptr< FIX::FieldMap > rvrdeleter1 ;
-  const char *classname SWIGUNUSED = "Quickfix::FieldMap";
-  FIX::FieldMap *result = 0 ;
-  
-  if ((argc < 1) || (argc > 1)) {
-    rb_raise(rb_eArgError, "wrong # of arguments(%d for 1)",argc); SWIG_fail;
-  }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__FieldMap, SWIG_POINTER_RELEASE |  0 );
-  if (!SWIG_IsOK(res1)) {
-    if (res1 == SWIG_ERROR_RELEASE_NOT_OWNED) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FieldMap" "', cannot release ownership as memory is not owned for argument " "1"" of type '" "FIX::FieldMap &&""'");
-    } else {
-      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::FieldMap &&","FieldMap", 1, argv[0] )); 
-    }
-  }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::FieldMap &&","FieldMap", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::FieldMap * >(argp1);
-  rvrdeleter1.reset(arg1);
-  {
-    if(tryRubyException([&]() mutable
-        {
-      result = (FIX::FieldMap *)new FIX::FieldMap((FIX::FieldMap &&)*arg1);
           DATA_PTR(self) = result;
           return self;
         fail:
@@ -33952,23 +34346,13 @@ SWIGINTERN VALUE _wrap_new_FieldMap(int nargs, VALUE *args, VALUE self) {
       return _wrap_new_FieldMap__SWIG_4(nargs, args, self);
     }
   }
-  if (argc == 1) {
-    int _v = 0;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__FieldMap, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      return _wrap_new_FieldMap__SWIG_5(nargs, args, self);
-    }
-  }
   
 fail:
   Ruby_Format_OverloadedError( argc, 1, "FieldMap.new", 
     "    FieldMap.new(message_order const &order)\n"
     "    FieldMap.new()\n"
     "    FieldMap.new(int const order[])\n"
-    "    FieldMap.new(FIX::FieldMap const &copy)\n"
-    "    FieldMap.new(FIX::FieldMap &&rhs)\n");
+    "    FieldMap.new(FIX::FieldMap const &copy)\n");
   
   return Qnil;
 }
@@ -34657,7 +35041,8 @@ _wrap_FieldMap_removeField(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeField(arg2);
+      QuickfixViews::beforeRemovingField(*arg1, arg2);
+          (arg1)->removeField(arg2);
           return self;
         fail:
           return Qnil;
@@ -34666,6 +35051,7 @@ _wrap_FieldMap_removeField(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -34896,7 +35282,8 @@ _wrap_FieldMap_replaceGroup(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->replaceGroup(arg2,arg3,(FIX::FieldMap const &)*arg4);
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3);
+          (arg1)->replaceGroup(arg2,arg3,(FIX::FieldMap const &)*arg4);
           return self;
         fail:
           return Qnil;
@@ -34905,6 +35292,7 @@ _wrap_FieldMap_replaceGroup(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -34958,7 +35346,8 @@ _wrap_FieldMap_getGroup(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      result = (FIX::FieldMap *) &((FIX::FieldMap const *)arg1)->getGroup(arg2,arg3,*arg4);
+      QuickfixViews::beforeGettingGroup(*arg1, arg2, arg3, *arg4);
+          result = (FIX::FieldMap *) &((FIX::FieldMap const *)arg1)->getGroup(arg2,arg3,*arg4);
           return self;
         fail:
           return Qnil;
@@ -34967,6 +35356,7 @@ _wrap_FieldMap_getGroup(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = argv[2];
   return vresult;
@@ -35022,6 +35412,14 @@ _wrap_FieldMap_getGroupRef(int argc, VALUE *argv, VALUE self) {
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldMap, 0);
   rb_iv_set(vresult, "@quickfixOwner", self);
+  if (result)
+  {
+    bool registered = QuickfixViews::registerView(vresult, result);
+    redeliverKill();
+    QuickfixViews::redeliverError();
+    if (!registered)
+    rb_memerror();
+  }
   return vresult;
 fail:
   return Qnil;
@@ -35075,6 +35473,14 @@ _wrap_FieldMap_getGroupPtr(int argc, VALUE *argv, VALUE self) {
   }
   vresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_FIX__FieldMap, 0);
   rb_iv_set(vresult, "@quickfixOwner", self);
+  if (result)
+  {
+    bool registered = QuickfixViews::registerView(vresult, result);
+    redeliverKill();
+    QuickfixViews::redeliverError();
+    if (!registered)
+    rb_memerror();
+  }
   return vresult;
 fail:
   return Qnil;
@@ -35114,7 +35520,8 @@ _wrap_FieldMap_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeGroup(arg2,arg3);
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3);
+          (arg1)->removeGroup(arg2,arg3);
           return self;
         fail:
           return Qnil;
@@ -35123,6 +35530,7 @@ _wrap_FieldMap_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -35155,7 +35563,8 @@ _wrap_FieldMap_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeGroup(arg2);
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2);
+          (arg1)->removeGroup(arg2);
           return self;
         fail:
           return Qnil;
@@ -35164,6 +35573,7 @@ _wrap_FieldMap_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -35450,7 +35860,8 @@ _wrap_FieldMap_clear(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->clear();
+      QuickfixViews::beforeClearing(*arg1);
+          (arg1)->clear();
           return self;
         fail:
           return Qnil;
@@ -35459,6 +35870,7 @@ _wrap_FieldMap_clear(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -35494,7 +35906,8 @@ _wrap_FieldMap_swap(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->swap(*arg2);
+      QuickfixViews::beforeSwapping(*arg1, *arg2);
+          (arg1)->swap(*arg2);
           return self;
         fail:
           return Qnil;
@@ -35503,6 +35916,7 @@ _wrap_FieldMap_swap(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -36719,7 +37133,8 @@ _wrap_Header_replaceGroup(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
+          (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
@@ -36728,6 +37143,7 @@ _wrap_Header_replaceGroup(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -36773,7 +37189,8 @@ _wrap_Header_getGroup(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      result = (Group *) &((FIX::Header const *)arg1)->getGroup(arg2,*arg3);
+      QuickfixViews::beforeClearing(*arg3);
+          result = (Group *) &((FIX::Header const *)arg1)->getGroup(arg2,*arg3);
           return self;
         fail:
           return Qnil;
@@ -36782,6 +37199,7 @@ _wrap_Header_getGroup(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = argv[1];
   return vresult;
@@ -36826,7 +37244,8 @@ _wrap_Header_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
+          (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
@@ -36835,6 +37254,7 @@ _wrap_Header_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -36870,7 +37290,8 @@ _wrap_Header_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeGroup((FIX::Group const &)*arg2);
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
+          (arg1)->removeGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
@@ -36879,6 +37300,7 @@ _wrap_Header_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -37300,7 +37722,8 @@ _wrap_Trailer_replaceGroup(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
+          (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
@@ -37309,6 +37732,7 @@ _wrap_Trailer_replaceGroup(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -37354,7 +37778,8 @@ _wrap_Trailer_getGroup(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      result = (Group *) &((FIX::Trailer const *)arg1)->getGroup(arg2,*arg3);
+      QuickfixViews::beforeClearing(*arg3);
+          result = (Group *) &((FIX::Trailer const *)arg1)->getGroup(arg2,*arg3);
           return self;
         fail:
           return Qnil;
@@ -37363,6 +37788,7 @@ _wrap_Trailer_getGroup(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = argv[1];
   return vresult;
@@ -37407,7 +37833,8 @@ _wrap_Trailer_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
+          (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
@@ -37416,6 +37843,7 @@ _wrap_Trailer_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -37451,7 +37879,8 @@ _wrap_Trailer_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeGroup((FIX::Group const &)*arg2);
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
+          (arg1)->removeGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
@@ -37460,6 +37889,7 @@ _wrap_Trailer_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -38581,6 +39011,21 @@ fail:
 
 
 SWIGINTERN VALUE
+#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
+_wrap_Message_allocate(VALUE self)
+#else
+_wrap_Message_allocate(int argc, VALUE *argv, VALUE self)
+#endif
+{
+  VALUE vresult = SWIG_NewClassInstance(self, SWIGTYPE_p_FIX__Message);
+#ifndef HAVE_RB_DEFINE_ALLOC_FUNC
+  rb_obj_call_init(vresult, argc, argv);
+#endif
+  return vresult;
+}
+
+
+SWIGINTERN VALUE
 _wrap_new_Message__SWIG_12(int argc, VALUE *argv, VALUE self) {
   FIX::Message *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -38619,66 +39064,6 @@ fail:
 }
 
 
-SWIGINTERN VALUE
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
-_wrap_Message_allocate(VALUE self)
-#else
-_wrap_Message_allocate(int argc, VALUE *argv, VALUE self)
-#endif
-{
-  VALUE vresult = SWIG_NewClassInstance(self, SWIGTYPE_p_FIX__Message);
-#ifndef HAVE_RB_DEFINE_ALLOC_FUNC
-  rb_obj_call_init(vresult, argc, argv);
-#endif
-  return vresult;
-}
-
-
-SWIGINTERN VALUE
-_wrap_new_Message__SWIG_13(int argc, VALUE *argv, VALUE self) {
-  FIX::Message *arg1 = 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  std::unique_ptr< FIX::Message > rvrdeleter1 ;
-  const char *classname SWIGUNUSED = "Quickfix::Message";
-  FIX::Message *result = 0 ;
-  
-  if ((argc < 1) || (argc > 1)) {
-    rb_raise(rb_eArgError, "wrong # of arguments(%d for 1)",argc); SWIG_fail;
-  }
-  res1 = SWIG_ConvertPtr(argv[0], &argp1, SWIGTYPE_p_FIX__Message, SWIG_POINTER_RELEASE |  0 );
-  if (!SWIG_IsOK(res1)) {
-    if (res1 == SWIG_ERROR_RELEASE_NOT_OWNED) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Message" "', cannot release ownership as memory is not owned for argument " "1"" of type '" "FIX::Message &&""'");
-    } else {
-      SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Message &&","Message", 1, argv[0] )); 
-    }
-  }
-  if (!argp1) {
-    SWIG_exception_fail(SWIG_NullReferenceError, Ruby_Format_TypeError("invalid null reference ", "FIX::Message &&","Message", 1, argv[0])); 
-  }
-  arg1 = reinterpret_cast< FIX::Message * >(argp1);
-  rvrdeleter1.reset(arg1);
-  {
-    if(tryRubyException([&]() mutable
-        {
-      result = (FIX::Message *)new FIX::Message((FIX::Message &&)*arg1);
-          DATA_PTR(self) = result;
-          return self;
-        fail:
-          return Qnil;
-        }) == Qnil)
-    {
-      SWIG_fail;
-    }
-    redeliverKill();
-  }
-  return self;
-fail:
-  return Qnil;
-}
-
-
 SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
   int argc;
   VALUE argv[7];
@@ -38699,15 +39084,6 @@ SWIGINTERN VALUE _wrap_new_Message(int nargs, VALUE *args, VALUE self) {
     _v = SWIG_CheckState(res) || res == SWIG_ObjectPreviouslyDeletedError;
     if (_v) {
       return _wrap_new_Message__SWIG_12(nargs, args, self);
-    }
-  }
-  if (argc == 1) {
-    int _v = 0;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_FIX__Message, SWIG_POINTER_NO_NULL);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      return _wrap_new_Message__SWIG_13(nargs, args, self);
     }
   }
   if (argc == 1) {
@@ -38974,8 +39350,7 @@ fail:
     "    Message.new(message_order const &headerOrder, message_order const &trailerOrder, message_order const &order, std::string const &string, FIX::DataDictionary const &dataDictionary)\n"
     "    Message.new(message_order const &headerOrder, message_order const &trailerOrder, message_order const &order, std::string const &string, FIX::DataDictionary const &sessionDataDictionary, FIX::DataDictionary const &applicationDataDictionary, bool validate)\n"
     "    Message.new(message_order const &headerOrder, message_order const &trailerOrder, message_order const &order, std::string const &string, FIX::DataDictionary const &sessionDataDictionary, FIX::DataDictionary const &applicationDataDictionary)\n"
-    "    Message.new(FIX::Message const &)\n"
-    "    Message.new(FIX::Message &&)\n");
+    "    Message.new(FIX::Message const &)\n");
   
   return Qnil;
 }
@@ -39117,7 +39492,8 @@ _wrap_Message_replaceGroup(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
+          (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
@@ -39126,6 +39502,7 @@ _wrap_Message_replaceGroup(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -39171,7 +39548,8 @@ _wrap_Message_getGroup(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      result = (Group *) &((FIX::Message const *)arg1)->getGroup(arg2,*arg3);
+      QuickfixViews::beforeClearing(*arg3);
+          result = (Group *) &((FIX::Message const *)arg1)->getGroup(arg2,*arg3);
           return self;
         fail:
           return Qnil;
@@ -39180,6 +39558,7 @@ _wrap_Message_getGroup(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = argv[1];
   return vresult;
@@ -39224,7 +39603,8 @@ _wrap_Message_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
+          (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
@@ -39233,6 +39613,7 @@ _wrap_Message_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -39268,7 +39649,8 @@ _wrap_Message_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeGroup((FIX::Group const &)*arg2);
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
+          (arg1)->removeGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
@@ -39277,6 +39659,7 @@ _wrap_Message_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -40280,7 +40663,8 @@ _wrap_Message_reverseRoute(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->reverseRoute((FIX::Header const &)*arg2);
+      QuickfixViews::HeaderGroups views(*arg1);
+          (arg1)->reverseRoute((FIX::Header const &)*arg2);
           return self;
         fail:
           return Qnil;
@@ -40289,6 +40673,7 @@ _wrap_Message_reverseRoute(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -40327,7 +40712,8 @@ _wrap_Message_setString__SWIG_0(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->setString((std::string const &)*arg2);
+      QuickfixViews::beforeClearingMessage(*arg1);
+          (arg1)->setString((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
@@ -40336,6 +40722,7 @@ _wrap_Message_setString__SWIG_0(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -40391,7 +40778,8 @@ _wrap_Message_setString__SWIG_1(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->setString((std::string const &)*arg2,arg3);
+      QuickfixViews::beforeClearingMessage(*arg1);
+          (arg1)->setString((std::string const &)*arg2,arg3);
           return self;
         fail:
           return Qnil;
@@ -40400,6 +40788,7 @@ _wrap_Message_setString__SWIG_1(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -40463,7 +40852,8 @@ _wrap_Message_setString__SWIG_2(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->setString((std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4);
+      QuickfixViews::beforeClearingMessage(*arg1);
+          (arg1)->setString((std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4);
           return self;
         fail:
           return Qnil;
@@ -40472,6 +40862,7 @@ _wrap_Message_setString__SWIG_2(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -40543,7 +40934,8 @@ _wrap_Message_setString__SWIG_3(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->setString((std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4,(FIX::DataDictionary const *)arg5);
+      QuickfixViews::beforeClearingMessage(*arg1);
+          (arg1)->setString((std::string const &)*arg2,arg3,(FIX::DataDictionary const *)arg4,(FIX::DataDictionary const *)arg5);
           return self;
         fail:
           return Qnil;
@@ -40552,6 +40944,7 @@ _wrap_Message_setString__SWIG_3(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   {
     if( std::string("std::string const &") == "std::string &" ) 	 
@@ -40831,7 +41224,8 @@ _wrap_Message_setStringHeader(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      result = (bool)(arg1)->setStringHeader((std::string const &)*arg2);
+      QuickfixViews::beforeClearingMessage(*arg1);
+          result = (bool)(arg1)->setStringHeader((std::string const &)*arg2);
           return self;
         fail:
           return Qnil;
@@ -40840,6 +41234,7 @@ _wrap_Message_setStringHeader(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -41772,7 +42167,8 @@ _wrap_Message_clear(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->clear();
+      QuickfixViews::beforeClearingMessage(*arg1);
+          (arg1)->clear();
           return self;
         fail:
           return Qnil;
@@ -41781,6 +42177,7 @@ _wrap_Message_clear(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -43175,7 +43572,8 @@ _wrap_Group_replaceGroup(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
+      QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());
+          (arg1)->replaceGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
@@ -43184,6 +43582,7 @@ _wrap_Group_replaceGroup(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -43229,7 +43628,8 @@ _wrap_Group_getGroup(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      result = (FIX::Group *) &((FIX::Group const *)arg1)->getGroup(arg2,*arg3);
+      QuickfixViews::beforeGettingGroup(*arg1, arg2, arg3->field(), *arg3);
+          result = (FIX::Group *) &((FIX::Group const *)arg1)->getGroup(arg2,*arg3);
           return self;
         fail:
           return Qnil;
@@ -43238,6 +43638,7 @@ _wrap_Group_getGroup(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = argv[1];
   return vresult;
@@ -43282,7 +43683,8 @@ _wrap_Group_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
+      QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());
+          (arg1)->removeGroup(arg2,(FIX::Group const &)*arg3);
           return self;
         fail:
           return Qnil;
@@ -43291,6 +43693,7 @@ _wrap_Group_removeGroup__SWIG_0(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -43326,7 +43729,8 @@ _wrap_Group_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      (arg1)->removeGroup((FIX::Group const &)*arg2);
+      QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());
+          (arg1)->removeGroup((FIX::Group const &)*arg2);
           return self;
         fail:
           return Qnil;
@@ -43335,6 +43739,7 @@ _wrap_Group_removeGroup__SWIG_1(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   return Qnil;
 fail:
@@ -101193,7 +101598,8 @@ _wrap_Session_sendToTarget__SWIG_0(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      return withoutGvl([&]() mutable -> VALUE
+      QuickfixViews::HeaderGroups views(*arg1);
+          return withoutGvl([&]() mutable -> VALUE
             {
         result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2);
               return self;
@@ -101203,6 +101609,7 @@ _wrap_Session_sendToTarget__SWIG_0(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -101242,7 +101649,8 @@ _wrap_Session_sendToTarget__SWIG_1(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      return withoutGvl([&]() mutable -> VALUE
+      QuickfixViews::HeaderGroups views(*arg1);
+          return withoutGvl([&]() mutable -> VALUE
             {
         result = (bool)FIX::Session::sendToTarget(*arg1);
               return self;
@@ -101252,6 +101660,7 @@ _wrap_Session_sendToTarget__SWIG_1(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -101293,7 +101702,8 @@ _wrap_Session_sendToTarget__SWIG_2(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      return withoutGvl([&]() mutable -> VALUE
+      QuickfixViews::HeaderGroups views(*arg1);
+          return withoutGvl([&]() mutable -> VALUE
             {
         result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SessionID const &)*arg2);
               return self;
@@ -101303,6 +101713,7 @@ _wrap_Session_sendToTarget__SWIG_2(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -101368,7 +101779,8 @@ _wrap_Session_sendToTarget__SWIG_3(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      return withoutGvl([&]() mutable -> VALUE
+      QuickfixViews::HeaderGroups views(*arg1);
+          return withoutGvl([&]() mutable -> VALUE
             {
         result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SenderCompID const &)*arg2,(FIX::TargetCompID const &)*arg3,(std::string const &)*arg4);
               return self;
@@ -101378,6 +101790,7 @@ _wrap_Session_sendToTarget__SWIG_3(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -101439,7 +101852,8 @@ _wrap_Session_sendToTarget__SWIG_4(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      return withoutGvl([&]() mutable -> VALUE
+      QuickfixViews::HeaderGroups views(*arg1);
+          return withoutGvl([&]() mutable -> VALUE
             {
         result = (bool)FIX::Session::sendToTarget(*arg1,(FIX::SenderCompID const &)*arg2,(FIX::TargetCompID const &)*arg3);
               return self;
@@ -101449,6 +101863,7 @@ _wrap_Session_sendToTarget__SWIG_4(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -101518,7 +101933,8 @@ _wrap_Session_sendToTarget__SWIG_5(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      return withoutGvl([&]() mutable -> VALUE
+      QuickfixViews::HeaderGroups views(*arg1);
+          return withoutGvl([&]() mutable -> VALUE
             {
         result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2,(std::string const &)*arg3,(std::string const &)*arg4);
               return self;
@@ -101528,6 +101944,7 @@ _wrap_Session_sendToTarget__SWIG_5(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -101611,7 +102028,8 @@ _wrap_Session_sendToTarget__SWIG_6(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      return withoutGvl([&]() mutable -> VALUE
+      QuickfixViews::HeaderGroups views(*arg1);
+          return withoutGvl([&]() mutable -> VALUE
             {
         result = (bool)FIX::Session::sendToTarget(*arg1,(std::string const &)*arg2,(std::string const &)*arg3);
               return self;
@@ -101621,6 +102039,7 @@ _wrap_Session_sendToTarget__SWIG_6(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   {
@@ -104210,7 +104629,8 @@ _wrap_Session_send(int argc, VALUE *argv, VALUE self) {
   {
     if(tryRubyException([&]() mutable
         {
-      return withoutGvl([&]() mutable -> VALUE
+      QuickfixViews::HeaderGroups views(*arg2);
+          return withoutGvl([&]() mutable -> VALUE
             {
         result = (bool)(arg1)->send(*arg2);
               return self;
@@ -104220,6 +104640,7 @@ _wrap_Session_send(int argc, VALUE *argv, VALUE self) {
       SWIG_fail;
     }
     redeliverKill();
+    QuickfixViews::redeliverError();
   }
   vresult = SWIG_From_bool(static_cast< bool >(result));
   return vresult;
@@ -136396,6 +136817,12 @@ SWIGEXPORT void Init_quickfix(void) {
   rb_define_module_function(mQuickfix, "_acceptorBlocking", RUBY_METHOD_FUNC(isAcceptorBlocking), 1);
   rb_define_module_function(mQuickfix, "_callbackThread", RUBY_METHOD_FUNC(callbackThread), 0);
   rb_define_module_function(mQuickfix, "_endView", RUBY_METHOD_FUNC(quickfixTestEndView), 1);
+  rb_define_module_function(mQuickfix, "_viewCount", RUBY_METHOD_FUNC(quickfixTestViewCount), 0);
+  rb_define_module_function(mQuickfix, "_viewEntries", RUBY_METHOD_FUNC(quickfixTestViewEntries), 0);
+  rb_define_module_function(mQuickfix, "_viewsLanded", RUBY_METHOD_FUNC(quickfixTestViewsLanded), 0);
+  // The group views' map (QuickfixViews): a root before it exists, so no GC can take it in between.
+  rb_gc_register_address(&QuickfixViews::s_map);
+  QuickfixViews::s_map = rb_class_new_instance(0, nullptr, rb_path2class("ObjectSpace::WeakMap"));
   
 }
 

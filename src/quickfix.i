@@ -267,11 +267,18 @@ bool tryPythonException(std::function<bool()> const& function)
 #endif
 
 #ifdef SWIGRUBY
+namespace QuickfixViews
+{
+void redeliverError();
+}
+
 template<typename Exception>
 void raiseRubyException(Exception const& e, swig_type_info* swigType)
 {
-  // A kill that landed in a callback outranks what the engine threw (#147).
+  // A kill that landed in a callback outranks what the engine threw (#147), and so does an exception that landed
+  // while a call ended views (#196; ruby/quickfix.i).
   redeliverKill();
+  QuickfixViews::redeliverError();
   rb_exc_raise(SWIG_Ruby_ExceptionType(swigType, SWIG_NewPointerObj((new Exception(static_cast<const Exception&>(e))),swigType,SWIG_POINTER_OWN)));
 }
 
@@ -555,8 +562,8 @@ typedef FIX::SessionSettings SessionSettings;
 // - a copy, where C++ returns const: getFieldRef, getFieldPtr and SessionID's getters (below; java/quickfix.i).
 //   A field's view was also moved by any setField that grew its message.
 // - the view, holding its owner, where an application writes through it: getHeader, getTrailer, getGroupRef,
-//   getGroupPtr and SessionSettings.get (python/, ruby/ and java/quickfix.i). Like C++'s reference, a group's
-//   view ends when the group is removed or the message cleared or set from a string.
+//   getGroupPtr and SessionSettings.get (python/, ruby/ and java/quickfix.i). A group's view ends when a call
+//   through the binding destroys its group, and raises if it is used after (#196, below).
 // - the argument itself, where the result is the argument: getField(field) and getGroup(..., group), likewise.
 // A Session and what a transport or session returns live until the transport is destroyed, as in C++ (README).
 // These return an engine internal, or an opaque type nothing in a binding can use, so they are not wrapped:
@@ -573,6 +580,218 @@ typedef FIX::SessionSettings SessionSettings;
 // made is freed by its proxy too, and a group view by the message it is in. addGroup copies, and is what a binding
 // needs.
 %ignore FIX::FieldMap::addGroupPtr;
+// A move constructor would take the groups from under its argument's views (#196). SWIG already shadows both with
+// the copy constructor (warnings 509 and 516), so neither was reachable; now neither is wrapped.
+%ignore FIX::FieldMap::FieldMap(FieldMap &&);
+%ignore FIX::Message::Message(Message &&);
+
+// A group's view (getGroupRef, getGroupPtr) points into its message, and the binding's own calls destroy what it
+// points at: removeGroup, clear, setString and the rest below (#196). Each binding keeps the group views it hands
+// out, by the address of their group (QuickfixViews in python/, ruby/ and java/quickfix.i), and each of these calls
+// first ends the views of what it is about to destroy: their pointers become null, so a later use raises instead of
+// reaching freed memory (the null-proxy check above each binding's %include). In Java, whose delete() frees an
+// object, it also ends the views of what that frees. These walks say what each call destroys. While no group view
+// is registered, a call pays one check.
+%{
+#include <algorithm>
+#include <vector>
+namespace QuickfixViews
+{
+typedef std::vector<const void *> Addresses;
+
+// Each binding's own: whether any group view is registered, and ending the views registered at these addresses.
+// endViews() leaves the language's pending error, if there is one, as it found it. (Not end(): an unqualified call
+// with a std::vector finds std::end too, and std::end(Container &) binds a non-const vector more tightly.)
+bool anyGroupViews();
+void endViews(const Addresses &addresses);
+
+// Every group under map, at any depth; not map itself.
+inline void addGroupsUnder(const FIX::FieldMap &map, Addresses &addresses)
+{
+  for (FIX::FieldMap::g_const_iterator tag = map.g_begin(); tag != map.g_end(); ++tag)
+  {
+    for (const FIX::FieldMap *group : tag->second)
+    {
+      addresses.push_back(group);
+      addGroupsUnder(*group, addresses);
+    }
+  }
+}
+
+// Group num at tag, or null.
+inline const FIX::FieldMap *groupAt(const FIX::FieldMap &map, int num, int tag)
+{
+  if (num <= 0 || map.groupCount(tag) < static_cast<size_t>(num))
+    return nullptr;
+  return &map.getGroupRef(num, tag);
+}
+
+// clear(), and Message's, Header's and Trailer's getGroup(num, group), which clear their argument before they look
+// (Message.h): every group under map.
+inline void beforeClearing(const FIX::FieldMap &map)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(map, addresses);
+  endViews(addresses);
+}
+
+// Message's clear(), setString() and setStringHeader(), which clear first: the header's, body's and trailer's groups.
+inline void beforeClearingMessage(const FIX::Message &message)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(message.getHeader(), addresses);
+  addGroupsUnder(message, addresses);
+  addGroupsUnder(message.getTrailer(), addresses);
+  endViews(addresses);
+}
+
+// removeGroup(num, tag): group num, and every group under it.
+inline void beforeRemovingGroup(const FIX::FieldMap &map, int num, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  if (const FIX::FieldMap *group = groupAt(map, num, tag))
+  {
+    Addresses addresses(1, group);
+    addGroupsUnder(*group, addresses);
+    endViews(addresses);
+  }
+}
+
+// removeGroup(tag): every group at tag, and every group under them.
+inline void beforeRemovingGroups(const FIX::FieldMap &map, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  for (size_t num = 1, count = map.groupCount(tag); num <= count; ++num)
+  {
+    const FIX::FieldMap &group = map.getGroupRef(static_cast<int>(num), tag);
+    addresses.push_back(&group);
+    addGroupsUnder(group, addresses);
+  }
+  endViews(addresses);
+}
+
+// removeField(tag) removes tag's groups with the field, and only when the field is set.
+inline void beforeRemovingField(const FIX::FieldMap &map, int tag)
+{
+  if (map.isSetField(tag))
+    beforeRemovingGroups(map, tag);
+}
+
+// replaceGroup(num, ...) assigns over group num: the group stays, and the groups under it go.
+inline void beforeReplacingGroup(const FIX::FieldMap &map, int num, int tag)
+{
+  if (!anyGroupViews())
+    return;
+  if (const FIX::FieldMap *group = groupAt(map, num, tag))
+  {
+    Addresses addresses;
+    addGroupsUnder(*group, addresses);
+    endViews(addresses);
+  }
+}
+
+// FieldMap's and Group's getGroup(num, ..., group) assign group num over group, and throw FieldNotFound first,
+// leaving group as it was, when there is none.
+inline void beforeGettingGroup(const FIX::FieldMap &map, int num, int tag, const FIX::FieldMap &group)
+{
+  if (groupAt(map, num, tag))
+    beforeClearing(group);
+}
+
+// swap(rhs): each map's groups pass to the other, with its arena, so a view would keep the wrong message alive.
+inline void beforeSwapping(const FIX::FieldMap &map, const FIX::FieldMap &rhs)
+{
+  if (!anyGroupViews())
+    return;
+  Addresses addresses;
+  addGroupsUnder(map, addresses);
+  addGroupsUnder(rhs, addresses);
+  endViews(addresses);
+}
+
+// Message's reverseRoute(), and Session's send() and sendToTarget() on their message, remove routing and resend
+// fields from its header, and the groups at those tags with them (Message.cpp, Session.cpp). Rather than mirror
+// their lists, which would go stale without a word, this compares the header's groups before and after the call,
+// also when the call throws. Nothing in the send path removes from the message after toApp or toAdmin returns, so
+// deciding before the call that no view needs the comparison holds for a view a callback takes.
+class HeaderGroups
+{
+public:
+  explicit HeaderGroups(const FIX::Message &message) : m_message(anyGroupViews() ? &message : nullptr)
+  {
+    if (m_message)
+      addGroupsUnder(message.getHeader(), m_before);
+  }
+  ~HeaderGroups()
+  {
+    if (!m_message || m_before.empty())
+      return;
+    try
+    {
+      Addresses after;
+      addGroupsUnder(m_message->getHeader(), after);
+      std::sort(after.begin(), after.end());
+      Addresses gone;
+      for (const void *address : m_before)
+        if (!std::binary_search(after.begin(), after.end(), address))
+          gone.push_back(address);
+      if (!gone.empty())
+        endViews(gone);
+    }
+    catch (...)
+    {
+    }
+  }
+  HeaderGroups(const HeaderGroups &) = delete;
+  HeaderGroups &operator=(const HeaderGroups &) = delete;
+
+private:
+  const FIX::Message *m_message;
+  Addresses m_before;
+};
+}
+%}
+
+// The calls that destroy a group a view may point at, each ending those views first: QUICKFIX_VIEWS_EXCEPTION is
+// each binding's exception translation with the code given before $action, after the arguments are converted, so
+// an argument that is refused ends nothing. SWIG names the receiver arg1 and the arguments after it arg2 on, and a
+// reference argument is a pointer. Every public method of FieldMap, Message, Header, Trailer and Group is classified
+// as destroying or not in each binding's view tests, which fail on one that is neither.
+QUICKFIX_VIEWS_EXCEPTION(FIX::FieldMap::clear, QuickfixViews::beforeClearing(*arg1);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::FieldMap::removeField, QuickfixViews::beforeRemovingField(*arg1, arg2);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::FieldMap::removeGroup(int, int), QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::FieldMap::removeGroup(int), QuickfixViews::beforeRemovingGroups(*arg1, arg2);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::FieldMap::replaceGroup, QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::FieldMap::getGroup, QuickfixViews::beforeGettingGroup(*arg1, arg2, arg3, *arg4);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::FieldMap::swap, QuickfixViews::beforeSwapping(*arg1, *arg2);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Message::clear, QuickfixViews::beforeClearingMessage(*arg1);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Message::setString, QuickfixViews::beforeClearingMessage(*arg1);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Message::setStringHeader, QuickfixViews::beforeClearingMessage(*arg1);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Message::reverseRoute, QuickfixViews::HeaderGroups views(*arg1);)
+// A parameter's type is matched as its header spells it: Message.h's FIX::Group, Group.h's Group.
+%define QUICKFIX_VIEWS_GROUP_METHODS(Class, GroupType)
+QUICKFIX_VIEWS_EXCEPTION(Class::removeGroup(unsigned int, GroupType const &),
+                         QuickfixViews::beforeRemovingGroup(*arg1, arg2, arg3->field());)
+QUICKFIX_VIEWS_EXCEPTION(Class::removeGroup(GroupType const &), QuickfixViews::beforeRemovingGroups(*arg1, arg2->field());)
+QUICKFIX_VIEWS_EXCEPTION(Class::replaceGroup, QuickfixViews::beforeReplacingGroup(*arg1, arg2, arg3->field());)
+%enddef
+QUICKFIX_VIEWS_GROUP_METHODS(FIX::Message, FIX::Group)
+QUICKFIX_VIEWS_GROUP_METHODS(FIX::Header, FIX::Group)
+QUICKFIX_VIEWS_GROUP_METHODS(FIX::Trailer, FIX::Group)
+QUICKFIX_VIEWS_GROUP_METHODS(FIX::Group, Group)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Message::getGroup, QuickfixViews::beforeClearing(*arg3);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Header::getGroup, QuickfixViews::beforeClearing(*arg3);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Trailer::getGroup, QuickfixViews::beforeClearing(*arg3);)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Group::getGroup, QuickfixViews::beforeGettingGroup(*arg1, arg2, arg3->field(), *arg3);)
+QUICKFIX_VIEWS_SESSION_EXCEPTION(FIX::Session::send, QuickfixViews::HeaderGroups views(*arg2);)
+QUICKFIX_VIEWS_SESSION_EXCEPTION(FIX::Session::sendToTarget, QuickfixViews::HeaderGroups views(*arg1);)
 
 #if defined(SWIGPYTHON) || defined(SWIGRUBY)
 %typemap(out, noblock=1) const FIX::FieldBase &getFieldRef, const FIX::FieldBase *const getFieldPtr {

@@ -9272,6 +9272,9 @@ class NullStore(MessageStore):
 # Register NullStore in _quickfix:
 _quickfix.NullStore_swigregister(NullStore)
 
+def _viewCount():
+    return _quickfix._viewCount()
+
 try:
   import thread
 except ImportError:

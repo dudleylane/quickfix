@@ -765,10 +765,23 @@ private:
 // returns the argument's own object, so neither outlives what it points into (#194; ../quickfix.i). A wrapper's
 // self is the receiver and argv the arguments after it. Message's getGroup returns a Group SWIG has not read yet.
 %typemap(out, noblock=1) FIX::Header &getHeader, const FIX::Header &getHeader, FIX::Trailer &getTrailer,
-                         const FIX::Trailer &getTrailer, FIX::FieldMap &getGroupRef, FIX::FieldMap *getGroupPtr,
-                         const FIX::Dictionary &get {
+                         const FIX::Trailer &getTrailer, const FIX::Dictionary &get {
   $result = SWIG_NewPointerObj(SWIG_as_voidptr($1), $descriptor, 0);
   rb_iv_set($result, "@quickfixOwner", self);
+}
+// A group's view is also registered, so the calls that destroy its group can end it (#196, QuickfixViews below).
+// This runs after the method's own redeliverKill, so it raises what lands while it registers the view.
+%typemap(out, noblock=1) FIX::FieldMap &getGroupRef, FIX::FieldMap *getGroupPtr {
+  $result = SWIG_NewPointerObj(SWIG_as_voidptr($1), $descriptor, 0);
+  rb_iv_set($result, "@quickfixOwner", self);
+  if ($1)
+  {
+    bool registered = QuickfixViews::registerView($result, $1);
+    redeliverKill();
+    QuickfixViews::redeliverError();
+    if (!registered)
+      rb_memerror();
+  }
 }
 %{
 // Ends a view: a proxy that owns nothing, of an object that is destroyed or about to be. Its pointer becomes null,
@@ -817,7 +830,319 @@ VALUE quickfixTestEndView(VALUE, VALUE view) { return quickfixEndView(view) ? Qt
 %typemap(out, noblock=1) FIX::FieldMap &getGroup { $result = argv[2]; }
 %typemap(out, noblock=1) FIX::Group &getGroup, Group &getGroup { $result = argv[1]; }
 
+// A call that destroys a group a view may point at (#196; ../quickfix.i): QUICKFIX_RUBY_EXCEPTION, with BEFORE ahead
+// of $action, which runs with the GVL. Session's send and sendToTarget release the GVL around $action alone, as
+// QUICKFIX_RUBY_EXCEPTION_WITHOUT_GVL does, so BEFORE, and the destructor of anything it declares, run with it, and
+// before tryRubyException translates a C++ exception.
+%define QUICKFIX_VIEWS_EXCEPTION(decl, BEFORE)
+%exception decl
+{
+  if(tryRubyException([&]() mutable
+  {
+    BEFORE
+    $action
+    return self;
+  fail:
+    return Qnil;
+  }) == Qnil)
+  {
+    SWIG_fail;
+  }
+  redeliverKill();
+  QuickfixViews::redeliverError();
+}
+%enddef
+%define QUICKFIX_VIEWS_SESSION_EXCEPTION(decl, BEFORE)
+%exception decl
+{
+  if(tryRubyException([&]() mutable
+  {
+    BEFORE
+    return withoutGvl([&]() mutable -> VALUE
+    {
+      $action
+      return self;
+    });
+  }) == Qnil)
+  {
+    SWIG_fail;
+  }
+  redeliverKill();
+  QuickfixViews::redeliverError();
+}
+%enddef
+
 %include ../quickfix.i
+
+%{
+#include <unordered_map>
+#include <unordered_set>
+namespace QuickfixViews
+{
+// The group views handed out (#196; ../quickfix.i). An ObjectSpace::WeakMap holds each view, mapped to the address
+// of its group, so a view still goes when Ruby collects it: Ruby's C API has no weak reference of its own. The
+// counts, by address, serve the fast check and say when the map needs walking: they never miss a view that has not
+// been ended, and may count views collected since the last walk recounted them. A walk ends the views of the
+// groups a call destroys by nulling their pointers (quickfixEndView), and SWIG raises ObjectPreviouslyDeleted for
+// them from then on.
+//
+// An ended view stays in the map until Ruby collects it, so a loop that ends a view on every pass would walk every
+// view it had made since the last GC. Instead, once the map holds more than twice the views not ended, and 16 more,
+// a walk keeps the views it finds not ended, and a new map of those replaces it (WeakMap#delete is Ruby 3.3's). So a
+// walk costs O(views not ended), amortized.
+//
+// Each call into Ruby here may switch threads, or run a trap handler or a finalizer that registers views itself,
+// and may deliver a Thread#raise, a Thread#kill or a throw. Each lands after the call has done its work: each_pair's
+// block calls nothing that checks for one. So nothing here holds an iterator or a count across such a call, a walk
+// is repeated when a view was registered while it ran, a map is replaced only if none was, and what lands is held
+// for the method's wrapper to deliver once it is out of C++ frames: a kill by deferKill, anything else by protect
+// (redeliverError). While one is held, nothing here calls into Ruby again, where a second could land over it.
+static VALUE s_map = Qnil;
+static std::unordered_map<const void *, size_t> s_counts;
+static size_t s_total = 0;
+// The map's entries as the last walk found them, and the views registered since: more than it holds once Ruby has
+// collected some.
+static size_t s_entries = 0;
+static size_t s_registrations = 0;
+static size_t s_idle = 0;
+static size_t s_lastGc = 0;
+static size_t s_walkAt = 64;
+// How many times something landed in protect: for the tests, which show they reach it.
+static size_t s_landed = 0;
+// What protect caught, for redeliverError: its tag, and $! as protect found it, compared, not kept, since Ruby
+// keeps it there.
+thread_local int t_heldTag = 0;
+thread_local VALUE t_heldError = Qnil;
+
+static bool holding() { return t_heldTag || t_deferredKill; }
+
+// Calls into Ruby, unless something is held already, so that nothing it raises or throws unwinds through C++
+// frames. A kill is held by deferKill; anything else by its tag, to go on with rb_jump_tag as it would have gone on.
+// False if it did not call, or something landed. call creates no C++ object that needs destroying.
+template <typename Call> static bool protect(Call &call)
+{
+  if (holding())
+    return false;
+  int state = 0;
+  rb_protect(
+      [](VALUE call) -> VALUE
+      {
+        (*reinterpret_cast<Call *>(call))();
+        return Qnil;
+      },
+      reinterpret_cast<VALUE>(&call), &state);
+  if (!state)
+    return true;
+  ++s_landed;
+  if (!deferKill(rb_errinfo()))
+  {
+    t_heldTag = state;
+    t_heldError = rb_errinfo();
+  }
+  return false;
+}
+
+// With the GVL, where a longjmp leaves no C++ frame that needs unwinding: after redeliverKill, which outranks it.
+// What protect held goes on as it would have; if $! no longer holds it, it was lost, and that is raised instead.
+void redeliverError()
+{
+  if (!t_heldTag)
+    return;
+  int tag = t_heldTag;
+  VALUE error = t_heldError;
+  t_heldTag = 0;
+  t_heldError = Qnil;
+  if (rb_errinfo() != error)
+    rb_raise(rb_eThreadError, "quickfix: what landed while views were registered or ended was lost before it could "
+                              "be delivered");
+  rb_jump_tag(tag);
+}
+
+static const void *addressOf(VALUE value) { return reinterpret_cast<const void *>(NUM2ULL(value)); }
+
+struct Walk
+{
+  const std::unordered_set<const void *> *doomed;
+  // The views not ended, each followed by its address, when the map is to be replaced: an array made with room for
+  // as many as the counts allow, so that pushing never allocates; Qnil if not, or if they did not fit.
+  VALUE kept;
+  long room;
+  std::unordered_map<const void *, size_t> counts;
+  size_t total = 0;
+  size_t entries = 0;
+  bool failed = false;
+  bool refused = false;
+};
+
+// Calls nothing that can raise, allocate or let other Ruby code run, so a walk is never cut short once it has begun.
+static VALUE walkView(RB_BLOCK_CALL_FUNC_ARGLIST(view, data))
+{
+  Walk *walk = reinterpret_cast<Walk *>(data);
+  ++walk->entries;
+  if (!DATA_PTR(argv[0]))
+    return Qnil;
+  const void *address = addressOf(argv[1]);
+  if (walk->doomed && walk->doomed->count(address))
+  {
+    if (quickfixEndView(argv[0]))
+      return Qnil;
+    walk->refused = true;
+  }
+  try
+  {
+    ++walk->counts[address];
+    ++walk->total;
+  }
+  catch (...)
+  {
+    walk->failed = true;
+  }
+  if (!NIL_P(walk->kept))
+  {
+    if (walk->room >= 2)
+    {
+      rb_ary_push(walk->kept, argv[0]);
+      rb_ary_push(walk->kept, argv[1]);
+      walk->room -= 2;
+    }
+    else
+    {
+      walk->kept = Qnil;
+    }
+  }
+  return Qnil;
+}
+
+// A new map of the views kept replaces the old one, if every one went in and no view was registered meanwhile: one
+// registered meanwhile is in the old map alone.
+static void replace(VALUE kept)
+{
+  size_t registrations = s_registrations;
+  VALUE map = Qnil;
+  auto make = [&]() { map = rb_class_new_instance(0, nullptr, rb_path2class("ObjectSpace::WeakMap")); };
+  if (!protect(make))
+    return;
+  for (long i = 0; i + 1 < RARRAY_LEN(kept); i += 2)
+  {
+    VALUE view = RARRAY_AREF(kept, i);
+    VALUE address = RARRAY_AREF(kept, i + 1);
+    auto store = [&]() { rb_funcall(map, rb_intern("[]="), 2, view, address); };
+    if (!protect(store))
+      return;
+  }
+  if (registrations != s_registrations)
+    return;
+  s_map = map;
+  s_entries = static_cast<size_t>(RARRAY_LEN(kept) / 2);
+  RB_GC_GUARD(map);
+}
+
+// Walks the map: ends the views at doomed, if given, recounts the rest, and replaces the map if ended views fill
+// it. Repeated when a view was registered while it ran, which the recount may miss; ending a view twice is
+// harmless. False if it never ran undisturbed, if something landed, or if a view at doomed could not be ended:
+// quickfixEndView refuses one that owns its object, which no view does.
+static bool walk(const std::unordered_set<const void *> *doomed)
+{
+  VALUE kept = Qnil;
+  long room = 0;
+  if (s_entries > 2 * s_total + 16)
+  {
+    room = static_cast<long>(2 * s_total);
+    auto make = [&]() { kept = rb_ary_new_capa(room); };
+    if (!protect(make))
+      return false;
+  }
+  for (int attempt = 0; attempt < 3; ++attempt)
+  {
+    size_t registrations = s_registrations;
+    Walk pass{doomed, attempt ? Qnil : kept, room};
+    auto each = [&]()
+    { rb_block_call(s_map, rb_intern("each_pair"), 0, nullptr, walkView, reinterpret_cast<VALUE>(&pass)); };
+    if (!protect(each))
+      return false;
+    if (registrations != s_registrations)
+      continue;
+    if (!pass.failed)
+    {
+      s_counts.swap(pass.counts);
+      s_total = pass.total;
+    }
+    s_entries = pass.entries;
+    s_lastGc = rb_gc_count();
+    s_idle = 0;
+    if (!NIL_P(pass.kept))
+      replace(pass.kept);
+    RB_GC_GUARD(kept);
+    return !pass.refused;
+  }
+  return false;
+}
+
+// From a wrapper's out typemap, which delivers what landed here, so a view that may be missing from the map is
+// never handed out. It is counted first, so a count never misses it. False if it is not in the map.
+bool registerView(VALUE view, const void *address)
+{
+  try
+  {
+    ++s_counts[address];
+  }
+  catch (...)
+  {
+    return false;
+  }
+  ++s_total;
+  ++s_entries;
+  ++s_registrations;
+  auto store = [&]() { rb_funcall(s_map, rb_intern("[]="), 2, view, ULL2NUM(reinterpret_cast<uintptr_t>(address))); };
+  if (!protect(store))
+    return false;
+  if (s_total >= s_walkAt)
+  {
+    if (rb_gc_count() != s_lastGc)
+      walk(nullptr);
+    s_walkAt = std::max<size_t>(64, 2 * s_total);
+  }
+  return true;
+}
+
+bool anyGroupViews() { return s_total != 0; }
+
+// A call that destroys groups with views runs only once those views are ended. Calls that end nothing recount the
+// map once they outnumber its views, if a GC may have collected some.
+void endViews(const Addresses &addresses)
+{
+  if (!s_total)
+    return;
+  std::unordered_set<const void *> doomed;
+  for (const void *address : addresses)
+    if (s_counts.count(address))
+      doomed.insert(address);
+  if (doomed.empty())
+  {
+    if (++s_idle >= s_total && rb_gc_count() != s_lastGc)
+      walk(nullptr);
+    return;
+  }
+  if (!walk(&doomed))
+    throw FIX::RuntimeError("the views of the groups this call destroys could not be ended");
+}
+}
+
+// For the tests: Quickfix._viewCount is how many group views are registered and not ended, after a recount;
+// Quickfix._viewEntries how many entries the registry's map holds, ended views among them; and Quickfix._viewsLanded
+// how many times something landed in the registry's own calls into Ruby.
+VALUE quickfixTestViewCount(VALUE)
+{
+  QuickfixViews::walk(nullptr);
+  redeliverKill();
+  QuickfixViews::redeliverError();
+  return SIZET2NUM(QuickfixViews::s_total);
+}
+
+VALUE quickfixTestViewEntries(VALUE) { return rb_funcall(QuickfixViews::s_map, rb_intern("size"), 0); }
+
+VALUE quickfixTestViewsLanded(VALUE) { return SIZET2NUM(QuickfixViews::s_landed); }
+%}
 	  	 
 // Without director:except a Log or LogFactory method calls Ruby with a bare
 // rb_funcall, and an exception longjmps out through the engine's C++ frames (#112).
@@ -950,4 +1275,10 @@ QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::LogFactory::destroy)
   rb_define_module_function(mQuickfix, "_acceptorBlocking", RUBY_METHOD_FUNC(isAcceptorBlocking), 1);
   rb_define_module_function(mQuickfix, "_callbackThread", RUBY_METHOD_FUNC(callbackThread), 0);
   rb_define_module_function(mQuickfix, "_endView", RUBY_METHOD_FUNC(quickfixTestEndView), 1);
+  rb_define_module_function(mQuickfix, "_viewCount", RUBY_METHOD_FUNC(quickfixTestViewCount), 0);
+  rb_define_module_function(mQuickfix, "_viewEntries", RUBY_METHOD_FUNC(quickfixTestViewEntries), 0);
+  rb_define_module_function(mQuickfix, "_viewsLanded", RUBY_METHOD_FUNC(quickfixTestViewsLanded), 0);
+  // The group views' map (QuickfixViews): a root before it exists, so no GC can take it in between.
+  rb_gc_register_address(&QuickfixViews::s_map);
+  QuickfixViews::s_map = rb_class_new_instance(0, nullptr, rb_path2class("ObjectSpace::WeakMap"));
 %}

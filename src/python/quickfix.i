@@ -214,7 +214,150 @@ bool quickfixEndView(PyObject *view)
 bool quickfixTestEndView(PyObject *view) { return quickfixEndView(view); }
 %}
 
+// A call that destroys a group a view may point at (#196; ../quickfix.i): the exception translation above, with
+// BEFORE ahead of $action. $action releases the GIL only inside itself (-threads), so BEFORE, and the destructor of
+// anything it declares, run with it.
+%define QUICKFIX_VIEWS_EXCEPTION(decl, BEFORE)
+%exception decl
+{
+  if(!tryPythonException([&]() mutable
+  {
+    BEFORE
+    $action
+    return true;
+  fail:
+    return false;
+  }))
+  {
+    SWIG_fail;
+  }
+}
+%enddef
+%define QUICKFIX_VIEWS_SESSION_EXCEPTION(decl, BEFORE)
+QUICKFIX_VIEWS_EXCEPTION(decl, BEFORE)
+%enddef
+
+// A group's view is registered, so the calls that destroy its group can end it (QuickfixViews, below). One that
+// cannot be is not handed out: the call raises instead.
+%typemap(ret, noblock=1) FIX::FieldMap &getGroupRef, FIX::FieldMap *getGroupPtr {
+  if ($1 && $result && !QuickfixViews::registerView($result, $1)) {
+    Py_DECREF($result);
+    $result = NULL;
+  }
+}
+
 %include ../quickfix.i
+
+// The group views handed out (#196; ../quickfix.i): each view's `this` object, by the address of its group. The
+// registry holds a reference to it, as the view's proxy does, so the object of a view nothing else holds has a
+// count of 1, and a prune drops it: at a registration once the registry has doubled since the last prune, and once
+// calls that end nothing outnumber its objects. A view that is ended loses its pointer, and the null-proxy check
+// above raises for it from then on. Nothing here runs Python code or releases the GIL, which guards it all: the
+// calls' hooks and the registration run with it. A view never owns its group, and is made not to before its object
+// is dropped, so dropping one runs no destructor.
+%{
+#include <unordered_map>
+namespace QuickfixViews
+{
+static std::unordered_map<const void *, std::vector<PyObject *>> s_views;
+static size_t s_entries = 0;
+static size_t s_idle = 0;
+static size_t s_pruneAt = 64;
+
+static void drop(PyObject *object)
+{
+  reinterpret_cast<SwigPyObject *>(object)->own = 0;
+  Py_DECREF(object);
+  --s_entries;
+}
+
+static void prune()
+{
+  for (auto views = s_views.begin(); views != s_views.end();)
+  {
+    std::vector<PyObject *> &objects = views->second;
+    for (size_t i = 0; i < objects.size();)
+    {
+      if (Py_REFCNT(objects[i]) == 1)
+      {
+        drop(objects[i]);
+        objects[i] = objects.back();
+        objects.pop_back();
+      }
+      else
+      {
+        ++i;
+      }
+    }
+    views = objects.empty() ? s_views.erase(views) : std::next(views);
+  }
+  s_idle = 0;
+}
+
+// From a wrapper's ret typemap, outside the exception translation, so nothing may escape. False, with a Python
+// exception set, if view could not be registered.
+bool registerView(PyObject *view, const void *address)
+{
+  PyObject *object = reinterpret_cast<PyObject *>(SWIG_Python_GetSwigThis(view));
+  if (!object)
+  {
+    PyErr_SetString(PyExc_RuntimeError, "a group view could not be registered");
+    return false;
+  }
+  try
+  {
+    s_views[address].push_back(object);
+  }
+  catch (...)
+  {
+    PyErr_NoMemory();
+    return false;
+  }
+  Py_INCREF(object);
+  if (++s_entries >= s_pruneAt)
+  {
+    prune();
+    s_pruneAt = std::max<size_t>(64, 2 * s_entries);
+  }
+  return true;
+}
+
+bool anyGroupViews() { return !s_views.empty(); }
+
+void endViews(const Addresses &addresses)
+{
+  bool ended = false;
+  for (const void *address : addresses)
+  {
+    auto views = s_views.find(address);
+    if (views == s_views.end())
+      continue;
+    for (PyObject *object : views->second)
+    {
+      reinterpret_cast<SwigPyObject *>(object)->ptr = 0;
+      drop(object);
+    }
+    s_views.erase(views);
+    ended = true;
+  }
+  if (ended)
+    s_idle = 0;
+  else if (++s_idle >= s_entries)
+    prune();
+}
+}
+%}
+// For the tests: fix._viewCount() is how many group views are registered and still held. With the GIL, like the
+// rest of the registry: a prune can free objects.
+%rename(_viewCount) quickfixTestViewCount;
+%nothread quickfixTestViewCount;
+%inline %{
+size_t quickfixTestViewCount()
+{
+  QuickfixViews::prune();
+  return QuickfixViews::s_entries;
+}
+%}
 
 %pythoncode %{
 try:

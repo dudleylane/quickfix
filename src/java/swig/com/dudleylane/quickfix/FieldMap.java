@@ -50,6 +50,8 @@ public class FieldMap {
 
   // What this proxy is a view into, if anything: kept reachable while this is (#194).
   protected Object swigOwner;
+  // Whether this is a view the binding registered (#196; Views).
+  transient boolean swigRegistered;
 
   public FieldMap(SWIGTYPE_p_message_order order) {
     this(quickfixJNI.new_FieldMap__SWIG_1(SWIGTYPE_p_message_order.getCPtr(order)), true);
@@ -136,7 +138,7 @@ public class FieldMap {
     }
     FieldMap view = new FieldMap(cPtr, false);
     view.swigOwner = this;
-    return view;
+    return Views.group(view, cPtr);
   }
 
   public FieldMap getGroupPtr(int num, int tag) {
@@ -146,7 +148,7 @@ public class FieldMap {
     }
     FieldMap view = new FieldMap(cPtr, false);
     view.swigOwner = this;
-    return view;
+    return Views.group(view, cPtr);
   }
 
   public void removeGroup(int num, int tag) {
