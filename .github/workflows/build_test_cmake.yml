@@ -29,7 +29,8 @@ jobs:
     # The runners share this machine with other repositories' runners and with their benchmarks. No job here
     # starts until those are idle: a run beside them disturbs their work, and theirs disturbs this run's tests and
     # timings. waitidle.sh logs what it waits for once a minute, so a run that waits here for hours shows why; a day
-    # without an idle machine fails the run.
+    # without an idle machine fails the run. QuantLib's CI is the exception: a run starts beside it and shares the
+    # machine with it, and only the pt job's wait holds for it.
     name: Wait for an idle machine
     runs-on: [self-hosted, Linux, X64, quickfix-dev]
     timeout-minutes: 1440
@@ -37,6 +38,10 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Wait for other projects to finish
+        env:
+          # Its runners' jobs, and the CPU time they use, do not hold a run. Its benchmarks, and its builds outside
+          # those runners, still do.
+          IDLE_WAIVE: dudleylane/QuantLib
         run: test/waitidle.sh
 
   build:
@@ -717,7 +722,9 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Wait for other projects to finish
-        # Again: another project may have started while the other jobs ran.
+        # Again: another project may have started while the other jobs ran. Nothing is waived here, QuantLib's CI
+        # included: a timing is what load spoils, and dispatch 42928087075's comparison, run on a busy machine, read
+        # INCONCLUSIVE.
         timeout-minutes: 1440
         run: test/waitidle.sh
 

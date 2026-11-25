@@ -76,8 +76,10 @@ jobs:
 
       - name: Wait for other projects to finish
         # The runners share this machine with other repositories' runners and benchmarks, and this builds the
-        # library: it starts once they are idle, as build_test_cmake.yml's jobs do.
+        # library: it starts once they are idle, as build_test_cmake.yml's jobs do, and beside QuantLib's CI as they do.
         timeout-minutes: 1440
+        env:
+          IDLE_WAIVE: dudleylane/QuantLib
         run: test/waitidle.sh
 
       - name: Compare the tag with project(), the built soname and NEWS

@@ -261,13 +261,17 @@ the previous commit).
 The self-hosted runners share one machine with other repositories' runners and with their
 benchmarks. A run therefore starts with a job that waits until the machine is idle of them
 (`test/waitidle.sh`): no runner serving another repository is running a job, and under one core
-was busy in each of three minutes in a row. Such a run can wait for hours, and logs once a
-minute what it is waiting for; a day without an idle machine fails it. Its jobs then run side by
+was busy in each of three minutes in a row. QuantLib's CI is the exception (`IDLE_WAIVE`): a run
+does not wait for its runners' jobs and leaves the CPU time they use out of the count, so the two
+share the machine; QuantLib's benchmarks, and its builds outside those runners, still hold a run.
+Such a run can wait for hours, and logs once a minute what it is waiting for; a day without an
+idle machine fails it. Its jobs then run side by
 side, one per registered runner. Every step that binds a port runs through `test/isolate.sh`, in
 its own user, network and PID namespaces, so the fixed ports and `runat.sh`'s `killall` belong to
 one job each. That needs unprivileged user namespaces, which the stock kernel allows. The database
 step needs the host's servers, so it takes a lock in `~/.cache/quickfix-ci/` instead. The `pt`
-gate is a job of its own that runs after the others and waits for an idle machine again. Every job
+gate is a job of its own that runs after the others and waits for an idle machine again,
+waiving nothing, QuantLib's CI included: a timing is what load spoils. Every job
 has a time limit of about twice its longest run so far, so a hang frees its runner in an hour or two
 rather than after GitHub's six; a job cancelled at its limit is a hang to find, or a limit to
 re-measure, never a run to repeat until it passes. A pull request pushed again cancels its earlier
