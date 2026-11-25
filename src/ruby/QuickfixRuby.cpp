@@ -8075,14 +8075,13 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
   args.recv = swig_get_self();
   args.id = rb_intern("create");
   args.argc = 1;
-  args.argv = new VALUE[1];
+  VALUE quickfixArgv[1]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   result = rb_protect(PROTECTFUNC(LogFactory_create_body), reinterpret_cast<VALUE>(&args), &status);
   if (status) {
     VALUE lastErr = rb_gv_get("$!");
     LogFactory_create_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
   swig_res = SWIG_ConvertPtrAndOwn(result, &swig_argp, SWIGTYPE_p_FIX__Log,  0  | SWIG_POINTER_DISOWN, &own);
   if (!SWIG_IsOK(swig_res)) {
     Swig::DirectorTypeMismatchException::raise(SWIG_ErrorType(SWIG_ArgError(swig_res)), "in output value of type '""FIX::Log *""'");
@@ -8103,14 +8102,13 @@ void SwigDirector_LogFactory::destroy(FIX::Log *arg0) {
   args.recv = swig_get_self();
   args.id = rb_intern("destroy");
   args.argc = 1;
-  args.argv = new VALUE[1];
+  VALUE quickfixArgv[1]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   result = rb_protect(PROTECTFUNC(LogFactory_destroy_body), reinterpret_cast<VALUE>(&args), &status);
   if (status) {
     VALUE lastErr = rb_gv_get("$!");
     LogFactory_destroy_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
@@ -8167,14 +8165,13 @@ void SwigDirector_Log::onIncoming(std::string const &arg0) {
   args.recv = swig_get_self();
   args.id = rb_intern("onIncoming");
   args.argc = 1;
-  args.argv = new VALUE[1];
+  VALUE quickfixArgv[1]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   result = rb_protect(PROTECTFUNC(Log_onIncoming_body), reinterpret_cast<VALUE>(&args), &status);
   if (status) {
     VALUE lastErr = rb_gv_get("$!");
     Log_onIncoming_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
@@ -8188,14 +8185,13 @@ void SwigDirector_Log::onOutgoing(std::string const &arg0) {
   args.recv = swig_get_self();
   args.id = rb_intern("onOutgoing");
   args.argc = 1;
-  args.argv = new VALUE[1];
+  VALUE quickfixArgv[1]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   result = rb_protect(PROTECTFUNC(Log_onOutgoing_body), reinterpret_cast<VALUE>(&args), &status);
   if (status) {
     VALUE lastErr = rb_gv_get("$!");
     Log_onOutgoing_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
@@ -8209,14 +8205,13 @@ void SwigDirector_Log::onEvent(std::string const &arg0) {
   args.recv = swig_get_self();
   args.id = rb_intern("onEvent");
   args.argc = 1;
-  args.argv = new VALUE[1];
+  VALUE quickfixArgv[1]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   result = rb_protect(PROTECTFUNC(Log_onEvent_body), reinterpret_cast<VALUE>(&args), &status);
   if (status) {
     VALUE lastErr = rb_gv_get("$!");
     Log_onEvent_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
@@ -8239,14 +8234,13 @@ void SwigDirector_Application::onCreate(FIX::SessionID const &arg0) {
   args.recv = swig_get_self();
   args.id = rb_intern("onCreate");
   args.argc = 1;
-  args.argv = new VALUE[1];
+  VALUE quickfixArgv[1]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   result = rb_protect(PROTECTFUNC(Application_onCreate_body), reinterpret_cast<VALUE>(&args), &status);
   if (status) {
     VALUE lastErr = rb_gv_get("$!");
     Application_onCreate_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
@@ -8260,14 +8254,13 @@ void SwigDirector_Application::onLogon(FIX::SessionID const &arg0) {
   args.recv = swig_get_self();
   args.id = rb_intern("onLogon");
   args.argc = 1;
-  args.argv = new VALUE[1];
+  VALUE quickfixArgv[1]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   result = rb_protect(PROTECTFUNC(Application_onLogon_body), reinterpret_cast<VALUE>(&args), &status);
   if (status) {
     VALUE lastErr = rb_gv_get("$!");
     Application_onLogon_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
@@ -8281,14 +8274,13 @@ void SwigDirector_Application::onLogout(FIX::SessionID const &arg0) {
   args.recv = swig_get_self();
   args.id = rb_intern("onLogout");
   args.argc = 1;
-  args.argv = new VALUE[1];
+  VALUE quickfixArgv[1]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   result = rb_protect(PROTECTFUNC(Application_onLogout_body), reinterpret_cast<VALUE>(&args), &status);
   if (status) {
     VALUE lastErr = rb_gv_get("$!");
     Application_onLogout_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
@@ -8304,7 +8296,7 @@ void SwigDirector_Application::toAdmin(FIX::Message &arg0,FIX::SessionID const &
   args.recv = swig_get_self();
   args.id = rb_intern("toAdmin");
   args.argc = 2;
-  args.argv = new VALUE[2];
+  VALUE quickfixArgv[2]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   args.argv[1] = obj1;
   result = rb_protect(PROTECTFUNC(Application_toAdmin_body), reinterpret_cast<VALUE>(&args), &status);
@@ -8312,7 +8304,6 @@ void SwigDirector_Application::toAdmin(FIX::Message &arg0,FIX::SessionID const &
     VALUE lastErr = rb_gv_get("$!");
     Application_toAdmin_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
@@ -8328,7 +8319,7 @@ void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &ar
   args.recv = swig_get_self();
   args.id = rb_intern("toApp");
   args.argc = 2;
-  args.argv = new VALUE[2];
+  VALUE quickfixArgv[2]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   args.argv[1] = obj1;
   result = rb_protect(PROTECTFUNC(Application_toApp_body), reinterpret_cast<VALUE>(&args), &status);
@@ -8336,7 +8327,6 @@ void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &ar
     VALUE lastErr = rb_gv_get("$!");
     Application_toApp_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
@@ -8352,7 +8342,7 @@ void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID
   args.recv = swig_get_self();
   args.id = rb_intern("fromAdmin");
   args.argc = 2;
-  args.argv = new VALUE[2];
+  VALUE quickfixArgv[2]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   args.argv[1] = obj1;
   result = rb_protect(PROTECTFUNC(Application_fromAdmin_body), reinterpret_cast<VALUE>(&args), &status);
@@ -8360,7 +8350,6 @@ void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID
     VALUE lastErr = rb_gv_get("$!");
     Application_fromAdmin_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
@@ -8376,7 +8365,7 @@ void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID c
   args.recv = swig_get_self();
   args.id = rb_intern("fromApp");
   args.argc = 2;
-  args.argv = new VALUE[2];
+  VALUE quickfixArgv[2]; args.argv = quickfixArgv;
   args.argv[0] = obj0;
   args.argv[1] = obj1;
   result = rb_protect(PROTECTFUNC(Application_fromApp_body), reinterpret_cast<VALUE>(&args), &status);
@@ -8384,7 +8373,6 @@ void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID c
     VALUE lastErr = rb_gv_get("$!");
     Application_fromApp_rescue(reinterpret_cast<VALUE>(&args), lastErr);
   }
-  delete [] args.argv;
 }
 
 
