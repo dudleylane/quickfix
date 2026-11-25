@@ -720,9 +720,17 @@ QUICKFIX_VIEWS_EXCEPTION(FIX::Message::setBytes, QuickfixViews::beforeClearingMe
     long cPtr = $jnicall;
     return cPtr == 0 ? null : Views.store(new MessageStore(cPtr, false), cPtr, this);
   }
+// A transport's destructor destroys its sessions' stores and logs, and its own log, through the store and log
+// factories it was made with. The classes in main/ keep them in fields, which orders nothing when the GC finds both
+// unreachable: the finalizers ran in any order, and a factory finalized first left the transport's destructor using
+// freed memory; the *Base classes kept nothing (#201). So the constructor's call records them as it passes them
+// (TransportArguments.argument; nowhere else are they parameters), and its result pins them by the transport's
+// native address until delete() has freed it. The application is not pinned (#204).
+%typemap(javain) FIX::MessageStoreFactory & "$javaclassname.getCPtr(TransportArguments.argument($javainput))"
+%typemap(javain) FIX::LogFactory & "$javaclassname.getCPtr(TransportArguments.argument($javainput))"
 %define QUICKFIX_JAVA_TRANSPORT(Class)
 %typemap(javaconstruct) Class {
-    this(Views.constructing(() -> $imcall), true);
+    this(TransportArguments.constructing(() -> Views.constructing(() -> $imcall)), true);
     Views.constructed(this);
   }
 %typemap(javadestruct_derived, methodname="delete", methodmodifiers="public synchronized", parameters="") Class {
@@ -730,10 +738,12 @@ QUICKFIX_VIEWS_EXCEPTION(FIX::Message::setBytes, QuickfixViews::beforeClearingMe
       if (swigCMemOwn) {
         long[] freed = Views.teardown(this);
         swigCMemOwn = false;
+        Object pinned = TransportArguments.take(swigCPtr);
         try {
           $jnicall;
         } finally {
           Views.endTransportViews(freed);
+          java.lang.ref.Reference.reachabilityFence(pinned);
         }
       }
       swigCPtr = 0;

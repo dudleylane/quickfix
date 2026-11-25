@@ -328,7 +328,13 @@ VALUE blockWithoutGvl(std::function<VALUE()> call, Transport &transport)
 // they are all alive, deletes each one through these instead: the Ruby object
 // gives up the pointer, so its finalizer does nothing, and any later call on it
 // raises ObjectPreviouslyDeleted. One whose block() is still running is not
-// touched.
+// touched. The delete goes through QuickfixPins, as the finalizer's does, so
+// the factories it was made with are let go once it has run (#201).
+namespace QuickfixPins
+{
+template <class Transport> void destroy(Transport *transport); // ../quickfix.i
+}
+
 template <typename Transport>
 VALUE destroyTransport(VALUE object, swig_type_info *type)
 {
@@ -341,7 +347,7 @@ VALUE destroyTransport(VALUE object, swig_type_info *type)
   {
     return Qfalse;
   }
-  delete static_cast<Transport *>(pointer);
+  QuickfixPins::destroy(static_cast<Transport *>(pointer));
   return Qtrue;
 }
 

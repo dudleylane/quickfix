@@ -6796,6 +6796,129 @@ inline Addresses liveSessions()
 }
 }
 
+
+#include <map>
+#include <memory>
+#include <mutex>
+
+namespace QuickfixPins
+{
+#ifdef SWIGPYTHON
+typedef PyObject *Object;
+#else
+typedef VALUE Object;
+#endif
+
+// What a transport was made with: its store factory and its log factory, or None/nil.
+struct Held
+{
+  Object objects[2];
+};
+
+#ifdef SWIGPYTHON
+// With the GIL held: the pinning helpers are nothread.
+void hold(Held &held, Object store, Object logs)
+{
+  held.objects[0] = store;
+  held.objects[1] = logs;
+  Py_XINCREF(store);
+  Py_XINCREF(logs);
+}
+
+// On any thread, with the GIL or without: a delete wrapper runs its delete with the GIL released.
+void release(Held &held)
+{
+  SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  Py_XDECREF(held.objects[0]);
+  Py_XDECREF(held.objects[1]);
+  SWIG_PYTHON_THREAD_END_BLOCK;
+}
+#else
+// With the GVL held, as every caller is: a free function runs with it, and so do the helpers and destroyTransport.
+// held lives on the heap, so the addresses registered stay put until they are unregistered.
+void hold(Held &held, Object store, Object logs)
+{
+  held.objects[0] = store;
+  held.objects[1] = logs;
+  rb_gc_register_address(&held.objects[0]);
+  rb_gc_register_address(&held.objects[1]);
+}
+
+void release(Held &held)
+{
+  rb_gc_unregister_address(&held.objects[0]);
+  rb_gc_unregister_address(&held.objects[1]);
+}
+#endif
+
+// Never destroyed, so no static destructor races a transport freed at exit.
+std::mutex &mutex()
+{
+  static std::mutex *pinsMutex = new std::mutex;
+  return *pinsMutex;
+}
+
+std::map<const void *, std::unique_ptr<Held>> &registry()
+{
+  static auto *pins = new std::map<const void *, std::unique_ptr<Held>>;
+  return *pins;
+}
+
+// Keyed by the transport's FIX::Acceptor or FIX::Initiator subobject, as destroy() finds it. A second pin of one
+// transport -- Python pins at each level of a subclass's construction -- replaces the first.
+void pin(const void *transport, Object store, Object logs)
+{
+  if (!transport)
+  {
+    return;
+  }
+  std::unique_ptr<Held> held(new Held);
+  hold(*held, store, logs);
+  std::unique_ptr<Held> replaced;
+  {
+    std::lock_guard<std::mutex> lock(mutex());
+    std::unique_ptr<Held> &entry = registry()[transport];
+    replaced = std::move(entry);
+    entry = std::move(held);
+  }
+  if (replaced)
+  {
+    release(*replaced);
+  }
+}
+
+// Deletes the transport, then lets its factories go. The entry is taken out before the delete, so that a
+// transport made at the same address in the meantime -- on another thread -- keeps its own.
+template <class Transport> void destroy(Transport *transport)
+{
+  if (!transport)
+  {
+    return;
+  }
+  std::unique_ptr<Held> held;
+  {
+    std::lock_guard<std::mutex> lock(mutex());
+    auto entry = registry().find(static_cast<const void *>(transport));
+    if (entry != registry().end())
+    {
+      held = std::move(entry->second);
+      registry().erase(entry);
+    }
+  }
+  delete transport;
+  if (held)
+  {
+    release(*held);
+  }
+}
+
+size_t count()
+{
+  std::lock_guard<std::mutex> lock(mutex());
+  return registry().size();
+}
+} // namespace QuickfixPins
+
 SWIGINTERN std::string FIX_Exception___str__(FIX::Exception *self){
     return self->what();
   }
@@ -6945,6 +7068,20 @@ SWIGINTERNINLINE PyObject *
 SWIG_From_unsigned_SS_short  (unsigned short value)
 {    
   return SWIG_From_unsigned_SS_long  (value);
+}
+
+
+void _quickfixPinAcceptor(FIX::Acceptor *transport, PyObject *store, PyObject *logs)
+{
+  QuickfixPins::pin(transport, store, logs);
+}
+void _quickfixPinInitiator(FIX::Initiator *transport, PyObject *store, PyObject *logs)
+{
+  QuickfixPins::pin(transport, store, logs);
+}
+size_t _quickfixPinCount()
+{
+  return QuickfixPins::count();
 }
 
 
@@ -149443,7 +149580,7 @@ SWIGINTERN PyObject *_wrap_delete_Initiator(PyObject *self, PyObject *args) {
         {
       {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            delete arg1;
+            QuickfixPins::destroy(static_cast<FIX::Initiator *>(arg1));
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -150500,7 +150637,7 @@ SWIGINTERN PyObject *_wrap_delete_SocketInitiatorBase(PyObject *self, PyObject *
       QuickfixTransportViews::Teardown<FIX::SocketInitiator> teardown(*arg1);
           {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            delete arg1;
+            QuickfixPins::destroy(static_cast<FIX::Initiator *>(arg1));
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -150553,7 +150690,7 @@ SWIGINTERN PyObject *_wrap_delete_Acceptor(PyObject *self, PyObject *args) {
         {
       {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            delete arg1;
+            QuickfixPins::destroy(static_cast<FIX::Acceptor *>(arg1));
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -151673,7 +151810,7 @@ SWIGINTERN PyObject *_wrap_delete_SocketAcceptorBase(PyObject *self, PyObject *a
       QuickfixTransportViews::Teardown<FIX::SocketAcceptor> teardown(*arg1);
           {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            delete arg1;
+            QuickfixPins::destroy(static_cast<FIX::Acceptor *>(arg1));
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -155286,7 +155423,7 @@ SWIGINTERN PyObject *_wrap_delete_SSLSocketAcceptorBase(PyObject *self, PyObject
       QuickfixTransportViews::Teardown<FIX::SSLSocketAcceptor> teardown(*arg1);
           {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            delete arg1;
+            QuickfixPins::destroy(static_cast<FIX::Acceptor *>(arg1));
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -155740,7 +155877,7 @@ SWIGINTERN PyObject *_wrap_delete_SSLSocketInitiatorBase(PyObject *self, PyObjec
       QuickfixTransportViews::Teardown<FIX::SSLSocketInitiator> teardown(*arg1);
           {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            delete arg1;
+            QuickfixPins::destroy(static_cast<FIX::Initiator *>(arg1));
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -165414,7 +165551,7 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSocketAcceptorBase(PyObject *self, PyO
       QuickfixTransportViews::Teardown<FIX::ThreadedSocketAcceptor> teardown(*arg1);
           {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            delete arg1;
+            QuickfixPins::destroy(static_cast<FIX::Acceptor *>(arg1));
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -165664,7 +165801,7 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSocketInitiatorBase(PyObject *self, Py
       QuickfixTransportViews::Teardown<FIX::ThreadedSocketInitiator> teardown(*arg1);
           {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            delete arg1;
+            QuickfixPins::destroy(static_cast<FIX::Initiator *>(arg1));
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -165914,7 +166051,7 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSSLSocketAcceptorBase(PyObject *self, 
       QuickfixTransportViews::Teardown<FIX::ThreadedSSLSocketAcceptor> teardown(*arg1);
           {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            delete arg1;
+            QuickfixPins::destroy(static_cast<FIX::Acceptor *>(arg1));
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -166368,7 +166505,7 @@ SWIGINTERN PyObject *_wrap_delete_ThreadedSSLSocketInitiatorBase(PyObject *self,
       QuickfixTransportViews::Teardown<FIX::ThreadedSSLSocketInitiator> teardown(*arg1);
           {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-            delete arg1;
+            QuickfixPins::destroy(static_cast<FIX::Initiator *>(arg1));
             SWIG_PYTHON_THREAD_END_ALLOW;
           }
           return true;
@@ -167566,6 +167703,113 @@ SWIGINTERN PyObject *NullStore_swiginit(PyObject *SWIGUNUSEDPARM(self), PyObject
   return SWIG_Python_InitShadowInstance(args);
 }
 
+SWIGINTERN PyObject *_wrap__quickfixPinAcceptor(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::Acceptor *arg1 = (FIX::Acceptor *) 0 ;
+  PyObject *arg2 = (PyObject *) 0 ;
+  PyObject *arg3 = (PyObject *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[3] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "_quickfixPinAcceptor", 3, 3, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "_quickfixPinAcceptor" "', argument " "1"" of type '" "FIX::Acceptor *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method '_quickfixPinAcceptor', argument 1: what it refers to was destroyed");
+    SWIG_fail;
+  }
+  arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
+  arg2 = swig_obj[1];
+  arg3 = swig_obj[2];
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      _quickfixPinAcceptor(arg1,arg2,arg3);
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap__quickfixPinInitiator(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  FIX::Initiator *arg1 = (FIX::Initiator *) 0 ;
+  PyObject *arg2 = (PyObject *) 0 ;
+  PyObject *arg3 = (PyObject *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[3] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "_quickfixPinInitiator", 3, 3, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "_quickfixPinInitiator" "', argument " "1"" of type '" "FIX::Initiator *""'");
+  }
+  if (!argp1 && swig_obj[0] != Py_None) {
+    PyErr_SetString(PyExc_ReferenceError, "in method '_quickfixPinInitiator', argument 1: what it refers to was destroyed");
+    SWIG_fail;
+  }
+  arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
+  arg2 = swig_obj[1];
+  arg3 = swig_obj[2];
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      _quickfixPinInitiator(arg1,arg2,arg3);
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap__quickfixPinCount(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  size_t result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "_quickfixPinCount", 0, 0, 0)) SWIG_fail;
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      result = _quickfixPinCount();
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_size_t(static_cast< size_t >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap__viewCount(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   size_t result;
@@ -168741,6 +168985,9 @@ static PyMethodDef SwigMethods[] = {
 	 { "delete_NullStore", _wrap_delete_NullStore, METH_O, NULL},
 	 { "NullStore_swigregister", NullStore_swigregister, METH_O, NULL},
 	 { "NullStore_swiginit", NullStore_swiginit, METH_VARARGS, NULL},
+	 { "_quickfixPinAcceptor", _wrap__quickfixPinAcceptor, METH_VARARGS, NULL},
+	 { "_quickfixPinInitiator", _wrap__quickfixPinInitiator, METH_VARARGS, NULL},
+	 { "_quickfixPinCount", _wrap__quickfixPinCount, METH_NOARGS, NULL},
 	 { "_viewCount", _wrap__viewCount, METH_NOARGS, NULL},
 	 { "_transportViewCount", _wrap__transportViewCount, METH_NOARGS, NULL},
 	 { NULL, NULL, 0, NULL }

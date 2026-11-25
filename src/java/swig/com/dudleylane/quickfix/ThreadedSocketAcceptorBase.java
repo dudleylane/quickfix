@@ -42,10 +42,12 @@ public class ThreadedSocketAcceptorBase extends Acceptor {
       if (swigCMemOwn) {
         long[] freed = Views.teardown(this);
         swigCMemOwn = false;
+        Object pinned = TransportArguments.take(swigCPtr);
         try {
           quickfixJNI.delete_ThreadedSocketAcceptorBase(swigCPtr);
         } finally {
           Views.endTransportViews(freed);
+          java.lang.ref.Reference.reachabilityFence(pinned);
         }
       }
       swigCPtr = 0;
@@ -54,12 +56,12 @@ public class ThreadedSocketAcceptorBase extends Acceptor {
   }
 
   protected ThreadedSocketAcceptorBase(Application arg0, MessageStoreFactory arg1, SessionSettings arg2) {
-    this(Views.constructing(() -> quickfixJNI.new_ThreadedSocketAcceptorBase__SWIG_0(Application.getCPtr(arg0), arg0, MessageStoreFactory.getCPtr(arg1), arg1, SessionSettings.getCPtr(arg2), arg2)), true);
+    this(TransportArguments.constructing(() -> Views.constructing(() -> quickfixJNI.new_ThreadedSocketAcceptorBase__SWIG_0(Application.getCPtr(arg0), arg0, MessageStoreFactory.getCPtr(TransportArguments.argument(arg1)), arg1, SessionSettings.getCPtr(arg2), arg2))), true);
     Views.constructed(this);
   }
 
   protected ThreadedSocketAcceptorBase(Application arg0, MessageStoreFactory arg1, SessionSettings arg2, LogFactory arg3) {
-    this(Views.constructing(() -> quickfixJNI.new_ThreadedSocketAcceptorBase__SWIG_1(Application.getCPtr(arg0), arg0, MessageStoreFactory.getCPtr(arg1), arg1, SessionSettings.getCPtr(arg2), arg2, LogFactory.getCPtr(arg3), arg3)), true);
+    this(TransportArguments.constructing(() -> Views.constructing(() -> quickfixJNI.new_ThreadedSocketAcceptorBase__SWIG_1(Application.getCPtr(arg0), arg0, MessageStoreFactory.getCPtr(TransportArguments.argument(arg1)), arg1, SessionSettings.getCPtr(arg2), arg2, LogFactory.getCPtr(TransportArguments.argument(arg3)), arg3))), true);
     Views.constructed(this);
   }
 

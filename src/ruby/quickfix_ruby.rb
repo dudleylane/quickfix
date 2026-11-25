@@ -126,9 +126,12 @@ module Quickfix
 	# An initiator or acceptor holds C++ references to the application, store
 	# factory, settings and log factory it was made with, so they must live as
 	# long as it does: keep them on the Ruby object, whichever class made it
-	# (#107). And its views (TransportViews): in ensure, so that a kill landing
-	# once the transport exists still gives them their owner. A transport that
-	# exists has a session; one whose constructor raised has none.
+	# (#107). Kept there, they still went in the same GC as the transport, in any
+	# order, and its destructor used its store and log factories (#201): those
+	# are pinned from C++ too, until its C++ object is deleted. And its views
+	# (TransportViews): in ensure, so that a kill landing once the transport
+	# exists still gives them their owner. A transport that exists has a
+	# session; one whose constructor raised has none.
 	module KeepsArguments
 		def initialize(*args)
 			super
@@ -138,6 +141,7 @@ module Quickfix
 				TransportViews.endDangling
 			else
 				@quickfixArguments = args
+				Quickfix.send(is_a?(Initiator) ? :_quickfixPinInitiator : :_quickfixPinAcceptor, self, args[1], args[3])
 				TransportViews.constructed(self, sessions)
 			end
 		end

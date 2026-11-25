@@ -15,6 +15,11 @@ public class CallbackErrorTests {
     record Result(int status, String output) {}
 
     static Result child(String mode) throws IOException, InterruptedException {
+        return child(Child.class, mode);
+    }
+
+    /** Runs main's main(mode) in a JVM of its own; TransportGcTests' child too. */
+    static Result child(Class<?> main, String mode) throws IOException, InterruptedException {
         List<String> command = new ArrayList<>();
         command.add(ProcessHandle.current().info().command().orElse("java"));
         command.add("-cp");
@@ -22,7 +27,7 @@ public class CallbackErrorTests {
         for (String property : new String[] {"com.dudleylane.quickfix.library", "quickfix.test.root"}) {
             command.add("-D" + property + "=" + System.getProperty(property));
         }
-        command.add(Child.class.getName());
+        command.add(main.getName());
         command.add(mode);
         Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
         if (!process.waitFor(60, TimeUnit.SECONDS)) {

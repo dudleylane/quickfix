@@ -952,6 +952,142 @@ inline Addresses liveSessions()
     }
 }
 
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
+// A transport's destructor destroys its sessions' stores and logs, and its own log, through the store and log
+// factories it was made with. The bindings keep those from the transport's own object (#107, #110), which orders
+// nothing when one collection frees both: a collector frees them in its own order, and a factory freed first left
+// the transport's destructor using freed memory (#201). So each transport's factories are held from here, a root,
+// from its construction -- the bindings' keepArguments pins them -- until its C++ object has been deleted, by its
+// free or delete wrapper (the unref below, which every transport class inherits) or by Ruby's destroyTransport. The
+// application is not held (#204): one that refers to its transport would never be freed, nor would the transport.
+// The registry's mutex is never held across a delete or a release, which may run script code.
+%{
+#include <map>
+#include <memory>
+#include <mutex>
+
+namespace QuickfixPins
+{
+#ifdef SWIGPYTHON
+typedef PyObject *Object;
+#else
+typedef VALUE Object;
+#endif
+
+// What a transport was made with: its store factory and its log factory, or None/nil.
+struct Held
+{
+  Object objects[2];
+};
+
+#ifdef SWIGPYTHON
+// With the GIL held: the pinning helpers are nothread.
+void hold(Held &held, Object store, Object logs)
+{
+  held.objects[0] = store;
+  held.objects[1] = logs;
+  Py_XINCREF(store);
+  Py_XINCREF(logs);
+}
+
+// On any thread, with the GIL or without: a delete wrapper runs its delete with the GIL released.
+void release(Held &held)
+{
+  SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  Py_XDECREF(held.objects[0]);
+  Py_XDECREF(held.objects[1]);
+  SWIG_PYTHON_THREAD_END_BLOCK;
+}
+#else
+// With the GVL held, as every caller is: a free function runs with it, and so do the helpers and destroyTransport.
+// held lives on the heap, so the addresses registered stay put until they are unregistered.
+void hold(Held &held, Object store, Object logs)
+{
+  held.objects[0] = store;
+  held.objects[1] = logs;
+  rb_gc_register_address(&held.objects[0]);
+  rb_gc_register_address(&held.objects[1]);
+}
+
+void release(Held &held)
+{
+  rb_gc_unregister_address(&held.objects[0]);
+  rb_gc_unregister_address(&held.objects[1]);
+}
+#endif
+
+// Never destroyed, so no static destructor races a transport freed at exit.
+std::mutex &mutex()
+{
+  static std::mutex *pinsMutex = new std::mutex;
+  return *pinsMutex;
+}
+
+std::map<const void *, std::unique_ptr<Held>> &registry()
+{
+  static auto *pins = new std::map<const void *, std::unique_ptr<Held>>;
+  return *pins;
+}
+
+// Keyed by the transport's FIX::Acceptor or FIX::Initiator subobject, as destroy() finds it. A second pin of one
+// transport -- Python pins at each level of a subclass's construction -- replaces the first.
+void pin(const void *transport, Object store, Object logs)
+{
+  if (!transport)
+  {
+    return;
+  }
+  std::unique_ptr<Held> held(new Held);
+  hold(*held, store, logs);
+  std::unique_ptr<Held> replaced;
+  {
+    std::lock_guard<std::mutex> lock(mutex());
+    std::unique_ptr<Held> &entry = registry()[transport];
+    replaced = std::move(entry);
+    entry = std::move(held);
+  }
+  if (replaced)
+  {
+    release(*replaced);
+  }
+}
+
+// Deletes the transport, then lets its factories go. The entry is taken out before the delete, so that a
+// transport made at the same address in the meantime -- on another thread -- keeps its own.
+template <class Transport> void destroy(Transport *transport)
+{
+  if (!transport)
+  {
+    return;
+  }
+  std::unique_ptr<Held> held;
+  {
+    std::lock_guard<std::mutex> lock(mutex());
+    auto entry = registry().find(static_cast<const void *>(transport));
+    if (entry != registry().end())
+    {
+      held = std::move(entry->second);
+      registry().erase(entry);
+    }
+  }
+  delete transport;
+  if (held)
+  {
+    release(*held);
+  }
+}
+
+size_t count()
+{
+  std::lock_guard<std::mutex> lock(mutex());
+  return registry().size();
+}
+} // namespace QuickfixPins
+%}
+%feature("unref") FIX::Acceptor "QuickfixPins::destroy(static_cast<FIX::Acceptor *>($this));"
+%feature("unref") FIX::Initiator "QuickfixPins::destroy(static_cast<FIX::Initiator *>($this));"
+#endif
+
 %include "../C++/Except.h"
 %include "../C++/Exceptions.h"
 %include "../C++/FieldTypes.h"
@@ -1018,3 +1154,42 @@ QUICKFIX_RUBY_EXCEPTION
 %include "../C++/ThreadedSSLSocketAcceptor.h"
 %include "../C++/ThreadedSSLSocketInitiator.h"
 %include "../C++/NullStore.h"
+
+#ifdef SWIGPYTHON
+// What _keepArguments calls once a transport is made, and a count for the tests (QuickfixPins, above). nothread: the
+// pin takes references, which needs the GIL.
+%feature("nothread") _quickfixPinAcceptor;
+%feature("nothread") _quickfixPinInitiator;
+%feature("nothread") _quickfixPinCount;
+%inline %{
+void _quickfixPinAcceptor(FIX::Acceptor *transport, PyObject *store, PyObject *logs)
+{
+  QuickfixPins::pin(transport, store, logs);
+}
+void _quickfixPinInitiator(FIX::Initiator *transport, PyObject *store, PyObject *logs)
+{
+  QuickfixPins::pin(transport, store, logs);
+}
+size_t _quickfixPinCount()
+{
+  return QuickfixPins::count();
+}
+%}
+#endif
+#ifdef SWIGRUBY
+// What KeepsArguments calls once a transport is made, and a count for the tests (QuickfixPins, above).
+%inline %{
+void _quickfixPinAcceptor(FIX::Acceptor *transport, VALUE store, VALUE logs)
+{
+  QuickfixPins::pin(transport, store, logs);
+}
+void _quickfixPinInitiator(FIX::Initiator *transport, VALUE store, VALUE logs)
+{
+  QuickfixPins::pin(transport, store, logs);
+}
+size_t _quickfixPinCount()
+{
+  return QuickfixPins::count();
+}
+%}
+#endif

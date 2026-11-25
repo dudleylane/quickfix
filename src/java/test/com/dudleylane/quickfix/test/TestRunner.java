@@ -18,7 +18,7 @@ public final class TestRunner {
                                       DataDictionaryTests.class, StoreTests.class, TransportTests.class,
                                       CallbackErrorTests.class, LifetimeTests.class, SessionIDTests.class,
                                       ViewTests.class, EndedViewTests.class, TransportViewTests.class,
-                                      ExceptionListTests.class, GeneratedTests.class,
+                                      ExceptionListTests.class, GeneratedTests.class, TransportGcTests.class,
                                       ExampleTests.class};
 
     public static void main(String[] args) throws Exception {

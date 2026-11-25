@@ -2738,7 +2738,13 @@ VALUE blockWithoutGvl(std::function<VALUE()> call, Transport &transport)
 // they are all alive, deletes each one through these instead: the Ruby object
 // gives up the pointer, so its finalizer does nothing, and any later call on it
 // raises ObjectPreviouslyDeleted. One whose block() is still running is not
-// touched.
+// touched. The delete goes through QuickfixPins, as the finalizer's does, so
+// the factories it was made with are let go once it has run (#201).
+namespace QuickfixPins
+{
+template <class Transport> void destroy(Transport *transport); // ../quickfix.i
+}
+
 template <typename Transport>
 VALUE destroyTransport(VALUE object, swig_type_info *type)
 {
@@ -2751,7 +2757,7 @@ VALUE destroyTransport(VALUE object, swig_type_info *type)
   {
     return Qfalse;
   }
-  delete static_cast<Transport *>(pointer);
+  QuickfixPins::destroy(static_cast<Transport *>(pointer));
   return Qtrue;
 }
 
@@ -6909,6 +6915,129 @@ inline Addresses liveSessions()
 }
 }
 
+
+#include <map>
+#include <memory>
+#include <mutex>
+
+namespace QuickfixPins
+{
+#ifdef SWIGPYTHON
+typedef PyObject *Object;
+#else
+typedef VALUE Object;
+#endif
+
+// What a transport was made with: its store factory and its log factory, or None/nil.
+struct Held
+{
+  Object objects[2];
+};
+
+#ifdef SWIGPYTHON
+// With the GIL held: the pinning helpers are nothread.
+void hold(Held &held, Object store, Object logs)
+{
+  held.objects[0] = store;
+  held.objects[1] = logs;
+  Py_XINCREF(store);
+  Py_XINCREF(logs);
+}
+
+// On any thread, with the GIL or without: a delete wrapper runs its delete with the GIL released.
+void release(Held &held)
+{
+  SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  Py_XDECREF(held.objects[0]);
+  Py_XDECREF(held.objects[1]);
+  SWIG_PYTHON_THREAD_END_BLOCK;
+}
+#else
+// With the GVL held, as every caller is: a free function runs with it, and so do the helpers and destroyTransport.
+// held lives on the heap, so the addresses registered stay put until they are unregistered.
+void hold(Held &held, Object store, Object logs)
+{
+  held.objects[0] = store;
+  held.objects[1] = logs;
+  rb_gc_register_address(&held.objects[0]);
+  rb_gc_register_address(&held.objects[1]);
+}
+
+void release(Held &held)
+{
+  rb_gc_unregister_address(&held.objects[0]);
+  rb_gc_unregister_address(&held.objects[1]);
+}
+#endif
+
+// Never destroyed, so no static destructor races a transport freed at exit.
+std::mutex &mutex()
+{
+  static std::mutex *pinsMutex = new std::mutex;
+  return *pinsMutex;
+}
+
+std::map<const void *, std::unique_ptr<Held>> &registry()
+{
+  static auto *pins = new std::map<const void *, std::unique_ptr<Held>>;
+  return *pins;
+}
+
+// Keyed by the transport's FIX::Acceptor or FIX::Initiator subobject, as destroy() finds it. A second pin of one
+// transport -- Python pins at each level of a subclass's construction -- replaces the first.
+void pin(const void *transport, Object store, Object logs)
+{
+  if (!transport)
+  {
+    return;
+  }
+  std::unique_ptr<Held> held(new Held);
+  hold(*held, store, logs);
+  std::unique_ptr<Held> replaced;
+  {
+    std::lock_guard<std::mutex> lock(mutex());
+    std::unique_ptr<Held> &entry = registry()[transport];
+    replaced = std::move(entry);
+    entry = std::move(held);
+  }
+  if (replaced)
+  {
+    release(*replaced);
+  }
+}
+
+// Deletes the transport, then lets its factories go. The entry is taken out before the delete, so that a
+// transport made at the same address in the meantime -- on another thread -- keeps its own.
+template <class Transport> void destroy(Transport *transport)
+{
+  if (!transport)
+  {
+    return;
+  }
+  std::unique_ptr<Held> held;
+  {
+    std::lock_guard<std::mutex> lock(mutex());
+    auto entry = registry().find(static_cast<const void *>(transport));
+    if (entry != registry().end())
+    {
+      held = std::move(entry->second);
+      registry().erase(entry);
+    }
+  }
+  delete transport;
+  if (held)
+  {
+    release(*held);
+  }
+}
+
+size_t count()
+{
+  std::lock_guard<std::mutex> lock(mutex());
+  return registry().size();
+}
+} // namespace QuickfixPins
+
 SWIGINTERN std::string FIX_Exception___str__(FIX::Exception *self){
     return self->what();
   }
@@ -7080,6 +7209,20 @@ SWIGINTERNINLINE VALUE
 SWIG_From_unsigned_SS_short  (unsigned short value)
 {    
   return SWIG_From_unsigned_SS_long  (value);
+}
+
+
+void _quickfixPinAcceptor(FIX::Acceptor *transport, VALUE store, VALUE logs)
+{
+  QuickfixPins::pin(transport, store, logs);
+}
+void _quickfixPinInitiator(FIX::Initiator *transport, VALUE store, VALUE logs)
+{
+  QuickfixPins::pin(transport, store, logs);
+}
+size_t _quickfixPinCount()
+{
+  return QuickfixPins::count();
 }
 
 
@@ -117378,7 +117521,7 @@ static swig_class SwigClassInitiator;
 SWIGINTERN void
 free_FIX_Initiator(void *self) {
     FIX::Initiator *arg1 = (FIX::Initiator *)self;
-    delete arg1;
+    QuickfixPins::destroy(static_cast<FIX::Initiator *>(arg1));
 }
 
 SWIGINTERN VALUE
@@ -118410,7 +118553,7 @@ fail:
 SWIGINTERN void
 free_FIX_SocketInitiator(void *self) {
     FIX::SocketInitiator *arg1 = (FIX::SocketInitiator *)self;
-    delete arg1;
+    QuickfixPins::destroy(static_cast<FIX::Initiator *>(arg1));
 }
 
 static swig_class SwigClassAcceptor;
@@ -118418,7 +118561,7 @@ static swig_class SwigClassAcceptor;
 SWIGINTERN void
 free_FIX_Acceptor(void *self) {
     FIX::Acceptor *arg1 = (FIX::Acceptor *)self;
-    delete arg1;
+    QuickfixPins::destroy(static_cast<FIX::Acceptor *>(arg1));
 }
 
 SWIGINTERN VALUE
@@ -119504,7 +119647,7 @@ fail:
 SWIGINTERN void
 free_FIX_SocketAcceptor(void *self) {
     FIX::SocketAcceptor *arg1 = (FIX::SocketAcceptor *)self;
-    delete arg1;
+    QuickfixPins::destroy(static_cast<FIX::Acceptor *>(arg1));
 }
 
 static swig_class SwigClassDataDictionary;
@@ -122785,7 +122928,7 @@ fail:
 SWIGINTERN void
 free_FIX_SSLSocketAcceptor(void *self) {
     FIX::SSLSocketAcceptor *arg1 = (FIX::SSLSocketAcceptor *)self;
-    delete arg1;
+    QuickfixPins::destroy(static_cast<FIX::Acceptor *>(arg1));
 }
 
 SWIGINTERN VALUE
@@ -123221,7 +123364,7 @@ fail:
 SWIGINTERN void
 free_FIX_SSLSocketInitiator(void *self) {
     FIX::SSLSocketInitiator *arg1 = (FIX::SSLSocketInitiator *)self;
-    delete arg1;
+    QuickfixPins::destroy(static_cast<FIX::Initiator *>(arg1));
 }
 
 SWIGINTERN VALUE
@@ -131753,7 +131896,7 @@ fail:
 SWIGINTERN void
 free_FIX_ThreadedSocketAcceptor(void *self) {
     FIX::ThreadedSocketAcceptor *arg1 = (FIX::ThreadedSocketAcceptor *)self;
-    delete arg1;
+    QuickfixPins::destroy(static_cast<FIX::Acceptor *>(arg1));
 }
 
 static swig_class SwigClassThreadedSocketInitiatorBase;
@@ -131988,7 +132131,7 @@ fail:
 SWIGINTERN void
 free_FIX_ThreadedSocketInitiator(void *self) {
     FIX::ThreadedSocketInitiator *arg1 = (FIX::ThreadedSocketInitiator *)self;
-    delete arg1;
+    QuickfixPins::destroy(static_cast<FIX::Initiator *>(arg1));
 }
 
 static swig_class SwigClassThreadedSSLSocketAcceptorBase;
@@ -132223,7 +132366,7 @@ fail:
 SWIGINTERN void
 free_FIX_ThreadedSSLSocketAcceptor(void *self) {
     FIX::ThreadedSSLSocketAcceptor *arg1 = (FIX::ThreadedSSLSocketAcceptor *)self;
-    delete arg1;
+    QuickfixPins::destroy(static_cast<FIX::Acceptor *>(arg1));
 }
 
 SWIGINTERN VALUE
@@ -132659,7 +132802,7 @@ fail:
 SWIGINTERN void
 free_FIX_ThreadedSSLSocketInitiator(void *self) {
     FIX::ThreadedSSLSocketInitiator *arg1 = (FIX::ThreadedSSLSocketInitiator *)self;
-    delete arg1;
+    QuickfixPins::destroy(static_cast<FIX::Initiator *>(arg1));
 }
 
 SWIGINTERN VALUE
@@ -133713,6 +133856,123 @@ free_FIX_NullStore(void *self) {
     FIX::NullStore *arg1 = (FIX::NullStore *)self;
     delete arg1;
 }
+
+SWIGINTERN VALUE
+_wrap__quickfixPinAcceptor(int argc, VALUE *argv, VALUE self) {
+  FIX::Acceptor *arg1 = (FIX::Acceptor *) 0 ;
+  VALUE arg2 = (VALUE) 0 ;
+  VALUE arg3 = (VALUE) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  
+  if ((argc < 3) || (argc > 3)) {
+    rb_raise(rb_eArgError, "wrong # of arguments(%d for 3)",argc); SWIG_fail;
+  }
+  res1 = SWIG_ConvertPtr(argv[0], &argp1,SWIGTYPE_p_FIX__Acceptor, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Acceptor *","_quickfixPinAcceptor", 1, argv[0] )); 
+  }
+  arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
+  arg2 = argv[1];
+  arg3 = argv[2];
+  {
+    QuickfixCaught caught;
+    if(tryRubyException([&]() mutable
+        {
+      _quickfixPinAcceptor(arg1,arg2,arg3);
+          return self;
+        fail:
+          return Qnil;
+        }, caught) == Qnil)
+    {
+      if(caught.caught)
+      {
+        raiseCaught(caught);
+      }
+      SWIG_fail;
+    }
+    redeliverKill();
+  }
+  return Qnil;
+fail:
+  return Qnil;
+}
+
+
+SWIGINTERN VALUE
+_wrap__quickfixPinInitiator(int argc, VALUE *argv, VALUE self) {
+  FIX::Initiator *arg1 = (FIX::Initiator *) 0 ;
+  VALUE arg2 = (VALUE) 0 ;
+  VALUE arg3 = (VALUE) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  
+  if ((argc < 3) || (argc > 3)) {
+    rb_raise(rb_eArgError, "wrong # of arguments(%d for 3)",argc); SWIG_fail;
+  }
+  res1 = SWIG_ConvertPtr(argv[0], &argp1,SWIGTYPE_p_FIX__Initiator, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), Ruby_Format_TypeError( "", "FIX::Initiator *","_quickfixPinInitiator", 1, argv[0] )); 
+  }
+  arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
+  arg2 = argv[1];
+  arg3 = argv[2];
+  {
+    QuickfixCaught caught;
+    if(tryRubyException([&]() mutable
+        {
+      _quickfixPinInitiator(arg1,arg2,arg3);
+          return self;
+        fail:
+          return Qnil;
+        }, caught) == Qnil)
+    {
+      if(caught.caught)
+      {
+        raiseCaught(caught);
+      }
+      SWIG_fail;
+    }
+    redeliverKill();
+  }
+  return Qnil;
+fail:
+  return Qnil;
+}
+
+
+SWIGINTERN VALUE
+_wrap__quickfixPinCount(int argc, VALUE *argv, VALUE self) {
+  size_t result;
+  VALUE vresult = Qnil;
+  
+  if ((argc < 0) || (argc > 0)) {
+    rb_raise(rb_eArgError, "wrong # of arguments(%d for 0)",argc); SWIG_fail;
+  }
+  {
+    QuickfixCaught caught;
+    if(tryRubyException([&]() mutable
+        {
+      result = _quickfixPinCount();
+          return self;
+        fail:
+          return Qnil;
+        }, caught) == Qnil)
+    {
+      if(caught.caught)
+      {
+        raiseCaught(caught);
+      }
+      SWIG_fail;
+    }
+    redeliverKill();
+  }
+  vresult = SWIG_From_size_t(static_cast< size_t >(result));
+  return vresult;
+fail:
+  return Qnil;
+}
+
 
 SWIGINTERN VALUE
 _wrap__throw(int argc, VALUE *argv, VALUE self) {
@@ -142769,6 +143029,9 @@ SWIGEXPORT void Init_quickfix(void) {
   SwigClassNullStore.mark = 0;
   SwigClassNullStore.destroy = (void (*)(void *)) free_FIX_NullStore;
   SwigClassNullStore.trackObjects = 0;
+  rb_define_module_function(mQuickfix, "_quickfixPinAcceptor", VALUEFUNC(_wrap__quickfixPinAcceptor), -1);
+  rb_define_module_function(mQuickfix, "_quickfixPinInitiator", VALUEFUNC(_wrap__quickfixPinInitiator), -1);
+  rb_define_module_function(mQuickfix, "_quickfixPinCount", VALUEFUNC(_wrap__quickfixPinCount), -1);
   rb_define_module_function(mQuickfix, "_throw", VALUEFUNC(_wrap__throw), -1);
   rb_define_module_function(mQuickfix, "_currentException", VALUEFUNC(_wrap__currentException), -1);
   

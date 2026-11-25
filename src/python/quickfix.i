@@ -836,12 +836,17 @@ class ThreadedSSLSocketAcceptor(ThreadedSSLSocketAcceptorBase):
 # An initiator or acceptor holds C++ references to what it was made with. The classes above keep
 # theirs, but the *Base classes SWIG generates kept nothing, so an argument written inline was freed
 # when the constructor returned and the transport used freed memory (#110). Every transport class
-# keeps its arguments, as quickfix_ruby.rb does for Ruby (#107).
+# keeps its arguments, as quickfix_ruby.rb does for Ruby (#107). Kept on the transport, they still
+# went in the same collection as it, in any order, and its destructor used its store and log
+# factories (#201): those are pinned from C++ too, until the transport's C++ object is deleted.
 def _keepArguments(cls):
   construct = cls.__init__
   def __init__(self, *args, **kwargs):
     construct(self, *args, **kwargs)
     self._quickfixArguments = (args, kwargs)
+    pin = _quickfixPinAcceptor if isinstance(self, Acceptor) else _quickfixPinInitiator
+    pin(self, args[1] if len(args) > 1 else kwargs.get('storeFactory'),
+        args[3] if len(args) > 3 else kwargs.get('logFactory'))
   cls.__init__ = __init__
 
 def _transportClasses(base):
