@@ -4143,6 +4143,28 @@ namespace swig {
   _exit( status );
 }
 
+// Throws into the engine, as the C++ exception it holds, a FIX exception a
+// Python callback raised. PyErr_Fetch gave the caller the type, the value and
+// the traceback as new references, and the throw leaves the caller, so they
+// are released here, by a destructor: after the throw has copied the C++
+// exception out of the value's proxy, which owns it, and whether or not that
+// copy succeeds.
+template <class E>
+[[noreturn]] void throwToEngine( void *exception, PyObject *ptype, PyObject *pvalue, PyObject *ptraceback )
+{
+  struct Fetched
+  {
+    PyObject *type, *value, *traceback;
+    ~Fetched()
+    {
+      Py_XDECREF( type );
+      Py_XDECREF( value );
+      Py_XDECREF( traceback );
+    }
+  } fetched{ ptype, pvalue, ptraceback };
+  throw *static_cast<E *>( exception );
+}
+
 
 // Ends a view: a proxy that owns nothing, of an object that is destroyed or about to be. Its pointer becomes null,
 // so any later use raises (the typemap above). An owner is never ended: its pointer is what frees its object.
@@ -7813,7 +7835,7 @@ void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &ar
           void *result;
           
           if( SWIG_ConvertPtr(pvalue, &result, SWIGTYPE_p_FIX__DoNotSend, 0 ) != -1 ) {
-            throw *((FIX::DoNotSend*)result);
+            throwToEngine<FIX::DoNotSend>( result, ptype, pvalue, ptraceback );
           } else {
             PyErr_Restore( ptype, pvalue, ptraceback );
             exitOnCallbackError();
@@ -7854,13 +7876,13 @@ void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID
           void *result;
           
           if( SWIG_ConvertPtr(pvalue, &result, SWIGTYPE_p_FIX__FieldNotFound, 0 ) != -1 ) {
-            throw *((FIX::FieldNotFound*)result);
+            throwToEngine<FIX::FieldNotFound>( result, ptype, pvalue, ptraceback );
           } else if( SWIG_ConvertPtr(pvalue, &result, SWIGTYPE_p_FIX__IncorrectDataFormat, 0 ) != -1 ) {
-            throw *((FIX::IncorrectDataFormat*)result);
+            throwToEngine<FIX::IncorrectDataFormat>( result, ptype, pvalue, ptraceback );
           } else if( SWIG_ConvertPtr(pvalue, &result, SWIGTYPE_p_FIX__IncorrectTagValue, 0 ) != -1 ) {
-            throw *((FIX::IncorrectTagValue*)result);
+            throwToEngine<FIX::IncorrectTagValue>( result, ptype, pvalue, ptraceback );
           } else if( SWIG_ConvertPtr(pvalue, &result, SWIGTYPE_p_FIX__RejectLogon, 0 ) != -1 ) {
-            throw *((FIX::RejectLogon*)result);
+            throwToEngine<FIX::RejectLogon>( result, ptype, pvalue, ptraceback );
           } else {
             PyErr_Restore( ptype, pvalue, ptraceback );
             exitOnCallbackError();
@@ -7901,13 +7923,13 @@ void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID c
           void *result;
           
           if( SWIG_ConvertPtr(pvalue, &result, SWIGTYPE_p_FIX__FieldNotFound, 0 ) != -1 ) {
-            throw *((FIX::FieldNotFound*)result);
+            throwToEngine<FIX::FieldNotFound>( result, ptype, pvalue, ptraceback );
           } else if( SWIG_ConvertPtr(pvalue, &result, SWIGTYPE_p_FIX__IncorrectDataFormat, 0 ) != -1 ) {
-            throw *((FIX::IncorrectDataFormat*)result);
+            throwToEngine<FIX::IncorrectDataFormat>( result, ptype, pvalue, ptraceback );
           } else if( SWIG_ConvertPtr(pvalue, &result, SWIGTYPE_p_FIX__IncorrectTagValue, 0 ) != -1 ) {
-            throw *((FIX::IncorrectTagValue*)result);
+            throwToEngine<FIX::IncorrectTagValue>( result, ptype, pvalue, ptraceback );
           } else if( SWIG_ConvertPtr(pvalue, &result, SWIGTYPE_p_FIX__UnsupportedMessageType, 0 ) != -1 ) {
-            throw *((FIX::UnsupportedMessageType*)result);
+            throwToEngine<FIX::UnsupportedMessageType>( result, ptype, pvalue, ptraceback );
           } else {
             PyErr_Restore( ptype, pvalue, ptraceback );
             exitOnCallbackError();
