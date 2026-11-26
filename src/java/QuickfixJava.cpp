@@ -1001,6 +1001,34 @@ std::string detailOf(JNIEnv *jenv, jthrowable error)
 }
 
 int fieldOf(JNIEnv *jenv, jthrowable error) { return jenv->GetIntField(error, g_field); }
+
+// Releases the Java exception fetched from the callback and the director's upcall
+// object when a rethrow leaves the handler below: the throw leaves the handler,
+// so they are released here, by a destructor. Built only once a callback has left
+// an exception pending; on the ordinary path it is never built and the generated
+// director releases the upcall object as before.
+struct CallbackRefs
+{
+  CallbackRefs(JNIEnv *jenv, jthrowable error, jobject self) : m_jenv(jenv), m_error(error), m_self(self) {}
+  ~CallbackRefs()
+  {
+    if (m_error)
+    {
+      m_jenv->DeleteLocalRef(m_error);
+    }
+    if (m_self)
+    {
+      m_jenv->DeleteLocalRef(m_self);
+    }
+  }
+  CallbackRefs(const CallbackRefs &) = delete;
+  CallbackRefs &operator=(const CallbackRefs &) = delete;
+
+private:
+  JNIEnv *m_jenv;
+  jthrowable m_error;
+  jobject m_self;
+};
 } // namespace QuickfixJava
 
 namespace QuickfixViews
@@ -2321,6 +2349,7 @@ FIX::Log *SwigDirector_LogFactory::create() {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::LogFactory::create");
       }
@@ -2354,6 +2383,7 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::LogFactory::create");
       }
@@ -2385,6 +2415,7 @@ void SwigDirector_LogFactory::destroy(FIX::Log *arg0) {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::LogFactory::destroy");
       }
@@ -2443,6 +2474,7 @@ void SwigDirector_Log::clear() {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::Log::clear");
       }
@@ -2470,6 +2502,7 @@ void SwigDirector_Log::backup() {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::Log::backup");
       }
@@ -2500,6 +2533,7 @@ void SwigDirector_Log::onIncoming(std::string const &arg0) {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::Log::onIncoming");
       }
@@ -2530,6 +2564,7 @@ void SwigDirector_Log::onOutgoing(std::string const &arg0) {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::Log::onOutgoing");
       }
@@ -2560,6 +2595,7 @@ void SwigDirector_Log::onEvent(std::string const &arg0) {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::Log::onEvent");
       }
@@ -2622,6 +2658,7 @@ void SwigDirector_Application::onCreate(FIX::SessionID const &arg0) {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::Application::onCreate");
       }
@@ -2651,6 +2688,7 @@ void SwigDirector_Application::onLogon(FIX::SessionID const &arg0) {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::Application::onLogon");
       }
@@ -2680,6 +2718,7 @@ void SwigDirector_Application::onLogout(FIX::SessionID const &arg0) {
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::Application::onLogout");
       }
@@ -2711,6 +2750,7 @@ void SwigDirector_Application::toAdmin(FIX::Message &arg0,FIX::SessionID const &
       if (swigerror)
       {
         jenv->ExceptionClear();
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
         
         QuickfixJava::exitOnCallbackError(jenv, swigerror,"FIX::Application::toAdmin");
       }
@@ -2742,7 +2782,8 @@ void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &ar
       if (swigerror)
       {
         jenv->ExceptionClear();
-        /*@SWIG:quickfix.i,290,QUICKFIX_JAVA_RETHROW@*/
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
+        /*@SWIG:quickfix.i,319,QUICKFIX_JAVA_RETHROW@*/
         if (QuickfixJava::isA(jenv, swigerror,"DoNotSend")) {
           throw FIX::DoNotSend(QuickfixJava::detailOf(jenv, swigerror)); 
         }
@@ -2777,23 +2818,24 @@ void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID
       if (swigerror)
       {
         jenv->ExceptionClear();
-        /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
+        /*@SWIG:quickfix.i,322,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"FieldNotFound"))
         {
           throw FIX::FieldNotFound(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
-        /*@SWIG@*/ /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        /*@SWIG@*/ /*@SWIG:quickfix.i,322,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"IncorrectDataFormat"))
         {
           throw FIX::IncorrectDataFormat(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
         /*@SWIG@*/
-        /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        /*@SWIG:quickfix.i,322,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"IncorrectTagValue"))
         {
           throw FIX::IncorrectTagValue(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
-        /*@SWIG@*/ /*@SWIG:quickfix.i,290,QUICKFIX_JAVA_RETHROW@*/
+        /*@SWIG@*/ /*@SWIG:quickfix.i,319,QUICKFIX_JAVA_RETHROW@*/
         if (QuickfixJava::isA(jenv, swigerror,"RejectLogon")) {
           throw FIX::RejectLogon(QuickfixJava::detailOf(jenv, swigerror)); 
         }
@@ -2828,23 +2870,24 @@ void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID c
       if (swigerror)
       {
         jenv->ExceptionClear();
-        /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        QuickfixJava::CallbackRefs swigCallbackRefs(jenv, swigerror, swigjobj);
+        /*@SWIG:quickfix.i,322,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"FieldNotFound"))
         {
           throw FIX::FieldNotFound(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
-        /*@SWIG@*/ /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        /*@SWIG@*/ /*@SWIG:quickfix.i,322,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"IncorrectDataFormat"))
         {
           throw FIX::IncorrectDataFormat(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
         /*@SWIG@*/
-        /*@SWIG:quickfix.i,293,QUICKFIX_JAVA_RETHROW_FIELD@*/
+        /*@SWIG:quickfix.i,322,QUICKFIX_JAVA_RETHROW_FIELD@*/
         if (QuickfixJava::isA(jenv, swigerror,"IncorrectTagValue"))
         {
           throw FIX::IncorrectTagValue(QuickfixJava::fieldOf(jenv, swigerror), QuickfixJava::detailOf(jenv, swigerror));
         }
-        /*@SWIG@*/ /*@SWIG:quickfix.i,290,QUICKFIX_JAVA_RETHROW@*/
+        /*@SWIG@*/ /*@SWIG:quickfix.i,319,QUICKFIX_JAVA_RETHROW@*/
         if (QuickfixJava::isA(jenv, swigerror,"UnsupportedMessageType")) {
           throw FIX::UnsupportedMessageType(QuickfixJava::detailOf(jenv, swigerror)); 
         }

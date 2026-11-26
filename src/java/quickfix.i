@@ -151,6 +151,34 @@ std::string detailOf(JNIEnv *jenv, jthrowable error)
 }
 
 int fieldOf(JNIEnv *jenv, jthrowable error) { return jenv->GetIntField(error, g_field); }
+
+// Releases the Java exception fetched from the callback and the director's upcall
+// object when a rethrow leaves the handler below: the throw leaves the handler,
+// so they are released here, by a destructor. Built only once a callback has left
+// an exception pending; on the ordinary path it is never built and the generated
+// director releases the upcall object as before.
+struct CallbackRefs
+{
+  CallbackRefs(JNIEnv *jenv, jthrowable error, jobject self) : m_jenv(jenv), m_error(error), m_self(self) {}
+  ~CallbackRefs()
+  {
+    if (m_error)
+    {
+      m_jenv->DeleteLocalRef(m_error);
+    }
+    if (m_self)
+    {
+      m_jenv->DeleteLocalRef(m_self);
+    }
+  }
+  CallbackRefs(const CallbackRefs &) = delete;
+  CallbackRefs &operator=(const CallbackRefs &) = delete;
+
+private:
+  JNIEnv *m_jenv;
+  jthrowable m_error;
+  jobject m_self;
+};
 } // namespace QuickfixJava
 
 namespace QuickfixViews
@@ -282,6 +310,7 @@ QUICKFIX_VIEWS_EXCEPTION(FIX::SessionSettings::~SessionSettings, QuickfixViews::
   if ($error)
   {
     jenv->ExceptionClear();
+    QuickfixJava::CallbackRefs swigCallbackRefs(jenv, $error, swigjobj);
     EXPECTED
     QuickfixJava::exitOnCallbackError(jenv, $error, #method);
   }
