@@ -818,6 +818,19 @@ QUICKFIX_JAVA_TRANSPORT(FIX::ThreadedSSLSocketAcceptor)
 }
 %typemap(javain) SWIGTYPE * "Proxies.cPtr($javaclassname.getCPtr($javainput), $javainput)"
 
+// SynchronizedApplication holds a C++ reference to the application it wraps but kept no Java field referring to it,
+// so once the script dropped its own reference the application was collected and finalized and the next callback
+// through the wrapper used freed memory (#208). Keep it on the wrapper's own object, as a transport keeps its
+// arguments above.
+%typemap(javacode) FIX::SynchronizedApplication %{
+  // The application this wraps, kept reachable while this is (#208).
+  private Application quickfixApplication;
+%}
+%typemap(javaconstruct) FIX::SynchronizedApplication {
+    this($imcall, true);
+    quickfixApplication = app;
+  }
+
 %include ../quickfix.i
 
 // The views of objects that a call from Java can destroy (#196; ../quickfix.i, Views): each by the address of its

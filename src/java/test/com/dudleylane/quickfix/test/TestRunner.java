@@ -19,7 +19,8 @@ public final class TestRunner {
                                       CallbackErrorTests.class, LifetimeTests.class, SessionIDTests.class,
                                       ViewTests.class, EndedViewTests.class, TransportViewTests.class,
                                       ExceptionListTests.class, GeneratedTests.class, TransportGcTests.class,
-                                      CallbackExceptionTests.class, ExampleTests.class};
+                                      CallbackExceptionTests.class, SynchronizedApplicationTests.class,
+                                      ExampleTests.class};
 
     public static void main(String[] args) throws Exception {
         List<Class<?>> suites = new ArrayList<>();

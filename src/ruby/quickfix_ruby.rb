@@ -152,6 +152,19 @@ module Quickfix
 		klass.prepend(KeepsArguments)
 	end
 
+	# SynchronizedApplication holds a C++ reference to the application it wraps but
+	# kept nothing referring to the script's object, so once the script dropped its
+	# own reference the GC freed the application and the next callback through the
+	# wrapper used freed memory (#208). Keep it on the wrapper's own object, the way
+	# KeepsArguments keeps a transport's arguments.
+	module KeepsApplication
+		def initialize(application, *args)
+			super
+			@quickfixApplication = application
+		end
+	end
+	SynchronizedApplication.prepend(KeepsApplication)
+
 	module TransportGetters
 		def getSession(*args)
 			TransportViews.keep(super, self, TransportViews::SESSIONS)

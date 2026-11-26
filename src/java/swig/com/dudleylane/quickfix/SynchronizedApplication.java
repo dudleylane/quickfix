@@ -48,8 +48,12 @@ public class SynchronizedApplication extends Application {
     super.delete();
   }
 
+  // The application this wraps, kept reachable while this is (#208).
+  private Application quickfixApplication;
+
   public SynchronizedApplication(Application app) {
     this(quickfixJNI.new_SynchronizedApplication(Application.getCPtr(app), app), true);
+    quickfixApplication = app;
   }
 
   public void onCreate(SessionID sessionID) {

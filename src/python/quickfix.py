@@ -9424,6 +9424,17 @@ for _cls in set(_transportClasses(Initiator)) | set(_transportClasses(Acceptor))
   _keepArguments(_cls)
 del _cls
 
+# SynchronizedApplication holds a C++ reference to the application it wraps but kept nothing referring to the
+# script's object, so once the script dropped its own reference the application was freed and the next callback
+# through the wrapper used freed memory (#208). Keep it on the wrapper's own object, as the transports keep theirs.
+def _keepApplication(cls):
+  construct = cls.__init__
+  def __init__(self, app, *args, **kwargs):
+    construct(self, app, *args, **kwargs)
+    self._quickfixApplication = app
+  cls.__init__ = __init__
+_keepApplication(SynchronizedApplication)
+
 # What a transport was made with is the script's own object, kept above. SWIG returned a second proxy of it that
 # owned nothing, and kept nothing alive once the transport had gone (#197).
 def _keptArgument(transport, index, name):
