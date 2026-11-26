@@ -7669,12 +7669,9 @@ VALUE LogFactory_create_body(VALUE data) {
 
 VALUE LogFactory_create_rescue(VALUE args, VALUE error) {
   LogFactory_create_call_depth--;
-  if (LogFactory_create_call_depth == 0) {
     if( error != 0 ) {
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7691,13 +7688,10 @@ VALUE LogFactory_destroy_body(VALUE data) {
 
 VALUE LogFactory_destroy_rescue(VALUE args, VALUE error) {
   LogFactory_destroy_call_depth--;
-  if (LogFactory_destroy_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7714,13 +7708,10 @@ VALUE Log_clear_body(VALUE data) {
 
 VALUE Log_clear_rescue(VALUE args, VALUE error) {
   Log_clear_call_depth--;
-  if (Log_clear_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7737,13 +7728,10 @@ VALUE Log_backup_body(VALUE data) {
 
 VALUE Log_backup_rescue(VALUE args, VALUE error) {
   Log_backup_call_depth--;
-  if (Log_backup_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7760,13 +7748,10 @@ VALUE Log_onIncoming_body(VALUE data) {
 
 VALUE Log_onIncoming_rescue(VALUE args, VALUE error) {
   Log_onIncoming_call_depth--;
-  if (Log_onIncoming_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7783,13 +7768,10 @@ VALUE Log_onOutgoing_body(VALUE data) {
 
 VALUE Log_onOutgoing_rescue(VALUE args, VALUE error) {
   Log_onOutgoing_call_depth--;
-  if (Log_onOutgoing_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7806,13 +7788,10 @@ VALUE Log_onEvent_body(VALUE data) {
 
 VALUE Log_onEvent_rescue(VALUE args, VALUE error) {
   Log_onEvent_call_depth--;
-  if (Log_onEvent_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7829,13 +7808,10 @@ VALUE Application_onCreate_body(VALUE data) {
 
 VALUE Application_onCreate_rescue(VALUE args, VALUE error) {
   Application_onCreate_call_depth--;
-  if (Application_onCreate_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7852,13 +7828,10 @@ VALUE Application_onLogon_body(VALUE data) {
 
 VALUE Application_onLogon_rescue(VALUE args, VALUE error) {
   Application_onLogon_call_depth--;
-  if (Application_onLogon_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7875,13 +7848,10 @@ VALUE Application_onLogout_body(VALUE data) {
 
 VALUE Application_onLogout_rescue(VALUE args, VALUE error) {
   Application_onLogout_call_depth--;
-  if (Application_onLogout_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7898,13 +7868,10 @@ VALUE Application_toAdmin_body(VALUE data) {
 
 VALUE Application_toAdmin_rescue(VALUE args, VALUE error) {
   Application_toAdmin_call_depth--;
-  if (Application_toAdmin_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       exitOnCallbackError( error );
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7921,7 +7888,6 @@ VALUE Application_toApp_body(VALUE data) {
 
 VALUE Application_toApp_rescue(VALUE args, VALUE error) {
   Application_toApp_call_depth--;
-  if (Application_toApp_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       void* result;
@@ -7933,8 +7899,6 @@ VALUE Application_toApp_rescue(VALUE args, VALUE error) {
         exitOnCallbackError( error );
       }
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7951,7 +7915,6 @@ VALUE Application_fromAdmin_body(VALUE data) {
 
 VALUE Application_fromAdmin_rescue(VALUE args, VALUE error) {
   Application_fromAdmin_call_depth--;
-  if (Application_fromAdmin_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       void* result;
@@ -7972,8 +7935,6 @@ VALUE Application_fromAdmin_rescue(VALUE args, VALUE error) {
         exitOnCallbackError( error );
       }
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
@@ -7990,7 +7951,6 @@ VALUE Application_fromApp_body(VALUE data) {
 
 VALUE Application_fromApp_rescue(VALUE args, VALUE error) {
   Application_fromApp_call_depth--;
-  if (Application_fromApp_call_depth == 0) {
     if( error != 0 ) {
       if( deferKill( error ) ) return Qnil;
       void* result;
@@ -8011,8 +7971,6 @@ VALUE Application_fromApp_rescue(VALUE args, VALUE error) {
         exitOnCallbackError( error );
       }
     }
-  }
-  rb_exc_raise(error);
   return Qnil;
 }
 
