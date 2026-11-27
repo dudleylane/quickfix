@@ -56,15 +56,26 @@ module Quickfix
 		end
 	end
 
+	# start runs block() on a new thread, which clears m_stop (marking the transport
+	# started) only once it has entered block(). stop() does nothing while the
+	# transport is still marked stopped, so a stop() right after start() would miss
+	# it and leave block() running until exit (#206). Wait until block() has entered,
+	# or its thread has ended because block() raised -- a failed start still surfaces
+	# when the returned thread is joined (#123). m_stop is atomic, so isStopped reads
+	# it without a race.
 	class Initiator
 		def start
 			@quickfixThread = Thread.new { block() }
+			sleep 0.0001 while isStopped && @quickfixThread.alive?
+			@quickfixThread
 		end
 	end
 
 	class Acceptor
 		def start
 			@quickfixThread = Thread.new { block() }
+			sleep 0.0001 while isStopped && @quickfixThread.alive?
+			@quickfixThread
 		end
 	end
 
