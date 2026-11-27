@@ -105,8 +105,21 @@ void ThreadedSocketAcceptor::onInitialize(const SessionSettings &sessionSettings
             socket_setsockopt(socket, SO_RCVBUF, rcvBufSize);
         }
 
-        m_socketToPort[socket] = port;
-        m_sockets.insert(socket);
+        // onInitialize runs on block()'s own thread (the Ruby binding drives it that way, #206), so a
+        // stop() from another thread can run onStop() before this bind. Take m_mutex, which onStop() and
+        // onStart() also hold, so the write no longer races them; and if stop() has already run, close this
+        // listener rather than insert it -- onStop() swapped m_sockets before it existed and onStart() will
+        // skip it, so nothing else would ever close it, and the port would stay bound until exit (#211).
+        {
+            Locker l(m_mutex);
+            if (isStopped())
+            {
+                socket_close(socket);
+                continue;
+            }
+            m_socketToPort[socket] = port;
+            m_sockets.insert(socket);
+        }
     }
 }
 

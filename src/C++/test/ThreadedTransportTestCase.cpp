@@ -358,8 +358,73 @@ TEST_CASE("ThreadedTransportTests")
 #endif
 }
 
+// block() on a thread, then stop() the instant block() has started (m_stop = false): the stop can land while
+// block() is between there and onInitialize binding the listeners, where onStop() runs before they exist. A
+// threaded acceptor must not then leave a listener bound with nothing to close it -- isStopped() is true, so no
+// later stop() reaches it and the port stays bound until exit (#211); the plain reactor must not close or use a
+// half-built or freed server (#212). Looped with a varied gap so the stop lands across those windows, no descriptor
+// left open. The SECTION instantiates it for each transport (the SSL reactor's onStop is empty, so it never raced).
+template <class Acc> void stopRightAfterBlockClosesEveryListener(const std::string &extraConfig)
+{
+    NullApplication application;
+    MemoryStoreFactory factory;
+    const std::size_t before = openDescriptors();
+    for (int round = 0; round < 30; ++round)
+    {
+        const int port = freePort();
+        std::stringstream config;
+        config << "[DEFAULT]\nConnectionType=acceptor\nStartTime=00:00:00\nEndTime=00:00:00\nUseDataDictionary=N\n"
+               << extraConfig
+               << "[SESSION]\nBeginString=FIX.4.2\nSenderCompID=BLKINIT\nTargetCompID=TW\nSocketAcceptPort=" << port
+               << "\n";
+        SessionSettings settings(config);
+        {
+            Acc acceptor(application, factory, settings);
+            std::thread blocker(
+                [&acceptor]()
+                {
+                    try
+                    {
+                        acceptor.block();
+                    }
+                    catch (...)
+                    {
+                    }
+                });
+            while (acceptor.isStopped()) // block() has set m_stop = false but may not have bound yet
+            {
+                std::this_thread::yield();
+            }
+            // Vary where stop() lands across rounds -- at once (before the bind), during it, and after -- so the run
+            // reaches a stop that races onInitialize's build, not only the harmless pre-build window (#211, #212).
+            std::this_thread::sleep_for(std::chrono::microseconds(round * 3));
+            acceptor.stop(true);
+            blocker.join();
+        }
+        int probe = ::socket(AF_INET, SOCK_STREAM, 0);
+        sockaddr_in address{};
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        address.sin_port = htons(port);
+        INFO("round " << round << ", port " << port);
+        CHECK(::bind(probe, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0);
+        ::close(probe);
+    }
+    CHECK(openDescriptors() == before);
+}
+
 TEST_CASE("ThreadedTransportStopTests")
 {
+    SECTION("stopRightAfterBlockClosesEveryListener")
+    {
+        stopRightAfterBlockClosesEveryListener<ThreadedSocketAcceptor>("");
+#if (HAVE_SSL > 0)
+        const std::string ssl = "ServerCertificateFile=" + certPath("127_0_0_1_server.crt") + "\n" +
+                                "ServerCertificateKeyFile=" + certPath("127_0_0_1_server.key") + "\n";
+        stopRightAfterBlockClosesEveryListener<ThreadedSSLSocketAcceptor>(ssl);
+#endif
+    }
+
     SECTION("stopWithALiveConnectionIsPromptAndLeavesNoDescriptorOpen")
     {
         // onStop shuts every socket down to wake its thread, joins the threads,
