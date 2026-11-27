@@ -5,7 +5,7 @@
 #   acceptor         a SocketAcceptor that refers to itself, then gc.collect()
 #   initiator        the same with a SocketInitiator
 #   stopped          a SocketAcceptor started and stopped first
-#   scriptlogs       with a LogFactory written in Python, which keeps its logs (#205) and counts destroy's calls
+#   scriptlogs       with a LogFactory written in Python, which keeps its logs and counts destroy's calls
 #   appcycle         the Application refers to the transport: the application is not pinned (#204), so this is
 #                    still collected, and the transport's sessions are unregistered
 #   exit             left in its cycle for the interpreter's exit

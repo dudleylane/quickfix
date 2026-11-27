@@ -4165,6 +4165,78 @@ template <class E>
   throw *static_cast<E *>( exception );
 }
 
+// The engine keeps each Log a factory creates until it destroys it, but nothing kept the script's Log, and the GC
+// freed it under the engine (#205). Keep it on the factory's own Python object, which #201 pins for the transport's
+// life, in a _quickfixLogs dict keyed by the C++ Log the engine holds and counted per address (a factory may return
+// one Log for several sessions). The C++ Log is used only as a key, so it is a void *. Under the GIL.
+static void keepLog( PyObject *factory, void *log, PyObject *pyLog )
+{
+  if( !factory || !pyLog ) return;
+  PyObject *logs = PyObject_GetAttrString( factory, "_quickfixLogs" );
+  if( !logs )
+  {
+    PyErr_Clear();
+    logs = PyDict_New();
+    if( !logs ) { PyErr_Clear(); return; }
+    PyObject_SetAttrString( factory, "_quickfixLogs", logs );
+  }
+  PyObject *key = PyLong_FromVoidPtr( log );
+  if( key )
+  {
+    PyObject *entry = PyDict_GetItem( logs, key );
+    if( entry )
+    {
+      PyObject *count = PyLong_FromLong( PyLong_AsLong( PyList_GET_ITEM( entry, 1 ) ) + 1 );
+      if( count ) PyList_SetItem( entry, 1, count );
+    }
+    else
+    {
+      PyObject *pair = PyList_New( 2 ), *one = PyLong_FromLong( 1 );
+      if( pair && one )
+      {
+        Py_INCREF( pyLog );
+        PyList_SET_ITEM( pair, 0, pyLog );
+        PyList_SET_ITEM( pair, 1, one );
+        PyDict_SetItem( logs, key, pair );
+      }
+      else Py_XDECREF( one );
+      Py_XDECREF( pair );
+    }
+    Py_DECREF( key );
+  }
+  PyErr_Clear();
+  Py_DECREF( logs );
+}
+
+// Returns an owned reference to the Log create returned, if it is still kept, and drops the keep once destroy has
+// been called for it as many times as create made it; otherwise NULL, for the caller to make a fresh proxy. Leaves
+// no Python error set: destroy runs in the GC's teardown and at the interpreter's exit.
+static PyObject *releaseLog( PyObject *factory, void *log )
+{
+  PyObject *result = NULL;
+  if( factory )
+  {
+    PyObject *logs = PyObject_GetAttrString( factory, "_quickfixLogs" );
+    if( logs )
+    {
+      PyObject *key = PyLong_FromVoidPtr( log );
+      PyObject *entry = key ? PyDict_GetItem( logs, key ) : NULL;
+      if( entry )
+      {
+        result = PyList_GET_ITEM( entry, 0 );
+        Py_XINCREF( result );
+        long count = PyLong_AsLong( PyList_GET_ITEM( entry, 1 ) ) - 1;
+        if( count <= 0 ) PyDict_DelItem( logs, key );
+        else { PyObject *c = PyLong_FromLong( count ); if( c ) PyList_SetItem( entry, 1, c ); }
+      }
+      Py_XDECREF( key );
+      Py_DECREF( logs );
+    }
+  }
+  PyErr_Clear();
+  return result;
+}
+
 
 // Ends a view: a proxy that owns nothing, of an object that is destroyed or about to be. Its pointer becomes null,
 // so any later use raises (the typemap above). An owner is never ended: its pointer is what frees its object.
@@ -7406,6 +7478,7 @@ FIX::Log *SwigDirector_LogFactory::create() {
     }
     c_result = reinterpret_cast< FIX::Log * >(swig_argp);
     swig_acquire_ownership_obj(SWIG_as_voidptr(c_result), own /* & TODO: SWIG_POINTER_OWN */);
+    keepLog(swig_get_self(), SWIG_as_voidptr(c_result), result);
   }
   SWIG_PYTHON_THREAD_END_BLOCK;
   return (FIX::Log *) c_result;
@@ -7451,6 +7524,7 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
     }
     c_result = reinterpret_cast< FIX::Log * >(swig_argp);
     swig_acquire_ownership_obj(SWIG_as_voidptr(c_result), own /* & TODO: SWIG_POINTER_OWN */);
+    keepLog(swig_get_self(), SWIG_as_voidptr(c_result), result);
   }
   SWIG_PYTHON_THREAD_END_BLOCK;
   return (FIX::Log *) c_result;
@@ -7461,7 +7535,12 @@ void SwigDirector_LogFactory::destroy(FIX::Log *arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
   {
     swig::SwigVar_PyObject obj0;
-    obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(arg0), SWIGTYPE_p_FIX__Log,  0 );
+    {
+      obj0 = releaseLog(swig_get_self(), SWIG_as_voidptr(arg0));
+      if (!obj0) {
+        obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(arg0), SWIGTYPE_p_FIX__Log, 0);
+      }
+    }
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call LogFactory.__init__.");
     }

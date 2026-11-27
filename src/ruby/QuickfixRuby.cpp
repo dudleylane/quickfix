@@ -3124,20 +3124,20 @@ public:
   FIX::Log *create() override
   {
     FIX::Log *log = nullptr;
-    withGvl([&]() { log = m_factory.create(); });
+    withGvl([&]() { log = m_factory.create(); keepLog(m_factory, log); });
     return wrap(log);
   }
   FIX::Log *create(const FIX::SessionID &sessionID) override
   {
     FIX::Log *log = nullptr;
-    withGvl([&]() { log = m_factory.create(sessionID); });
+    withGvl([&]() { log = m_factory.create(sessionID); keepLog(m_factory, log); });
     return wrap(log);
   }
   void destroy(FIX::Log *log) override
   {
     RubyLog *adapter = dynamic_cast<RubyLog *>(log);
     FIX::Log *inner = adapter ? &adapter->log() : log;
-    withGvl([&]() { m_factory.destroy(inner); });
+    withGvl([&]() { m_factory.destroy(inner); releaseLog(m_factory, inner); });
     delete adapter;
   }
 
@@ -3147,6 +3147,73 @@ private:
   static FIX::Log *wrap(FIX::Log *log)
   {
     return log && dynamic_cast<Swig::Director *>(log) ? new RubyLog(*log) : log;
+  }
+
+  // The engine keeps each Log a factory creates until it destroys it, but nothing kept the script's Log, and the GC
+  // freed it under the engine (#205). Keep it alive from the factory's own Ruby object, which #201 pins for the
+  // transport's life, keyed by the C++ Log the engine holds and counted per address (a factory may return one Log
+  // for several sessions). Under the GVL, as withGvl holds it.
+  static VALUE logs(FIX::LogFactory &factory, bool make)
+  {
+    Swig::Director *director = dynamic_cast<Swig::Director *>(&factory);
+    if (!director)
+    {
+      return Qnil;
+    }
+    VALUE self = director->swig_get_self();
+    VALUE kept = rb_ivar_get(self, rb_intern("@quickfixLogs"));
+    if (!RB_TYPE_P(kept, T_HASH))
+    {
+      if (!make)
+      {
+        return Qnil;
+      }
+      kept = rb_hash_new();
+      rb_ivar_set(self, rb_intern("@quickfixLogs"), kept);
+    }
+    return kept;
+  }
+  static VALUE key(FIX::Log *log) { return ULL2NUM(static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(log))); }
+  static void keepLog(FIX::LogFactory &factory, FIX::Log *log)
+  {
+    Swig::Director *director = dynamic_cast<Swig::Director *>(log);
+    VALUE kept = logs(factory, true);
+    if (!director || NIL_P(kept))
+    {
+      return;
+    }
+    VALUE entry = rb_hash_aref(kept, key(log));
+    if (NIL_P(entry))
+    {
+      rb_hash_aset(kept, key(log), rb_ary_new_from_args(2, director->swig_get_self(), INT2FIX(1)));
+    }
+    else
+    {
+      rb_ary_store(entry, 1, INT2FIX(FIX2INT(rb_ary_entry(entry, 1)) + 1));
+    }
+  }
+  // Allocates nothing and raises nothing: destroy runs in the GC's teardown and the at_exit hook.
+  static void releaseLog(FIX::LogFactory &factory, FIX::Log *log)
+  {
+    VALUE kept = logs(factory, false);
+    if (NIL_P(kept))
+    {
+      return;
+    }
+    VALUE entry = rb_hash_aref(kept, key(log));
+    if (NIL_P(entry))
+    {
+      return;
+    }
+    int count = FIX2INT(rb_ary_entry(entry, 1)) - 1;
+    if (count <= 0)
+    {
+      rb_hash_delete(kept, key(log));
+    }
+    else
+    {
+      rb_ary_store(entry, 1, INT2FIX(count));
+    }
   }
 
   FIX::LogFactory &m_factory;
@@ -8056,7 +8123,12 @@ void SwigDirector_LogFactory::destroy(FIX::Log *arg0) {
   Swig::body_args args ;
   int status ;
   
-  obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(arg0), SWIGTYPE_p_FIX__Log,  0 );
+  {
+    obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(arg0), SWIGTYPE_p_FIX__Log, 0);
+    if (Swig::Director *director = dynamic_cast<Swig::Director *>(arg0)) {
+      obj0 = director->swig_get_self();
+    }
+  }
   args.recv = swig_get_self();
   args.id = rb_intern("destroy");
   args.argc = 1;

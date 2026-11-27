@@ -70,6 +70,78 @@ template <class E>
   } fetched{ ptype, pvalue, ptraceback };
   throw *static_cast<E *>( exception );
 }
+
+// The engine keeps each Log a factory creates until it destroys it, but nothing kept the script's Log, and the GC
+// freed it under the engine (#205). Keep it on the factory's own Python object, which #201 pins for the transport's
+// life, in a _quickfixLogs dict keyed by the C++ Log the engine holds and counted per address (a factory may return
+// one Log for several sessions). The C++ Log is used only as a key, so it is a void *. Under the GIL.
+static void keepLog( PyObject *factory, void *log, PyObject *pyLog )
+{
+  if( !factory || !pyLog ) return;
+  PyObject *logs = PyObject_GetAttrString( factory, "_quickfixLogs" );
+  if( !logs )
+  {
+    PyErr_Clear();
+    logs = PyDict_New();
+    if( !logs ) { PyErr_Clear(); return; }
+    PyObject_SetAttrString( factory, "_quickfixLogs", logs );
+  }
+  PyObject *key = PyLong_FromVoidPtr( log );
+  if( key )
+  {
+    PyObject *entry = PyDict_GetItem( logs, key );
+    if( entry )
+    {
+      PyObject *count = PyLong_FromLong( PyLong_AsLong( PyList_GET_ITEM( entry, 1 ) ) + 1 );
+      if( count ) PyList_SetItem( entry, 1, count );
+    }
+    else
+    {
+      PyObject *pair = PyList_New( 2 ), *one = PyLong_FromLong( 1 );
+      if( pair && one )
+      {
+        Py_INCREF( pyLog );
+        PyList_SET_ITEM( pair, 0, pyLog );
+        PyList_SET_ITEM( pair, 1, one );
+        PyDict_SetItem( logs, key, pair );
+      }
+      else Py_XDECREF( one );
+      Py_XDECREF( pair );
+    }
+    Py_DECREF( key );
+  }
+  PyErr_Clear();
+  Py_DECREF( logs );
+}
+
+// Returns an owned reference to the Log create returned, if it is still kept, and drops the keep once destroy has
+// been called for it as many times as create made it; otherwise NULL, for the caller to make a fresh proxy. Leaves
+// no Python error set: destroy runs in the GC's teardown and at the interpreter's exit.
+static PyObject *releaseLog( PyObject *factory, void *log )
+{
+  PyObject *result = NULL;
+  if( factory )
+  {
+    PyObject *logs = PyObject_GetAttrString( factory, "_quickfixLogs" );
+    if( logs )
+    {
+      PyObject *key = PyLong_FromVoidPtr( log );
+      PyObject *entry = key ? PyDict_GetItem( logs, key ) : NULL;
+      if( entry )
+      {
+        result = PyList_GET_ITEM( entry, 0 );
+        Py_XINCREF( result );
+        long count = PyLong_AsLong( PyList_GET_ITEM( entry, 1 ) ) - 1;
+        if( count <= 0 ) PyDict_DelItem( logs, key );
+        else { PyObject *c = PyLong_FromLong( count ); if( c ) PyList_SetItem( entry, 1, c ); }
+      }
+      Py_XDECREF( key );
+      Py_DECREF( logs );
+    }
+  }
+  PyErr_Clear();
+  return result;
+}
 %}
 
 %exception
@@ -297,6 +369,27 @@ QUICKFIX_TRANSPORT_VIEWS(FIX::SSLSocketInitiator, SSLSocketInitiator)
 QUICKFIX_TRANSPORT_VIEWS(FIX::SSLSocketAcceptor, SSLSocketAcceptor)
 QUICKFIX_TRANSPORT_VIEWS(FIX::ThreadedSSLSocketInitiator, ThreadedSSLSocketInitiator)
 QUICKFIX_TRANSPORT_VIEWS(FIX::ThreadedSSLSocketAcceptor, ThreadedSSLSocketAcceptor)
+
+// A script LogFactory's Log (#205): create keeps it on the factory (so the GC does not free one the engine still
+// uses), and destroy is handed the object create returned, not a fresh proxy, so a factory can match it to what it
+// kept. Only LogFactory::create returns a FIX::Log * from a director, and only LogFactory::destroy takes one in; the
+// directorout is SWIG's own SWIGTYPE * directorout (typemaps/swigtype.swg) with the keep appended.
+%typemap(directorout,noblock=1,warning=SWIGWARN_TYPEMAP_DIRECTOROUT_PTR_MSG)
+  FIX::Log *(void *swig_argp, int swig_res, swig_owntype own) {
+  swig_res = SWIG_ConvertPtrAndOwn($input, &swig_argp, $descriptor, %convertptr_flags | SWIG_POINTER_DISOWN, &own);
+  if (!SWIG_IsOK(swig_res)) {
+    %dirout_fail(swig_res,"$type");
+  }
+  $result = %reinterpret_cast(swig_argp, $ltype);
+  swig_acquire_ownership_obj(%as_voidptr($result), own /* & TODO: SWIG_POINTER_OWN */);
+  keepLog(swig_get_self(), %as_voidptr($result), $input);
+}
+%typemap(directorin) FIX::Log * {
+  $input = releaseLog(swig_get_self(), %as_voidptr($1));
+  if (!$input) {
+    $input = SWIG_NewPointerObj(%as_voidptr($1), $descriptor, 0);
+  }
+}
 
 %include ../quickfix.i
 

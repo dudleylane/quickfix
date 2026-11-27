@@ -6,7 +6,7 @@
 #   acceptor   SocketAcceptors, half with a LogFactory, half without
 #   initiator  SocketInitiators, the same
 #   threaded   ThreadedSocketAcceptorBase, the class SWIG makes, each with a
-#              LogFactory written in Ruby that keeps its logs (#205)
+#              LogFactory written in Ruby that keeps its logs and counts destroy
 #   stopped    SocketAcceptors started and stopped first
 #   appcycle   each Application refers to its transport: the application is not
 #              pinned (#204), so each is still freed, and its sessions go
@@ -40,8 +40,8 @@ class QuietLog < Quickfix::Log
 	def onEvent(s); end
 end
 
-# Keeps every log it makes: destroy is handed a different object from the one
-# create returned, so it cannot drop the right one (#205).
+# Keeps every log it makes and counts destroy's calls. (Since #205 the binding keeps each log and hands destroy the
+# object create returned -- tested in ScriptLogFactoryTestCase; this factory keeps its own only to count them here.)
 class KeepingLogFactory < Quickfix::LogFactory
 	attr_accessor :transport, :app
 	def initialize; super; @logs = []; end
