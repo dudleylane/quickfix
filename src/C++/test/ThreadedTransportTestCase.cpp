@@ -417,10 +417,12 @@ TEST_CASE("ThreadedTransportStopTests")
 {
     SECTION("stopRightAfterBlockClosesEveryListener")
     {
+        stopRightAfterBlockClosesEveryListener<SocketAcceptor>("");
         stopRightAfterBlockClosesEveryListener<ThreadedSocketAcceptor>("");
 #if (HAVE_SSL > 0)
         const std::string ssl = "ServerCertificateFile=" + certPath("127_0_0_1_server.crt") + "\n" +
                                 "ServerCertificateKeyFile=" + certPath("127_0_0_1_server.key") + "\n";
+        stopRightAfterBlockClosesEveryListener<SSLSocketAcceptor>(ssl);
         stopRightAfterBlockClosesEveryListener<ThreadedSSLSocketAcceptor>(ssl);
 #endif
     }

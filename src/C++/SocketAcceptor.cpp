@@ -72,6 +72,11 @@ void SocketAcceptor::onInitialize(const SessionSettings &sessionSettings) EXCEPT
 {
     uint16_t port = 0;
 
+    // onInitialize runs on block()'s own thread (the Ruby binding drives it that way, #206). onStop reads and
+    // uses m_pServer under m_serverMutex from the thread calling stop(), so build it -- and, on a bind failure,
+    // delete it -- under the same lock: otherwise onStop could close a half-built server, or use one the catch
+    // below has already freed (#212). onStart runs after this returns, on the same thread, and takes the lock itself.
+    Locker l(m_serverMutex);
     try
     {
         m_pServer = new SocketServer(1);
