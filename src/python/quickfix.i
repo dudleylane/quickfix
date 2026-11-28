@@ -370,6 +370,48 @@ QUICKFIX_TRANSPORT_VIEWS(FIX::SSLSocketAcceptor, SSLSocketAcceptor)
 QUICKFIX_TRANSPORT_VIEWS(FIX::ThreadedSSLSocketInitiator, ThreadedSSLSocketInitiator)
 QUICKFIX_TRANSPORT_VIEWS(FIX::ThreadedSSLSocketAcceptor, ThreadedSSLSocketAcceptor)
 
+// #207: a public close() deletes a transport now, but it must not delete one while another thread is still inside
+// its block() -- that would free the transport under block()'s own stack. block()'s with-GIL hook (the
+// QUICKFIX_VIEWS_EXCEPTION mechanism above, run before $action takes the GIL away) registers the transport here for
+// the duration of the call, keyed by its FIX::Acceptor/FIX::Initiator subobject -- the same pointer the destroy
+// helper computes -- and the helper reports it still running, touching nothing, while it is registered. Both the
+// hook's insert and the helper's check hold the GIL, so the GIL orders them: no thread can enter block() between the
+// helper reading the registry and its clearing of the proxy. A leaked set, never destroyed, so no static destructor
+// races a transport still blocking at exit.
+%{
+#include <set>
+namespace QuickfixBlocking
+{
+inline std::set<const void *> &registry()
+{
+  static std::set<const void *> *blocking = new std::set<const void *>;
+  return *blocking;
+}
+inline bool isBlocking(const void *transport) { return transport && registry().count(transport) != 0; }
+class Guard
+{
+public:
+  explicit Guard(const void *transport) : m_transport(transport)
+  {
+    if (m_transport)
+      registry().insert(m_transport);
+  }
+  ~Guard()
+  {
+    if (m_transport)
+      registry().erase(m_transport);
+  }
+  Guard(const Guard &) = delete;
+  Guard &operator=(const Guard &) = delete;
+
+private:
+  const void *m_transport;
+};
+}
+%}
+QUICKFIX_VIEWS_EXCEPTION(FIX::Acceptor::block, QuickfixBlocking::Guard _qfBlockGuard(static_cast<FIX::Acceptor *>(arg1));)
+QUICKFIX_VIEWS_EXCEPTION(FIX::Initiator::block, QuickfixBlocking::Guard _qfBlockGuard(static_cast<FIX::Initiator *>(arg1));)
+
 // A script LogFactory's Log (#205): create keeps it on the factory (so the GC does not free one the engine still
 // uses), and destroy is handed the object create returned, not a fresh proxy, so a factory can match it to what it
 // kept. Only LogFactory::create returns a FIX::Log * from a director, and only LogFactory::destroy takes one in; the
@@ -653,6 +695,96 @@ size_t quickfixTestTransportViewCount()
 {
   QuickfixTransportViews::prune();
   return QuickfixTransportViews::s_entries;
+}
+%}
+
+// #207: close() refuses from inside any callback, on any thread. A callback that closes its own transport would
+// delete it under its own stack -- a toApp reached through Session.sendToTarget runs on the script's own calling
+// thread, which no thread-identity check catches, as the Ruby half proved under ASan. A per-thread depth counter,
+// bumped by an RAII guard that src/python/swig.sh injects at the top of every SwigDirector upcall: the director
+// dispatch is Python's single callback chokepoint, as withGvl is Ruby's. The guard's destructor runs on every path
+// out of an upcall -- a normal return, the C++ throw throwToEngine makes for a FIX exception the engine expects
+// (DoNotSend and the rest), and the stack unwinding -- so the count cannot stick and leave close() refusing for
+// ever on that thread. exitOnCallbackError() _exit()s for any other exception, ending the process, so a decrement
+// missed there is moot. The rule is stop()'s rule: no close() of any transport from inside any callback.
+%{
+namespace QuickfixInCallback
+{
+thread_local int t_depth = 0;
+class Guard
+{
+public:
+  Guard() { ++t_depth; }
+  ~Guard() { --t_depth; }
+  Guard(const Guard &) = delete;
+  Guard &operator=(const Guard &) = delete;
+};
+}
+%}
+%nothread quickfixInCallback;
+%rename(_inCallback) quickfixInCallback;
+%inline %{
+bool quickfixInCallback() { return QuickfixInCallback::t_depth > 0; }
+%}
+
+// close()'s delete reproduces the generated transport delete wrapper (_wrap_delete_SocketAcceptorBase and its kin):
+// it runs the destructor under QuickfixTransportViews::Teardown -- which ends the #197 session and log views, so a
+// view taken earlier raises ReferenceError rather than reaching freed memory -- and releases the GIL around the
+// delete itself (QuickfixPins::destroy: the C++ delete, then the factory references let go). It differs in two ways.
+// It refuses, reporting the transport still running and leaving it owned by the GC, while block() holds it (above).
+// And it clears the proxy's pointer, not only its ownership (DISOWN clears only ownership), BEFORE the delete, so a
+// method reaching the transport from another thread during the delete raises through the null-proxy typemap rather
+// than racing it. The template is C++ only; the two wrapped functions pass the base's type. nothread: the proxy and
+// views are read and written under the GIL, which the helper releases only around the delete.
+%{
+template <class Transport>
+static int quickfixDestroyTransport(PyObject *self, swig_type_info *type)
+{
+  SwigPyObject *proxy = self ? SWIG_Python_GetSwigThis(self) : nullptr;
+  if (!proxy || !proxy->ptr)
+    return 0; // already closed, or never a transport proxy
+  void *argp = nullptr;
+  if (!SWIG_IsOK(SWIG_ConvertPtr(self, &argp, type, 0)) || !argp)
+    return 0;
+  Transport *transport = static_cast<Transport *>(argp);
+  if (QuickfixBlocking::isBlocking(transport))
+    return 1; // another thread is inside block() -- leave the proxy owning it, for the GC
+  proxy->ptr = 0;
+  proxy->own = 0;
+  QuickfixTransportViews::Teardown<Transport> teardown(*transport);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    QuickfixPins::destroy(transport);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  return 0;
+}
+%}
+%nothread _quickfixDestroyAcceptor;
+%nothread _quickfixDestroyInitiator;
+%nothread _quickfixBlocking;
+%inline %{
+int _quickfixDestroyAcceptor(PyObject *self)
+{
+  return quickfixDestroyTransport<FIX::Acceptor>(self, SWIGTYPE_p_FIX__Acceptor);
+}
+int _quickfixDestroyInitiator(PyObject *self)
+{
+  return quickfixDestroyTransport<FIX::Initiator>(self, SWIGTYPE_p_FIX__Initiator);
+}
+// Whether another thread is inside this transport's block() now, by the same key the destroy helper uses. A Python
+// program may call block() on a thread of its own -- start() uses the engine's own threads instead, which stop()
+// joins -- and this reports while it runs, so close()'s wait loop and a test can see the destroy helper refuse.
+// Tries the Acceptor base, then the Initiator base, so one helper serves both.
+bool _quickfixBlocking(PyObject *self)
+{
+  void *argp = nullptr;
+  if (SWIG_IsOK(SWIG_ConvertPtr(self, &argp, SWIGTYPE_p_FIX__Acceptor, 0)) && argp)
+    return QuickfixBlocking::isBlocking(argp);
+  argp = nullptr;
+  if (SWIG_IsOK(SWIG_ConvertPtr(self, &argp, SWIGTYPE_p_FIX__Initiator, 0)) && argp)
+    return QuickfixBlocking::isBlocking(argp);
+  return false;
 }
 %}
 
@@ -959,6 +1091,8 @@ def _keepArguments(cls):
   def __init__(self, *args, **kwargs):
     construct(self, *args, **kwargs)
     self._quickfixArguments = (args, kwargs)
+    self._quickfixCloseLock = _threading.RLock()
+    self._quickfixClosed = False
     pin = _quickfixPinAcceptor if isinstance(self, Acceptor) else _quickfixPinInitiator
     pin(self, args[1] if len(args) > 1 else kwargs.get('storeFactory'),
         args[3] if len(args) > 3 else kwargs.get('logFactory'))
@@ -994,6 +1128,41 @@ for _cls in (Initiator, Acceptor):
   _cls.getApplication = lambda self: _keptArgument(self, 0, 'application')
   _cls.getMessageStoreFactory = lambda self: _keptArgument(self, 1, 'storeFactory')
 del _cls
+
+# close() ends a transport deterministically (#207). A script whose factory or application refers to its transport
+# pins it (#201), so it and its sessions outlive every Python reference, freed only when the garbage collector
+# collects the proxy. close() stops the transport and deletes it now: its sessions are unregistered (a later
+# transport for the same SessionID then constructs), its factories are let go, and a method on it afterward raises
+# ReferenceError rather than reaching freed memory. It refuses from inside a callback, on any thread -- a callback
+# that closed its own transport would delete it under its own stack -- as stop() does; the refusal is before the
+# lock, so a callback's close() raises at once rather than deadlocking a teardown that holds the lock (#111). A
+# second close() is a no-op. A transport another thread is still inside block() on is not deleted: close() stops it
+# and waits, up to timeout seconds, for block() to return, and raises RuntimeError if it does not.
+import threading as _threading
+import time as _time
+
+def _quickfixClose(self, timeout=15.0):
+  if _inCallback():
+    raise RuntimeError('cannot close a transport from inside a callback')
+  with self._quickfixCloseLock:
+    if self._quickfixClosed:
+      return
+    _destroy = _quickfixDestroyInitiator if isinstance(self, Initiator) else _quickfixDestroyAcceptor
+    deadline = _time.monotonic() + timeout
+    while True:
+      try:
+        self.stop()
+      except ReferenceError:
+        pass  # a reentrant call cleared this proxy during release; the destroy below then reports it already closed
+      if _destroy(self) == 0:
+        self._quickfixClosed = True
+        return
+      if _time.monotonic() >= deadline:
+        raise RuntimeError('transport still inside block() after %g s; not closed' % timeout)
+      _time.sleep(0.02)
+
+Initiator.close = _quickfixClose
+Acceptor.close = _quickfixClose
 %}
 
 %init %{

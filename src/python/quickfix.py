@@ -9272,6 +9272,18 @@ def _viewCount():
 def _transportViewCount():
     return _quickfix._transportViewCount()
 
+def _inCallback():
+    return _quickfix._inCallback()
+
+def _quickfixDestroyAcceptor(_self):
+    return _quickfix._quickfixDestroyAcceptor(_self)
+
+def _quickfixDestroyInitiator(_self):
+    return _quickfix._quickfixDestroyInitiator(_self)
+
+def _quickfixBlocking(_self):
+    return _quickfix._quickfixBlocking(_self)
+
 try:
   import thread
 except ImportError:
@@ -9410,6 +9422,8 @@ def _keepArguments(cls):
   def __init__(self, *args, **kwargs):
     construct(self, *args, **kwargs)
     self._quickfixArguments = (args, kwargs)
+    self._quickfixCloseLock = _threading.RLock()
+    self._quickfixClosed = False
     pin = _quickfixPinAcceptor if isinstance(self, Acceptor) else _quickfixPinInitiator
     pin(self, args[1] if len(args) > 1 else kwargs.get('storeFactory'),
         args[3] if len(args) > 3 else kwargs.get('logFactory'))
@@ -9445,6 +9459,41 @@ for _cls in (Initiator, Acceptor):
   _cls.getApplication = lambda self: _keptArgument(self, 0, 'application')
   _cls.getMessageStoreFactory = lambda self: _keptArgument(self, 1, 'storeFactory')
 del _cls
+
+# close() ends a transport deterministically (#207). A script whose factory or application refers to its transport
+# pins it (#201), so it and its sessions outlive every Python reference, freed only when the garbage collector
+# collects the proxy. close() stops the transport and deletes it now: its sessions are unregistered (a later
+# transport for the same SessionID then constructs), its factories are let go, and a method on it afterward raises
+# ReferenceError rather than reaching freed memory. It refuses from inside a callback, on any thread -- a callback
+# that closed its own transport would delete it under its own stack -- as stop() does; the refusal is before the
+# lock, so a callback's close() raises at once rather than deadlocking a teardown that holds the lock (#111). A
+# second close() is a no-op. A transport another thread is still inside block() on is not deleted: close() stops it
+# and waits, up to timeout seconds, for block() to return, and raises RuntimeError if it does not.
+import threading as _threading
+import time as _time
+
+def _quickfixClose(self, timeout=15.0):
+  if _inCallback():
+    raise RuntimeError('cannot close a transport from inside a callback')
+  with self._quickfixCloseLock:
+    if self._quickfixClosed:
+      return
+    _destroy = _quickfixDestroyInitiator if isinstance(self, Initiator) else _quickfixDestroyAcceptor
+    deadline = _time.monotonic() + timeout
+    while True:
+      try:
+        self.stop()
+      except ReferenceError:
+        pass  # a reentrant call cleared this proxy during release; the destroy below then reports it already closed
+      if _destroy(self) == 0:
+        self._quickfixClosed = True
+        return
+      if _time.monotonic() >= deadline:
+        raise RuntimeError('transport still inside block() after %g s; not closed' % timeout)
+      _time.sleep(0.02)
+
+Initiator.close = _quickfixClose
+Acceptor.close = _quickfixClose
 
 
 import quickfix

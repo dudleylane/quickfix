@@ -41,7 +41,7 @@ This fork applies the following fixes and improvements over [quickfix/quickfix](
 - **Python out-parameters** (#124): a `std::string&` out-parameter built its string from `PyUnicode_AsUTF8` unchecked, so `None` or `bytes` aborted the process in eleven wrappers (`DataDictionary.getFieldName`, `Message.toString`, ...); it is a `TypeError` now, as is a non-int for an `int&`. The five `DataDictionary` lookups -- `getFieldName`, `getFieldTag`, `getValueName`, `getNameValue`, `getGroup` -- return `None` when nothing is found, where the dict of outputs made a miss look like a hit, and the out-parameter dicts no longer leak a reference per call
 - **Per-session ReconnectInterval** (#125): each initiator kept one reconnect interval and one last-attempt time, and every session's `doConnect` overwrote the interval with its own, so the session that connected last set the retry pace for all of them. `Initiator::connect` now starts a disconnected session only when its own `ReconnectInterval` has passed since its last attempt, timed on the steady clock; the transports call it on every tick. A `ReconnectInterval` that is not a number is a `ConfigError` at construction. No layout change: the timing lives in `Initiator`'s unused `m_sessionState` slot, and the transports' old members are left unused
 - **Python director mutex** (#109): SWIG 4.3.0 generates a `Swig::Mutex` whose `unlock()` frees the lock and whose destructor only releases it. The mutex guards a director's ownership map, which a `LogFactory` written in Python takes on every `create`, so the second `Log` it returned locked and freed freed memory and the program aborted while its transport created sessions. `src/python/swig.sh` swaps the two calls back in the generated wrapper, and fails if SWIG's text changes
-- **Transports collected with their factories** (#201): a transport's destructor destroys its sessions' stores and logs, and its own log, through the store and log factories it was made with. The Python, Ruby and Java bindings kept those alive only from the transport's own object, so a collector that found the transport and them garbage together -- Ruby's GC, Java's finalizer thread, Python's cycle collector -- freed them in its own order, and a factory freed first crashed the destructor. Each binding now holds them from a root, from the transport's construction until its C++ object has been deleted. So a factory that refers to its transport, directly or through its application, keeps it, and its sessions registered, until that reference is cleared or, in Java or Ruby, the transport is closed (#207). Collected together, those crashed before, except in Python through the application, which was collected cleanly and is now kept. The `Application` is not held, since one that refers to its transport would never be collected (#204)
+- **Transports collected with their factories** (#201): a transport's destructor destroys its sessions' stores and logs, and its own log, through the store and log factories it was made with. The Python, Ruby and Java bindings kept those alive only from the transport's own object, so a collector that found the transport and them garbage together -- Ruby's GC, Java's finalizer thread, Python's cycle collector -- freed them in its own order, and a factory freed first crashed the destructor. Each binding now holds them from a root, from the transport's construction until its C++ object has been deleted. So a factory that refers to its transport, directly or through its application, keeps it, and its sessions registered, until that reference is cleared or, in Java, Ruby or Python, the transport is closed (#207). Collected together, those crashed before, except in Python through the application, which was collected cleanly and is now kept. The `Application` is not held, since one that refers to its transport would never be collected (#204)
 
 ### SSL/OpenSSL
 - **X509 leak**: Added `X509_free()` after `SSL_get_peer_certificate()`, now in `checkSSLClient()`, which `ee3b1780` split out of `acceptSSLConnection()`
@@ -404,8 +404,8 @@ keep past its owner and so read freed memory (#194):
   class.
 - **A view that ends with its transport**: a `Session` from `lookupSession`, `registerSession` or a transport's
   `getSession`, a transport's `getLog()`, and in Java a session's `getStore()` and `getLog()`. As in C++, it is
-  valid until the transport is destroyed -- in Python when the transport's last reference goes, in Ruby at exit,
-  in Java at `close()` or `delete()` -- and the transport's destructor ends it first; a transport constructor
+  valid until the transport is destroyed -- in Python and Ruby at `close()`, or when Python's last reference to it
+  goes or Ruby's exit hook runs, in Java at `close()` or `delete()` -- and the transport's destructor ends it first; a transport constructor
   that raises after making sessions, at a duplicate session or a bad setting, ends the views its application's
   `onCreate` took of them. A call through an ended view raises as one through a deleted object does, where it
   read freed memory (#197). In Ruby and Java a view also keeps its transport, so the GC never collects a
@@ -419,12 +419,14 @@ keep past its owner and so read freed memory (#194):
   `getAllowedRemoteAddresses()` does (#197). Its store and log factories are also held from a root until its
   destructor has run, so the GC never frees them before the transport that uses them (#201). A factory that
   refers to its transport, directly or through its application, therefore keeps it, and its sessions
-  registered, until that reference is cleared or, in Java or Ruby, the transport is closed (#207) -- `close()`
-  stops the transport and deletes it at once, rather than leaving it to the collector or the exit hook. Like
-  destroying a transport in C++, it must not race another thread's call on the same transport, `block()`
-  excepted, which it is designed to end: end a poll loop before closing from another thread, or close from its
-  own thread. Ruby's `close()` refuses a call made from inside an engine callback, which would delete the
-  transport under the callback's own stack.
+  registered, until that reference is cleared or, in Java, Ruby or Python, the transport is closed (#207) --
+  `close()` stops the transport and deletes it at once, rather than leaving it to the collector or the exit hook.
+  Like destroying a transport in C++, it must not race another thread's call on the same transport, `block()`
+  excepted, which it is designed to end: every other call runs without the GIL or GVL and so races a concurrent
+  `close()`, as a C++ caller would race a `delete` (#214), so end a poll loop before closing from another thread,
+  or close from its own thread. Ruby's and Python's `close()` refuse a call made from inside an engine callback,
+  which would delete the transport under the callback's own stack -- in Python a `toApp` reached through
+  `Session.sendToTarget`, on the caller's own thread, confirmed under AddressSanitizer.
 
 `FieldMap.groups()` and `cloneInto()`, `GroupArena`, `DataDictionary.getOrderedFields` and its header,
 trailer and message forms, and `sessionToPort()` are not wrapped: they returned engine internals and opaque

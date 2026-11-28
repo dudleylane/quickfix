@@ -4260,6 +4260,37 @@ SWIGINTERNINLINE PyObject*
 }
 
 
+#include <set>
+namespace QuickfixBlocking
+{
+inline std::set<const void *> &registry()
+{
+  static std::set<const void *> *blocking = new std::set<const void *>;
+  return *blocking;
+}
+inline bool isBlocking(const void *transport) { return transport && registry().count(transport) != 0; }
+class Guard
+{
+public:
+  explicit Guard(const void *transport) : m_transport(transport)
+  {
+    if (m_transport)
+      registry().insert(m_transport);
+  }
+  ~Guard()
+  {
+    if (m_transport)
+      registry().erase(m_transport);
+  }
+  Guard(const Guard &) = delete;
+  Guard &operator=(const Guard &) = delete;
+
+private:
+  const void *m_transport;
+};
+}
+
+
 #include <string>
 
 
@@ -7423,6 +7454,71 @@ size_t quickfixTestTransportViewCount()
 }
 
 
+namespace QuickfixInCallback
+{
+thread_local int t_depth = 0;
+class Guard
+{
+public:
+  Guard() { ++t_depth; }
+  ~Guard() { --t_depth; }
+  Guard(const Guard &) = delete;
+  Guard &operator=(const Guard &) = delete;
+};
+}
+
+
+bool quickfixInCallback() { return QuickfixInCallback::t_depth > 0; }
+
+
+template <class Transport>
+static int quickfixDestroyTransport(PyObject *self, swig_type_info *type)
+{
+  SwigPyObject *proxy = self ? SWIG_Python_GetSwigThis(self) : nullptr;
+  if (!proxy || !proxy->ptr)
+    return 0; // already closed, or never a transport proxy
+  void *argp = nullptr;
+  if (!SWIG_IsOK(SWIG_ConvertPtr(self, &argp, type, 0)) || !argp)
+    return 0;
+  Transport *transport = static_cast<Transport *>(argp);
+  if (QuickfixBlocking::isBlocking(transport))
+    return 1; // another thread is inside block() -- leave the proxy owning it, for the GC
+  proxy->ptr = 0;
+  proxy->own = 0;
+  QuickfixTransportViews::Teardown<Transport> teardown(*transport);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    QuickfixPins::destroy(transport);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  return 0;
+}
+
+
+int _quickfixDestroyAcceptor(PyObject *self)
+{
+  return quickfixDestroyTransport<FIX::Acceptor>(self, SWIGTYPE_p_FIX__Acceptor);
+}
+int _quickfixDestroyInitiator(PyObject *self)
+{
+  return quickfixDestroyTransport<FIX::Initiator>(self, SWIGTYPE_p_FIX__Initiator);
+}
+// Whether another thread is inside this transport's block() now, by the same key the destroy helper uses. A Python
+// program may call block() on a thread of its own -- start() uses the engine's own threads instead, which stop()
+// joins -- and this reports while it runs, so close()'s wait loop and a test can see the destroy helper refuse.
+// Tries the Acceptor base, then the Initiator base, so one helper serves both.
+bool _quickfixBlocking(PyObject *self)
+{
+  void *argp = nullptr;
+  if (SWIG_IsOK(SWIG_ConvertPtr(self, &argp, SWIGTYPE_p_FIX__Acceptor, 0)) && argp)
+    return QuickfixBlocking::isBlocking(argp);
+  argp = nullptr;
+  if (SWIG_IsOK(SWIG_ConvertPtr(self, &argp, SWIGTYPE_p_FIX__Initiator, 0)) && argp)
+    return QuickfixBlocking::isBlocking(argp);
+  return false;
+}
+
+
 
 /* ---------------------------------------------------
  * C++ director class methods
@@ -7447,6 +7543,7 @@ FIX::Log *SwigDirector_LogFactory::create() {
   swig_owntype own ;
   
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call LogFactory.__init__.");
@@ -7492,6 +7589,7 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
   swig_owntype own ;
   
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
@@ -7533,6 +7631,7 @@ FIX::Log *SwigDirector_LogFactory::create(FIX::SessionID const &arg0) {
 
 void SwigDirector_LogFactory::destroy(FIX::Log *arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     {
@@ -7581,6 +7680,7 @@ SwigDirector_Log::~SwigDirector_Log() {
 
 void SwigDirector_Log::clear() {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Log.__init__.");
@@ -7613,6 +7713,7 @@ void SwigDirector_Log::clear() {
 
 void SwigDirector_Log::backup() {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     if (!swig_get_self()) {
       Swig::DirectorException::raise("'self' uninitialized, maybe you forgot to call Log.__init__.");
@@ -7645,6 +7746,7 @@ void SwigDirector_Log::backup() {
 
 void SwigDirector_Log::onIncoming(std::string const &arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_From_std_string(static_cast< std::string >(arg0));
@@ -7678,6 +7780,7 @@ void SwigDirector_Log::onIncoming(std::string const &arg0) {
 
 void SwigDirector_Log::onOutgoing(std::string const &arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_From_std_string(static_cast< std::string >(arg0));
@@ -7711,6 +7814,7 @@ void SwigDirector_Log::onOutgoing(std::string const &arg0) {
 
 void SwigDirector_Log::onEvent(std::string const &arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_From_std_string(static_cast< std::string >(arg0));
@@ -7754,6 +7858,7 @@ SwigDirector_Application::~SwigDirector_Application() {
 
 void SwigDirector_Application::onCreate(FIX::SessionID const &arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
@@ -7787,6 +7892,7 @@ void SwigDirector_Application::onCreate(FIX::SessionID const &arg0) {
 
 void SwigDirector_Application::onLogon(FIX::SessionID const &arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
@@ -7820,6 +7926,7 @@ void SwigDirector_Application::onLogon(FIX::SessionID const &arg0) {
 
 void SwigDirector_Application::onLogout(FIX::SessionID const &arg0) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(QuickfixBinding::handOver(arg0)), SWIGTYPE_p_FIX__SessionID, SWIG_POINTER_OWN);
@@ -7853,6 +7960,7 @@ void SwigDirector_Application::onLogout(FIX::SessionID const &arg0) {
 
 void SwigDirector_Application::toAdmin(FIX::Message &arg0,FIX::SessionID const &arg1) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
@@ -7888,6 +7996,7 @@ void SwigDirector_Application::toAdmin(FIX::Message &arg0,FIX::SessionID const &
 
 void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &arg1) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
@@ -7929,6 +8038,7 @@ void SwigDirector_Application::toApp(FIX::Message &arg0,FIX::SessionID const &ar
 
 void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID const &arg1) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
@@ -7976,6 +8086,7 @@ void SwigDirector_Application::fromAdmin(FIX::Message const &arg0,FIX::SessionID
 
 void SwigDirector_Application::fromApp(FIX::Message const &arg0,FIX::SessionID const &arg1) {
   SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  QuickfixInCallback::Guard _qfInCallbackGuard;
   {
     swig::SwigVar_PyObject obj0;
     obj0 = SWIG_NewPointerObj(SWIG_as_voidptr(&arg0), SWIGTYPE_p_FIX__Message,  0 );
@@ -149761,9 +149872,10 @@ SWIGINTERN PyObject *_wrap_Initiator_block(PyObject *self, PyObject *args) {
   }
   arg1 = reinterpret_cast< FIX::Initiator * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixBlocking::Guard _qfBlockGuard(static_cast<FIX::Initiator *>(arg1));
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->block();
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -149771,7 +149883,7 @@ SWIGINTERN PyObject *_wrap_Initiator_block(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -150925,9 +151037,10 @@ SWIGINTERN PyObject *_wrap_Acceptor_block(PyObject *self, PyObject *args) {
   }
   arg1 = reinterpret_cast< FIX::Acceptor * >(argp1);
   {
-    if(!tryPythonException([&]() mutable 
+    if(!tryPythonException([&]() mutable
         {
-      {
+      QuickfixBlocking::Guard _qfBlockGuard(static_cast<FIX::Acceptor *>(arg1));
+          {
         SWIG_PYTHON_THREAD_BEGIN_ALLOW;
             (arg1)->block();
             SWIG_PYTHON_THREAD_END_ALLOW;
@@ -150935,7 +151048,7 @@ SWIGINTERN PyObject *_wrap_Acceptor_block(PyObject *self, PyObject *args) {
           return true;
         fail:
           return false;
-        })) 
+        }))
     {
       SWIG_fail;
     }
@@ -167961,6 +168074,118 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap__inCallback(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  bool result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "_inCallback", 0, 0, 0)) SWIG_fail;
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      result = (bool)quickfixInCallback();
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap__quickfixDestroyAcceptor(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  PyObject *arg1 = (PyObject *) 0 ;
+  PyObject *swig_obj[1] ;
+  int result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  arg1 = swig_obj[0];
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      result = (int)_quickfixDestroyAcceptor(arg1);
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap__quickfixDestroyInitiator(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  PyObject *arg1 = (PyObject *) 0 ;
+  PyObject *swig_obj[1] ;
+  int result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  arg1 = swig_obj[0];
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      result = (int)_quickfixDestroyInitiator(arg1);
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap__quickfixBlocking(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  PyObject *arg1 = (PyObject *) 0 ;
+  PyObject *swig_obj[1] ;
+  bool result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  arg1 = swig_obj[0];
+  {
+    if(!tryPythonException([&]() mutable 
+        {
+      result = (bool)_quickfixBlocking(arg1);
+          return true;
+        fail:
+          return false;
+        })) 
+    {
+      SWIG_fail;
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 static PyMethodDef SwigMethods[] = {
 	 { "_endView", _wrap__endView, METH_O, NULL},
 	 { "delete_SwigPyIterator", _wrap_delete_SwigPyIterator, METH_O, NULL},
@@ -169091,6 +169316,10 @@ static PyMethodDef SwigMethods[] = {
 	 { "_quickfixPinCount", _wrap__quickfixPinCount, METH_NOARGS, NULL},
 	 { "_viewCount", _wrap__viewCount, METH_NOARGS, NULL},
 	 { "_transportViewCount", _wrap__transportViewCount, METH_NOARGS, NULL},
+	 { "_inCallback", _wrap__inCallback, METH_NOARGS, NULL},
+	 { "_quickfixDestroyAcceptor", _wrap__quickfixDestroyAcceptor, METH_O, NULL},
+	 { "_quickfixDestroyInitiator", _wrap__quickfixDestroyInitiator, METH_O, NULL},
+	 { "_quickfixBlocking", _wrap__quickfixBlocking, METH_O, NULL},
 	 { NULL, NULL, 0, NULL }
 };
 
