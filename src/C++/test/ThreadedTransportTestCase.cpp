@@ -24,6 +24,7 @@
 #include <UtilitySSL.h>
 #endif
 
+#include "../scope_guard.hpp"
 #include "TestHelper.h"
 #include "catch_amalgamated.hpp"
 
@@ -2072,6 +2073,11 @@ TEST_CASE("ThreadedQueuedWriteTests")
     DataDictionaryProvider provider;
     TimeRange always(UtcTimeOnly(0, 0, 0), UtcTimeOnly(0, 0, 0));
     Session session([] { return UtcTimeStamp::now(); }, application, factory, sessionID, provider, always, 30, nullptr);
+    // heartBtInt=30 makes this an initiator (Session's ctor runs m_state.initiate(heartBtInt != 0)), so the
+    // connection's own thread, driving next() once a second, sends a Logon no dumb-socket peer will ever answer.
+    // Leave its logon timeout beyond any run: the 10 s default would otherwise disconnect the session mid-test
+    // under load, silently dropping queued sends (send() still returns true), which left one message short.
+    session.setLogonTimeout(24 * 60 * 60);
     std::unique_ptr<ThreadedSocketConnection> connection(
         new ThreadedSocketConnection(sessionID, pair[0], "", 0, nullptr, "", 0, true, busyPoll));
     connection->startQueuedWrites();
@@ -2162,8 +2168,16 @@ TEST_CASE("ThreadedQueuedWriteTests")
             writer.join();
         }
         reading = false;
-        reader.join();
+        if (reader.joinable())
+        {
+            reader.join();
+        }
     };
+    // Join those threads on any exit from this body, a thrown REQUIRE included, so a failure reports as a Catch2
+    // failure rather than destroying joinable std::threads, which calls std::terminate -> SIGABRT: that aborts ut
+    // and, in CI, skips the binding and acceptance steps that run after it. finish() is idempotent, so the explicit
+    // calls below each run it first and this guard is then a no-op.
+    auto finishGuard = sg::make_scope_guard([&]() noexcept { finish(); });
 
     SECTION("wireOrderIsSequenceOrderAcrossThreads")
     {
