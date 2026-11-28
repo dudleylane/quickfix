@@ -249,6 +249,23 @@ const int killTag = 8;
 thread_local bool t_deferredKill = false;
 }
 
+// A per-thread depth count of the Ruby callbacks running on this thread, bumped
+// around every callback withGvl runs and the one the dispatcher runs.
+// quickfix_ruby.rb's #close reads it through _inCallback and refuses when it is
+// nonzero: deleting a transport under a callback's own stack is a use-after-free
+// (#207). Each guard is destroyed before dispatcherLoop's rb_jump_tag and before
+// withGvl rethrows a C++ exception, so a raise or a Thread#kill cannot leave the
+// count stuck -- a stuck count would make #close raise for ever on the thread.
+thread_local int t_inCallback = 0;
+struct InCallbackGuard
+{
+  InCallbackGuard() { ++t_inCallback; }
+  ~InCallbackGuard() { --t_inCallback; }
+  InCallbackGuard(const InCallbackGuard &) = delete;
+  InCallbackGuard &operator=(const InCallbackGuard &) = delete;
+};
+VALUE inCallback(VALUE) { return t_inCallback > 0 ? Qtrue : Qfalse; }
+
 bool deferKill(VALUE error)
 {
   if (!FIXNUM_P(error) || FIX2INT(error) != killTag)
@@ -432,9 +449,12 @@ void finishDispatch(Dispatch *dispatch)
   g_dispatchDone.notify_all();
 }
 
-// No C++ object with a destructor lives in this frame: rb_thread_check_ints
-// leaves it by longjmp when the thread is killed, and dispatcherEnded then
-// releases whatever was waiting.
+// Nothing with a destructor lives across a longjmp out of this frame:
+// rb_thread_check_ints leaves it that way when the thread is killed, after which
+// dispatcherEnded releases whatever was waiting. The one object with a destructor
+// here, the InCallbackGuard below, is scoped to the callback and destroyed before
+// finishDispatch and the redeliverKill rb_jump_tag; a kill landing in the callback
+// is deferred until then, so it cannot longjmp while the guard is alive.
 VALUE dispatcherLoop(VALUE)
 {
   for (;;)
@@ -445,6 +465,9 @@ VALUE dispatcherLoop(VALUE)
     {
       try
       {
+        // Destroyed at the end of this scope, before finishDispatch and the
+        // redeliverKill rb_jump_tag below, so a deferred kill cannot skip it.
+        InCallbackGuard inCallbackGuard;
         (*dispatch->callback)();
       }
       catch (...)
@@ -563,6 +586,7 @@ void withGvl(const std::function<void()> &callback)
   }
   if (ruby_thread_has_gvl_p())
   {
+    InCallbackGuard inCallbackGuard;
     callback();
     return;
   }
@@ -587,6 +611,7 @@ void withGvl(const std::function<void()> &callback)
         Call *c = static_cast<Call *>(p);
         try
         {
+          InCallbackGuard inCallbackGuard;
           c->callback();
         }
         catch (...)
@@ -1552,6 +1577,7 @@ QUICKFIX_RUBY_EXIT_ON_ERROR(FIX::LogFactory::destroy)
   rb_define_module_function(mQuickfix, "_initiatorBlocking", RUBY_METHOD_FUNC(isInitiatorBlocking), 1);
   rb_define_module_function(mQuickfix, "_acceptorBlocking", RUBY_METHOD_FUNC(isAcceptorBlocking), 1);
   rb_define_module_function(mQuickfix, "_callbackThread", RUBY_METHOD_FUNC(callbackThread), 0);
+  rb_define_module_function(mQuickfix, "_inCallback", RUBY_METHOD_FUNC(inCallback), 0);
   rb_define_module_function(mQuickfix, "_endView", RUBY_METHOD_FUNC(quickfixTestEndView), 1);
   rb_define_module_function(mQuickfix, "_viewCount", RUBY_METHOD_FUNC(quickfixTestViewCount), 0);
   rb_define_module_function(mQuickfix, "_viewEntries", RUBY_METHOD_FUNC(quickfixTestViewEntries), 0);

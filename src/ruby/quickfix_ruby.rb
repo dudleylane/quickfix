@@ -145,6 +145,7 @@ module Quickfix
 	# session; one whose constructor raised has none.
 	module KeepsArguments
 		def initialize(*args)
+			@quickfixCloseMutex = Thread::Mutex.new # serialises #close (#207)
 			super
 		ensure
 			sessions = Quickfix._sessionAddresses(self)
@@ -223,6 +224,32 @@ module Quickfix
 		destroyed
 	end
 
+	# Stops transport, waits up to timeout seconds for the thread #start made and for block() to
+	# finish, then deletes it (_destroyTransport: unregisters its sessions, lets its factories go
+	# (#201), ends its views (#197)). Shared by #close and the at_exit hook. Returns :destroyed; or
+	# :running if it was still blocking at the deadline or _destroyTransport refused the delete, so it
+	# was not deleted; or the Exception that joining the thread raised if start had failed (#123) --
+	# after the delete, so a caller can report it. Does not raise; #close turns these into its contract.
+	def self._closeTransport(transport, timeout = 15)
+		transport.stop
+		thread = transport.instance_variable_get(:@quickfixThread)
+		failure = nil
+		begin
+			thread.join(timeout) if thread
+		rescue Exception => error
+			failure = error
+		end
+		blocking = transport.is_a?(Initiator) ? :_initiatorBlocking : :_acceptorBlocking
+		deadline = Time.now + timeout
+		sleep 0.05 while Quickfix.send(blocking, transport) && Time.now < deadline
+		return :running if Quickfix.send(blocking, transport)
+		# _destroyTransport refuses (returns false) if the transport is blocking again or its pointer is
+		# already gone, so it was not deleted here: report :running rather than let #close mark a live
+		# transport closed, which would make the at_exit hook skip it and free it out of order (#105).
+		return :running unless Quickfix._destroyTransport(transport)
+		failure || :destroyed
+	end
+
 	# The threaded transports' callbacks run on the "quickfix callbacks" thread
 	# while the connection thread that made them waits (#104), and stop joins the
 	# connection threads. Called from a callback, stop would join the thread
@@ -242,26 +269,55 @@ module Quickfix
 	[ThreadedSocketInitiatorBase, ThreadedSocketAcceptorBase,
 	 ThreadedSSLSocketInitiatorBase, ThreadedSSLSocketAcceptorBase].each { |klass| klass.prepend(StopsOutsideCallbacks) }
 
+	# A script that keeps a transport reachable from its factory or application -- the #201 pin keeps the
+	# transport while such a reference stands -- can end it deterministically with #close, rather than wait
+	# for the GC or the at_exit hook (#207). close stops the transport, waits for the thread #start made and
+	# for block() to finish, then deletes it: its sessions are unregistered, its factories let go, its views
+	# ended. It raises if called from inside an engine callback -- it would delete the transport under the
+	# callback's own stack, as stop refuses a threaded callback (#111) -- and if the transport is still
+	# running after timeout seconds. close is the delete, so, as when a transport is destroyed in C++, it
+	# must not race another thread's call on the same transport (block() excepted, which close is designed to
+	# end): a script driving poll() ends its poll loop before closing from another thread, or closes from the
+	# poll thread itself. Idempotent; afterward the proxy raises ObjectPreviouslyDeleted, as a deleted view
+	# does (#197).
+	module Closeable
+		def close(timeout = 15)
+			# Refuse from inside any callback, and before taking the lock. Quickfix._inCallback counts the
+			# engine callbacks running on this thread (the binding bumps it around every one), so this
+			# catches close() reached through onLogon, fromApp, a toApp sent via Session.sendToTarget, or a
+			# poll() the script drives -- each of which would delete the transport under the callback's own
+			# stack, a use-after-free. Checking before the mutex also means a callback that reaches close()
+			# while another thread holds it raises rather than blocking on it, which on a threaded transport
+			# is the connection thread this callback's stop() would then wait for (#111). owned? refuses a
+			# reentrant close() on the thread already in one -- the non-reentrant mutex would deadlock it.
+			if Quickfix._inCallback || @quickfixCloseMutex.owned?
+				raise ThreadError, "#{self.class}#close cannot be called from inside an engine callback: it " \
+					"would delete the transport under the callback's own stack. Close it from another thread."
+			end
+			@quickfixCloseMutex.synchronize do
+				return if @quickfixClosed
+				result = Quickfix._closeTransport(self, timeout)
+				raise "#{self.class}#close: the transport is still running after #{timeout} s" if result == :running
+				@quickfixClosed = true
+				raise result if result.is_a?(Exception) # start had failed (#123); deleted first, reported now
+			end
+			nil
+		end
+	end
+	[Initiator, Acceptor].each { |klass| klass.prepend(Closeable) }
+
 	# At exit Ruby frees every object in no particular order, and an initiator or
 	# acceptor freed after its store factory, log factory or application used them
 	# from its destructor, which crashed the process (#105). at_exit runs before
-	# that, while they are all alive: stop each one, wait for the thread #start
-	# made and for any block() still running, and delete it.
+	# that, while they are all alive: close each one not already closed, through the
+	# same _closeTransport #close uses -- but swallowing a failed start's error
+	# (#123), which #close reports and a script can override, and which must not stop
+	# the exit hook from closing the rest.
 	at_exit do
-		[[Initiator, :_initiatorBlocking], [Acceptor, :_acceptorBlocking]].each do |kind, blocking|
+		[Initiator, Acceptor].each do |kind|
 			ObjectSpace.each_object(kind).to_a.each do |transport|
 				begin
-					transport.stop
-					thread = transport.instance_variable_get(:@quickfixThread)
-					# A start that failed ended that thread with its error, and join
-					# raises it again; it must not skip the delete below (#123).
-					begin
-						thread.join(15) if thread
-					rescue Exception
-					end
-					deadline = Time.now + 15
-					sleep 0.05 while Quickfix.send(blocking, transport) && Time.now < deadline
-					Quickfix._destroyTransport(transport)
+					Quickfix._closeTransport(transport) unless transport.instance_variable_get(:@quickfixClosed)
 				rescue StandardError
 				end
 			end
